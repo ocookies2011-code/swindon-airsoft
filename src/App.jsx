@@ -42,16 +42,19 @@ function QRCode({ value, size = 120 }) {
 function useData() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   const loadAll = useCallback(async () => {
+    setLoadError(null);
     try {
+      // Load each independently so one failure doesn't block everything
       const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
-        api.events.getAll(),
-        api.shop.getAll(),
-        api.postage.getAll(),
-        api.gallery.getAll(),
-        api.qa.getAll(),
-        api.settings.get("home_message"),
+        api.events.getAll().catch(e => { console.error("events:", e); return []; }),
+        api.shop.getAll().catch(e => { console.error("shop:", e); return []; }),
+        api.postage.getAll().catch(e => { console.error("postage:", e); return []; }),
+        api.gallery.getAll().catch(e => { console.error("gallery:", e); return []; }),
+        api.qa.getAll().catch(e => { console.error("qa:", e); return []; }),
+        api.settings.get("home_message").catch(() => ""),
       ]);
       setData({
         events: evList,
@@ -60,10 +63,11 @@ function useData() {
         albums: albumList,
         qa: qaList,
         homeMsg,
-        users: [], // loaded separately for admin
+        users: [],
       });
     } catch (e) {
-      console.error("loadAll error:", e);
+      console.error("loadAll critical error:", e);
+      setLoadError(e.message);
     } finally {
       setLoading(false);
     }
@@ -140,7 +144,7 @@ function useData() {
 
   const refresh = useCallback(() => loadAll(), [loadAll]);
 
-  return { data, loading, save, updateUser, updateEvent, refresh };
+  return { data, loading, loadError, save, updateUser, updateEvent, refresh };
 }
 
 // ── useAdminUsers — load all profiles (admin only) ────────────
@@ -1341,7 +1345,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         </div>
         <div className="admin-content">
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
-          {section === "bookings" && <AdminBookingsCheckin data={data} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
+          {section === "bookings" && <AdminBookingsCheckin data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
           {section === "events" && <AdminEvents data={data} save={save} updateEvent={updateEvent} showToast={showToast} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
@@ -1442,7 +1446,7 @@ function AdminDash({ data, setSection }) {
 
 // ── Admin Check-In ────────────────────────────────────────
 // ── Admin Bookings & Check-In (merged) ────────────────────
-function AdminBookingsCheckin({ data, updateEvent, updateUser, showToast }) {
+function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }) {
   const [tab, setTab] = useState("all");
   const [evId, setEvId] = useState(data.events[0]?.id || "");
   const [manual, setManual] = useState("");
@@ -2674,7 +2678,7 @@ function AdminStaff({ data, save, showToast }) {
 
 // ── Root App ──────────────────────────────────────────────────
 export default function App() {
-  const { data, loading, save, updateUser, updateEvent, refresh } = useData();
+  const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
   const [page, setPage] = useState("home");
   const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
@@ -2728,6 +2732,17 @@ export default function App() {
         <div style={{ width: 48, height: 48, background: "var(--green)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#000", fontSize: 20, animation: "pulse 1s infinite" }}>SA</div>
         <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
+        <div style={{ width: 48, height: 48, background: "#f85149", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 20 }}>!</div>
+        <div style={{ color: "#f85149", fontSize: 16, fontWeight: 700 }}>Failed to connect to database</div>
+        <div style={{ color: "var(--muted)", fontSize: 13, maxWidth: 400, textAlign: "center" }}>{loadError}</div>
+        <button onClick={refresh} style={{ background: "var(--green)", border: "none", color: "#000", padding: "10px 24px", borderRadius: 6, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Retry</button>
       </div>
     );
   }
