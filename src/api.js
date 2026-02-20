@@ -312,7 +312,28 @@ export const settings = {
   }
 }
 
-// ── Normalisers (snake_case DB → camelCase app) ───────────────
+// ── Cash Sales ────────────────────────────────────────────────
+export const cashSales = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('cash_sales').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    return data
+  },
+
+  async create(sale) {
+    const { data, error } = await supabase.from('cash_sales').insert({
+      customer_name:  sale.customerName || 'Walk-in',
+      customer_email: sale.customerEmail || '',
+      user_id:        sale.userId || null,
+      items:          sale.items,
+      total:          sale.total,
+      recorded_by:    sale.recordedBy || null,
+    }).select().single()
+    if (error) throw error
+    return data
+  }
+}
 function normaliseEvent(ev) {
   return {
     id:           ev.id,

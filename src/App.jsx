@@ -10,7 +10,35 @@ const gmtDate = (d) => new Date(d).toLocaleString("en-GB", { timeZone: "Europe/L
 const gmtShort = (d) => new Date(d).toLocaleDateString("en-GB", { timeZone: "Europe/London" });
 const uid = () => crypto.randomUUID();
 
-// ── useData — loads everything from Supabase ──────────────────
+// ── QR Code component using qrcode-svg ───────────────────────
+function QRCode({ value, size = 120 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !value) return;
+    // Load QRCode library dynamically from CDN
+    const loadQR = async () => {
+      if (!window.QRCode) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      if (ref.current) {
+        ref.current.innerHTML = '';
+        new window.QRCode(ref.current, {
+          text: value, width: size, height: size,
+          colorDark: '#000000', colorLight: '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel.M
+        });
+      }
+    };
+    loadQR().catch(console.error);
+  }, [value, size]);
+  return <div ref={ref} style={{ background: '#fff', padding: 8, borderRadius: 6, display: 'inline-block' }} />;
+}
+
 function useData() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -806,7 +834,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 <div>
                   <div className="alert alert-green">✓ You're booked in for this event!</div>
                   <div className="mt-2 text-muted" style={{ fontSize: 12 }}>Your check-in QR code:</div>
-                  <div className="qr-box mt-1" style={{ width: 80, height: 80 }}><div className="qr-inner" /></div>
+                  <div style={{ margin: "10px 0" }}><QRCode value={myBooking.id} size={120} /></div>
                   <div className="text-muted mt-1" style={{ fontSize: 10 }}>Booking ID: {myBooking.id}</div>
                 </div>
               ) : (
@@ -1202,7 +1230,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
                 {!b.checkedIn && (
                   <div style={{ marginTop: 14 }}>
                     <div className="text-muted" style={{ fontSize: 11, marginBottom: 6 }}>Your check-in QR code:</div>
-                    <div className="qr-box" style={{ width: 80, height: 80 }}><div className="qr-inner" /></div>
+                    <QRCode value={b.id} size={120} />
                     <div className="text-muted" style={{ fontSize: 10, marginTop: 4 }}>ID: {b.id}</div>
                   </div>
                 )}
@@ -1323,7 +1351,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
-          {section === "cash" && <AdminCash data={data} showToast={showToast} />}
+          {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "staff" && isMain && <AdminStaff data={data} save={save} showToast={showToast} />}
         </div>
       </div>
@@ -2240,14 +2268,30 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
 
 // ── Admin Revenue ─────────────────────────────────────────
 function AdminRevenue({ data }) {
-  const all = data.events.flatMap(ev => ev.bookings.map(b => ({ ...b, eventTitle: ev.title })));
-  const total = all.reduce((s, b) => s + b.total, 0);
+  const [cashSales, setCashSales] = useState([]);
+  useEffect(() => {
+    api.cashSales.getAll().then(setCashSales).catch(console.error);
+  }, []);
+
+  const bookingRevenue = data.events.flatMap(ev => ev.bookings.map(b => ({
+    ...b, eventTitle: ev.title, source: "booking"
+  })));
+  const cashRevenue = cashSales.map(s => ({
+    id: s.id, userName: s.customer_name, eventTitle: "Cash Sale",
+    type: "cash", total: Number(s.total), date: s.created_at, source: "cash"
+  }));
+  const all = [...bookingRevenue, ...cashRevenue].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const totalBookings = bookingRevenue.reduce((s, b) => s + b.total, 0);
+  const totalCash = cashRevenue.reduce((s, b) => s + b.total, 0);
+  const total = totalBookings + totalCash;
+
   const byMonth = {};
   all.forEach(b => {
     const m = new Date(b.date).toLocaleString("en-GB", { month: "short", year: "numeric", timeZone: "Europe/London" });
     byMonth[m] = (byMonth[m] || 0) + b.total;
   });
-  const months = Object.entries(byMonth).sort();
+  const months = Object.entries(byMonth).sort((a, b) => new Date("01 " + b[0]) - new Date("01 " + a[0]));
   const [detail, setDetail] = useState(null);
 
   return (
@@ -2255,19 +2299,19 @@ function AdminRevenue({ data }) {
       <div className="page-header"><div><div className="page-title">Revenue</div><div className="page-sub">All times GMT</div></div></div>
       <div className="grid-4 mb-2">
         {[
-          { label: "Total Revenue", val: `£${total.toFixed(0)}`, color: "" },
-          { label: "Total Bookings", val: all.length, color: "blue" },
-          { label: "Months Active", val: months.length, color: "teal" },
-          { label: "Avg Order Value", val: `£${all.length ? (total / all.length).toFixed(0) : 0}`, color: "gold" },
+          { label: "Total Revenue", val: `£${total.toFixed(2)}`, color: "" },
+          { label: "Online Bookings", val: `£${totalBookings.toFixed(2)}`, color: "blue" },
+          { label: "Cash Sales", val: `£${totalCash.toFixed(2)}`, color: "teal" },
+          { label: "Transactions", val: all.length, color: "gold" },
         ].map(({ label, val, color }) => (
           <div key={label} className={`stat-card ${color}`}><div className="stat-val">{val}</div><div className="stat-label">{label}</div></div>
         ))}
       </div>
-      <div className="card">
+      <div className="card mb-2">
         <div style={{ fontWeight: 700, marginBottom: 14 }}>Monthly Breakdown</div>
         {months.length === 0 ? <p className="text-muted">No revenue data yet.</p> : (
           <table className="data-table">
-            <thead><tr><th>Month</th><th>Revenue</th><th>Bookings</th><th></th></tr></thead>
+            <thead><tr><th>Month</th><th>Revenue</th><th>Transactions</th><th></th></tr></thead>
             <tbody>
               {months.map(([m, rev]) => {
                 const mbs = all.filter(b => new Date(b.date).toLocaleString("en-GB", { month: "short", year: "numeric", timeZone: "Europe/London" }) === m);
@@ -2282,13 +2326,37 @@ function AdminRevenue({ data }) {
           </table>
         )}
       </div>
+      <div className="card">
+        <div style={{ fontWeight: 700, marginBottom: 14 }}>Recent Transactions</div>
+        <table className="data-table">
+          <thead><tr><th>Date</th><th>Customer</th><th>Description</th><th>Source</th><th>Total</th></tr></thead>
+          <tbody>
+            {all.slice(0, 20).map(b => (
+              <tr key={b.id}>
+                <td className="text-muted" style={{ fontSize: 12 }}>{gmtShort(b.date)}</td>
+                <td>{b.userName}</td>
+                <td>{b.eventTitle}</td>
+                <td><span className={`tag ${b.source === "cash" ? "tag-gold" : "tag-blue"}`}>{b.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
+                <td className="text-green">£{b.total.toFixed(2)}</td>
+              </tr>
+            ))}
+            {all.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No transactions yet</td></tr>}
+          </tbody>
+        </table>
+      </div>
       {detail && (
         <div className="overlay" onClick={() => setDetail(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div className="modal-title">💰 {detail.m} — Detail</div>
             <table className="data-table">
-              <thead><tr><th>Player</th><th>Event</th><th>Type</th><th>Total</th></tr></thead>
-              <tbody>{detail.bookings.map(b => <tr key={b.id}><td>{b.userName}</td><td>{b.eventTitle}</td><td>{b.type}</td><td className="text-green">£{b.total.toFixed(2)}</td></tr>)}</tbody>
+              <thead><tr><th>Customer</th><th>Description</th><th>Source</th><th>Total</th></tr></thead>
+              <tbody>{detail.bookings.map(b => (
+                <tr key={b.id}>
+                  <td>{b.userName}</td><td>{b.eventTitle}</td>
+                  <td><span className={`tag ${b.source === "cash" ? "tag-gold" : "tag-blue"}`}>{b.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
+                  <td className="text-green">£{b.total.toFixed(2)}</td>
+                </tr>
+              ))}</tbody>
             </table>
             <button className="btn btn-ghost mt-2" onClick={() => setDetail(null)}>Close</button>
           </div>
@@ -2422,13 +2490,37 @@ function AdminMessages({ data, save, showToast }) {
 }
 
 // ── Admin Cash Sales ──────────────────────────────────────
-function AdminCash({ data, showToast }) {
+function AdminCash({ data, cu, showToast }) {
   const [items, setItems] = useState([]);
   const [playerId, setPlayerId] = useState("manual");
   const [manual, setManual] = useState({ name: "", email: "" });
+  const [busy, setBusy] = useState(false);
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
 
-  const add = (item) => setItems(c => { const ex = c.find(x => x.id === item.id); return ex ? c.map(x => x.id === item.id ? { ...x, qty: x.qty + 1 } : x) : [...c, { ...item, qty: 1 }]; });
+  const add = (item) => setItems(c => {
+    const ex = c.find(x => x.id === item.id);
+    return ex ? c.map(x => x.id === item.id ? { ...x, qty: x.qty + 1 } : x) : [...c, { ...item, qty: 1 }];
+  });
+
+  const completeSale = async () => {
+    if (items.length === 0) { showToast("Add items first", "red"); return; }
+    const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+    setBusy(true);
+    try {
+      await api.cashSales.create({
+        customerName:  player ? player.name : (manual.name || "Walk-in"),
+        customerEmail: player ? player.email : manual.email,
+        userId:        player ? player.id : null,
+        items:         items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+        total,
+        recordedBy:    cu?.id || null,
+      });
+      showToast(`✅ Cash sale £${total.toFixed(2)} recorded!`);
+      setItems([]); setManual({ name: "", email: "" }); setPlayerId("manual");
+    } catch (e) {
+      showToast("Failed to save sale: " + e.message, "red");
+    } finally { setBusy(false); }
+  };
 
   return (
     <div>
@@ -2476,9 +2568,8 @@ function AdminCash({ data, showToast }) {
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: 22, marginTop: 12 }}>
               <span>TOTAL</span><span className="text-green">£{total.toFixed(2)}</span>
             </div>
-            <button className="btn btn-primary mt-2" style={{ width: "100%", padding: 10 }}
-              onClick={() => { if (items.length === 0) { showToast("Add items first", "red"); return; } showToast(`Cash sale £${total.toFixed(2)} recorded!`); setItems([]); }}>
-              Complete Sale
+            <button className="btn btn-primary mt-2" style={{ width: "100%", padding: 10 }} disabled={busy} onClick={completeSale}>
+              {busy ? "Saving…" : "Complete Sale"}
             </button>
           </div>
         </div>
@@ -2499,17 +2590,34 @@ function AdminStaff({ data, save, showToast }) {
   const addStaff = async () => {
     if (!form.name || !form.email || !form.password) { showToast("Name, email and password required", "red"); return; }
     try {
-      await api.auth.signUp({ email: form.email, password: form.password, name: form.name, phone: "" });
-      // Find the new profile and set role + permissions
-      await new Promise(r => setTimeout(r, 1000)); // brief wait for trigger
+      // Use the Supabase admin endpoint via service role — but since we only have anon key,
+      // we sign up normally then immediately update their role
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { data: { name: form.name } }
+      });
+      if (signUpErr) throw signUpErr;
+      if (!signUpData.user) throw new Error("No user returned — email may already be registered");
+
+      // Wait for trigger to create profile row
+      await new Promise(r => setTimeout(r, 1500));
+
+      // Update their profile to staff role + permissions
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({ name: form.name, role: 'staff', permissions: form.permissions })
+        .eq('id', signUpData.user.id);
+      if (updateErr) throw updateErr;
+
       const allProfiles = await api.profiles.getAll();
-      const newProfile = allProfiles.find(p => p.email === form.email);
-      if (newProfile) {
-        await api.profiles.update(newProfile.id, { role: "staff", permissions: form.permissions });
-      }
-      save({ users: await api.profiles.getAll().then(list => list.map(normaliseProfile)) });
-      showToast("Staff account created!"); setModal(false); setForm({ name: "", email: "", password: "", permissions: [] });
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
+      save({ users: allProfiles.map(normaliseProfile) });
+      showToast("✅ Staff account created! They need to confirm their email before logging in.");
+      setModal(false);
+      setForm({ name: "", email: "", password: "", permissions: [] });
+    } catch (e) {
+      showToast("Failed: " + e.message, "red");
+    }
   };
 
   return (
