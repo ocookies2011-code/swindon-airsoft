@@ -1919,7 +1919,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
                 {[["Name", vw.waiverPending.name, vw.waiverData?.name], ["DOB", vw.waiverPending.dob, vw.waiverData?.dob], ["Medical", vw.waiverPending.medical || "None", vw.waiverData?.medical || "None"], ["Minor", vw.waiverPending.isChild ? "Yes" : "No", vw.waiverData?.isChild ? "Yes" : "No"], ["Guardian", vw.waiverPending.guardian || "N/A", vw.waiverData?.guardian || "N/A"]].map(([k, v, old]) => {
                   const changed = v !== old;
                   return (
-                    <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13, background: changed ? "#2d1e0a" : "transparent", borderRadius: changed ? 4 : 0, padding: changed ? "7px 8px" : "7px 0" }}>
+                    <div key={k} style={{ display: "flex", gap: 12, padding: changed ? "7px 8px" : "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13, background: changed ? "#2d1e0a" : "transparent", borderRadius: changed ? 4 : 0 }}>
                       <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span>
                       <span style={{ color: changed ? "var(--gold)" : "var(--text)" }}>{v}</span>
                       {changed && <span className="tag tag-gold" style={{ fontSize: 10, marginLeft: "auto" }}>CHANGED</span>}
