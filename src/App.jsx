@@ -2810,6 +2810,7 @@ function AdminCash({ data, cu, showToast }) {
   const [playerId, setPlayerId] = useState("manual");
   const [manual, setManual] = useState({ name: "", email: "" });
   const [busy, setBusy] = useState(false);
+  const [lastError, setLastError] = useState(null);
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
 
   const add = (item) => setItems(c => {
@@ -2819,27 +2820,104 @@ function AdminCash({ data, cu, showToast }) {
 
   const completeSale = async () => {
     if (items.length === 0) { showToast("Add items first", "red"); return; }
-    const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+    setLastError(null);
     setBusy(true);
+    const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+
+    const payload = {
+      customer_name:  player ? player.name : (manual.name || "Walk-in"),
+      customer_email: player ? (player.email || "") : (manual.email || ""),
+      user_id:        player ? player.id : null,
+      items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      total:          total,
+      recorded_by:    null, // omit recorded_by to avoid FK issues if cu.id is stale
+    };
+
     try {
-      const { data: result, error } = await supabase.from('cash_sales').insert({
-        customer_name:  player ? player.name : (manual.name || "Walk-in"),
-        customer_email: player ? (player.email || "") : (manual.email || ""),
-        user_id:        player ? player.id : null,
-        items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
-        total,
-        recorded_by:    cu?.id || null,
-      }).select().single();
-      if (error) throw error;
-      showToast(`✅ Cash sale £${total.toFixed(2)} recorded!`);
-      setItems([]); setManual({ name: "", email: "" }); setPlayerId("manual");
+      const response = await supabase.from('cash_sales').insert(payload).select();
+      console.log("Cash sale response:", response);
+
+      if (response.error) {
+        const msg = response.error.message || response.error.details || JSON.stringify(response.error);
+        setLastError(msg);
+        showToast("Error: " + msg, "red");
+      } else {
+        showToast(`✅ Cash sale £${total.toFixed(2)} recorded!`);
+        setItems([]);
+        setManual({ name: "", email: "" });
+        setPlayerId("manual");
+      }
     } catch (e) {
-      console.error("Cash sale error:", e);
-      showToast("Failed: " + (e.message || JSON.stringify(e)), "red");
-    } finally {
-      setBusy(false);
+      const msg = e?.message || String(e);
+      console.error("Cash sale exception:", e);
+      setLastError(msg);
+      showToast("Error: " + msg, "red");
     }
+
+    setBusy(false);
   };
+
+  return (
+    <div>
+      <div className="page-header"><div><div className="page-title">Cash Sales</div><div className="page-sub">Walk-in or unregistered customer sales</div></div></div>
+      {lastError && (
+        <div className="alert alert-red mb-2" style={{ wordBreak: "break-all", fontSize: 12 }}>
+          <strong>Error:</strong> {lastError}
+        </div>
+      )}
+      <div className="grid-2">
+        <div className="card">
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>PRODUCTS</div>
+          {data.shop.length === 0 && <p className="text-muted" style={{ fontSize: 13 }}>No products in shop yet. Add products in the Shop section.</p>}
+          {data.shop.map(item => (
+            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ fontSize: 13 }}>{item.name}</span>
+              <div className="gap-2"><span className="text-green">£{item.price}</span><button className="btn btn-sm btn-primary" onClick={() => add(item)}>+</button></div>
+            </div>
+          ))}
+        </div>
+        <div>
+          <div className="card mb-2">
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>CUSTOMER</div>
+            <div className="form-group">
+              <label>Player</label>
+              <select value={playerId} onChange={e => setPlayerId(e.target.value)}>
+                <option value="manual">Manual Entry (walk-in)</option>
+                {data.users.filter(u => u.role === "player").map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            {playerId === "manual" && (
+              <>
+                <div className="form-group"><label>Name</label><input value={manual.name} onChange={e => setManual(p => ({ ...p, name: e.target.value }))} /></div>
+                <div className="form-group"><label>Email (optional)</label><input value={manual.email} onChange={e => setManual(p => ({ ...p, email: e.target.value }))} /></div>
+              </>
+            )}
+          </div>
+          <div className="card">
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>SALE ITEMS</div>
+            {items.length === 0 ? <p className="text-muted" style={{ fontSize: 13 }}>No items added yet</p> : (
+              items.map(item => (
+                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+                  <span>{item.name} ×{item.qty}</span>
+                  <div className="gap-2">
+                    <span className="text-green">£{(item.price * item.qty).toFixed(2)}</span>
+                    <button style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }} onClick={() => setItems(c => c.filter(x => x.id !== item.id))}>✕</button>
+                  </div>
+                </div>
+              ))
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: 22, marginTop: 12 }}>
+              <span>TOTAL</span><span className="text-green">£{total.toFixed(2)}</span>
+            </div>
+            <button className="btn btn-primary mt-2" style={{ width: "100%", padding: 10 }} disabled={busy} onClick={completeSale}>
+              {busy ? "Saving…" : "Complete Sale"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div>
