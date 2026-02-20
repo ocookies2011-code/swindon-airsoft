@@ -89,7 +89,12 @@ function useData() {
     Object.entries(patch).forEach(([k, v]) => {
       if (map[k]) snakePatch[map[k]] = v;
     });
-    await api.profiles.update(id, snakePatch);
+    try {
+      await api.profiles.update(id, snakePatch);
+    } catch (e) {
+      console.error("updateUser failed:", e.message, snakePatch);
+      throw e;
+    }
     // Refresh local data
     setData(prev => {
       if (!prev) return prev;
