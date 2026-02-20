@@ -1425,12 +1425,18 @@ function AdminBookingsCheckin({ data, updateEvent, updateUser, showToast }) {
     ev.bookings.map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))
   );
 
-  const doCheckin = (booking, evObj) => {
-    const updated = evObj.bookings.map(b => b.id === booking.id ? { ...b, checkedIn: true } : b);
-    updateEvent(evObj.id, { bookings: updated });
-    const u = data.users.find(x => x.id === booking.userId);
-    if (u) updateUser(u.id, { gamesAttended: u.gamesAttended + 1 });
-    showToast(`✅ ${booking.userName} checked in!`);
+  const doCheckin = async (booking, evObj) => {
+    try {
+      const u = data.users.find(x => x.id === booking.userId);
+      await api.bookings.checkIn(booking.id, booking.userId, u ? u.gamesAttended : 0);
+      // Refresh events locally
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      if (u) updateUser(u.id, { gamesAttended: u.gamesAttended + 1 });
+      showToast(`✅ ${booking.userName} checked in!`);
+    } catch (e) {
+      showToast("Check-in failed: " + e.message, "red");
+    }
   };
 
   const manualCheckin = () => {
@@ -1599,16 +1605,31 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
   const [form, setForm] = useState(blank);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const saveEvent = () => {
+  const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
-    if (modal === "new") save({ events: [...data.events, { ...form, id: uid(), bookings: [] }] });
-    else updateEvent(form.id, form);
-    showToast("Event saved!"); setModal(null);
+    try {
+      if (modal === "new") {
+        await api.events.create(form);
+      } else {
+        await api.events.update(form.id, form);
+      }
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Event saved!"); setModal(null);
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    }
   };
 
-  const clone = (ev) => {
-    save({ events: [...data.events, { ...ev, id: uid(), title: ev.title + " (Copy)", bookings: [] }] });
-    showToast("Event cloned!");
+  const clone = async (ev) => {
+    try {
+      await api.events.create({ ...ev, title: ev.title + " (Copy)", bookings: [] });
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Event cloned!");
+    } catch (e) {
+      showToast("Clone failed: " + e.message, "red");
+    }
   };
 
   const viewEv = viewId ? data.events.find(e => e.id === viewId) : null;
@@ -1825,9 +1846,12 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
                     <td>
                       <div className="gap-2">
-                        <button className="btn btn-sm btn-danger" onClick={() => {
-                          save({ users: data.users.filter(x => x.id !== u.id) });
-                          showToast(`Account deleted: ${u.name}`, "red");
+                        <button className="btn btn-sm btn-danger" onClick={async () => {
+                          try {
+                            await api.profiles.delete(u.id);
+                            save({ users: data.users.filter(x => x.id !== u.id) });
+                            showToast(`Account deleted: ${u.name}`, "red");
+                          } catch (e) { showToast("Delete failed: " + e.message, "red"); }
                         }}>Delete Account</button>
                         <button className="btn btn-sm btn-ghost" onClick={() => {
                           updateUser(u.id, { deleteRequest: false });
@@ -1979,24 +2003,39 @@ function AdminShop({ data, save, showToast }) {
     const r = new FileReader(); r.onload = ev => f("image", ev.target.result); r.readAsDataURL(file);
   };
 
-  const saveItem = () => {
+  const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
-    if (modal === "new") save({ shop: [...data.shop, { ...form, id: uid() }] });
-    else save({ shop: data.shop.map(x => x.id === form.id ? form : x) });
-    showToast("Product saved!"); setModal(null);
+    try {
+      if (modal === "new") await api.shop.create(form);
+      else await api.shop.update(form.id, form);
+      save({ shop: await api.shop.getAll() });
+      showToast("Product saved!"); setModal(null);
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    }
   };
 
-  const savePostage = () => {
+  const savePostage = async () => {
     if (!postForm.name) { showToast("Name required", "red"); return; }
-    const opts = data.postageOptions || [];
-    if (postModal === "new") save({ postageOptions: [...opts, { ...postForm, id: uid() }] });
-    else save({ postageOptions: opts.map(x => x.id === postForm.id ? postForm : x) });
-    showToast("Postage option saved!"); setPostModal(null);
+    try {
+      const opts = data.postageOptions || [];
+      if (postModal === "new") await api.postage.create(postForm);
+      else await api.postage.update(postForm.id, postForm);
+      save({ postageOptions: await api.postage.getAll() });
+      showToast("Postage option saved!"); setPostModal(null);
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    }
   };
 
-  const deletePostage = (id) => {
-    save({ postageOptions: (data.postageOptions || []).filter(x => x.id !== id) });
-    showToast("Postage option removed");
+  const deletePostage = async (id) => {
+    try {
+      await api.postage.delete(id);
+      save({ postageOptions: await api.postage.getAll() });
+      showToast("Postage option removed");
+    } catch (e) {
+      showToast("Delete failed: " + e.message, "red");
+    }
   };
 
   return (
@@ -2029,7 +2068,7 @@ function AdminShop({ data, save, showToast }) {
                   <td>
                     <div className="gap-2">
                       <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item }); setModal(item.id); }}>Edit</button>
-                      <button className="btn btn-sm btn-danger" onClick={() => { save({ shop: data.shop.filter(x => x.id !== item.id) }); showToast("Deleted"); }}>Del</button>
+                      <button className="btn btn-sm btn-danger" onClick={async () => { try { await api.shop.delete(item.id); save({ shop: await api.shop.getAll() }); showToast("Deleted"); } catch(e) { showToast("Delete failed: " + e.message, "red"); } }}>Del</button>
                     </div>
                   </td>
                 </tr>
@@ -2119,17 +2158,29 @@ function AdminExtras({ data, save, showToast }) {
   const [form, setForm] = useState({ name: "", price: 0, noPost: false });
   const ev = data.events.find(e => e.id === evId);
 
-  const addExtra = () => {
+  const addExtra = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
-    const updated = { ...ev, extras: [...(ev.extras || []), { ...form, id: uid() }] };
-    save({ events: data.events.map(e => e.id === evId ? updated : e) });
-    setForm({ name: "", price: 0, noPost: false }); showToast("Extra added!");
+    try {
+      const updatedExtras = [...(ev.extras || []), { ...form, id: uid() }];
+      await api.events.update(evId, { extras: updatedExtras });
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      setForm({ name: "", price: 0, noPost: false }); showToast("Extra added!");
+    } catch (e) {
+      showToast("Failed: " + e.message, "red");
+    }
   };
 
-  const del = (id) => {
-    const updated = { ...ev, extras: ev.extras.filter(x => x.id !== id) };
-    save({ events: data.events.map(e => e.id === evId ? updated : e) });
-    showToast("Removed");
+  const del = async (id) => {
+    try {
+      const updatedExtras = ev.extras.filter(x => x.id !== id);
+      await api.events.update(evId, { extras: updatedExtras });
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Removed");
+    } catch (e) {
+      showToast("Failed: " + e.message, "red");
+    }
   };
 
   return (
@@ -2250,17 +2301,33 @@ function AdminRevenue({ data }) {
 // ── Admin Gallery ─────────────────────────────────────────
 function AdminGallery({ data, save, showToast }) {
   const [urlInput, setUrlInput] = useState({});
-  const addAlbum = () => {
+  const addAlbum = async () => {
     const name = prompt("Album name:"); if (!name) return;
-    save({ albums: [...data.albums, { id: uid(), title: name, images: [] }] });
-    showToast("Album created!");
+    try {
+      await api.gallery.createAlbum(name);
+      save({ albums: await api.gallery.getAll() });
+      showToast("Album created!");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
-  const addImg = (albumId, url) => {
-    save({ albums: data.albums.map(a => a.id === albumId ? { ...a, images: [...a.images, url] } : a) });
+  const addImg = async (albumId, url) => {
+    try {
+      await api.gallery.addImageUrl(albumId, url);
+      save({ albums: await api.gallery.getAll() });
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
-  const handleFile = (albumId, e) => {
+  const handleFile = async (albumId, e) => {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = ev => { addImg(albumId, ev.target.result); showToast("Image added!"); }; r.readAsDataURL(file);
+    try {
+      await api.gallery.uploadImage(albumId, file);
+      save({ albums: await api.gallery.getAll() });
+      showToast("Image added!");
+    } catch (e) { showToast("Upload failed: " + e.message, "red"); }
+  };
+  const removeImg = async (albumId, url) => {
+    try {
+      await api.gallery.removeImage(albumId, url);
+      save({ albums: await api.gallery.getAll() });
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
   return (
     <div>
@@ -2280,7 +2347,7 @@ function AdminGallery({ data, save, showToast }) {
               <div key={i} className="photo-cell">
                 <img src={img} alt="" />
                 <button style={{ position: "absolute", top: 4, right: 4, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}
-                  onClick={() => save({ albums: data.albums.map(a => a.id === album.id ? { ...a, images: a.images.filter((_, j) => j !== i) } : a) })}>✕</button>
+                  onClick={() => removeImg(album.id, img)}>✕</button>
               </div>
             ))}
           </div>
@@ -2293,10 +2360,20 @@ function AdminGallery({ data, save, showToast }) {
 // ── Admin Q&A ─────────────────────────────────────────────
 function AdminQA({ data, save, showToast }) {
   const [form, setForm] = useState({ q: "", a: "" });
-  const add = () => {
+  const add = async () => {
     if (!form.q || !form.a) return;
-    save({ qa: [...data.qa, { id: uid(), ...form }] });
-    setForm({ q: "", a: "" }); showToast("Q&A added!");
+    try {
+      await api.qa.create(form);
+      save({ qa: await api.qa.getAll() });
+      setForm({ q: "", a: "" }); showToast("Q&A added!");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+  const del = async (id) => {
+    try {
+      await api.qa.delete(id);
+      save({ qa: await api.qa.getAll() });
+      showToast("Deleted");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
   return (
     <div>
@@ -2312,7 +2389,7 @@ function AdminQA({ data, save, showToast }) {
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{item.q}</div>
             <div className="text-muted" style={{ fontSize: 13, lineHeight: 1.5 }}>{item.a}</div>
           </div>
-          <button className="btn btn-sm btn-danger" style={{ marginLeft: 14, flexShrink: 0 }} onClick={() => save({ qa: data.qa.filter(x => x.id !== item.id) })}>Del</button>
+          <button className="btn btn-sm btn-danger" style={{ marginLeft: 14, flexShrink: 0 }} onClick={() => del(item.id)}>Del</button>
         </div>
       ))}
     </div>
@@ -2322,14 +2399,21 @@ function AdminQA({ data, save, showToast }) {
 // ── Admin Messages ────────────────────────────────────────
 function AdminMessages({ data, save, showToast }) {
   const [msg, setMsg] = useState(data.homeMsg || "");
+  const saveMsg = async (val) => {
+    try {
+      await api.settings.set("home_message", val);
+      save({ homeMsg: val });
+      showToast(val ? "Message updated!" : "Cleared");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
   return (
     <div>
       <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Banner shown on homepage</div></div></div>
       <div className="card">
         <div className="form-group"><label>Home Page Banner Message</label><textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. 🎯 Next event booking now open!" /></div>
         <div className="gap-2">
-          <button className="btn btn-primary" onClick={() => { save({ homeMsg: msg }); showToast("Message updated!"); }}>Save</button>
-          <button className="btn btn-danger" onClick={() => { save({ homeMsg: "" }); setMsg(""); showToast("Cleared"); }}>Clear</button>
+          <button className="btn btn-primary" onClick={() => saveMsg(msg)}>Save</button>
+          <button className="btn btn-danger" onClick={() => { setMsg(""); saveMsg(""); }}>Clear</button>
         </div>
         {data.homeMsg && <div className="alert alert-green mt-2">Preview: {data.homeMsg}</div>}
       </div>
@@ -2412,11 +2496,20 @@ function AdminStaff({ data, save, showToast }) {
 
   const toggle = (p) => setForm(f => ({ ...f, permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p] }));
 
-  const addStaff = () => {
-    if (!form.name || !form.email) { showToast("Name and email required", "red"); return; }
-    const nu = { id: uid(), ...form, role: "staff", phone: "", address: "", gamesAttended: 0, waiverSigned: false, waiverYear: null, waiverData: null, waiverPending: null, vipStatus: "none", vipApplied: false, ukara: "", credits: 0, leaderboardOptOut: true, profilePic: "", joinDate: new Date().toISOString().slice(0, 10), deleteRequest: false };
-    save({ users: [...data.users, nu] });
-    showToast("Staff account created!"); setModal(false); setForm({ name: "", email: "", password: "", permissions: [] });
+  const addStaff = async () => {
+    if (!form.name || !form.email || !form.password) { showToast("Name, email and password required", "red"); return; }
+    try {
+      await api.auth.signUp({ email: form.email, password: form.password, name: form.name, phone: "" });
+      // Find the new profile and set role + permissions
+      await new Promise(r => setTimeout(r, 1000)); // brief wait for trigger
+      const allProfiles = await api.profiles.getAll();
+      const newProfile = allProfiles.find(p => p.email === form.email);
+      if (newProfile) {
+        await api.profiles.update(newProfile.id, { role: "staff", permissions: form.permissions });
+      }
+      save({ users: await api.profiles.getAll().then(list => list.map(normaliseProfile)) });
+      showToast("Staff account created!"); setModal(false); setForm({ name: "", email: "", password: "", permissions: [] });
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
   return (
@@ -2434,7 +2527,7 @@ function AdminStaff({ data, save, showToast }) {
                     {u.permissions.map(p => <span key={p} className="tag tag-blue" style={{ fontSize: 10 }}>{p}</span>)}
                   </div>
                 </td>
-                <td><button className="btn btn-sm btn-danger" onClick={() => { save({ users: data.users.filter(x => x.id !== u.id) }); showToast("Staff removed"); }}>Remove</button></td>
+                <td><button className="btn btn-sm btn-danger" onClick={async () => { try { await api.profiles.delete(u.id); save({ users: data.users.filter(x => x.id !== u.id) }); showToast("Staff removed"); } catch(e) { showToast("Failed: " + e.message, "red"); } }}>Remove</button></td>
               </tr>
             ))}
             {staff.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No staff accounts yet</td></tr>}
