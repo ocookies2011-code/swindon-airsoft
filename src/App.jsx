@@ -175,7 +175,7 @@ body,#root{background:#0d1117;color:#c9d1d9;font-family:'Exo 2',sans-serif;min-h
   --border:#30363d; --text:#c9d1d9; --muted:#8b949e; --subtle:#484f58;
   --green:#3fb950; --green2:#238636; --red:#f85149; --gold:#d29922;
   --blue:#58a6ff; --purple:#bc8cff; --orange:#e3b341; --teal:#39d353;
-  --sidebar-w:220px;
+  --sidebar-w:220px; --nav-h:56px; --bottom-nav-h:64px;
 }
 /* Scrollbar */
 ::-webkit-scrollbar{width:6px;height:6px;}
@@ -183,34 +183,44 @@ body,#root{background:#0d1117;color:#c9d1d9;font-family:'Exo 2',sans-serif;min-h
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--subtle);}
 
-/* Layout */
-.app-shell{display:flex;min-height:100vh;}
-.sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;}
-.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
-.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;
-  height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
-.page-content{padding:24px;flex:1;}
+/* ── Public Nav ── */
+.pub-nav{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.pub-nav-inner{max-width:1200px;margin:0 auto;padding:0 16px;height:var(--nav-h);display:flex;align-items:center;gap:4px;}
+.pub-nav-logo{display:flex;align-items:center;gap:8px;cursor:pointer;margin-right:8px;flex-shrink:0;}
+.pub-nav-logo-box{background:var(--green);width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:13px;}
+.pub-nav-logo-text{font-weight:900;font-size:15px;letter-spacing:.02em;white-space:nowrap;}
+.pub-nav-links{display:flex;gap:2px;flex:1;}
+.pub-nav-link{background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;padding:6px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;}
+.pub-nav-link.active{color:var(--green);}
+.pub-nav-link:hover{color:var(--text);}
+.pub-nav-actions{display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0;}
+/* Mobile hamburger menu */
+.pub-nav-hamburger{display:none;background:none;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:18px;cursor:pointer;}
+.pub-nav-drawer{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);}
+.pub-nav-drawer.open{display:block;}
+.pub-nav-drawer-panel{position:absolute;top:0;left:0;width:80%;max-width:300px;height:100%;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;overflow-y:auto;}
+.pub-nav-drawer-logo{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;font-weight:900;font-size:18px;}
+.pub-nav-drawer-link{display:flex;align-items:center;gap:12px;padding:14px 20px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;}
+.pub-nav-drawer-link.active{color:var(--green);background:#0d2818;}
+.pub-nav-drawer-link:hover{background:var(--bg4);color:var(--text);}
+.pub-nav-drawer-divider{border:none;border-top:1px solid var(--border);margin:8px 0;}
 
-/* Sidebar */
-.sb-logo{padding:18px 16px 12px;border-bottom:1px solid var(--border);}
-.sb-logo-text{font-size:20px;font-weight:900;letter-spacing:.02em;}
-.sb-logo-text span{color:var(--green);}
-.sb-time{font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-top:3px;}
-.sb-section{padding:16px 8px 4px;}
-.sb-label{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--subtle);padding:0 8px;margin-bottom:6px;}
-.sb-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;
-  font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;position:relative;margin-bottom:2px;}
-.sb-item:hover{background:var(--bg4);color:var(--text);}
-.sb-item.active{background:#238636;color:#fff;}
-.sb-item.active .sb-icon{opacity:1;}
-.sb-icon{font-size:16px;flex-shrink:0;}
-.sb-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:10px;
-  font-size:10px;font-weight:700;padding:1px 7px;min-width:20px;text-align:center;}
-.sb-badge.gold{background:var(--gold);}
-.sb-badge.blue{background:var(--blue);color:#000;}
+/* ── Bottom nav for mobile public pages ── */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:var(--bg2);border-top:1px solid var(--border);height:var(--bottom-nav-h);
+  padding:0 4px;padding-bottom:env(safe-area-inset-bottom);}
+.bottom-nav-inner{display:flex;height:100%;}
+.bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;border:none;background:none;color:var(--muted);font-size:9px;font-weight:700;
+  letter-spacing:.05em;cursor:pointer;padding:4px 2px;border-radius:8px;}
+.bottom-nav-btn.active{color:var(--green);}
+.bottom-nav-btn:hover{color:var(--text);}
+.bottom-nav-icon{font-size:20px;line-height:1;}
 
-/* Cards */
+/* ── Page content padding for mobile bottom nav ── */
+.pub-page-wrap{padding-bottom:80px;}
+
+/* ── Cards ── */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;}
 .card-sm{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:18px 20px;
@@ -227,7 +237,7 @@ body,#root{background:#0d1117;color:#c9d1d9;font-family:'Exo 2',sans-serif;min-h
 .stat-sub.red{color:var(--red);}
 .stat-sub.green{color:var(--green);}
 
-/* Buttons */
+/* ── Buttons ── */
 button{cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:600;border:none;border-radius:6px;transition:all .15s;}
 .btn{padding:8px 18px;font-size:13px;}
 .btn-primary{background:var(--green2);color:#fff;border:1px solid var(--green);}
@@ -240,7 +250,7 @@ button{cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:600;border:none
 .btn-gold{background:#92400e;color:var(--orange);border:1px solid var(--gold);}
 .btn-gold:hover{background:#a16207;}
 
-/* Tags */
+/* ── Tags ── */
 .tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:.04em;}
 .tag-green{background:#1a4d2e;color:var(--green);border:1px solid var(--green2);}
 .tag-red{background:#3d1c1c;color:var(--red);border:1px solid #6b2222;}
@@ -248,40 +258,41 @@ button{cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:600;border:none
 .tag-blue{background:#1a2d4d;color:var(--blue);border:1px solid #1a4a8a;}
 .tag-purple{background:#2d1a4d;color:var(--purple);border:1px solid #4a1a8a;}
 
-/* Forms */
+/* ── Forms ── */
 .form-group{margin-bottom:14px;}
 .form-group label{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;text-transform:uppercase;}
 input,select,textarea{background:var(--bg4);border:1px solid var(--border);color:var(--text);
-  padding:8px 12px;border-radius:6px;font-family:'Exo 2',sans-serif;font-size:13px;width:100%;outline:none;transition:border .15s;}
+  padding:10px 12px;border-radius:6px;font-family:'Exo 2',sans-serif;font-size:14px;width:100%;outline:none;transition:border .15s;}
 input:focus,select:focus,textarea:focus{border-color:var(--blue);}
 input[type=checkbox]{width:auto;accent-color:var(--green);cursor:pointer;}
 input[type=file]{padding:6px;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
 
-/* Table */
-.data-table{width:100%;border-collapse:collapse;}
+/* ── Table (scrollable on mobile) ── */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:6px;}
+.data-table{width:100%;border-collapse:collapse;min-width:500px;}
 .data-table th{text-align:left;padding:10px 14px;font-size:11px;font-weight:700;letter-spacing:.1em;
-  color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase;}
+  color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase;white-space:nowrap;}
 .data-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid #21262d;}
 .data-table tbody tr:hover td{background:#ffffff05;}
 
-/* Modal */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
-.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:28px;
-  width:100%;max-width:580px;max-height:90vh;overflow-y:auto;}
-.modal-box.wide{max-width:780px;}
-.modal-title{font-size:18px;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:0;}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:24px;
+  width:100%;max-width:600px;max-height:92vh;overflow-y:auto;}
+.modal-box.wide{max-width:100%;border-radius:16px 16px 0 0;}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:10px;}
 
-/* Misc */
+/* ── Misc ── */
 .divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
-.alert{padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:12px;}
+.alert{padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:12px;line-height:1.5;}
 .alert-green{background:#0d2818;border:1px solid var(--green2);color:var(--green);}
 .alert-red{background:#2d0d0d;border:1px solid #6b2222;color:var(--red);}
 .alert-gold{background:#2d1e0a;border:1px solid #6b4f0a;color:var(--gold);}
 .alert-blue{background:#0d1a2d;border:1px solid #1a4a8a;color:var(--blue);}
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.page-title{font-size:26px;font-weight:800;letter-spacing:.02em;}
+.page-title{font-size:22px;font-weight:800;letter-spacing:.02em;}
 .page-sub{font-size:13px;color:var(--muted);margin-top:2px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
@@ -289,7 +300,7 @@ input[type=file]{padding:6px;}
 .grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
 @media(max-width:1100px){.grid-6{grid-template-columns:repeat(3,1fr);}.grid-4{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:700px){.grid-2,.grid-3,.grid-4,.grid-6{grid-template-columns:1fr;}}
-.gap-2{display:flex;gap:8px;flex-wrap:wrap;}
+.gap-2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .mt-1{margin-top:8px;}.mt-2{margin-top:16px;}.mt-3{margin-top:24px;}
 .mb-1{margin-bottom:8px;}.mb-2{margin-bottom:16px;}
 .text-muted{color:var(--muted);}
@@ -301,19 +312,19 @@ input[type=file]{padding:6px;}
 .progress-bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;}
 .progress-fill{height:100%;background:var(--green);border-radius:4px;transition:width .4s;}
 .progress-fill.red{background:var(--red);}
-.countdown-wrap{display:flex;gap:20px;justify-content:center;}
+.countdown-wrap{display:flex;gap:16px;justify-content:center;}
 .countdown-unit{text-align:center;}
-.countdown-num{font-size:52px;font-weight:900;color:var(--green);line-height:1;font-family:'Share Tech Mono',monospace;}
+.countdown-num{font-size:42px;font-weight:900;color:var(--green);line-height:1;font-family:'Share Tech Mono',monospace;}
 .countdown-lbl{font-size:10px;letter-spacing:.15em;color:var(--muted);margin-top:2px;}
-.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
 .photo-cell{aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:var(--bg4);position:relative;cursor:pointer;}
 .photo-cell img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
 .photo-cell:hover img{transform:scale(1.06);}
 .qr-box{width:120px;height:120px;background:#fff;padding:8px;border-radius:6px;margin:0 auto;}
 .qr-inner{width:100%;height:100%;background:repeating-conic-gradient(#000 0% 25%,#fff 0% 50%) 0 0/16px 16px;}
-.nav-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;}
-.nav-tab{padding:8px 18px;font-size:13px;font-weight:600;background:transparent;border:none;
-  color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:0;cursor:pointer;}
+.nav-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.nav-tab{padding:10px 16px;font-size:13px;font-weight:600;background:transparent;border:none;
+  color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:0;cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .nav-tab:hover{color:var(--text);}
 .nav-tab.active{color:var(--green);border-bottom-color:var(--green);}
 .event-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:border .15s;}
@@ -326,42 +337,58 @@ input[type=file]{padding:6px;}
 .shop-img img{width:100%;height:100%;object-fit:cover;}
 .shop-body{padding:14px;}
 .lb-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:6px;margin-bottom:6px;background:var(--bg4);}
-.lb-rank{font-size:22px;font-weight:900;width:36px;text-align:center;font-family:'Share Tech Mono',monospace;color:var(--muted);}
+.lb-rank{font-size:20px;font-weight:900;width:32px;text-align:center;font-family:'Share Tech Mono',monospace;color:var(--muted);}
 .lb-rank.top{color:var(--gold);}
 .lb-avatar{width:38px;height:38px;border-radius:50%;background:var(--bg2);border:2px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;overflow:hidden;flex-shrink:0;}
 .lb-avatar img{width:100%;height:100%;object-fit:cover;}
-.lb-games{margin-left:auto;font-size:22px;font-weight:900;color:var(--green);font-family:'Share Tech Mono',monospace;}
+.lb-games{margin-left:auto;font-size:20px;font-weight:900;color:var(--green);font-family:'Share Tech Mono',monospace;}
 .accordion-item{border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;}
 .accordion-q{padding:14px 16px;cursor:pointer;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;}
 .accordion-q:hover{background:var(--bg4);}
 .accordion-a{padding:14px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);line-height:1.6;}
 
-/* Admin specific */
+/* ── Admin shell ── */
 .admin-shell{display:flex;min-height:100vh;}
 .admin-sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);
-  flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;}
+  flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;transition:transform .25s;}
 .admin-main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
-.admin-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;
+.admin-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;
   height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
-.admin-content{padding:24px;flex:1;}
+.admin-content{padding:16px;flex:1;}
+.sb-logo{padding:16px 14px 12px;border-bottom:1px solid var(--border);}
+.sb-logo-text{font-size:18px;font-weight:900;letter-spacing:.02em;}
+.sb-logo-text span{color:var(--green);}
+.sb-time{font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-top:3px;}
+.sb-label{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--subtle);padding:0 8px;margin-bottom:6px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:6px;cursor:pointer;
+  font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;position:relative;margin-bottom:2px;}
+.sb-item:hover{background:var(--bg4);color:var(--text);}
+.sb-item.active{background:#238636;color:#fff;}
+.sb-icon{font-size:16px;flex-shrink:0;}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:10px;
+  font-size:10px;font-weight:700;padding:1px 7px;min-width:20px;text-align:center;}
+.sb-badge.gold{background:var(--gold);}
+.sb-badge.blue{background:var(--blue);color:#000;}
+/* Admin mobile sidebar overlay */
+.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:49;}
 
-/* Bar chart */
+/* ── Bar chart ── */
 .bar-chart{display:flex;align-items:flex-end;gap:6px;height:80px;}
 .bar{background:var(--green2);border-radius:3px 3px 0 0;flex:1;min-height:4px;transition:height .4s;}
 .bar:hover{background:var(--green);}
 .bar-labels{display:flex;gap:6px;}
 .bar-label{flex:1;text-align:center;font-size:10px;color:var(--muted);padding-top:4px;}
 
-/* Toast */
-.toast{position:fixed;bottom:20px;right:20px;z-index:999;padding:12px 20px;border-radius:8px;
-  font-size:13px;font-weight:600;animation:slideUp .2s ease;max-width:320px;}
+/* ── Toast ── */
+.toast{position:fixed;bottom:80px;right:16px;z-index:999;padding:12px 18px;border-radius:8px;
+  font-size:13px;font-weight:600;animation:slideUp .2s ease;max-width:300px;}
 .toast-green{background:#0d2818;border:1px solid var(--green);color:var(--green);}
 .toast-red{background:#2d0d0d;border:1px solid var(--red);color:var(--red);}
 .toast-gold{background:#2d1e0a;border:1px solid var(--gold);color:var(--gold);}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 
-/* QR Scanner */
+/* ── QR Scanner ── */
 .qr-scanner-wrap{position:relative;width:100%;max-width:340px;margin:0 auto;}
 .qr-scanner-wrap video{width:100%;border-radius:8px;display:block;}
 .qr-overlay{position:absolute;inset:0;border-radius:8px;border:2px solid var(--green);pointer-events:none;}
@@ -370,6 +397,39 @@ input[type=file]{padding:6px;}
 .qr-corner.tr{top:8px;right:8px;border-width:3px 3px 0 0;}
 .qr-corner.bl{bottom:8px;left:8px;border-width:0 0 3px 3px;}
 .qr-corner.br{bottom:8px;right:8px;border-width:0 3px 3px 0;}
+
+/* ── RESPONSIVE BREAKPOINTS ── */
+@media(max-width:768px){
+  /* Show hamburger, hide desktop links */
+  .pub-nav-links{display:none;}
+  .pub-nav-hamburger{display:block;}
+  .pub-nav-logo-text{display:none;}
+  /* Show bottom nav */
+  .bottom-nav{display:flex;}
+  .pub-page-wrap{padding-bottom:var(--bottom-nav-h);}
+  /* Admin: sidebar hidden by default, slides in */
+  .admin-sidebar{transform:translateX(-100%);}
+  .admin-sidebar.open{transform:translateX(0);}
+  .admin-overlay.open{display:block;}
+  .admin-main{margin-left:0;}
+  .admin-content{padding:12px;}
+  /* Shrink page titles */
+  .page-title{font-size:18px;}
+  /* Modals full width */
+  .modal-box,.modal-box.wide{border-radius:16px 16px 0 0;max-width:100%;}
+  /* Toast above bottom nav */
+  .toast{bottom:calc(var(--bottom-nav-h) + 12px);right:12px;}
+  /* Stat cards 2 col */
+  .grid-4{grid-template-columns:1fr 1fr;}
+  /* Countdown smaller */
+  .countdown-num{font-size:32px;}
+}
+@media(max-width:480px){
+  .grid-4{grid-template-columns:1fr 1fr;}
+  .admin-content{padding:10px;}
+  .card{padding:14px;}
+  .stat-val{font-size:24px;}
+}
 `;
 
 function Toast({ msg, type }) {
@@ -627,41 +687,119 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing })
 
 // ── Public Nav ────────────────────────────────────────────
 function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const links = [
-    { id: "home", label: "Home" }, { id: "events", label: "Events" }, { id: "shop", label: "Shop" },
-    { id: "leaderboard", label: "Leaderboard" }, { id: "gallery", label: "Gallery" }, { id: "qa", label: "Q&A" }
+    { id: "home", label: "Home", icon: "🏠" },
+    { id: "events", label: "Events", icon: "📅" },
+    { id: "shop", label: "Shop", icon: "🛒" },
+    { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
+    { id: "gallery", label: "Gallery", icon: "🖼" },
+    { id: "qa", label: "Q&A", icon: "❓" },
   ];
+  const go = (id) => { setPage(id); setDrawerOpen(false); };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setCu(null);
+    setDrawerOpen(false);
+  };
+
   return (
-    <nav style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 100 }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", gap: 4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginRight: 20, cursor: "pointer" }} onClick={() => setPage("home")}>
-          <div style={{ background: "var(--green)", width: 32, height: 32, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#000", fontSize: 13 }}>SA</div>
-          <span style={{ fontWeight: 900, fontSize: 16, letterSpacing: ".02em" }}>SWINDON <span style={{ color: "var(--green)" }}>AIRSOFT</span></span>
+    <>
+      <nav className="pub-nav">
+        <div className="pub-nav-inner">
+          {/* Logo */}
+          <div className="pub-nav-logo" onClick={() => go("home")}>
+            <div className="pub-nav-logo-box">SA</div>
+            <span className="pub-nav-logo-text">SWINDON <span style={{ color: "var(--green)" }}>AIRSOFT</span></span>
+          </div>
+          {/* Desktop links */}
+          <div className="pub-nav-links">
+            {links.map(l => (
+              <button key={l.id} className={`pub-nav-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+          {/* Desktop actions */}
+          <div className="pub-nav-actions">
+            {cu ? (
+              <>
+                {(cu.role === "admin" || cu.role === "staff") && (
+                  <button className="btn btn-sm btn-gold" onClick={() => go("admin")}>⚙ Admin</button>
+                )}
+                <button className="btn btn-sm btn-ghost" onClick={() => go("profile")}>{cu.name.split(" ")[0]}</button>
+                <button className="btn btn-sm btn-ghost" onClick={signOut}>Sign Out</button>
+              </>
+            ) : (
+              <>
+                <button className="btn btn-sm btn-ghost" onClick={() => setAuthModal("login")}>Login</button>
+                <button className="btn btn-sm btn-primary" onClick={() => setAuthModal("register")}>Register</button>
+              </>
+            )}
+          </div>
+          {/* Hamburger (mobile only) */}
+          <button className="pub-nav-hamburger" onClick={() => setDrawerOpen(true)}>☰</button>
         </div>
-        {links.map(l => (
-          <button key={l.id} onClick={() => setPage(l.id)}
-            style={{ background: "none", border: "none", color: page === l.id ? "var(--green)" : "var(--muted)", fontSize: 13, fontWeight: 600, padding: "6px 12px", borderRadius: 4, cursor: "pointer" }}>
-            {l.label}
-          </button>
-        ))}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+      </nav>
+
+      {/* Mobile drawer */}
+      <div className={`pub-nav-drawer ${drawerOpen ? "open" : ""}`} onClick={() => setDrawerOpen(false)}>
+        <div className="pub-nav-drawer-panel" onClick={e => e.stopPropagation()}>
+          <div className="pub-nav-drawer-logo">
+            SWINDON <span style={{ color: "var(--green)" }}>AIRSOFT</span>
+          </div>
+          {links.map(l => (
+            <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
+              <span style={{ fontSize: 20 }}>{l.icon}</span> {l.label}
+            </button>
+          ))}
+          <hr className="pub-nav-drawer-divider" />
           {cu ? (
             <>
               {(cu.role === "admin" || cu.role === "staff") && (
-                <button className="btn btn-sm btn-gold" onClick={() => setPage("admin")}>⚙ Admin</button>
+                <button className="pub-nav-drawer-link" onClick={() => go("admin")}>
+                  <span style={{ fontSize: 20 }}>⚙</span> Admin Panel
+                </button>
               )}
-              <button className="btn btn-sm btn-ghost" onClick={() => setPage("profile")}>{cu.name.split(" ")[0]}</button>
-              <button className="btn btn-sm btn-ghost" onClick={() => setCu(null)}>Sign Out</button>
+              <button className="pub-nav-drawer-link" onClick={() => go("profile")}>
+                <span style={{ fontSize: 20 }}>👤</span> {cu.name}
+              </button>
+              <button className="pub-nav-drawer-link" style={{ color: "var(--red)" }} onClick={signOut}>
+                <span style={{ fontSize: 20 }}>🚪</span> Sign Out
+              </button>
             </>
           ) : (
             <>
-              <button className="btn btn-sm btn-ghost" onClick={() => setAuthModal("login")}>Login</button>
-              <button className="btn btn-sm btn-primary" onClick={() => setAuthModal("register")}>Register</button>
+              <button className="pub-nav-drawer-link" onClick={() => { setAuthModal("login"); setDrawerOpen(false); }}>
+                <span style={{ fontSize: 20 }}>🔐</span> Login
+              </button>
+              <button className="pub-nav-drawer-link" onClick={() => { setAuthModal("register"); setDrawerOpen(false); }}>
+                <span style={{ fontSize: 20 }}>🎯</span> Register
+              </button>
             </>
           )}
         </div>
       </div>
-    </nav>
+
+      {/* Bottom nav (mobile only) */}
+      <nav className="bottom-nav">
+        <div className="bottom-nav-inner">
+          {[
+            { id: "home", icon: "🏠", label: "Home" },
+            { id: "events", icon: "📅", label: "Events" },
+            { id: "shop", icon: "🛒", label: "Shop" },
+            { id: "leaderboard", icon: "🏆", label: "Ranks" },
+            { id: "profile", icon: "👤", label: "Profile" },
+          ].map(b => (
+            <button key={b.id} className={`bottom-nav-btn ${page === b.id ? "active" : ""}`} onClick={() => go(b.id)}>
+              <span className="bottom-nav-icon">{b.icon}</span>
+              <span>{b.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </>
   );
 }
 
@@ -672,11 +810,11 @@ function HomePage({ data, setPage }) {
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
       {data.homeMsg && <div className="alert alert-green mb-2">{data.homeMsg}</div>}
 
       {/* Hero */}
-      <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderTop: "3px solid var(--green)", borderRadius: 8, padding: "40px 30px", textAlign: "center", marginBottom: 24 }}>
+      <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderTop: "3px solid var(--green)", borderRadius: 8, padding: "clamp(20px,5vw,40px) clamp(16px,5vw,30px)", textAlign: "center", marginBottom: 16 }}>
         <div style={{ fontSize: 11, letterSpacing: ".2em", color: "var(--green)", marginBottom: 12, fontWeight: 700 }}>SWINDON'S #1 AIRSOFT SITE</div>
         <h1 style={{ fontSize: "clamp(36px,6vw,72px)", fontWeight: 900, lineHeight: 1, marginBottom: 14 }}>
           LOCK <span style={{ color: "var(--green)" }}>AND</span> LOAD
@@ -775,7 +913,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     };
 
     return (
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 20px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "16px" }}>
         <button className="btn btn-ghost btn-sm mb-2" onClick={() => { setDetail(null); setTab("info"); setExtras({}); }}>← Back to Events</button>
         <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 20 }}>
           <div style={{ height: 160, background: "linear-gradient(135deg,#0d2010,#111827)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: "var(--green)", letterSpacing: ".04em" }}>
@@ -910,7 +1048,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
       <div className="page-header">
         <div><div className="page-title">Events</div><div className="page-sub">Book your next game day</div></div>
       </div>
@@ -965,7 +1103,7 @@ function ShopPage({ data, cu, showToast }) {
   const subTotal = cart.reduce((s, i) => { const p = i.onSale && i.salePrice ? i.salePrice : i.price; return s + p * i.qty * (cu?.vipStatus === "active" ? 0.9 : 1); }, 0);
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
       <div className="page-header">
         <div><div className="page-title">Shop</div><div className="page-sub">Gear up for battle</div></div>
         <button className="btn btn-ghost" onClick={() => setCartOpen(true)}>
@@ -1053,7 +1191,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
     .sort((a, b) => b.gamesAttended - a.gamesAttended);
 
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 700, margin: "0 auto", padding: "16px" }}>
       <div className="page-header">
         <div><div className="page-title">Leaderboard</div><div className="page-sub">Ranked by game days attended — dedication, not kills</div></div>
       </div>
@@ -1093,7 +1231,7 @@ function GalleryPage({ data }) {
   const [active, setActive] = useState(null);
   const albums = active ? data.albums.filter(a => a.id === active) : data.albums;
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
       <div className="page-header"><div className="page-title">Gallery</div></div>
       <div className="gap-2 mb-2">
         <button className={`btn btn-sm ${!active ? "btn-primary" : "btn-ghost"}`} onClick={() => setActive(null)}>All</button>
@@ -1115,7 +1253,7 @@ function GalleryPage({ data }) {
 function QAPage({ data }) {
   const [open, setOpen] = useState(null);
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 700, margin: "0 auto", padding: "16px" }}>
       <div className="page-header"><div><div className="page-title">Q&amp;A</div><div className="page-sub">Got questions? We've got answers.</div></div></div>
       {data.qa.map(item => (
         <div key={item.id} className="accordion-item">
@@ -1145,7 +1283,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "16px" }}>
       <div className="page-header">
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ position: "relative" }}>
@@ -1305,22 +1443,26 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     ...(isMain ? [{ id: "staff", label: "Staff", icon: "🔑", group: null }] : []),
   ];
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="admin-shell">
+      {/* Mobile overlay */}
+      <div className={`admin-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
+
       {/* Sidebar */}
-      <div className="admin-sidebar">
+      <div className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sb-logo">
           <div className="sb-logo-text">SWINDON <span>AIRSOFT</span></div>
           <div className="sb-time"><GmtClock /></div>
         </div>
-
         <div style={{ padding: "8px 8px 0" }}>
           {NAV.map((item, idx) => {
             const showGroup = item.group && (idx === 0 || NAV[idx - 1]?.group !== item.group);
             return (
               <div key={item.id}>
                 {showGroup && <div className="sb-label" style={{ marginTop: idx > 0 ? 16 : 8 }}>{item.group}</div>}
-                <div className={`sb-item ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>
+                <div className={`sb-item ${section === item.id ? "active" : ""}`} onClick={() => { setSection(item.id); setSidebarOpen(false); }}>
                   <span className="sb-icon">{item.icon}</span>
                   <span>{item.label}</span>
                   {item.badge > 0 && <span className={`sb-badge ${item.badgeColor || ""}`}>{item.badge}</span>}
@@ -1340,10 +1482,13 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
       {/* Main */}
       <div className="admin-main">
         <div className="admin-topbar">
-          <div style={{ fontWeight: 800, fontSize: 14 }}>⚙ ADMIN OPS</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text)", padding: "5px 10px", borderRadius: 6, fontSize: 16 }}>☰</button>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>⚙ ADMIN</div>
+          </div>
           <div className="gap-2" style={{ alignItems: "center" }}>
             <GmtClock />
-            <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")}>← Back to Site</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")}>← Site</button>
           </div>
         </div>
         <div className="admin-content">
@@ -1530,7 +1675,7 @@ function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }
 
       {tab === "all" && (
         <div className="card">
-          <table className="data-table">
+          <div className="table-wrap"><table className="data-table">
             <thead>
               <tr>
                 <th>Player</th><th>Event</th><th>Date Booked</th><th>Type</th>
@@ -1559,7 +1704,7 @@ function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -1596,7 +1741,7 @@ function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }
                   </div>
                 </div>
               </div>
-              <table className="data-table">
+              <div className="table-wrap"><table className="data-table">
                 <thead>
                   <tr><th>Player</th><th>Type</th><th>Qty</th><th>Total</th><th>Booked</th><th>Status</th><th>Action</th></tr>
                 </thead>
@@ -1621,7 +1766,7 @@ function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }
                     <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No bookings for this event</td></tr>
                   )}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
         </div>
@@ -1675,7 +1820,7 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
         <div><div className="page-title">Events</div></div>
         <button className="btn btn-primary" onClick={() => { setForm(blank); setModal("new"); }}>+ New Event</button>
       </div>
-      <table className="data-table">
+      <div className="table-wrap"><table className="data-table">
         <thead><tr><th>Event</th><th>Date / Time</th><th>Slots</th><th>Booked</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           {data.events.map(ev => {
@@ -1697,14 +1842,14 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
             );
           })}
         </tbody>
-      </table>
+      </table></div>
 
       {viewEv && (
         <div className="overlay" onClick={() => setViewId(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div className="modal-title">📅 {viewEv.title} — Bookings</div>
             <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{viewEv.date} @ {viewEv.time} GMT | {viewEv.location}</p>
-            <table className="data-table">
+            <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th></tr></thead>
               <tbody>
                 {viewEv.bookings.map(b => (
@@ -1714,7 +1859,7 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
                 ))}
                 {viewEv.bookings.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No bookings</td></tr>}
               </tbody>
-            </table>
+            </table></div>
             <button className="btn btn-ghost mt-2" onClick={() => setViewId(null)}>Close</button>
           </div>
         </div>
@@ -1809,7 +1954,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 
       {tab === "all" && (
         <div className="card">
-          <table className="data-table">
+          <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th></th></tr></thead>
             <tbody>
               {players.map(u => (
@@ -1827,7 +1972,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -1836,7 +1981,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
           {vipApps.length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No pending VIP applications.</div>
           ) : (
-            <table className="data-table">
+            <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Actions</th></tr></thead>
               <tbody>
                 {vipApps.map(u => (
@@ -1861,7 +2006,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -1871,7 +2016,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
           {players.filter(u => u.deleteRequest).length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No deletion requests.</div>
           ) : (
-            <table className="data-table">
+            <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Player</th><th>Email</th><th>Joined</th><th>Actions</th></tr></thead>
               <tbody>
                 {players.filter(u => u.deleteRequest).map(u => (
@@ -1897,7 +2042,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -1960,7 +2105,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
     <div>
       <div className="page-header"><div><div className="page-title">Waivers</div><div className="page-sub">Valid for {new Date().getFullYear()} calendar year</div></div></div>
       <div className="card">
-        <table className="data-table">
+        <div className="table-wrap"><table className="data-table">
           <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Pending Changes</th><th></th></tr></thead>
           <tbody>
             {withWaiver.map(u => (
@@ -1974,7 +2119,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
             ))}
             {withWaiver.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No waivers on file</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {vw && (
@@ -2090,7 +2235,7 @@ function AdminShop({ data, save, showToast }) {
 
       {tab === "products" && (
         <div className="card">
-          <table className="data-table">
+          <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Product</th><th>Price</th><th>Sale</th><th>Stock</th><th>No Post</th><th></th></tr></thead>
             <tbody>
               {data.shop.map(item => (
@@ -2110,7 +2255,7 @@ function AdminShop({ data, save, showToast }) {
               ))}
               {data.shop.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No products yet</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -2119,7 +2264,7 @@ function AdminShop({ data, save, showToast }) {
           <p className="text-muted mb-2" style={{ fontSize: 13 }}>
             These options appear in the shop cart. Items marked <strong>No Post</strong> (e.g. Pyro) are always collection-only regardless of postage selection.
           </p>
-          <table className="data-table">
+          <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Option Name</th><th>Price</th><th></th></tr></thead>
             <tbody>
               {(data.postageOptions || []).map(p => (
@@ -2138,7 +2283,7 @@ function AdminShop({ data, save, showToast }) {
                 <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No postage options configured</td></tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -2256,7 +2401,7 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
     <div>
       <div className="page-header"><div><div className="page-title">Leaderboard</div></div></div>
       <div className="card">
-        <table className="data-table">
+        <div className="table-wrap"><table className="data-table">
           <thead><tr><th>Rank</th><th>Player</th><th>Games</th><th>VIP</th><th>Visible</th></tr></thead>
           <tbody>
             {board.map((u, i) => (
@@ -2267,7 +2412,7 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );
@@ -2368,7 +2513,7 @@ function AdminRevenue({ data }) {
       <div className="card mb-2">
         <div style={{ fontWeight: 700, marginBottom: 14 }}>Monthly Breakdown</div>
         {months.length === 0 ? <p className="text-muted">No revenue data yet.</p> : (
-          <table className="data-table">
+          <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Month</th><th>Revenue</th><th>Transactions</th><th></th></tr></thead>
             <tbody>
               {months.map(([m, rev]) => {
@@ -2383,14 +2528,14 @@ function AdminRevenue({ data }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
       {/* All transactions */}
       <div className="card">
         <div style={{ fontWeight: 700, marginBottom: 14 }}>All Transactions <span className="text-muted" style={{ fontSize: 12, fontWeight: 400 }}>— click any row for full detail</span></div>
-        <table className="data-table">
+        <div className="table-wrap"><table className="data-table">
           <thead>
             <tr>
               <th>Date &amp; Time (GMT)</th>
@@ -2414,7 +2559,7 @@ function AdminRevenue({ data }) {
             ))}
             {all.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No transactions yet</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {/* Transaction detail modal */}
@@ -2441,7 +2586,7 @@ function AdminRevenue({ data }) {
             </div>
 
             <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13, letterSpacing: ".05em", color: "var(--muted)" }}>ITEMS</div>
-            <table className="data-table" style={{ marginBottom: 16 }}>
+            <div className="table-wrap"><table className="data-table" style={{ marginBottom: 16 }}>
               <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
               <tbody>
                 {getLines(selected).map((line, i) => (
@@ -2453,7 +2598,7 @@ function AdminRevenue({ data }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16 }}>
               <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
@@ -2468,7 +2613,7 @@ function AdminRevenue({ data }) {
         <div className="overlay" onClick={() => setMonthDetail(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div className="modal-title">📅 {monthDetail.m} — All Transactions</div>
-            <table className="data-table">
+            <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Date &amp; Time (GMT)</th><th>Customer</th><th>Description</th><th>Source</th><th>Total</th></tr></thead>
               <tbody>
                 {monthDetail.bookings.map(t => (
@@ -2481,7 +2626,7 @@ function AdminRevenue({ data }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
               <div style={{ fontWeight: 900, fontSize: 16 }}>Month Total: <span className="text-green">£{monthDetail.bookings.reduce((s, b) => s + b.total, 0).toFixed(2)}</span></div>
               <button className="btn btn-ghost" onClick={() => setMonthDetail(null)}>Close</button>
@@ -2751,7 +2896,7 @@ function AdminStaff({ data, save, showToast }) {
     <div>
       <div className="page-header"><div><div className="page-title">Staff Management</div></div><button className="btn btn-primary" onClick={() => setModal(true)}>+ Add Staff</button></div>
       <div className="card">
-        <table className="data-table">
+        <div className="table-wrap"><table className="data-table">
           <thead><tr><th>Name</th><th>Email</th><th>Permissions</th><th></th></tr></thead>
           <tbody>
             {staff.map(u => (
@@ -2767,7 +2912,7 @@ function AdminStaff({ data, save, showToast }) {
             ))}
             {staff.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No staff accounts yet</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {modal && (
@@ -2900,14 +3045,16 @@ export default function App() {
       <Toast {...toast} />
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} />
 
-      {page === "home"        && <HomePage data={data} setPage={setPage} />}
-      {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} />}
-      {page === "shop"        && <ShopPage data={data} cu={cu} showToast={showToast} />}
-      {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} />}
-      {page === "gallery"     && <GalleryPage data={data} />}
-      {page === "qa"          && <QAPage data={data} />}
-      {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
-      {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
+      <div className="pub-page-wrap">
+        {page === "home"        && <HomePage data={data} setPage={setPage} />}
+        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} />}
+        {page === "shop"        && <ShopPage data={data} cu={cu} showToast={showToast} />}
+        {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} />}
+        {page === "gallery"     && <GalleryPage data={data} />}
+        {page === "qa"          && <QAPage data={data} />}
+        {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
+        {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
+      </div>
 
       {authModal && (
         <SupabaseAuthModal
