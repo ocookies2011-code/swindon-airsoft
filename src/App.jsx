@@ -2822,19 +2822,23 @@ function AdminCash({ data, cu, showToast }) {
     const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
     setBusy(true);
     try {
-      await api.cashSales.create({
-        customerName:  player ? player.name : (manual.name || "Walk-in"),
-        customerEmail: player ? player.email : manual.email,
-        userId:        player ? player.id : null,
-        items:         items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      const { data: result, error } = await supabase.from('cash_sales').insert({
+        customer_name:  player ? player.name : (manual.name || "Walk-in"),
+        customer_email: player ? (player.email || "") : (manual.email || ""),
+        user_id:        player ? player.id : null,
+        items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
         total,
-        recordedBy:    cu?.id || null,
-      });
+        recorded_by:    cu?.id || null,
+      }).select().single();
+      if (error) throw error;
       showToast(`✅ Cash sale £${total.toFixed(2)} recorded!`);
       setItems([]); setManual({ name: "", email: "" }); setPlayerId("manual");
     } catch (e) {
-      showToast("Failed to save sale: " + e.message, "red");
-    } finally { setBusy(false); }
+      console.error("Cash sale error:", e);
+      showToast("Failed: " + (e.message || JSON.stringify(e)), "red");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
