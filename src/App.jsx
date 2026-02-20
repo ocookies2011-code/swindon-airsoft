@@ -711,17 +711,32 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const vipDisc = cu?.vipStatus === "active" ? 0.1 : 0;
     const extrasTotal = ev.extras.reduce((s, ex) => s + (extras[ex.id] || 0) * ex.price, 0);
     const grandTotal = price * qty * (1 - vipDisc) + extrasTotal;
-    const waiverValid = cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear();
+    const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin" || cu?.role === "staff";
     const myBooking = cu && ev.bookings.find(b => b.userId === cu.id);
 
-    const doBook = () => {
+    const doBook = async () => {
       if (!cu) { setAuthModal("login"); return; }
       if (!waiverValid) { setWaiverModal(true); return; }
       if (booked + qty > total) { showToast("Not enough slots available", "red"); return; }
       if (myBooking) { showToast("You already have a booking for this event", "red"); return; }
-      const booking = { id: uid(), userId: cu.id, userName: cu.name, type: ticketType, qty, extras, total: grandTotal, date: new Date().toISOString(), checkedIn: false };
-      updateEvent(ev.id, { bookings: [...ev.bookings, booking] });
-      showToast("🎉 Booking confirmed!");
+      try {
+        await api.bookings.create({
+          eventId: ev.id,
+          userId: cu.id,
+          userName: cu.name,
+          type: ticketType,
+          qty,
+          extras,
+          total: grandTotal,
+        });
+        // Refresh events to show new booking
+        const evList = await api.events.getAll();
+        save({ events: evList });
+        showToast("🎉 Booking confirmed!");
+      } catch (e) {
+        console.error("Booking failed:", e);
+        showToast("Booking failed: " + e.message, "red");
+      }
     };
 
     return (
@@ -1085,7 +1100,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const [edit, setEdit] = useState({ name: cu.name, phone: cu.phone || "", address: cu.address || "" });
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
-  const waiverValid = cu.waiverSigned && cu.waiverYear === new Date().getFullYear();
+  const waiverValid = (cu.waiverSigned && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin" || cu.role === "staff";
   const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date })));
   const canApplyVip = cu.gamesAttended >= 3 && cu.vipStatus === "none" && !cu.vipApplied;
 
