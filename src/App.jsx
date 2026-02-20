@@ -2273,18 +2273,48 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
 // ── Admin Revenue ─────────────────────────────────────────
 function AdminRevenue({ data }) {
   const [cashSales, setCashSales] = useState([]);
+  const [selected, setSelected] = useState(null); // selected transaction for detail modal
+  const [monthDetail, setMonthDetail] = useState(null);
+
   useEffect(() => {
     api.cashSales.getAll().then(setCashSales).catch(console.error);
   }, []);
 
+  // Full GMT timestamp: "12/04/2026, 14:35:22"
+  const gmtFull = (d) => new Date(d).toLocaleString("en-GB", {
+    timeZone: "Europe/London", day: "2-digit", month: "2-digit",
+    year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+  });
+
   const bookingRevenue = data.events.flatMap(ev => ev.bookings.map(b => ({
-    ...b, eventTitle: ev.title, source: "booking"
+    id: b.id,
+    userName: b.userName,
+    userId: b.userId,
+    source: "booking",
+    eventTitle: ev.title,
+    eventDate: ev.date,
+    ticketType: b.type === "walkOn" ? "Walk-on" : "Rental",
+    qty: b.qty,
+    extras: b.extras || {},
+    eventExtras: ev.extras || [],
+    total: Number(b.total),
+    date: b.date || b.created_at,
+    checkedIn: b.checkedIn,
   })));
+
   const cashRevenue = cashSales.map(s => ({
-    id: s.id, userName: s.customer_name, eventTitle: "Cash Sale",
-    type: "cash", total: Number(s.total), date: s.created_at, source: "cash"
+    id: s.id,
+    userName: s.customer_name,
+    customerEmail: s.customer_email,
+    source: "cash",
+    eventTitle: "Cash Sale",
+    items: Array.isArray(s.items) ? s.items : [],
+    total: Number(s.total),
+    date: s.created_at,
   }));
-  const all = [...bookingRevenue, ...cashRevenue].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const all = [...bookingRevenue, ...cashRevenue]
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const totalBookings = bookingRevenue.reduce((s, b) => s + b.total, 0);
   const totalCash = cashRevenue.reduce((s, b) => s + b.total, 0);
@@ -2296,11 +2326,30 @@ function AdminRevenue({ data }) {
     byMonth[m] = (byMonth[m] || 0) + b.total;
   });
   const months = Object.entries(byMonth).sort((a, b) => new Date("01 " + b[0]) - new Date("01 " + a[0]));
-  const [detail, setDetail] = useState(null);
+
+  // Build detail lines for a transaction
+  const getLines = (t) => {
+    if (t.source === "cash") {
+      return t.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, line: i.price * i.qty }));
+    } else {
+      const lines = [{ name: `${t.ticketType} ticket`, qty: t.qty, price: t.total, line: null }];
+      if (t.extras && t.eventExtras) {
+        t.eventExtras.forEach(ex => {
+          const qty = t.extras[ex.id];
+          if (qty) lines.push({ name: ex.name, qty, price: ex.price, line: ex.price * qty });
+        });
+      }
+      return lines;
+    }
+  };
 
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Revenue</div><div className="page-sub">All times GMT</div></div></div>
+      <div className="page-header">
+        <div><div className="page-title">Revenue</div><div className="page-sub">All times GMT</div></div>
+      </div>
+
+      {/* Stat cards */}
       <div className="grid-4 mb-2">
         {[
           { label: "Total Revenue", val: `£${total.toFixed(2)}`, color: "" },
@@ -2311,6 +2360,8 @@ function AdminRevenue({ data }) {
           <div key={label} className={`stat-card ${color}`}><div className="stat-val">{val}</div><div className="stat-label">{label}</div></div>
         ))}
       </div>
+
+      {/* Monthly breakdown */}
       <div className="card mb-2">
         <div style={{ fontWeight: 700, marginBottom: 14 }}>Monthly Breakdown</div>
         {months.length === 0 ? <p className="text-muted">No revenue data yet.</p> : (
@@ -2321,8 +2372,10 @@ function AdminRevenue({ data }) {
                 const mbs = all.filter(b => new Date(b.date).toLocaleString("en-GB", { month: "short", year: "numeric", timeZone: "Europe/London" }) === m);
                 return (
                   <tr key={m}>
-                    <td>{m}</td><td className="text-green">£{rev.toFixed(2)}</td><td>{mbs.length}</td>
-                    <td><button className="btn btn-sm btn-ghost" onClick={() => setDetail({ m, bookings: mbs })}>View →</button></td>
+                    <td style={{ fontWeight: 600 }}>{m}</td>
+                    <td className="text-green">£{rev.toFixed(2)}</td>
+                    <td>{mbs.length}</td>
+                    <td><button className="btn btn-sm btn-ghost" onClick={() => setMonthDetail({ m, bookings: mbs })}>View →</button></td>
                   </tr>
                 );
               })}
@@ -2330,39 +2383,106 @@ function AdminRevenue({ data }) {
           </table>
         )}
       </div>
+
+      {/* All transactions */}
       <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 14 }}>Recent Transactions</div>
+        <div style={{ fontWeight: 700, marginBottom: 14 }}>All Transactions <span className="text-muted" style={{ fontSize: 12, fontWeight: 400 }}>— click any row for full detail</span></div>
         <table className="data-table">
-          <thead><tr><th>Date</th><th>Customer</th><th>Description</th><th>Source</th><th>Total</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Date &amp; Time (GMT)</th>
+              <th>Customer</th>
+              <th>Description</th>
+              <th>Source</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
-            {all.slice(0, 20).map(b => (
-              <tr key={b.id}>
-                <td className="text-muted" style={{ fontSize: 12 }}>{gmtShort(b.date)}</td>
-                <td>{b.userName}</td>
-                <td>{b.eventTitle}</td>
-                <td><span className={`tag ${b.source === "cash" ? "tag-gold" : "tag-blue"}`}>{b.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
-                <td className="text-green">£{b.total.toFixed(2)}</td>
+            {all.map(t => (
+              <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => setSelected(t)}>
+                <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
+                <td style={{ fontWeight: 600 }}>{t.userName}</td>
+                <td>{t.source === "cash" ? `Cash Sale (${t.items?.length || 0} items)` : `${t.eventTitle} — ${t.ticketType} ×${t.qty}`}</td>
+                <td><span className={`tag ${t.source === "cash" ? "tag-gold" : "tag-blue"}`}>{t.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
+                <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
+                <td><button className="btn btn-sm btn-ghost">Detail →</button></td>
               </tr>
             ))}
-            {all.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No transactions yet</td></tr>}
+            {all.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No transactions yet</td></tr>}
           </tbody>
         </table>
       </div>
-      {detail && (
-        <div className="overlay" onClick={() => setDetail(null)}>
+
+      {/* Transaction detail modal */}
+      {selected && (
+        <div className="overlay" onClick={() => setSelected(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">💰 {detail.m} — Detail</div>
-            <table className="data-table">
-              <thead><tr><th>Customer</th><th>Description</th><th>Source</th><th>Total</th></tr></thead>
-              <tbody>{detail.bookings.map(b => (
-                <tr key={b.id}>
-                  <td>{b.userName}</td><td>{b.eventTitle}</td>
-                  <td><span className={`tag ${b.source === "cash" ? "tag-gold" : "tag-blue"}`}>{b.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
-                  <td className="text-green">£{b.total.toFixed(2)}</td>
-                </tr>
-              ))}</tbody>
+            <div className="modal-title">{selected.source === "cash" ? "💵 Cash Sale" : "🌐 Online Booking"} — Detail</div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {[
+                ["Customer", selected.userName],
+                ["Date & Time (GMT)", gmtFull(selected.date)],
+                ["Source", selected.source === "cash" ? "Cash Sale" : "Online Booking"],
+                selected.source === "booking" ? ["Event", selected.eventTitle] : ["Customer Email", selected.customerEmail || "—"],
+                selected.source === "booking" ? ["Ticket Type", selected.ticketType] : null,
+                selected.source === "booking" ? ["Qty", selected.qty] : null,
+                selected.source === "booking" ? ["Checked In", selected.checkedIn ? "✅ Yes" : "❌ No"] : null,
+              ].filter(Boolean).map(([k, v]) => (
+                <div key={k} style={{ background: "var(--bg3)", borderRadius: 6, padding: "8px 12px" }}>
+                  <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: ".08em", marginBottom: 2 }}>{k.toUpperCase()}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13, letterSpacing: ".05em", color: "var(--muted)" }}>ITEMS</div>
+            <table className="data-table" style={{ marginBottom: 16 }}>
+              <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
+              <tbody>
+                {getLines(selected).map((line, i) => (
+                  <tr key={i}>
+                    <td>{line.name}</td>
+                    <td>{line.qty}</td>
+                    <td>{line.price != null ? `£${Number(line.price).toFixed(2)}` : "—"}</td>
+                    <td className="text-green">{line.line != null ? `£${line.line.toFixed(2)}` : `£${Number(selected.total).toFixed(2)}`}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
-            <button className="btn btn-ghost mt-2" onClick={() => setDetail(null)}>Close</button>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16 }}>
+              <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
+              <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Month detail modal */}
+      {monthDetail && (
+        <div className="overlay" onClick={() => setMonthDetail(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">📅 {monthDetail.m} — All Transactions</div>
+            <table className="data-table">
+              <thead><tr><th>Date &amp; Time (GMT)</th><th>Customer</th><th>Description</th><th>Source</th><th>Total</th></tr></thead>
+              <tbody>
+                {monthDetail.bookings.map(t => (
+                  <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => { setMonthDetail(null); setSelected(t); }}>
+                    <td style={{ fontSize: 12, color: "var(--muted)" }}>{gmtFull(t.date)}</td>
+                    <td>{t.userName}</td>
+                    <td>{t.source === "cash" ? `Cash Sale (${t.items?.length || 0} items)` : `${t.eventTitle} — ${t.ticketType} ×${t.qty}`}</td>
+                    <td><span className={`tag ${t.source === "cash" ? "tag-gold" : "tag-blue"}`}>{t.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
+                    <td className="text-green">£{t.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+              <div style={{ fontWeight: 900, fontSize: 16 }}>Month Total: <span className="text-green">£{monthDetail.bookings.reduce((s, b) => s + b.total, 0).toFixed(2)}</span></div>
+              <button className="btn btn-ghost" onClick={() => setMonthDetail(null)}>Close</button>
+            </div>
           </div>
         </div>
       )}
