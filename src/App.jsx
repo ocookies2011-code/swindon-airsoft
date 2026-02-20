@@ -1275,7 +1275,12 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const [delConfirm, setDelConfirm] = useState(false);
   const waiverValid = (cu.waiverSigned && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin" || cu.role === "staff";
   const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date })));
-  const canApplyVip = cu.gamesAttended >= 3 && cu.vipStatus === "none" && !cu.vipApplied;
+
+  // Count actual checked-in games from booking records — source of truth
+  const actualGamesAttended = myBookings.filter(b => b.checkedIn).length;
+  // Use the higher of stored count vs actual (in case bookings haven't all loaded)
+  const gamesAttended = Math.max(cu.gamesAttended || 0, actualGamesAttended);
+  const canApplyVip = gamesAttended >= 3 && cu.vipStatus === "none" && !cu.vipApplied;
 
   const handlePic = (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -1298,7 +1303,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
             <div className="page-title">{cu.name}</div>
             <div className="gap-2 mt-1">
               {cu.vipStatus === "active" && <span className="tag tag-gold">⭐ VIP</span>}
-              <span className="tag tag-green">{cu.gamesAttended} Games</span>
+              <span className="tag tag-green">{gamesAttended} Games</span>
               {cu.credits > 0 && <span className="tag tag-blue">£{cu.credits} Credits</span>}
             </div>
           </div>
@@ -1390,7 +1395,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>VIP Membership</div>
           <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, plus UKARA ID registration.</p>
           {[
-            { label: "Games Attended", value: `${cu.gamesAttended} / 3 required`, ok: cu.gamesAttended >= 3 },
+            { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
             { label: "VIP Discount", value: "10% off game days & shop", ok: cu.vipStatus === "active" },
@@ -1403,7 +1408,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
           {canApplyVip && <button className="btn btn-gold mt-2" onClick={() => { updateUser(cu.id, { vipApplied: true }); showToast("VIP application submitted!"); }}>Apply for VIP Membership</button>}
           {cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-blue mt-2">⏳ Application pending admin review</div>}
           {cu.vipStatus === "active" && <div className="alert alert-gold mt-2">⭐ You are an active VIP member!</div>}
-          {!canApplyVip && !cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-gold mt-2">Need {3 - cu.gamesAttended} more game(s) to be eligible for VIP.</div>}
+          {!canApplyVip && !cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-gold mt-2">Need {Math.max(0, 3 - gamesAttended)} more game(s) to be eligible for VIP.</div>}
         </div>
       )}
     </div>
@@ -1607,13 +1612,13 @@ function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }
 
   const doCheckin = async (booking, evObj) => {
     try {
-      const u = data.users.find(x => x.id === booking.userId);
-      await api.bookings.checkIn(booking.id, booking.userId, u ? u.gamesAttended : 0);
-      // Refresh events locally
+      const actualCount = await api.bookings.checkIn(booking.id, booking.userId);
       const evList = await api.events.getAll();
       save({ events: evList });
-      if (u) updateUser(u.id, { gamesAttended: u.gamesAttended + 1 });
-      showToast(`✅ ${booking.userName} checked in!`);
+      // Update local user games count with the accurate DB value
+      const u = data.users.find(x => x.id === booking.userId);
+      if (u) updateUser(u.id, { gamesAttended: actualCount });
+      showToast(`✅ ${booking.userName} checked in! Games attended: ${actualCount}`);
     } catch (e) {
       showToast("Check-in failed: " + e.message, "red");
     }
@@ -1931,6 +1936,7 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
 function AdminPlayers({ data, save, updateUser, showToast }) {
   const [edit, setEdit] = useState(null);
   const [tab, setTab] = useState("all");
+  const [recalcBusy, setRecalcBusy] = useState(false);
   const players = data.users.filter(u => u.role !== "admin");
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
 
@@ -1938,9 +1944,46 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
     updateUser(edit.id, edit); showToast("Player updated!"); setEdit(null);
   };
 
+  // Recalculate every player's game count from actual checked-in bookings in the DB
+  const recalcAll = async () => {
+    setRecalcBusy(true);
+    try {
+      const { data: allBookings, error } = await supabase
+        .from('bookings').select('user_id').eq('checked_in', true);
+      if (error) throw error;
+
+      // Count per user
+      const counts = {};
+      allBookings.forEach(b => { counts[b.user_id] = (counts[b.user_id] || 0) + 1; });
+
+      // Update each player
+      let updated = 0;
+      for (const u of players) {
+        const correct = counts[u.id] || 0;
+        if (u.gamesAttended !== correct) {
+          await updateUser(u.id, { gamesAttended: correct });
+          updated++;
+        }
+      }
+      // Refresh user list
+      const allProfiles = await api.profiles.getAll();
+      save({ users: allProfiles.map(normaliseProfile) });
+      showToast(`✅ Recalculated! ${updated} player(s) corrected.`);
+    } catch (e) {
+      showToast("Failed: " + e.message, "red");
+    } finally {
+      setRecalcBusy(false);
+    }
+  };
+
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Players</div><div className="page-sub">{players.length} registered</div></div></div>
+      <div className="page-header">
+        <div><div className="page-title">Players</div><div className="page-sub">{players.length} registered</div></div>
+        <button className="btn btn-ghost btn-sm" onClick={recalcAll} disabled={recalcBusy} title="Recalculate all players' game counts from actual check-ins">
+          {recalcBusy ? "Recalculating…" : "🔄 Recalc Game Counts"}
+        </button>
+      </div>
 
       <div className="nav-tabs">
         <button className={`nav-tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>All Players</button>
