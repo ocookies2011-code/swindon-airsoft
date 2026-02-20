@@ -46,8 +46,9 @@ function useData() {
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
+    // Hard timeout — show site after 8 seconds no matter what
+    const timeout = setTimeout(() => setLoading(false), 8000);
     try {
-      // Load each independently so one failure doesn't block everything
       const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
         api.events.getAll().catch(e => { console.error("events:", e); return []; }),
         api.shop.getAll().catch(e => { console.error("shop:", e); return []; }),
@@ -56,6 +57,7 @@ function useData() {
         api.qa.getAll().catch(e => { console.error("qa:", e); return []; }),
         api.settings.get("home_message").catch(() => ""),
       ]);
+      clearTimeout(timeout);
       setData({
         events: evList,
         shop: shopList,
@@ -66,6 +68,7 @@ function useData() {
         users: [],
       });
     } catch (e) {
+      clearTimeout(timeout);
       console.error("loadAll critical error:", e);
       setLoadError(e.message);
     } finally {
@@ -2807,13 +2810,20 @@ export default function App() {
 
   // Listen for Supabase auth changes
   useEffect(() => {
+    // Safety timeout — if auth takes more than 5s, show the site anyway
+    const timeout = setTimeout(() => setAuthLoading(false), 5000);
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(timeout);
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
         } catch { setCu(null); }
       }
+      setAuthLoading(false);
+    }).catch(() => {
+      clearTimeout(timeout);
       setAuthLoading(false);
     });
 
@@ -2828,7 +2838,7 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { clearTimeout(timeout); subscription.unsubscribe(); };
   }, []);
 
   // Refresh current user profile after updates
