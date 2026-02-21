@@ -2487,14 +2487,27 @@ function AdminWaivers({ data, updateUser, showToast }) {
 function AdminOrders({ showToast }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [detail, setDetail] = useState(null);
   const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
 
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.shopOrders.getAll();
+      setOrders(data);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api.shopOrders.getAll()
-      .then(setOrders)
-      .catch(e => showToast("Failed to load orders: " + e.message, "red"))
-      .finally(() => setLoading(false));
+    // Small delay so auth session is confirmed before querying RLS-protected table
+    const t = setTimeout(fetchOrders, 600);
+    return () => clearTimeout(t);
   }, []);
 
   const setStatus = async (id, status) => {
@@ -2513,6 +2526,7 @@ function AdminOrders({ showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Shop Orders</div><div className="page-sub">{orders.length} orders · £{totalRevenue.toFixed(2)} total</div></div>
+        <button className="btn btn-ghost" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
       </div>
       <div className="grid-4 mb-2">
         {[
@@ -2528,7 +2542,14 @@ function AdminOrders({ showToast }) {
         ))}
       </div>
 
-      {loading ? <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading orders…</div> : (
+      {loading ? (
+        <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading orders…</div>
+      ) : error ? (
+        <div className="card" style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ color: "var(--red)", marginBottom: 12 }}>Failed to load orders: {error}</div>
+          <button className="btn btn-ghost" onClick={fetchOrders}>Retry</button>
+        </div>
+      ) : (
         <div className="card">
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
