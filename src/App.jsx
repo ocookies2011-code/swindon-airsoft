@@ -1360,11 +1360,39 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         )}
 
         {tab === "map" && (
-          <div className="card">
-            {ev.mapEmbed ? <div dangerouslySetInnerHTML={{ __html: ev.mapEmbed }} /> : (
-              <div style={{ height: 160, background: "var(--bg4)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 13 }}>No map configured for this event</div>
+          <div style={{ borderRadius: 4, overflow: "hidden", border: "1px solid var(--border)" }}>
+            {ev.mapEmbed ? (
+              <div
+                style={{ width: "100%", height: "clamp(340px, 60vh, 620px)", lineHeight: 0 }}
+                dangerouslySetInnerHTML={{ __html: ev.mapEmbed.replace(
+                  /height="[^"]*"/g, 'height="100%"'
+                ).replace(
+                  /width="[^"]*"/g, 'width="100%"'
+                ).replace(
+                  /<iframe /g, '<iframe style="width:100%;height:100%;border:0;display:block;" '
+                ) }}
+              />
+            ) : (
+              <div style={{ height: 260, background: "var(--bg4)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 13 }}>
+                No map configured for this event
+              </div>
             )}
-            <p className="text-muted mt-1" style={{ fontSize: 13 }}>{ev.location}</p>
+            <div style={{ background: "var(--bg2)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>📍 {ev.location}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>{ev.date} · {ev.time} GMT</div>
+              </div>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: "none" }}
+              >
+                <button className="btn btn-primary" style={{ padding: "9px 20px", fontSize: 13 }}>
+                  🗺️ Get Directions
+                </button>
+              </a>
+            </div>
           </div>
         )}
 
