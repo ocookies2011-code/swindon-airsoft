@@ -47,36 +47,39 @@ function useData() {
   const loadAll = useCallback(async () => {
     setLoadError(null);
     const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [] };
-    // Hard timeout — show site after 8 seconds with empty data rather than null
+    // 5s timeout — show the site with empty data rather than hang forever
     const timeout = setTimeout(() => {
       setData(prev => prev || emptyData);
       setLoading(false);
-    }, 8000);
+    }, 5000);
     try {
-      const [evList, shopList, postageList, albumList, qaList, homeMsg, userList] = await Promise.all([
-        api.events.getAll().catch(e => { console.error("events:", e); return []; }),
-        api.shop.getAll().catch(e => { console.error("shop:", e); return []; }),
-        api.postage.getAll().catch(e => { console.error("postage:", e); return []; }),
-        api.gallery.getAll().catch(e => { console.error("gallery:", e); return []; }),
-        api.qa.getAll().catch(e => { console.error("qa:", e); return []; }),
+      // Load public data first — no auth needed, fast
+      const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
+        api.events.getAll().catch(() => []),
+        api.shop.getAll().catch(() => []),
+        api.postage.getAll().catch(() => []),
+        api.gallery.getAll().catch(() => []),
+        api.qa.getAll().catch(() => []),
         api.settings.get("home_message").catch(() => ""),
-        api.profiles.getAll().catch(e => { console.error("profiles:", e); return []; }),
       ]);
-      clearTimeout(timeout);
-      setData({
+      // Set public data immediately so site renders
+      setData(prev => ({
+        ...(prev || emptyData),
         events: evList,
         shop: shopList,
         postageOptions: postageList,
         albums: albumList,
         qa: qaList,
         homeMsg,
-        users: userList.map(normaliseProfile),
-      });
+      }));
+      clearTimeout(timeout);
+      // Load profiles separately — only works when authed, fails silently for guests
+      const userList = await api.profiles.getAll().catch(() => []);
+      setData(prev => ({ ...prev, users: userList.map(normaliseProfile) }));
     } catch (e) {
       clearTimeout(timeout);
-      console.error("loadAll critical error:", e);
+      console.error("loadAll error:", e);
       setData(prev => prev || emptyData);
-      setLoadError(e.message);
     } finally {
       setLoading(false);
     }
@@ -3276,32 +3279,26 @@ export default function App() {
   const [authModal, setAuthModal] = useState(null);
   const [toast, showToast] = useToast();
 
-  // Listen for Supabase auth changes
+  // Auth — runs in background, never blocks site from rendering
   useEffect(() => {
-    let didInit = false;
-    const timeout = setTimeout(() => setAuthLoading(false), 5000);
+    // Short timeout just to stop authLoading state from lingering
+    const timeout = setTimeout(() => setAuthLoading(false), 3000);
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       clearTimeout(timeout);
-      didInit = true;
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
+          // Reload to get admin-visible profiles
+          refresh();
         } catch { setCu(null); }
-        // Reload data now we have a session (profiles become visible to admin)
-        refresh();
       }
       setAuthLoading(false);
-    }).catch(() => {
-      clearTimeout(timeout);
-      setAuthLoading(false);
-    });
+    }).catch(() => { clearTimeout(timeout); setAuthLoading(false); });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Skip INITIAL_SESSION — handled by getSession() above to avoid double-lock
-      if (event === "INITIAL_SESSION") return;
-
+      if (event === "INITIAL_SESSION") return; // handled by getSession above
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
@@ -3332,7 +3329,9 @@ export default function App() {
     if (cu?.id === id) await refreshCu();
   }, [updateUser, cu, refreshCu]);
 
-  if (loading || authLoading) {
+  // Only show loading screen while initial data fetch is in progress
+  // Auth loads in the background - never block the site on it
+  if (loading) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117" }}>
         <div style={{ width: 48, height: 48, background: "var(--green)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#000", fontSize: 20, animation: "pulse 1s infinite" }}>SA</div>

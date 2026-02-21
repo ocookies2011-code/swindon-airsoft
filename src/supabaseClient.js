@@ -21,10 +21,7 @@ VITE_SUPABASE_ANON_KEY=eyJ...your-anon-key...</pre>
 
 export const supabase = createClient(supabaseUrl, supabaseAnon, {
   auth: {
-    // Use localStorage instead of the LockManager API — prevents lock timeout errors
-    // when multiple tabs are open or the browser doesn't support LockManager
     storage: window.localStorage,
-    flowType: 'pkce',
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
