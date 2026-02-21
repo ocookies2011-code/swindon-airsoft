@@ -47,22 +47,31 @@ function useData() {
   const loadAll = useCallback(async () => {
     setLoadError(null);
     const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [] };
-    // 5s timeout — show the site with empty data rather than hang forever
     const timeout = setTimeout(() => {
       setData(prev => prev || emptyData);
       setLoading(false);
     }, 5000);
     try {
-      // Load public data first — no auth needed, fast
+      const errors = {};
+      const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
+
       const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
-        api.events.getAll().catch(() => []),
-        api.shop.getAll().catch(() => []),
-        api.postage.getAll().catch(() => []),
-        api.gallery.getAll().catch(() => []),
-        api.qa.getAll().catch(() => []),
+        safe("events",  api.events.getAll()),
+        safe("shop",    api.shop.getAll()),
+        safe("postage", api.postage.getAll()),
+        safe("gallery", api.gallery.getAll()),
+        safe("qa",      api.qa.getAll()),
         api.settings.get("home_message").catch(() => ""),
       ]);
-      // Set public data immediately so site renders
+
+      if (Object.keys(errors).length > 0) {
+        console.error("loadAll partial errors:", errors);
+        // Show first error to help diagnose
+        const firstErr = Object.values(errors)[0];
+        setLoadError(firstErr);
+      }
+
+      clearTimeout(timeout);
       setData(prev => ({
         ...(prev || emptyData),
         events: evList,
@@ -72,13 +81,13 @@ function useData() {
         qa: qaList,
         homeMsg,
       }));
-      clearTimeout(timeout);
-      // Load profiles separately — only works when authed, fails silently for guests
+
       const userList = await api.profiles.getAll().catch(() => []);
       setData(prev => ({ ...prev, users: userList.map(normaliseProfile) }));
     } catch (e) {
       clearTimeout(timeout);
-      console.error("loadAll error:", e);
+      console.error("loadAll critical error:", e);
+      setLoadError(e.message);
       setData(prev => prev || emptyData);
     } finally {
       setLoading(false);
@@ -3341,18 +3350,15 @@ export default function App() {
     );
   }
 
-  if (loadError) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "#f85149", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 20 }}>!</div>
-        <div style={{ color: "#f85149", fontSize: 16, fontWeight: 700 }}>Failed to connect to database</div>
-        <div style={{ color: "var(--muted)", fontSize: 13, maxWidth: 400, textAlign: "center" }}>{loadError}</div>
-        <button onClick={refresh} style={{ background: "var(--green)", border: "none", color: "#000", padding: "10px 24px", borderRadius: 6, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Retry</button>
-      </div>
-    );
-  }
-
   const isAdmin = cu?.role === "admin" || cu?.role === "staff";
+
+  // Error banner — shown at top but doesn't block the site
+  const errorBanner = loadError ? (
+    <div style={{ background: "#f85149", color: "#fff", padding: "10px 20px", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+      <span>⚠️ Database error: {loadError}</span>
+      <button onClick={refresh} style={{ background: "rgba(255,255,255,.2)", border: "none", color: "#fff", padding: "4px 12px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Retry</button>
+    </div>
+  ) : null;
 
   if (page === "admin") {
     if (!isAdmin) { setPage("home"); return null; }
@@ -3360,6 +3366,7 @@ export default function App() {
       <>
         <style>{CSS}</style>
         <Toast {...toast} />
+        {errorBanner}
         <AdminPanel
           data={data} cu={cu} save={save}
           updateUser={updateUserAndRefresh} updateEvent={updateEvent}
@@ -3373,6 +3380,7 @@ export default function App() {
     <>
       <style>{CSS}</style>
       <Toast {...toast} />
+      {errorBanner}
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} />
 
       <div className="pub-page-wrap">
