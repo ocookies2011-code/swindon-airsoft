@@ -2919,62 +2919,6 @@ function AdminCash({ data, cu, showToast }) {
   );
 }
 
-  return (
-    <div>
-      <div className="page-header"><div><div className="page-title">Cash Sales</div><div className="page-sub">Walk-in or unregistered customer sales</div></div></div>
-      <div className="grid-2">
-        <div className="card">
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>PRODUCTS</div>
-          {data.shop.map(item => (
-            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-              <span style={{ fontSize: 13 }}>{item.name}</span>
-              <div className="gap-2"><span className="text-green">£{item.price}</span><button className="btn btn-sm btn-primary" onClick={() => add(item)}>+</button></div>
-            </div>
-          ))}
-        </div>
-        <div>
-          <div className="card mb-2">
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>CUSTOMER</div>
-            <div className="form-group">
-              <label>Player</label>
-              <select value={playerId} onChange={e => setPlayerId(e.target.value)}>
-                <option value="manual">Manual Entry (walk-in)</option>
-                {data.users.filter(u => u.role === "player").map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            </div>
-            {playerId === "manual" && (
-              <>
-                <div className="form-group"><label>Name</label><input value={manual.name} onChange={e => setManual(p => ({ ...p, name: e.target.value }))} /></div>
-                <div className="form-group"><label>Email (optional)</label><input value={manual.email} onChange={e => setManual(p => ({ ...p, email: e.target.value }))} /></div>
-              </>
-            )}
-          </div>
-          <div className="card">
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>SALE ITEMS</div>
-            {items.length === 0 ? <p className="text-muted" style={{ fontSize: 13 }}>No items added yet</p> : (
-              items.map(item => (
-                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
-                  <span>{item.name} ×{item.qty}</span>
-                  <div className="gap-2">
-                    <span className="text-green">£{(item.price * item.qty).toFixed(2)}</span>
-                    <button style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }} onClick={() => setItems(c => c.filter(x => x.id !== item.id))}>✕</button>
-                  </div>
-                </div>
-              ))
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: 22, marginTop: 12 }}>
-              <span>TOTAL</span><span className="text-green">£{total.toFixed(2)}</span>
-            </div>
-            <button className="btn btn-primary mt-2" style={{ width: "100%", padding: 10 }} disabled={busy} onClick={completeSale}>
-              {busy ? "Saving…" : "Complete Sale"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Admin Staff ───────────────────────────────────────────
 function AdminStaff({ data, save, showToast }) {
   const [modal, setModal] = useState(false);
