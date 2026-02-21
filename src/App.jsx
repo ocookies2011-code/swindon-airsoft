@@ -450,15 +450,41 @@ function QRScanner({ onScan, onClose }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const rafRef = useRef(null);
+  const detectorRef = useRef(null);
   const [error, setError] = useState(null);
   const [scanning, setScanning] = useState(false);
+  const [method, setMethod] = useState("loading");
 
   useEffect(() => {
     let active = true;
+
+    // Load jsQR from CDN if not already loaded
+    const ensureJsQR = () => new Promise((resolve) => {
+      if (window.jsQR) { resolve(true); return; }
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+      s.onload = () => resolve(true);
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+
     (async () => {
       try {
+        // Try BarcodeDetector first (native, works great on mobile)
+        if ('BarcodeDetector' in window) {
+          const formats = await BarcodeDetector.getSupportedFormats().catch(() => ['qr_code']);
+          if (formats.includes('qr_code')) {
+            detectorRef.current = new BarcodeDetector({ formats: ['qr_code'] });
+            setMethod("native");
+          }
+        }
+        if (!detectorRef.current) {
+          await ensureJsQR();
+          setMethod(window.jsQR ? "jsqr" : "none");
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: 640, height: 480 }
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
         streamRef.current = stream;
@@ -468,9 +494,10 @@ function QRScanner({ onScan, onClose }) {
           setScanning(true);
         }
       } catch (e) {
-        setError("Camera access denied or unavailable. Use manual check-in instead.");
+        setError("Camera access denied. Please allow camera access and try again.");
       }
     })();
+
     return () => {
       active = false;
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
@@ -480,7 +507,7 @@ function QRScanner({ onScan, onClose }) {
 
   useEffect(() => {
     if (!scanning) return;
-    const tick = () => {
+    const tick = async () => {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       if (!video || !canvas || video.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
@@ -489,9 +516,13 @@ function QRScanner({ onScan, onClose }) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0);
       try {
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        if (window.jsQR) {
-          const code = window.jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+        if (detectorRef.current) {
+          // Native BarcodeDetector
+          const codes = await detectorRef.current.detect(video);
+          if (codes.length > 0) { onScan(codes[0].rawValue); return; }
+        } else if (window.jsQR) {
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = window.jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "attemptBoth" });
           if (code?.data) { onScan(code.data); return; }
         }
       } catch {}
@@ -539,7 +570,13 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast }) {
     if (!form.email || !form.password) { showToast("Email and password required", "red"); return; }
     setBusy(true);
     try {
-      await api.auth.signIn({ email: form.email, password: form.password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+      if (error) throw error;
+      // Manually persist session for noopLock environments
+      if (data.session) {
+        const key = `sb-${supabase.supabaseUrl?.split('//')[1]?.split('.')[0]}-auth-token`;
+        try { localStorage.setItem(key, JSON.stringify(data.session)); } catch {}
+      }
       showToast("Welcome back!");
       onClose();
     } catch (e) {
@@ -663,7 +700,10 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
   const go = (id) => { setPage(id); setDrawerOpen(false); };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Force-clear the session from localStorage regardless of Supabase's response
+    // (noopLock can cause signOut to silently fail)
+    try { await supabase.auth.signOut(); } catch {}
+    Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
     setCu(null);
     setDrawerOpen(false);
   };
@@ -1163,9 +1203,10 @@ function ShopPage({ data, cu, showToast }) {
     try {
       // Save order to DB
       await api.shopOrders.create({
-        customerName:  cu.name,
-        customerEmail: cu.email || "",
-        userId:        cu.id,
+        customerName:    cu.name,
+        customerEmail:   cu.email || "",
+        customerAddress: cu.address || "",
+        userId:          cu.id,
         items:         cart.map(i => ({ id: i.id, name: i.name, price: i.onSale && i.salePrice ? i.salePrice : i.price, qty: i.qty })),
         subtotal:      subTotal,
         postage:       postageTotal,
@@ -1535,8 +1576,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 
       {tab === "vip" && (
         <div className="card">
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>VIP Membership</div>
-          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, plus UKARA ID registration.</p>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
+          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
           {[
             { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
@@ -2284,6 +2325,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 
       {tab === "all" && (
         <div className="card">
+          {localUsers === null && <div style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Loading players…</div>}
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th></th></tr></thead>
             <tbody>
@@ -2308,7 +2350,9 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 
       {tab === "vip" && (
         <div className="card">
-          {vipApps.length === 0 ? (
+          {localUsers === null ? (
+            <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading players…</div>
+          ) : vipApps.length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No pending VIP applications.</div>
           ) : (
             <div className="table-wrap"><table className="data-table">
@@ -2605,19 +2649,55 @@ function AdminOrders({ showToast }) {
 
       {detail && (
         <div className="overlay" onClick={() => setDetail(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">📦 Order Details</div>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+              <div className="modal-title" style={{ margin: 0 }}>📦 Order Details</div>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                const addr = detail.customer_address || "No address on file";
+                const items = (Array.isArray(detail.items) ? detail.items : []).map(i => `${i.name} x${i.qty}`).join(", ");
+                const win = window.open('', '_blank', 'width=400,height=300');
+                win.document.write(`
+                  <html><head><title>Postage Label</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:24px;border:3px solid #000;margin:20px;}
+                    h2{font-size:18px;margin:0 0 4px;}
+                    .to{font-size:22px;font-weight:bold;margin:16px 0 8px;}
+                    .addr{font-size:16px;line-height:1.6;white-space:pre-line;}
+                    .from{font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px;}
+                    .items{font-size:10px;color:#777;margin-top:8px;}
+                    @media print{body{margin:0;border:none;}}
+                  </style></head>
+                  <body>
+                    <div style="font-size:11px;color:#888;">ORDER #${detail.id?.slice(-8).toUpperCase()} · ${gmtShort(detail.created_at)}</div>
+                    <div class="to">TO:</div>
+                    <div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div>
+                    <div class="addr">${addr}</div>
+                    <div class="from">FROM: Swindon Airsoft</div>
+                    <div class="items">Contains: ${items}</div>
+                    <script>window.onload=()=>window.print();<\/script>
+                  </body></html>`);
+                win.document.close();
+              }}>🖨️ Print Postage Label</button>
+            </div>
+
             <div className="grid-2 mb-2">
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>CUSTOMER</div><div style={{ fontWeight: 700 }}>{detail.customer_name}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>EMAIL</div><div>{detail.customer_email || "—"}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>STATUS</div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>CUSTOMER</div><div style={{ fontWeight: 700 }}>{detail.customer_name}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>EMAIL</div><div style={{ fontSize: 13 }}>{detail.customer_email || "—"}</div></div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>SHIPPING ADDRESS</div>
+                <div style={{ fontSize: 13, whiteSpace: "pre-line", background: "var(--bg4)", padding: "10px 12px", borderRadius: 3, border: "1px solid var(--border)" }}>
+                  {detail.customer_address || <span style={{ color: "var(--muted)" }}>No address on file — player may need to update their profile</span>}
+                </div>
+              </div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>STATUS</div>
                 <select value={detail.status} onChange={e => setStatus(detail.id, e.target.value)}
-                  style={{ fontSize: 12, padding: "4px 8px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4 }}>
+                  style={{ fontSize: 12, padding: "6px 10px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 3, width: "100%" }}>
                   {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
             </div>
+
             <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 8, letterSpacing: ".1em" }}>ITEMS</div>
             <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Line Total</th></tr></thead>

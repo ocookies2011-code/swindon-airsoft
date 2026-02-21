@@ -469,15 +469,16 @@ export const shopOrders = {
 
   async create(order) {
     const { data, error } = await supabase.from('shop_orders').insert({
-      customer_name:  order.customerName,
-      customer_email: order.customerEmail || '',
-      user_id:        order.userId || null,
-      items:          order.items,
-      subtotal:       order.subtotal,
-      postage:        order.postage,
-      total:          order.total,
-      postage_name:   order.postageName || '',
-      status:         'pending',
+      customer_name:    order.customerName,
+      customer_email:   order.customerEmail || '',
+      customer_address: order.customerAddress || '',
+      user_id:          order.userId || null,
+      items:            order.items,
+      subtotal:         order.subtotal,
+      postage:          order.postage,
+      total:            order.total,
+      postage_name:     order.postageName || '',
+      status:           'pending',
     }).select().single()
     if (error) throw error
     return data
