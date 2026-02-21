@@ -908,7 +908,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
   ];
   const go = (id) => {
     // Guard: admin page requires admin/staff role — never navigate there otherwise
-    if (id === "admin" && cu?.role !== "admin" && cu?.role !== "staff") return;
+    if (id === "admin" && cu?.role !== "admin") return;
     setPage(id);
     setDrawerOpen(false);
   };
@@ -943,7 +943,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
           <div className="pub-nav-actions">
             {cu ? (
               <>
-                {(cu.role === "admin" || cu.role === "staff") && (
+                {cu.role === "admin" && (
                   <button className="btn btn-sm btn-gold" onClick={() => go("admin")}>⚙ Admin</button>
                 )}
                 <button className="btn btn-sm btn-ghost" onClick={() => go("profile")}>{cu.name.split(" ")[0]}</button>
@@ -975,7 +975,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
           <hr className="pub-nav-drawer-divider" />
           {cu ? (
             <>
-              {(cu.role === "admin" || cu.role === "staff") && (
+              {cu.role === "admin" && (
                 <button className="pub-nav-drawer-link" onClick={() => go("admin")}>
                   <span style={{ fontSize: 20 }}>⚙</span> Admin Panel
                 </button>
@@ -1191,7 +1191,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const vipDisc = cu?.vipStatus === "active" ? 0.1 : 0;
     const extrasTotal = ev.extras.reduce((s, ex) => s + (extras[ex.id] || 0) * ex.price, 0);
     const grandTotal = price * qty * (1 - vipDisc) + extrasTotal;
-    const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin" || cu?.role === "staff";
+    const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
     const myBooking = cu && ev.bookings.find(b => b.userId === cu.id);
 
     const confirmBookingAfterPayment = async (paypalOrder) => {
@@ -1746,7 +1746,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const [edit, setEdit] = useState({ name: cu.name, phone: cu.phone || "", address: cu.address || "" });
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
-  const waiverValid = (cu.waiverSigned && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin" || cu.role === "staff";
+  const waiverValid = (cu.waiverSigned && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin";
   const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date })));
 
   // Count actual checked-in games from booking records — source of truth
@@ -1901,7 +1901,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const verify = async () => {
       try {
         // Call Supabase directly — is_admin_or_staff() uses security definer, checks DB role
-        const { data: result, error } = await supabase.rpc("is_admin_or_staff");
+        const { data: result, error } = await supabase.rpc("is_admin");
         if (error || !result) { setVerified(false); return; }
         setVerified(true);
       } catch { setVerified(false); }
@@ -1957,7 +1957,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "qa-admin", label: "Q&A", icon: "❓", group: null },
     { id: "messages", label: "Site Messages", icon: "📢", group: null },
     { id: "cash", label: "Cash Sales", icon: "💵", group: "TOOLS" },
-    ...(isMain ? [{ id: "staff", label: "Staff", icon: "🔑", group: null }] : []),
   ];
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -2021,7 +2020,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
-          {section === "staff" && isMain && <AdminStaff data={data} save={save} showToast={showToast} />}
         </div>
       </div>
     </div>
@@ -3791,98 +3789,6 @@ function AdminCash({ data, cu, showToast }) {
     </div>
   );
 }
-
-// ── Admin Staff ───────────────────────────────────────────
-function AdminStaff({ data, save, showToast }) {
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "", permissions: [] });
-  const staff = data.users.filter(u => u.role === "staff");
-  const PERMS = ["events", "players", "waivers", "checkin", "shop", "revenue", "gallery-admin", "qa-admin", "messages", "cash"];
-
-  const toggle = (p) => setForm(f => ({ ...f, permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p] }));
-
-  const addStaff = async () => {
-    if (!form.name || !form.email || !form.password) { showToast("Name, email and password required", "red"); return; }
-    try {
-      // Use the Supabase admin endpoint via service role — but since we only have anon key,
-      // we sign up normally then immediately update their role
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: { data: { name: form.name } }
-      });
-      if (signUpErr) throw signUpErr;
-      if (!signUpData.user) throw new Error("No user returned — email may already be registered");
-
-      // Wait for trigger to create profile row
-      await new Promise(r => setTimeout(r, 1500));
-
-      // Update their profile to staff role + permissions
-      const { error: updateErr } = await supabase
-        .from('profiles')
-        .update({ name: form.name, role: 'staff', permissions: form.permissions })
-        .eq('id', signUpData.user.id);
-      if (updateErr) throw updateErr;
-
-      const allProfiles = await api.profiles.getAll();
-      save({ users: allProfiles.map(normaliseProfile) });
-      showToast("✅ Staff account created! They need to confirm their email before logging in.");
-      setModal(false);
-      setForm({ name: "", email: "", password: "", permissions: [] });
-    } catch (e) {
-      showToast("Failed: " + e.message, "red");
-    }
-  };
-
-  return (
-    <div>
-      <div className="page-header"><div><div className="page-title">Staff Management</div></div><button className="btn btn-primary" onClick={() => setModal(true)}>+ Add Staff</button></div>
-      <div className="card">
-        <div className="table-wrap"><table className="data-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Permissions</th><th></th></tr></thead>
-          <tbody>
-            {staff.map(u => (
-              <tr key={u.id}>
-                <td style={{ fontWeight: 600 }}>{u.name}</td><td className="text-muted">{u.email}</td>
-                <td style={{ maxWidth: 300 }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                    {u.permissions.map(p => <span key={p} className="tag tag-blue" style={{ fontSize: 10 }}>{p}</span>)}
-                  </div>
-                </td>
-                <td><button className="btn btn-sm btn-danger" onClick={async () => { try { await api.profiles.delete(u.id); save({ users: data.users.filter(x => x.id !== u.id) }); showToast("Staff removed"); } catch(e) { showToast("Failed: " + e.message, "red"); } }}>Remove</button></td>
-              </tr>
-            ))}
-            {staff.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No staff accounts yet</td></tr>}
-          </tbody>
-        </table></div>
-      </div>
-
-      {modal && (
-        <div className="overlay" onClick={() => setModal(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">🔑 Add Staff Member</div>
-            <div className="form-group"><label>Name</label><input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
-            <div className="form-group"><label>Email</label><input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
-            <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} /></div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 10 }}>PERMISSIONS</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
-              {PERMS.map(p => (
-                <label key={p} style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", padding: "5px 10px", borderRadius: 4, background: form.permissions.includes(p) ? "#1a3d1a" : "var(--bg4)", border: `1px solid ${form.permissions.includes(p) ? "var(--accent2)" : "var(--border)"}`, fontSize: 12 }}>
-                  <input type="checkbox" checked={form.permissions.includes(p)} onChange={() => toggle(p)} style={{ width: 12 }} />{p}
-                </label>
-              ))}
-            </div>
-            <div className="gap-2">
-              <button className="btn btn-primary" onClick={addStaff}>Create Account</button>
-              <button className="btn btn-ghost" onClick={() => setModal(false)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ═══════════════════════════════════════════════════════
 // ROOT APP
 
@@ -3987,7 +3893,7 @@ export default function App() {
     );
   }
 
-  const isAdmin = cu?.role === "admin" || cu?.role === "staff";
+  const isAdmin = cu?.role === "admin";
 
   // Error banner — shown at top but doesn't block the site
   const errorBanner = loadError ? (
