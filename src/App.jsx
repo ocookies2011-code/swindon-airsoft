@@ -82,8 +82,7 @@ function useData() {
         homeMsg,
       }));
 
-      const userList = await api.profiles.getAll().catch(() => []);
-      setData(prev => ({ ...prev, users: userList.map(normaliseProfile) }));
+      // Profiles only load after auth is confirmed (done in auth effect)
     } catch (e) {
       clearTimeout(timeout);
       console.error("loadAll critical error:", e);
@@ -3335,9 +3334,11 @@ export default function App() {
         try {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
-          // Reload to get admin-visible profiles
-          refresh();
+          // Now load all profiles (admin can see everyone)
+          const userList = await api.profiles.getAll().catch(() => []);
+          setData(prev => prev ? { ...prev, users: userList.map(normaliseProfile) } : prev);
         } catch { setCu(null); }
+        refresh();
       }
       setAuthLoading(false);
     }).catch(() => { clearTimeout(timeout); setAuthLoading(false); });
