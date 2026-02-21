@@ -1722,6 +1722,149 @@ function AdminDash({ data, setSection }) {
 
 // ── Admin Check-In ────────────────────────────────────────
 // ── Admin Bookings & Check-In (merged) ────────────────────
+function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
+  const [editBooking, setEditBooking] = useState(null);
+  const [delConfirm, setDelConfirm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = allBookings.filter(b =>
+    !search || b.userName.toLowerCase().includes(search.toLowerCase()) ||
+    b.eventTitle.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const openEdit = (b) => setEditBooking({
+    id: b.id, userId: b.userId, userName: b.userName,
+    eventTitle: b.eventTitle, eventObj: b.eventObj,
+    type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn,
+  });
+
+  const saveEdit = async () => {
+    setBusy(true);
+    try {
+      await api.bookings.update(editBooking.id, editBooking);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Booking updated!");
+      setEditBooking(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(false); }
+  };
+
+  const confirmDelete = async () => {
+    setBusy(true);
+    try {
+      await api.bookings.delete(delConfirm.id);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Booking deleted!");
+      setDelConfirm(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="card">
+      <div style={{ marginBottom: 12 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search player or event…"
+          style={{ maxWidth: 280 }} />
+      </div>
+      <div className="table-wrap"><table className="data-table">
+        <thead>
+          <tr><th>Player</th><th>Event</th><th>Date</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {filtered.length === 0 && (
+            <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No bookings found</td></tr>
+          )}
+          {filtered.map(b => (
+            <tr key={b.id}>
+              <td style={{ fontWeight: 600 }}>{b.userName}</td>
+              <td>{b.eventTitle}</td>
+              <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
+              <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+              <td>{b.qty}</td>
+              <td className="text-green">£{b.total.toFixed(2)}</td>
+              <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+              <td>
+                <div className="gap-2">
+                  {!b.checkedIn && (
+                    <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, b.eventObj)}>✓ In</button>
+                  )}
+                  <button className="btn btn-sm btn-ghost" onClick={() => openEdit(b)}>Edit</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(b)}>Del</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table></div>
+
+      {/* Edit modal */}
+      {editBooking && (
+        <div className="overlay" onClick={() => setEditBooking(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">✏️ Edit Booking</div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+              {editBooking.userName} — {editBooking.eventTitle}
+            </div>
+            <div className="form-group">
+              <label>Ticket Type</label>
+              <select value={editBooking.type} onChange={e => setEditBooking(p => ({ ...p, type: e.target.value }))}>
+                <option value="walkOn">Walk-On</option>
+                <option value="rental">Rental</option>
+              </select>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Quantity</label>
+                <input type="number" min={1} value={editBooking.qty}
+                  onChange={e => setEditBooking(p => ({ ...p, qty: +e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Total (£)</label>
+                <input type="number" step="0.01" min={0} value={editBooking.total}
+                  onChange={e => setEditBooking(p => ({ ...p, total: +e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input type="checkbox" id="ci-edit" checked={editBooking.checkedIn}
+                onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
+              <label htmlFor="ci-edit" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
+            </div>
+            <div className="gap-2 mt-2">
+              <button className="btn btn-primary" disabled={busy} onClick={saveEdit}>
+                {busy ? "Saving…" : "Save Changes"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setEditBooking(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {delConfirm && (
+        <div className="overlay" onClick={() => setDelConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🗑 Delete Booking?</div>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 20px" }}>
+              Delete <strong style={{ color: "var(--text)" }}>{delConfirm.userName}</strong>'s booking for <strong style={{ color: "var(--text)" }}>{delConfirm.eventTitle}</strong>?
+              This cannot be undone.
+            </p>
+            <div className="gap-2">
+              <button className="btn btn-danger" disabled={busy} onClick={confirmDelete}>
+                {busy ? "Deleting…" : "Yes, Delete"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setDelConfirm(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast }) {
   const [tab, setTab] = useState("events");
 
@@ -1879,35 +2022,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 
       {/* ── ALL BOOKINGS TAB ── */}
       {tab === "bookings" && (
-        <div className="card">
-          <div className="table-wrap"><table className="data-table">
-            <thead>
-              <tr><th>Player</th><th>Event</th><th>Date Booked</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th><th>Action</th></tr>
-            </thead>
-            <tbody>
-              {allBookings.length === 0 && (
-                <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No bookings yet</td></tr>
-              )}
-              {allBookings.map(b => (
-                <tr key={b.id}>
-                  <td style={{ fontWeight: 600 }}>{b.userName}</td>
-                  <td>{b.eventTitle}</td>
-                  <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
-                  <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
-                  <td>{b.qty}</td>
-                  <td className="text-green">£{b.total.toFixed(2)}</td>
-                  <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
-                  <td>
-                    {!b.checkedIn
-                      ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, b.eventObj)}>✓ Check In</button>
-                      : <span className="text-muted" style={{ fontSize: 11 }}>—</span>
-                    }
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        </div>
+        <BookingsTab
+          allBookings={allBookings}
+          data={data}
+          doCheckin={doCheckin}
+          save={save}
+          showToast={showToast}
+        />
       )}
 
       {/* ── CHECK-IN TAB ── */}

@@ -154,24 +154,34 @@ export const bookings = {
   },
 
   async checkIn(bookingId, userId) {
-    // Mark booking as checked in
     const { error: bErr } = await supabase
       .from('bookings').update({ checked_in: true }).eq('id', bookingId)
     if (bErr) throw bErr
-
-    // Recalculate from actual checked-in bookings — never trust a stale counter
     const { data: checkedInBookings, error: cErr } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('checked_in', true)
+      .from('bookings').select('id').eq('user_id', userId).eq('checked_in', true)
     if (cErr) throw cErr
-
     const actualCount = checkedInBookings.length
     const { error: pErr } = await supabase
       .from('profiles').update({ games_attended: actualCount }).eq('id', userId)
     if (pErr) throw pErr
     return actualCount
+  },
+
+  async update(bookingId, patch) {
+    const { error } = await supabase
+      .from('bookings').update({
+        ticket_type: patch.type,
+        qty:         patch.qty,
+        total:       patch.total,
+        checked_in:  patch.checkedIn,
+      }).eq('id', bookingId)
+    if (error) throw error
+  },
+
+  async delete(bookingId) {
+    const { error } = await supabase
+      .from('bookings').delete().eq('id', bookingId)
+    if (error) throw error
   }
 }
 
