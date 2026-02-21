@@ -1437,8 +1437,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
   const NAV = [
     { id: "dashboard", label: "Dashboard", icon: "📊", group: "OPERATIONS" },
-    { id: "bookings", label: "Bookings & Check-In", icon: "🎟", badge: totalBookings, badgeColor: "blue", group: null },
-    { id: "events", label: "Events", icon: "📅", badge: upcomingEvents, group: null },
+    { id: "events", label: "Events & Bookings", icon: "📅", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
     { id: "waivers", label: "Waivers", icon: "📋", badge: pendingWaivers || unsigned || null, group: null },
     { id: "shop", label: "Shop", icon: "🛒", group: null },
@@ -1501,8 +1500,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         </div>
         <div className="admin-content">
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
-          {section === "bookings" && <AdminBookingsCheckin data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
-          {section === "events" && <AdminEvents data={data} save={save} updateEvent={updateEvent} showToast={showToast} />}
+          {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
@@ -1602,48 +1600,61 @@ function AdminDash({ data, setSection }) {
 
 // ── Admin Check-In ────────────────────────────────────────
 // ── Admin Bookings & Check-In (merged) ────────────────────
-function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }) {
-  const [tab, setTab] = useState("all");
+function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast }) {
+  const [tab, setTab] = useState("events");
+
+  // ── Events state ──
+  const [modal, setModal] = useState(null);
+  const [viewId, setViewId] = useState(null);
+  const blank = { title: "", date: "", time: "09:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true };
+  const [form, setForm] = useState(blank);
+  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  // ── Check-in state ──
   const [evId, setEvId] = useState(data.events[0]?.id || "");
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
+
   const ev = data.events.find(e => e.id === evId);
+  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
 
   const allBookings = data.events.flatMap(ev =>
     ev.bookings.map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))
   );
 
+  // ── Check-in logic ──
   const doCheckin = async (booking, evObj) => {
+    if (!booking?.id || !booking?.userId) {
+      showToast("Invalid booking data", "red"); return;
+    }
     try {
       const actualCount = await api.bookings.checkIn(booking.id, booking.userId);
       const evList = await api.events.getAll();
       save({ events: evList });
-      // Update local user games count with the accurate DB value
       const u = data.users.find(x => x.id === booking.userId);
       if (u) updateUser(u.id, { gamesAttended: actualCount });
-      showToast(`✅ ${booking.userName} checked in! Games attended: ${actualCount}`);
+      showToast(`✅ ${booking.userName} checked in! Games: ${actualCount}`);
     } catch (e) {
       showToast("Check-in failed: " + e.message, "red");
     }
   };
 
   const manualCheckin = () => {
-    if (!ev || !manual) return;
+    if (!ev || !manual.trim()) return;
     const b = ev.bookings.find(x =>
       x.userName.toLowerCase().includes(manual.toLowerCase()) || x.id === manual.trim()
     );
     if (!b) { showToast("Booking not found", "red"); return; }
-    if (b.checkedIn) { showToast("Already checked in", "red"); return; }
+    if (b.checkedIn) { showToast("Already checked in", "gold"); return; }
     doCheckin(b, ev); setManual("");
   };
 
   const onQRScan = (code) => {
     setScanning(false);
-    // Search across all events for the booking ID
     for (const evObj of data.events) {
       const b = evObj.bookings.find(x => x.id === code);
       if (b) {
-        if (b.checkedIn) { showToast(`${b.userName} is already checked in`, "red"); return; }
+        if (b.checkedIn) { showToast(`${b.userName} already checked in`, "gold"); return; }
         doCheckin(b, evObj); return;
       }
     }
@@ -1661,138 +1672,7 @@ function AdminBookingsCheckin({ data, save, updateEvent, updateUser, showToast }
     showToast("Player list downloaded!");
   };
 
-  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
-
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <div className="page-title">Bookings &amp; Check-In</div>
-          <div className="page-sub">{allBookings.length} total bookings · {allBookings.filter(b => b.checkedIn).length} checked in</div>
-        </div>
-        <div className="gap-2">
-          <button className="btn btn-primary" onClick={() => setScanning(true)}>📷 Scan QR</button>
-          <button className="btn btn-ghost" onClick={downloadList}>⬇ Download List</button>
-        </div>
-      </div>
-
-      <div className="nav-tabs">
-        <button className={`nav-tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>All Bookings</button>
-        <button className={`nav-tab ${tab === "checkin" ? "active" : ""}`} onClick={() => setTab("checkin")}>Check-In by Event</button>
-      </div>
-
-      {tab === "all" && (
-        <div className="card">
-          <div className="table-wrap"><table className="data-table">
-            <thead>
-              <tr>
-                <th>Player</th><th>Event</th><th>Date Booked</th><th>Type</th>
-                <th>Qty</th><th>Total</th><th>Status</th><th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allBookings.length === 0 && (
-                <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No bookings yet</td></tr>
-              )}
-              {allBookings.map(b => (
-                <tr key={b.id}>
-                  <td style={{ fontWeight: 600 }}>{b.userName}</td>
-                  <td>{b.eventTitle}</td>
-                  <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
-                  <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
-                  <td>{b.qty}</td>
-                  <td className="text-green">£{b.total.toFixed(2)}</td>
-                  <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
-                  <td>
-                    {!b.checkedIn
-                      ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, b.eventObj)}>✓ Check In</button>
-                      : <span className="text-muted" style={{ fontSize: 11 }}>—</span>
-                    }
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        </div>
-      )}
-
-      {tab === "checkin" && (
-        <div>
-          <div className="grid-2 mb-2">
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>Select Event</label>
-              <select value={evId} onChange={e => setEvId(e.target.value)}>
-                {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {e.date}</option>)}
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 5, letterSpacing: ".06em", textTransform: "uppercase" }}>Manual Name / Booking ID</div>
-                <input value={manual} onChange={e => setManual(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && manualCheckin()}
-                  placeholder="Search player name or paste booking ID" />
-              </div>
-              <button className="btn btn-primary" onClick={manualCheckin}>Check In</button>
-            </div>
-          </div>
-
-          {ev && (
-            <div className="card">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{ev.title} — {ev.date}</div>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <span className="text-green" style={{ fontSize: 13, fontWeight: 700 }}>
-                    {checkedInCount} / {ev.bookings.length} checked in
-                  </span>
-                  <div className="progress-bar" style={{ width: 100 }}>
-                    <div className="progress-fill" style={{ width: ev.bookings.length ? (checkedInCount / ev.bookings.length * 100) + "%" : "0%" }} />
-                  </div>
-                </div>
-              </div>
-              <div className="table-wrap"><table className="data-table">
-                <thead>
-                  <tr><th>Player</th><th>Type</th><th>Qty</th><th>Total</th><th>Booked</th><th>Status</th><th>Action</th></tr>
-                </thead>
-                <tbody>
-                  {ev.bookings.map(b => (
-                    <tr key={b.id}>
-                      <td style={{ fontWeight: 600 }}>{b.userName}</td>
-                      <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
-                      <td>{b.qty}</td>
-                      <td className="text-green">£{b.total.toFixed(2)}</td>
-                      <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
-                      <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
-                      <td>
-                        {!b.checkedIn
-                          ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ Check In</button>
-                          : <span className="text-muted" style={{ fontSize: 11 }}>—</span>
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                  {ev.bookings.length === 0 && (
-                    <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No bookings for this event</td></tr>
-                  )}
-                </tbody>
-              </table></div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
-    </div>
-  );
-}
-
-// ── Admin Events ──────────────────────────────────────────
-function AdminEvents({ data, save, updateEvent, showToast }) {
-  const [modal, setModal] = useState(null);
-  const [viewId, setViewId] = useState(null);
-  const blank = { title: "", date: "", time: "09:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true };
-  const [form, setForm] = useState(blank);
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
+  // ── Events logic ──
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     try {
@@ -1825,43 +1705,166 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
   return (
     <div>
       <div className="page-header">
-        <div><div className="page-title">Events</div></div>
-        <button className="btn btn-primary" onClick={() => { setForm(blank); setModal("new"); }}>+ New Event</button>
+        <div>
+          <div className="page-title">Events &amp; Bookings</div>
+          <div className="page-sub">{data.events.length} events · {allBookings.length} bookings · {allBookings.filter(b => b.checkedIn).length} checked in</div>
+        </div>
+        <div className="gap-2">
+          {tab === "events" && <button className="btn btn-primary" onClick={() => { setForm(blank); setModal("new"); }}>+ New Event</button>}
+          {tab === "checkin" && <>
+            <button className="btn btn-primary" onClick={() => setScanning(true)}>📷 Scan QR</button>
+            <button className="btn btn-ghost" onClick={downloadList}>⬇ Export</button>
+          </>}
+        </div>
       </div>
-      <div className="table-wrap"><table className="data-table">
-        <thead><tr><th>Event</th><th>Date / Time</th><th>Slots</th><th>Booked</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          {data.events.map(ev => {
-            const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
-            return (
-              <tr key={ev.id}>
-                <td><button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }} onClick={() => setViewId(ev.id)}>{ev.title}</button></td>
-                <td className="mono" style={{ fontSize: 12 }}>{ev.date} {ev.time}</td>
-                <td>{ev.walkOnSlots + ev.rentalSlots}</td>
-                <td>{booked}</td>
-                <td>{ev.published ? <span className="tag tag-green">Live</span> : <span className="tag tag-red">Draft</span>}</td>
-                <td>
-                  <div className="gap-2">
-                    <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...ev }); setModal(ev.id); }}>Edit</button>
-                    <button className="btn btn-sm btn-ghost" onClick={() => clone(ev)}>Clone</button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table></div>
 
+      <div className="nav-tabs">
+        <button className={`nav-tab ${tab === "events" ? "active" : ""}`} onClick={() => setTab("events")}>📅 Events</button>
+        <button className={`nav-tab ${tab === "bookings" ? "active" : ""}`} onClick={() => setTab("bookings")}>🎟 All Bookings</button>
+        <button className={`nav-tab ${tab === "checkin" ? "active" : ""}`} onClick={() => setTab("checkin")}>✅ Check-In</button>
+      </div>
+
+      {/* ── EVENTS TAB ── */}
+      {tab === "events" && (
+        <div className="table-wrap"><table className="data-table">
+          <thead><tr><th>Event</th><th>Date / Time</th><th>Slots</th><th>Booked</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {data.events.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No events yet</td></tr>}
+            {data.events.map(ev => {
+              const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
+              return (
+                <tr key={ev.id}>
+                  <td>
+                    <button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }}
+                      onClick={() => setViewId(ev.id)}>{ev.title}</button>
+                  </td>
+                  <td className="mono" style={{ fontSize: 12 }}>{ev.date} {ev.time}</td>
+                  <td>{ev.walkOnSlots + ev.rentalSlots}</td>
+                  <td>{booked}</td>
+                  <td>{ev.published ? <span className="tag tag-green">Live</span> : <span className="tag tag-red">Draft</span>}</td>
+                  <td>
+                    <div className="gap-2">
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...ev }); setModal(ev.id); }}>Edit</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => clone(ev)}>Clone</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table></div>
+      )}
+
+      {/* ── ALL BOOKINGS TAB ── */}
+      {tab === "bookings" && (
+        <div className="card">
+          <div className="table-wrap"><table className="data-table">
+            <thead>
+              <tr><th>Player</th><th>Event</th><th>Date Booked</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              {allBookings.length === 0 && (
+                <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No bookings yet</td></tr>
+              )}
+              {allBookings.map(b => (
+                <tr key={b.id}>
+                  <td style={{ fontWeight: 600 }}>{b.userName}</td>
+                  <td>{b.eventTitle}</td>
+                  <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
+                  <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+                  <td>{b.qty}</td>
+                  <td className="text-green">£{b.total.toFixed(2)}</td>
+                  <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                  <td>
+                    {!b.checkedIn
+                      ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, b.eventObj)}>✓ Check In</button>
+                      : <span className="text-muted" style={{ fontSize: 11 }}>—</span>
+                    }
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        </div>
+      )}
+
+      {/* ── CHECK-IN TAB ── */}
+      {tab === "checkin" && (
+        <div>
+          <div className="grid-2 mb-2">
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Select Event</label>
+              <select value={evId} onChange={e => setEvId(e.target.value)}>
+                {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {e.date}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 5, letterSpacing: ".06em", textTransform: "uppercase" }}>Name / Booking ID</div>
+                <input value={manual} onChange={e => setManual(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && manualCheckin()}
+                  placeholder="Search player name or paste booking ID" />
+              </div>
+              <button className="btn btn-primary" onClick={manualCheckin}>Check In</button>
+            </div>
+          </div>
+
+          {ev && (
+            <div className="card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{ev.title} — {ev.date}</div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span className="text-green" style={{ fontSize: 13, fontWeight: 700 }}>
+                    {checkedInCount} / {ev.bookings.length} checked in
+                  </span>
+                  <div className="progress-bar" style={{ width: 100 }}>
+                    <div className="progress-fill" style={{ width: ev.bookings.length ? (checkedInCount / ev.bookings.length * 100) + "%" : "0%" }} />
+                  </div>
+                </div>
+              </div>
+              <div className="table-wrap"><table className="data-table">
+                <thead>
+                  <tr><th>Player</th><th>Type</th><th>Qty</th><th>Total</th><th>Booked</th><th>Status</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  {ev.bookings.length === 0 && (
+                    <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No bookings for this event</td></tr>
+                  )}
+                  {ev.bookings.map(b => (
+                    <tr key={b.id} style={{ background: b.checkedIn ? "#0d2818" : "transparent" }}>
+                      <td style={{ fontWeight: 600 }}>{b.userName}</td>
+                      <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+                      <td>{b.qty}</td>
+                      <td className="text-green">£{b.total.toFixed(2)}</td>
+                      <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
+                      <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                      <td>
+                        {!b.checkedIn
+                          ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ Check In</button>
+                          : <span className="text-muted" style={{ fontSize: 11 }}>✓ Done</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Event view modal */}
       {viewEv && (
         <div className="overlay" onClick={() => setViewId(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">📅 {viewEv.title} — Bookings</div>
+            <div className="modal-title">📅 {viewEv.title}</div>
             <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{viewEv.date} @ {viewEv.time} GMT | {viewEv.location}</p>
             <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th></tr></thead>
               <tbody>
                 {viewEv.bookings.map(b => (
-                  <tr key={b.id}><td>{b.userName}</td><td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td><td>{b.qty}</td><td className="text-green">£{b.total.toFixed(2)}</td>
+                  <tr key={b.id}><td>{b.userName}</td><td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td><td>{b.qty}</td>
+                    <td className="text-green">£{b.total.toFixed(2)}</td>
                     <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
                   </tr>
                 ))}
@@ -1873,6 +1876,7 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
         </div>
       )}
 
+      {/* Event edit/new modal */}
       {modal && (
         <div className="overlay" onClick={() => setModal(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
@@ -1899,9 +1903,7 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: "inline-block", cursor: "pointer", marginBottom: 8 }}>
-                    <div className="btn btn-ghost btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      📁 Upload Image
-                    </div>
+                    <div className="btn btn-ghost btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>📁 Upload Image</div>
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                       const file = e.target.files[0]; if (!file) return;
                       const r = new FileReader(); r.onload = ev => f("banner", ev.target.result); r.readAsDataURL(file);
@@ -1913,8 +1915,8 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
                 </div>
                 {form.banner && (
                   <div style={{ position: "relative" }}>
-                    <img src={form.banner} style={{ width: 100, height: 60, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} alt="Banner preview" />
-                    <button onClick={() => f("banner", "")} style={{ position: "absolute", top: -6, right: -6, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    <img src={form.banner} style={{ width: 100, height: 60, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} alt="" />
+                    <button onClick={() => f("banner", "")} style={{ position: "absolute", top: -6, right: -6, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 11 }}>✕</button>
                   </div>
                 )}
               </div>
@@ -1931,9 +1933,13 @@ function AdminEvents({ data, save, updateEvent, showToast }) {
           </div>
         </div>
       )}
+
+      {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
     </div>
   );
 }
+
+// ── Admin Events (alias — kept for any legacy references) ──────
 
 // ── Admin Players ─────────────────────────────────────────
 function AdminPlayers({ data, save, updateUser, showToast }) {
