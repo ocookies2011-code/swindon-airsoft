@@ -1743,7 +1743,28 @@ function QAPage({ data }) {
 // ── Profile ───────────────────────────────────────────────
 function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const [tab, setTab] = useState("profile");
-  const [edit, setEdit] = useState({ name: cu.name, phone: cu.phone || "", address: cu.address || "" });
+
+  // Parse stored address string back into structured fields
+  const parseAddress = (addr) => {
+    const parts = (addr || "").split("\n");
+    return {
+      line1:    parts[0] || "",
+      line2:    parts[1] || "",
+      city:     parts[2] || "",
+      county:   parts[3] || "",
+      postcode: parts[4] || "",
+    };
+  };
+  const composeAddress = (a) =>
+    [a.line1, a.line2, a.city, a.county, a.postcode].map(s => s.trim()).filter(Boolean).join("\n");
+
+  const [edit, setEdit] = useState({
+    name: cu.name,
+    phone: cu.phone || "",
+    ...parseAddress(cu.address),
+  });
+  const setAddr = (field, val) => setEdit(p => ({ ...p, [field]: val }));
+
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
   const waiverValid = (cu.waiverSigned && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin";
@@ -1758,6 +1779,15 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const handlePic = (e) => {
     const file = e.target.files[0]; if (!file) return;
     const r = new FileReader(); r.onload = (ev) => updateUser(cu.id, { profilePic: ev.target.result }); r.readAsDataURL(file);
+  };
+
+  const saveProfile = () => {
+    updateUser(cu.id, {
+      name:    edit.name,
+      phone:   edit.phone,
+      address: composeAddress(edit),
+    });
+    showToast("Profile updated!");
   };
 
   return (
@@ -1791,11 +1821,37 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
         <div className="card">
           <div className="form-row">
             <div className="form-group"><label>Full Name</label><input value={edit.name} onChange={e => setEdit(p => ({ ...p, name: e.target.value }))} /></div>
-            <div className="form-group"><label>Phone</label><input value={edit.phone} onChange={e => setEdit(p => ({ ...p, phone: e.target.value }))} /></div>
+            <div className="form-group"><label>Phone</label><input value={edit.phone} onChange={e => setEdit(p => ({ ...p, phone: e.target.value }))} placeholder="07700 000000" /></div>
           </div>
-          <div className="form-group"><label>Address</label><textarea rows={2} value={edit.address} onChange={e => setEdit(p => ({ ...p, address: e.target.value }))} /></div>
+
+          <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>Delivery Address</div>
+          <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 2, padding: "14px 16px", marginBottom: 14 }}>
+            <div className="form-group" style={{ marginBottom: 10 }}>
+              <label>Address Line 1</label>
+              <input value={edit.line1} onChange={e => setAddr("line1", e.target.value)} placeholder="House number and street name" />
+            </div>
+            <div className="form-group" style={{ marginBottom: 10 }}>
+              <label>Address Line 2 <span style={{ color: "var(--subtle)", fontWeight: 400, letterSpacing: 0 }}>(optional)</span></label>
+              <input value={edit.line2} onChange={e => setAddr("line2", e.target.value)} placeholder="Flat, apartment, unit, etc." />
+            </div>
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Town / City</label>
+                <input value={edit.city} onChange={e => setAddr("city", e.target.value)} placeholder="Swindon" />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>County <span style={{ color: "var(--subtle)", fontWeight: 400, letterSpacing: 0 }}>(optional)</span></label>
+                <input value={edit.county} onChange={e => setAddr("county", e.target.value)} placeholder="Wiltshire" />
+              </div>
+            </div>
+            <div className="form-group mt-1" style={{ marginBottom: 0 }}>
+              <label>Postcode</label>
+              <input value={edit.postcode} onChange={e => setAddr("postcode", e.target.value.toUpperCase())} placeholder="SN1 1AA" style={{ maxWidth: 160 }} />
+            </div>
+          </div>
+
           <div className="gap-2">
-            <button className="btn btn-primary" onClick={() => { updateUser(cu.id, edit); showToast("Profile updated!"); }}>Save</button>
+            <button className="btn btn-primary" onClick={saveProfile}>Save</button>
             <button className="btn btn-danger" onClick={() => setDelConfirm(true)}>Request Account Deletion</button>
           </div>
           {delConfirm && (
@@ -2742,7 +2798,29 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             </div>
             <div className="form-row">
               <div className="form-group"><label>Credits (£)</label><input type="number" value={edit.credits || 0} onChange={e => setEdit(p => ({ ...p, credits: +e.target.value }))} /></div>
-              <div className="form-group"><label>Address</label><input value={edit.address || ""} onChange={e => setEdit(p => ({ ...p, address: e.target.value }))} /></div>
+            </div>
+            <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>Delivery Address</div>
+            <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 2, padding: "12px 14px", marginBottom: 14 }}>
+              {(() => {
+                const parts = (edit.address || "").split("\n");
+                const setAddrPart = (idx, val) => {
+                  const p = (edit.address || "").split("\n");
+                  while (p.length <= idx) p.push("");
+                  p[idx] = val;
+                  setEdit(prev => ({ ...prev, address: p.join("\n") }));
+                };
+                return (
+                  <>
+                    <div className="form-group" style={{ marginBottom: 8 }}><label>Line 1</label><input value={parts[0] || ""} onChange={e => setAddrPart(0, e.target.value)} placeholder="House number and street" /></div>
+                    <div className="form-group" style={{ marginBottom: 8 }}><label>Line 2</label><input value={parts[1] || ""} onChange={e => setAddrPart(1, e.target.value)} placeholder="Flat, apartment, etc." /></div>
+                    <div className="form-row" style={{ marginBottom: 8 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}><label>Town / City</label><input value={parts[2] || ""} onChange={e => setAddrPart(2, e.target.value)} placeholder="Swindon" /></div>
+                      <div className="form-group" style={{ marginBottom: 0 }}><label>County</label><input value={parts[3] || ""} onChange={e => setAddrPart(3, e.target.value)} placeholder="Wiltshire" /></div>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}><label>Postcode</label><input value={parts[4] || ""} onChange={e => setAddrPart(4, e.target.value.toUpperCase())} placeholder="SN1 1AA" style={{ maxWidth: 160 }} /></div>
+                  </>
+                );
+              })()}
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
               <input type="checkbox" checked={edit.deleteRequest || false} onChange={e => setEdit(p => ({ ...p, deleteRequest: e.target.checked }))} />
