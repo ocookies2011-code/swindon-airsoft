@@ -46,16 +46,16 @@ function useData() {
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
-    // Hard timeout — show site after 8 seconds no matter what
     const timeout = setTimeout(() => setLoading(false), 8000);
     try {
-      const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
+      const [evList, shopList, postageList, albumList, qaList, homeMsg, userList] = await Promise.all([
         api.events.getAll().catch(e => { console.error("events:", e); return []; }),
         api.shop.getAll().catch(e => { console.error("shop:", e); return []; }),
         api.postage.getAll().catch(e => { console.error("postage:", e); return []; }),
         api.gallery.getAll().catch(e => { console.error("gallery:", e); return []; }),
         api.qa.getAll().catch(e => { console.error("qa:", e); return []; }),
         api.settings.get("home_message").catch(() => ""),
+        api.profiles.getAll().catch(e => { console.error("profiles:", e); return []; }),
       ]);
       clearTimeout(timeout);
       setData({
@@ -65,7 +65,7 @@ function useData() {
         albums: albumList,
         qa: qaList,
         homeMsg,
-        users: [],
+        users: userList.map(normaliseProfile),
       });
     } catch (e) {
       clearTimeout(timeout);
@@ -3043,7 +3043,7 @@ export default function App() {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
         } catch { setCu(null); }
-        // Reload events now that we have a session — bookings will be visible
+        // Reload everything now session is confirmed — profiles will be visible to admin
         refresh();
       }
       setAuthLoading(false);
