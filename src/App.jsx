@@ -3306,42 +3306,6 @@ function AdminStaff({ data, save, showToast }) {
 // ROOT APP
 
 // ── Root App ──────────────────────────────────────────────────
-// Temporary diagnostic — shows Supabase config and connection status on loading screen
-function _Diagnostics() {
-  const [status, setStatus] = useState("checking…");
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  useEffect(() => {
-    if (!url || url.includes("your-project")) {
-      setStatus("❌ VITE_SUPABASE_URL is missing or placeholder");
-      return;
-    }
-    if (!key || key.length < 20) {
-      setStatus("❌ VITE_SUPABASE_ANON_KEY is missing");
-      return;
-    }
-    // Try a simple fetch directly
-    fetch(`${url}/rest/v1/events?select=id&limit=1`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` }
-    })
-      .then(r => r.ok ? r.json().then(d => setStatus(`✅ Connected — got ${d.length} event(s)`)) : r.text().then(t => setStatus(`❌ HTTP ${r.status}: ${t.slice(0,120)}`)))
-      .catch(e => setStatus(`❌ Network error: ${e.message}`));
-  }, []);
-
-  const urlShort = url ? url.replace("https://","").slice(0,30)+"…" : "NOT SET";
-  const keyShort = key ? key.slice(0,20)+"…" : "NOT SET";
-
-  return (
-    <div style={{ marginTop: 24, background: "#161b22", border: "1px solid #30363d", borderRadius: 8, padding: 16, maxWidth: 480, width: "100%", fontSize: 12, fontFamily: "monospace", color: "#c9d1d9" }}>
-      <div style={{ fontWeight: 700, marginBottom: 10, color: "#58a6ff" }}>🔧 Connection Diagnostics</div>
-      <div style={{ marginBottom: 6 }}><span style={{ color: "#8b949e" }}>SUPABASE_URL: </span>{urlShort}</div>
-      <div style={{ marginBottom: 12 }}><span style={{ color: "#8b949e" }}>ANON_KEY: </span>{keyShort}</div>
-      <div style={{ color: status.startsWith("✅") ? "#3fb950" : "#f85149", wordBreak: "break-all" }}>{status}</div>
-    </div>
-  );
-}
-
 export default function App() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
   const [page, setPage] = useState("home");
@@ -3352,26 +3316,54 @@ export default function App() {
 
   // Auth — runs in background, never blocks site from rendering
   useEffect(() => {
-    // Short timeout just to stop authLoading state from lingering
     const timeout = setTimeout(() => setAuthLoading(false), 3000);
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const loadSession = async () => {
+      try {
+        // Try getSession first
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          clearTimeout(timeout);
+          try {
+            const profile = await api.profiles.getById(session.user.id);
+            setCu(normaliseProfile(profile));
+            api.profiles.getAll().catch(() => []).then(list =>
+              setData(prev => prev ? { ...prev, users: list.map(normaliseProfile) } : prev)
+            );
+          } catch { setCu(null); }
+          setAuthLoading(false);
+          return;
+        }
+
+        // Fallback: read raw session from localStorage directly
+        // (needed when noopLock causes getSession to return null on refresh)
+        const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        if (storageKey) {
+          try {
+            const raw = JSON.parse(localStorage.getItem(storageKey));
+            const userId = raw?.user?.id;
+            if (userId) {
+              const profile = await api.profiles.getById(userId);
+              if (profile) {
+                setCu(normaliseProfile(profile));
+                // Restore session properly
+                if (raw.access_token) {
+                  await supabase.auth.setSession({ access_token: raw.access_token, refresh_token: raw.refresh_token });
+                }
+              }
+            }
+          } catch { /* localStorage entry malformed, ignore */ }
+        }
+      } catch { /* getSession failed, stay logged out */ }
+
       clearTimeout(timeout);
-      if (session?.user) {
-        try {
-          const profile = await api.profiles.getById(session.user.id);
-          setCu(normaliseProfile(profile));
-          // Now load all profiles (admin can see everyone)
-          const userList = await api.profiles.getAll().catch(() => []);
-          setData(prev => prev ? { ...prev, users: userList.map(normaliseProfile) } : prev);
-        } catch { setCu(null); }
-        refresh();
-      }
       setAuthLoading(false);
-    }).catch(() => { clearTimeout(timeout); setAuthLoading(false); });
+    };
+
+    loadSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "INITIAL_SESSION") return; // handled by getSession above
+      if (event === "INITIAL_SESSION") return;
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
@@ -3410,7 +3402,6 @@ export default function App() {
         <div style={{ width: 48, height: 48, background: "var(--green)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#000", fontSize: 20, animation: "pulse 1s infinite" }}>SA</div>
         <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
-        <_Diagnostics />
       </div>
     );
   }
