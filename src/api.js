@@ -141,13 +141,14 @@ export const events = {
 export const bookings = {
   async create(booking) {
     const { data, error } = await supabase.from('bookings').insert({
-      event_id:    booking.eventId,
-      user_id:     booking.userId,
-      user_name:   booking.userName,
-      ticket_type: booking.type,
-      qty:         booking.qty,
-      extras:      booking.extras,
-      total:       booking.total,
+      event_id:       booking.eventId,
+      user_id:        booking.userId,
+      user_name:      booking.userName,
+      ticket_type:    booking.type,
+      qty:            booking.qty,
+      extras:         booking.extras,
+      total:          booking.total,
+      paypal_order_id: booking.paypalOrderId || null,
     }).select().single()
     if (error) throw error
     return data
@@ -479,6 +480,7 @@ export const shopOrders = {
       total:            order.total,
       postage_name:     order.postageName || '',
       status:           'pending',
+      paypal_order_id:  order.paypalOrderId || null,
     }).select().single()
     if (error) throw error
     return data

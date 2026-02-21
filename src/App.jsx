@@ -4,6 +4,83 @@ import * as api from "./api";
 import { normaliseProfile } from "./api";
 // jsQR is loaded via CDN in the QRScanner component — no import needed
 
+// ── PayPal SDK loader ─────────────────────────────────────────────────
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
+
+function usePayPal() {
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    if (!PAYPAL_CLIENT_ID) { setError("PayPal Client ID not configured"); return; }
+    if (window.paypal) { setReady(true); return; }
+    const existing = document.getElementById("paypal-sdk");
+    if (existing) { existing.addEventListener("load", () => setReady(true)); return; }
+    const script = document.createElement("script");
+    script.id = "paypal-sdk";
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=GBP&intent=capture`;
+    script.onload = () => setReady(true);
+    script.onerror = () => setError("Failed to load PayPal — check your internet connection");
+    document.head.appendChild(script);
+  }, []);
+  return { ready, error };
+}
+
+// ── PayPal Button component ───────────────────────────────────────────
+function PayPalCheckoutButton({ amount, description, onSuccess, onError, disabled }) {
+  const containerRef = useRef(null);
+  const rendered = useRef(false);
+  const { ready, error: sdkError } = usePayPal();
+
+  useEffect(() => {
+    if (!ready || !containerRef.current || rendered.current || disabled) return;
+    if (!window.paypal) return;
+    rendered.current = true;
+    containerRef.current.innerHTML = "";
+
+    window.paypal.Buttons({
+      style: {
+        layout: "vertical",
+        color: "black",
+        shape: "rect",
+        label: "pay",
+        height: 44,
+      },
+      createOrder: (_data, actions) => actions.order.create({
+        purchase_units: [{
+          amount: { value: Number(amount).toFixed(2), currency_code: "GBP" },
+          description,
+        }],
+      }),
+      onApprove: async (_data, actions) => {
+        try {
+          const order = await actions.order.capture();
+          onSuccess(order);
+        } catch (e) {
+          onError(e.message || "Payment capture failed");
+        }
+      },
+      onError: (err) => {
+        onError(err?.message || "PayPal error — please try again");
+      },
+      onCancel: () => {
+        onError(null); // null = cancelled, not an error
+      },
+    }).render(containerRef.current);
+  }, [ready, disabled, amount]);
+
+  if (!PAYPAL_CLIENT_ID) return (
+    <div className="alert alert-red">⚠️ PayPal not configured — add VITE_PAYPAL_CLIENT_ID to your .env file</div>
+  );
+  if (sdkError) return <div className="alert alert-red">⚠️ {sdkError}</div>;
+  if (!ready) return (
+    <div style={{ textAlign: "center", padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>
+      Loading PayPal…
+    </div>
+  );
+  return <div ref={containerRef} style={{ marginTop: 12 }} />;
+}
+
+
 // ── GMT helpers ───────────────────────────────────────────────
 const gmtNow = () => new Date().toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
 const gmtDate = (d) => new Date(d).toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
@@ -1110,30 +1187,39 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin" || cu?.role === "staff";
     const myBooking = cu && ev.bookings.find(b => b.userId === cu.id);
 
-    const doBook = async () => {
-      if (!cu) { setAuthModal("login"); return; }
-      if (!waiverValid) { setWaiverModal(true); return; }
-      if (booked + qty > total) { showToast("Not enough slots available", "red"); return; }
-      if (myBooking) { showToast("You already have a booking for this event", "red"); return; }
+    const [paypalError, setPaypalError] = useState(null);
+    const [bookingBusy, setBookingBusy] = useState(false);
+
+    const confirmBookingAfterPayment = async (paypalOrder) => {
+      setBookingBusy(true);
+      setPaypalError(null);
       try {
         await api.bookings.create({
-          eventId: ev.id,
-          userId: cu.id,
-          userName: cu.name,
-          type: ticketType,
+          eventId:      ev.id,
+          userId:       cu.id,
+          userName:     cu.name,
+          type:         ticketType,
           qty,
           extras,
-          total: grandTotal,
+          total:        grandTotal,
+          paypalOrderId: paypalOrder.id,
         });
-        // Refresh events to show new booking
         const evList = await api.events.getAll();
         save({ events: evList });
-        showToast("🎉 Booking confirmed!");
+        showToast("🎉 Payment successful — you're booked in!");
       } catch (e) {
-        console.error("Booking failed:", e);
-        showToast("Booking failed: " + e.message, "red");
+        showToast("Payment taken but booking failed — please contact us: " + e.message, "red");
+      } finally {
+        setBookingBusy(false);
       }
     };
+
+    const handlePaypalError = (msg) => {
+      if (msg) setPaypalError(msg);
+    };
+
+    // Pre-flight check before showing PayPal button
+    const bookingBlocked = !cu || !waiverValid || (booked + qty > total) || !!myBooking;
 
     return (
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "16px" }}>
@@ -1247,9 +1333,27 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <span>TOTAL</span><span className="text-green">£{grandTotal.toFixed(2)}</span>
                     </div>
                   </div>
-                  <button className="btn btn-primary" style={{ width: "100%", padding: "11px", fontSize: 14 }} onClick={doBook}>
-                    {waiverValid ? "Confirm Booking" : "Sign Waiver & Book"}
-                  </button>
+                  {paypalError && <div className="alert alert-red mt-1">⚠️ {paypalError}</div>}
+                  {bookingBusy && <div className="alert alert-blue mt-1">⏳ Confirming your booking…</div>}
+                  {!bookingBlocked && !bookingBusy && (
+                    <PayPalCheckoutButton
+                      amount={grandTotal}
+                      description={`${ev.title} — ${qty}x ${ticketType === "walkOn" ? "Walk-On" : "Rental"} ticket`}
+                      onSuccess={confirmBookingAfterPayment}
+                      onError={handlePaypalError}
+                      disabled={bookingBlocked}
+                    />
+                  )}
+                  {!cu && (
+                    <button className="btn btn-primary" style={{ width: "100%", padding: "11px", fontSize: 14 }} onClick={() => setAuthModal("login")}>
+                      Log In to Book
+                    </button>
+                  )}
+                  {cu && !waiverValid && (
+                    <button className="btn btn-primary" style={{ width: "100%", padding: "11px", fontSize: 14 }} onClick={() => setWaiverModal(true)}>
+                      Sign Waiver to Continue
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -1336,37 +1440,40 @@ function ShopPage({ data, cu, showToast }) {
   const postageTotal = hasNoPost ? 0 : (postage?.price || 0);
   const grandTotal = subTotal + postageTotal;
 
-  const placeOrder = async () => {
-    if (!cu) { showToast("Please log in to place an order", "red"); return; }
-    if (cart.length === 0) return;
+  const [shopPaypalError, setShopPaypalError] = useState(null);
+
+  const placeOrderAfterPayment = async (paypalOrder) => {
+    if (!cu || cart.length === 0) return;
     setPlacing(true);
+    setShopPaypalError(null);
     try {
-      // Save order to DB
       await api.shopOrders.create({
         customerName:    cu.name,
         customerEmail:   cu.email || "",
         customerAddress: cu.address || "",
         userId:          cu.id,
-        items:         cart.map(i => ({ id: i.id, name: i.name, price: i.onSale && i.salePrice ? i.salePrice : i.price, qty: i.qty })),
-        subtotal:      subTotal,
-        postage:       postageTotal,
-        postageName:   hasNoPost ? "Collection Only" : (postage?.name || ""),
-        total:         grandTotal,
+        items:           cart.map(i => ({ id: i.id, name: i.name, price: i.onSale && i.salePrice ? i.salePrice : i.price, qty: i.qty })),
+        subtotal:        subTotal,
+        postage:         postageTotal,
+        postageName:     hasNoPost ? "Collection Only" : (postage?.name || ""),
+        total:           grandTotal,
+        paypalOrderId:   paypalOrder.id,
       });
-
-      // Deduct stock via DB function (runs with security definer, bypasses RLS)
       for (const item of cart) {
-        await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
+        await supabase.rpc("deduct_stock", { product_id: item.id, qty: item.qty });
       }
-
-      showToast("✅ Order placed! We'll be in touch shortly.");
+      showToast("✅ Payment successful — order confirmed!");
       setCart([]);
       setCartOpen(false);
     } catch (e) {
-      showToast("Order failed: " + e.message, "red");
+      showToast("Payment taken but order failed — contact us: " + e.message, "red");
     } finally {
       setPlacing(false);
     }
+  };
+
+  const handleShopPaypalError = (msg) => {
+    if (msg) setShopPaypalError(msg);
   };
 
   return (
@@ -1450,10 +1557,20 @@ function ShopPage({ data, cu, showToast }) {
                 )}
 
                 {!cu && <div className="alert alert-red mt-2">Please log in to place an order</div>}
-                <button className="btn btn-primary mt-2" style={{ width: "100%", padding: "11px" }}
-                  disabled={placing || !cu} onClick={placeOrder}>
-                  {placing ? "Placing Order…" : "Place Order"}
-                </button>
+                {shopPaypalError && <div className="alert alert-red mt-1">⚠️ {shopPaypalError}</div>}
+                {placing && <div className="alert alert-blue mt-1">⏳ Confirming your order…</div>}
+                {cu && !placing && grandTotal > 0 && (
+                  <PayPalCheckoutButton
+                    amount={grandTotal}
+                    description={`Swindon Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
+                    onSuccess={placeOrderAfterPayment}
+                    onError={handleShopPaypalError}
+                    disabled={placing}
+                  />
+                )}
+                {!cu && (
+                  <div className="alert alert-red mt-2" style={{ fontSize: 12 }}>Log in to checkout with PayPal</div>
+                )}
               </>
             )}
             <button className="btn btn-ghost mt-1" style={{ width: "100%" }} onClick={() => setCartOpen(false)}>Close</button>
@@ -2840,6 +2957,7 @@ function AdminOrders({ showToast }) {
                 </div>
               </div>
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>PAYPAL REF</div><div className="mono" style={{ fontSize: 11, color: detail.paypal_order_id ? "var(--text)" : "var(--muted)" }}>{detail.paypal_order_id || "—"}</div></div>
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>STATUS</div>
                 <select value={detail.status} onChange={e => setStatus(detail.id, e.target.value)}
                   style={{ fontSize: 12, padding: "6px 10px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 3, width: "100%" }}>
