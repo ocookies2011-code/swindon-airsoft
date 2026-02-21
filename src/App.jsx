@@ -1894,44 +1894,6 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 
 function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
   const [section, setSection] = useState("dashboard");
-  const [verified, setVerified] = useState(null); // null=checking, true=ok, false=denied
-
-  // Server-side role verification — can't be spoofed by client state manipulation
-  useEffect(() => {
-    const verify = async () => {
-      try {
-        // Call Supabase directly — is_admin_or_staff() uses security definer, checks DB role
-        const { data: result, error } = await supabase.rpc("is_admin");
-        if (error || !result) { setVerified(false); return; }
-        setVerified(true);
-      } catch { setVerified(false); }
-    };
-    verify();
-  }, []);
-
-  // Hard block — shown while verifying or if server says no
-  if (verified === null) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
-        <style>{CSS}</style>
-        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: ".1em", color: "var(--muted)" }}>VERIFYING ACCESS…</div>
-      </div>
-    );
-  }
-
-  if (verified === false) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
-        <style>{CSS}</style>
-        <div style={{ fontSize: 48 }}>🔒</div>
-        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
-        <div style={{ color: "var(--muted)", fontSize: 14, textAlign: "center", maxWidth: 320 }}>
-          You don't have permission to access the admin panel.
-        </div>
-        <button className="btn btn-ghost" onClick={() => setPage("home")}>← Back to Site</button>
-      </div>
-    );
-  }
 
   const isMain = cu.role === "admin";
 
