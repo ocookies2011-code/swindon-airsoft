@@ -3720,12 +3720,12 @@ function AdminCash({ data, cu, showToast }) {
     setLastError(null);
     setBusy(true);
 
-    // Hard 10s timeout so it never hangs forever
+    // Hard 8s timeout so it never hangs forever
     const timer = setTimeout(() => {
       setBusy(false);
-      setLastError("Request timed out — check your internet and that the cash_sales table exists in Supabase");
-      showToast("Timed out — see error on page", "red");
-    }, 10000);
+      setLastError("Request timed out. This is usually an RLS (permissions) issue in Supabase. Run the fix-cash-sales-rls.sql file in your Supabase SQL Editor.");
+      showToast("Timed out — see error below", "red");
+    }, 8000);
 
     try {
       const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
