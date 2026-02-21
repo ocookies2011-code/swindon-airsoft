@@ -82,7 +82,10 @@ function useData() {
         homeMsg,
       }));
 
-      // Profiles only load after auth is confirmed (done in auth effect)
+      // Load profiles after public data — only succeeds when authed, silently skipped for guests
+      api.profiles.getAll()
+        .then(userList => setData(prev => prev ? { ...prev, users: userList.map(normaliseProfile) } : prev))
+        .catch(() => {}); // guests can't see profiles — that's fine
     } catch (e) {
       clearTimeout(timeout);
       console.error("loadAll critical error:", e);
@@ -2065,7 +2068,22 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const [edit, setEdit] = useState(null);
   const [tab, setTab] = useState("all");
   const [recalcBusy, setRecalcBusy] = useState(false);
-  const players = data.users.filter(u => u.role !== "admin");
+  const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
+
+  // Fetch fresh from DB on mount — don't rely on global data.users timing
+  useEffect(() => {
+    api.profiles.getAll()
+      .then(list => {
+        const users = list.map(normaliseProfile);
+        setLocalUsers(users);
+        save({ users }); // also update global state
+      })
+      .catch(e => showToast("Failed to load players: " + e.message, "red"));
+  }, []);
+
+  // Use local (fresh) users if available, fall back to global data.users
+  const allUsers = localUsers ?? data.users;
+  const players = allUsers.filter(u => u.role !== "admin");
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
 
   const saveEdit = () => {
@@ -2260,7 +2278,16 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 // ── Admin Waivers ─────────────────────────────────────────
 function AdminWaivers({ data, updateUser, showToast }) {
   const [view, setView] = useState(null);
-  const withWaiver = data.users.filter(u => u.waiverData || u.waiverPending);
+  const [localUsers, setLocalUsers] = useState(null);
+
+  useEffect(() => {
+    api.profiles.getAll()
+      .then(list => setLocalUsers(list.map(normaliseProfile)))
+      .catch(() => {});
+  }, []);
+
+  const allUsers = localUsers ?? data.users;
+  const withWaiver = allUsers.filter(u => u.waiverData || u.waiverPending);
 
   const approve = (u) => {
     updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
@@ -2270,7 +2297,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
     updateUser(u.id, { waiverPending: null }); showToast("Changes rejected"); setView(null);
   };
 
-  const vw = view ? data.users.find(u => u.id === view) : null;
+  const vw = view ? allUsers.find(u => u.id === view) : null;
 
   return (
     <div>
