@@ -2831,39 +2831,49 @@ function AdminCash({ data, cu, showToast }) {
     if (items.length === 0) { showToast("Add items first", "red"); return; }
     setLastError(null);
     setBusy(true);
-    const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
 
-    const payload = {
-      customer_name:  player ? player.name : (manual.name || "Walk-in"),
-      customer_email: player ? (player.email || "") : (manual.email || ""),
-      user_id:        player ? player.id : null,
-      items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
-      total:          total,
-      recorded_by:    null, // omit recorded_by to avoid FK issues if cu.id is stale
-    };
+    // Hard 10s timeout so it never hangs forever
+    const timer = setTimeout(() => {
+      setBusy(false);
+      setLastError("Request timed out — check your internet and that the cash_sales table exists in Supabase");
+      showToast("Timed out — see error on page", "red");
+    }, 10000);
 
     try {
-      const response = await supabase.from('cash_sales').insert(payload).select();
-      console.log("Cash sale response:", response);
+      const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+      const payload = {
+        customer_name:  player ? player.name : (manual.name || "Walk-in"),
+        customer_email: player ? (player.email || "") : (manual.email || ""),
+        user_id:        player?.id ?? null,
+        items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+        total:          total,
+      };
 
-      if (response.error) {
-        const msg = response.error.message || response.error.details || JSON.stringify(response.error);
-        setLastError(msg);
-        showToast("Error: " + msg, "red");
+      console.log("Inserting cash sale:", payload);
+      const { data: result, error } = await supabase.from('cash_sales').insert(payload).select();
+      clearTimeout(timer);
+      console.log("Cash sale result:", result, "error:", error);
+
+      if (error) {
+        const msg = error.message || error.details || error.hint || JSON.stringify(error);
+        setLastError("DB Error: " + msg);
+        showToast("DB Error: " + msg, "red");
       } else {
-        showToast(`✅ Cash sale £${total.toFixed(2)} recorded!`);
+        showToast(`✅ Sale £${total.toFixed(2)} saved!`);
         setItems([]);
         setManual({ name: "", email: "" });
         setPlayerId("manual");
+        setLastError(null);
       }
     } catch (e) {
+      clearTimeout(timer);
       const msg = e?.message || String(e);
       console.error("Cash sale exception:", e);
-      setLastError(msg);
+      setLastError("Exception: " + msg);
       showToast("Error: " + msg, "red");
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   };
 
   return (
