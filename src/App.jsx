@@ -3090,6 +3090,8 @@ export default function App() {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
         } catch { setCu(null); }
+        // Reload events now that we have a session — bookings will be visible
+        refresh();
       }
       setAuthLoading(false);
     }).catch(() => {
@@ -3103,8 +3105,11 @@ export default function App() {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
         } catch { setCu(null); }
+        // Reload events when auth state changes (login/logout)
+        refresh();
       } else {
         setCu(null);
+        refresh(); // reload to clear any auth-dependent data
       }
     });
 
