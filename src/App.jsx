@@ -46,7 +46,12 @@ function useData() {
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
-    const timeout = setTimeout(() => setLoading(false), 8000);
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [] };
+    // Hard timeout — show site after 8 seconds with empty data rather than null
+    const timeout = setTimeout(() => {
+      setData(prev => prev || emptyData);
+      setLoading(false);
+    }, 8000);
     try {
       const [evList, shopList, postageList, albumList, qaList, homeMsg, userList] = await Promise.all([
         api.events.getAll().catch(e => { console.error("events:", e); return []; }),
@@ -70,6 +75,7 @@ function useData() {
     } catch (e) {
       clearTimeout(timeout);
       console.error("loadAll critical error:", e);
+      setData(prev => prev || emptyData);
       setLoadError(e.message);
     } finally {
       setLoading(false);
@@ -3272,17 +3278,18 @@ export default function App() {
 
   // Listen for Supabase auth changes
   useEffect(() => {
-    // Safety timeout — if auth takes more than 5s, show the site anyway
+    let didInit = false;
     const timeout = setTimeout(() => setAuthLoading(false), 5000);
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       clearTimeout(timeout);
+      didInit = true;
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
         } catch { setCu(null); }
-        // Reload everything now session is confirmed — profiles will be visible to admin
+        // Reload data now we have a session (profiles become visible to admin)
         refresh();
       }
       setAuthLoading(false);
@@ -3292,16 +3299,18 @@ export default function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Skip INITIAL_SESSION — handled by getSession() above to avoid double-lock
+      if (event === "INITIAL_SESSION") return;
+
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
           setCu(normaliseProfile(profile));
         } catch { setCu(null); }
-        // Reload events when auth state changes (login/logout)
-        refresh();
+        if (event === "SIGNED_IN") refresh();
       } else {
         setCu(null);
-        refresh(); // reload to clear any auth-dependent data
+        if (event === "SIGNED_OUT") refresh();
       }
     });
 
