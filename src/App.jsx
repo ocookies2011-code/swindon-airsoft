@@ -186,109 +186,341 @@ function useAdminUsers(isAdmin) {
 // (SEED data removed — all data comes from Supabase)
 
 // ── CSS ──────────────────────────────────────────────────
+port { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "./supabaseClient";
+import * as api from "./api";
+import { normaliseProfile } from "./api";
+// jsQR is loaded via CDN in the QRScanner component — no import needed
+
+// ── GMT helpers ───────────────────────────────────────────────
+const gmtNow = () => new Date().toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
+const gmtDate = (d) => new Date(d).toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
+const gmtShort = (d) => new Date(d).toLocaleDateString("en-GB", { timeZone: "Europe/London" });
+const uid = () => crypto.randomUUID();
+
+// ── QR Code component using qrcode-svg ───────────────────────
+function QRCode({ value, size = 120 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !value) return;
+    // Load QRCode library dynamically from CDN
+    const loadQR = async () => {
+      if (!window.QRCode) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      if (ref.current) {
+        ref.current.innerHTML = '';
+        new window.QRCode(ref.current, {
+          text: value, width: size, height: size,
+          colorDark: '#000000', colorLight: '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel.M
+        });
+      }
+    };
+    loadQR().catch(console.error);
+  }, [value, size]);
+  return <div ref={ref} style={{ background: '#fff', padding: 8, borderRadius: 6, display: 'inline-block' }} />;
+}
+
+function useData() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const loadAll = useCallback(async () => {
+    setLoadError(null);
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [] };
+    const timeout = setTimeout(() => {
+      setData(prev => prev || emptyData);
+      setLoading(false);
+    }, 5000);
+    try {
+      const errors = {};
+      const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
+
+      const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
+        safe("events",  api.events.getAll()),
+        safe("shop",    api.shop.getAll()),
+        safe("postage", api.postage.getAll()),
+        safe("gallery", api.gallery.getAll()),
+        safe("qa",      api.qa.getAll()),
+        api.settings.get("home_message").catch(() => ""),
+      ]);
+
+      if (Object.keys(errors).length > 0) {
+        console.error("loadAll partial errors:", errors);
+        // Show first error to help diagnose
+        const firstErr = Object.values(errors)[0];
+        setLoadError(firstErr);
+      }
+
+      clearTimeout(timeout);
+      setData(prev => ({
+        ...(prev || emptyData),
+        events: evList,
+        shop: shopList,
+        postageOptions: postageList,
+        albums: albumList,
+        qa: qaList,
+        homeMsg,
+      }));
+
+      // Load profiles after public data — only succeeds when authed, silently skipped for guests
+      api.profiles.getAll()
+        .then(userList => setData(prev => prev ? { ...prev, users: userList.map(normaliseProfile) } : prev))
+        .catch(() => {}); // guests can't see profiles — that's fine
+    } catch (e) {
+      clearTimeout(timeout);
+      console.error("loadAll critical error:", e);
+      setLoadError(e.message);
+      setData(prev => prev || emptyData);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // save() now delegates to specific API calls based on what changed
+  const save = useCallback(async (patch) => {
+    // Optimistic local update
+    setData(prev => ({ ...prev, ...patch }));
+
+    if (patch.homeMsg !== undefined) {
+      await api.settings.set("home_message", patch.homeMsg);
+    }
+    if (patch.postageOptions !== undefined) {
+      // Diff is handled by admin components calling api.postage directly
+      // This just keeps local state in sync
+    }
+    if (patch.qa !== undefined) {
+      // Handled by admin components calling api.qa directly
+    }
+    if (patch.albums !== undefined) {
+      // Handled by admin components calling api.gallery directly
+    }
+    if (patch.shop !== undefined) {
+      // Handled by admin components calling api.shop directly
+    }
+    if (patch.events !== undefined) {
+      // Handled by admin components calling api.events directly
+    }
+    if (patch.users !== undefined) {
+      // Local admin user list — refresh from DB
+      const allProfiles = await api.profiles.getAll();
+      setData(prev => ({ ...prev, users: allProfiles.map(normaliseProfile) }));
+    }
+  }, []);
+
+  const updateUser = useCallback(async (id, patch) => {
+    // Convert camelCase patch to snake_case for Supabase
+    const snakePatch = {};
+    const map = {
+      name: "name", phone: "phone", address: "address", role: "role",
+      gamesAttended: "games_attended", waiverSigned: "waiver_signed",
+      waiverYear: "waiver_year", waiverData: "waiver_data",
+      waiverPending: "waiver_pending", vipStatus: "vip_status",
+      vipApplied: "vip_applied", ukara: "ukara", credits: "credits",
+      leaderboardOptOut: "leaderboard_opt_out", profilePic: "profile_pic",
+      deleteRequest: "delete_request", permissions: "permissions",
+    };
+    Object.entries(patch).forEach(([k, v]) => {
+      if (map[k]) snakePatch[map[k]] = v;
+    });
+    try {
+      await api.profiles.update(id, snakePatch);
+    } catch (e) {
+      console.error("updateUser failed:", e.message, snakePatch);
+      throw e;
+    }
+    // Refresh local data
+    setData(prev => {
+      if (!prev) return prev;
+      const users = prev.users.map(u => u.id === id ? { ...u, ...patch } : u);
+      return { ...prev, users };
+    });
+  }, []);
+
+  const updateEvent = useCallback(async (id, patch) => {
+    await api.events.update(id, patch);
+    // Refresh events from DB to get accurate state
+    const evList = await api.events.getAll();
+    setData(prev => ({ ...prev, events: evList }));
+  }, []);
+
+  const refresh = useCallback(() => loadAll(), [loadAll]);
+
+  return { data, loading, loadError, save, updateUser, updateEvent, refresh };
+}
+
+// ── useAdminUsers — load all profiles (admin only) ────────────
+function useAdminUsers(isAdmin) {
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    if (!isAdmin) return;
+    api.profiles.getAll()
+      .then(list => setUsers(list.map(normaliseProfile)))
+      .catch(console.error);
+  }, [isAdmin]);
+  return [users, setUsers];
+}
+
+
+// (SEED data removed — all data comes from Supabase)
+
+// ── CSS ──────────────────────────────────────────────────
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-body,#root{background:#0a0c08;color:#d4d8cc;font-family:'Barlow',sans-serif;min-height:100vh;}
+body,#root{background:#0f0f0f;color:#e8e2d9;font-family:'Barlow',sans-serif;min-height:100vh;}
 :root{
-  --bg:#0a0c08;--bg2:#111409;--bg3:#181c12;--bg4:#1e231a;
-  --border:#2a3020;--text:#d4d8cc;--muted:#7a8268;--subtle:#4a5040;
-  --green:#5a8a1e;--green2:#4a7a14;--green-bright:#7ec832;--green-glow:#7ec83240;
-  --red:#c43a2a;--gold:#b8962a;--blue:#4a7aaa;--teal:#2a8a6a;
-  --orange:#c47a2a;--purple:#7a5aaa;
-  --camo1:#3d4a2a;--camo2:#2a3020;--camo3:#4a5a30;--camo4:#1e2618;
+  --bg:#0f0f0f;--bg2:#161616;--bg3:#1e1e1e;--bg4:#252525;
+  --border:#2e2e2e;--text:#e8e2d9;--muted:#8a8278;--subtle:#4a4540;
+  --accent:#e05c00;--accent2:#c04800;--accent-glow:rgba(224,92,0,.3);
+  --accent-pale:#ff7a20;
+  --red:#d63030;--gold:#c8922a;--blue:#3a78b0;--teal:#2a8a72;
+  --orange:#e05c00;--purple:#7a5aaa;
+  --panel:#161616;
   --sidebar-w:224px;--nav-h:56px;--bottom-nav-h:64px;
 }
-::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:var(--bg2);}
-::-webkit-scrollbar-thumb{background:var(--camo1);border-radius:3px;}
-::-webkit-scrollbar-thumb:hover{background:var(--green);}
-.pub-nav{background:rgba(10,12,8,.96);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(8px);box-shadow:0 2px 20px rgba(0,0,0,.6);}
-.pub-nav-inner{max-width:1200px;margin:0 auto;padding:0 16px;height:var(--nav-h);display:flex;align-items:center;gap:4px;}
-.pub-nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer;margin-right:12px;flex-shrink:0;}
-.pub-nav-logo-box{background:linear-gradient(135deg,var(--green2),var(--camo1));width:36px;height:36px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em;border:1px solid var(--green);box-shadow:0 0 12px var(--green-glow);}
-.pub-nav-logo-text{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--text);}
-.pub-nav-logo-text span{color:var(--green-bright);}
-.pub-nav-links{display:flex;gap:2px;flex:1;}
-.pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:6px 12px;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .15s;}
-.pub-nav-link.active{color:var(--green-bright);background:rgba(126,200,50,.08);}
-.pub-nav-link:hover{color:var(--text);background:var(--bg4);}
-.pub-nav-actions{display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0;}
-.pub-nav-hamburger{display:none;background:none;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:18px;cursor:pointer;}
-.pub-nav-drawer{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.85);}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+/* ── NAV ── */
+.pub-nav{
+  background:rgba(10,10,10,.97);
+  border-bottom:2px solid var(--accent);
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(12px);
+}
+.pub-nav-inner{max-width:1200px;margin:0 auto;padding:0 20px;height:var(--nav-h);display:flex;align-items:center;gap:4px;}
+.pub-nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer;margin-right:16px;flex-shrink:0;}
+.pub-nav-logo-box{
+  background:var(--accent);width:38px;height:38px;border-radius:2px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bebas Neue',sans-serif;font-size:13px;color:#fff;letter-spacing:.05em;
+  clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px));
+}
+.pub-nav-logo-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.12em;color:var(--text);}
+.pub-nav-logo-text span{color:var(--accent);}
+.pub-nav-links{display:flex;gap:1px;flex:1;}
+.pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:6px 14px;cursor:pointer;white-space:nowrap;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .12s;position:relative;}
+.pub-nav-link::after{content:'';position:absolute;bottom:0;left:50%;right:50%;height:2px;background:var(--accent);transition:all .15s;}
+.pub-nav-link.active{color:#fff;}
+.pub-nav-link.active::after{left:8px;right:8px;}
+.pub-nav-link:hover{color:#fff;}
+.pub-nav-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex-shrink:0;}
+.pub-nav-hamburger{display:none;background:none;border:1px solid #333;color:var(--text);padding:6px 10px;border-radius:2px;font-size:18px;cursor:pointer;}
+.pub-nav-drawer{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.9);}
 .pub-nav-drawer.open{display:block;}
-.pub-nav-drawer-panel{position:absolute;top:0;left:0;width:80%;max-width:300px;height:100%;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;overflow-y:auto;}
-.pub-nav-drawer-logo{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;letter-spacing:.08em;text-transform:uppercase;}
-.pub-nav-drawer-link{display:flex;align-items:center;gap:12px;padding:14px 20px;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;letter-spacing:.06em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
-.pub-nav-drawer-link.active{color:var(--green-bright);background:rgba(126,200,50,.1);}
-.pub-nav-drawer-link:hover{background:var(--bg4);color:var(--text);}
-.pub-nav-drawer-divider{border:none;border-top:1px solid var(--border);margin:8px 0;}
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,12,8,.97);border-top:1px solid var(--border);height:var(--bottom-nav-h);padding:0 4px;padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(8px);}
+.pub-nav-drawer-panel{position:absolute;top:0;left:0;width:80%;max-width:300px;height:100%;background:#111;border-right:2px solid var(--accent);display:flex;flex-direction:column;padding:20px 0;overflow-y:auto;}
+.pub-nav-drawer-logo{padding:0 20px 16px;border-bottom:1px solid #222;margin-bottom:8px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.1em;}
+.pub-nav-drawer-link{display:flex;align-items:center;gap:12px;padding:14px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .1s;}
+.pub-nav-drawer-link.active{color:var(--accent);border-left:3px solid var(--accent);padding-left:17px;}
+.pub-nav-drawer-link:hover{background:#1e1e1e;color:#fff;}
+.pub-nav-drawer-divider{border:none;border-top:1px solid #222;margin:8px 0;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,10,10,.98);border-top:2px solid var(--accent);height:var(--bottom-nav-h);padding:0 4px;padding-bottom:env(safe-area-inset-bottom);}
 .bottom-nav-inner{display:flex;height:100%;}
-.bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.08em;cursor:pointer;padding:4px 2px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.bottom-nav-btn.active{color:var(--green-bright);}
-.bottom-nav-btn:hover{color:var(--text);}
+.bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.1em;cursor:pointer;padding:4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;transition:color .1s;}
+.bottom-nav-btn.active{color:var(--accent);}
+.bottom-nav-btn:hover{color:#fff;}
 .bottom-nav-icon{font-size:20px;line-height:1;}
 .pub-page-wrap{padding-bottom:80px;}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:20px;}
-.card-sm{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:14px 18px;}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:18px 20px;border-left:3px solid var(--green);position:relative;overflow:hidden;}
-.stat-card::before{content:'';position:absolute;top:0;right:0;width:60px;height:60px;background:radial-gradient(circle at top right,rgba(126,200,50,.06) 0%,transparent 70%);}
-.stat-card.red{border-left-color:var(--red);}
-.stat-card.blue{border-left-color:var(--blue);}
-.stat-card.gold{border-left-color:var(--gold);}
-.stat-card.purple{border-left-color:var(--purple);}
-.stat-card.teal{border-left-color:var(--teal);}
+
+/* ── CARDS ── */
+.card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:2px;padding:20px;
+  position:relative;
+}
+.card-sm{background:var(--bg2);border:1px solid var(--border);border-radius:2px;padding:14px 18px;}
+.stat-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:2px;padding:18px 20px;
+  border-top:3px solid var(--accent);position:relative;overflow:hidden;
+}
+.stat-card::after{content:'';position:absolute;bottom:0;right:0;width:0;height:0;border-style:solid;border-width:0 0 20px 20px;border-color:transparent transparent var(--border) transparent;}
+.stat-card.red{border-top-color:var(--red);}
+.stat-card.blue{border-top-color:var(--blue);}
+.stat-card.gold{border-top-color:var(--gold);}
+.stat-card.purple{border-top-color:var(--purple);}
+.stat-card.teal{border-top-color:var(--teal);}
 .stat-icon{font-size:22px;margin-bottom:10px;}
-.stat-val{font-size:32px;font-weight:900;color:var(--text);line-height:1;font-family:'Barlow Condensed',sans-serif;}
-.stat-label{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--muted);margin-top:4px;text-transform:uppercase;}
+.stat-val{font-size:34px;font-weight:900;color:#fff;line-height:1;font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin-top:4px;text-transform:uppercase;}
 .stat-sub{font-size:11px;color:var(--subtle);margin-top:6px;}
 .stat-sub.red{color:var(--red);}
-.stat-sub.green{color:var(--green-bright);}
-button{cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;border:none;border-radius:3px;transition:all .15s;letter-spacing:.06em;text-transform:uppercase;}
-.btn{padding:8px 20px;font-size:13px;}
-.btn-primary{background:linear-gradient(135deg,var(--green2),var(--green));color:#fff;border:1px solid var(--green);box-shadow:0 2px 8px rgba(90,138,30,.25);}
-.btn-primary:hover{background:linear-gradient(135deg,var(--green),var(--green-bright));box-shadow:0 4px 16px rgba(126,200,50,.35);}
-.btn-danger{background:var(--red);color:#fff;border:1px solid #d44a3a;}
-.btn-danger:hover{background:#d44a3a;}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
-.btn-ghost:hover{background:var(--bg4);border-color:var(--subtle);}
+.stat-sub.green{color:#5aaa30;}
+
+/* ── BUTTONS ── */
+button{cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;border:none;transition:all .12s;letter-spacing:.08em;text-transform:uppercase;}
+.btn{padding:9px 22px;font-size:13px;border-radius:2px;}
+.btn-primary{
+  background:var(--accent);color:#fff;border:none;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);
+  box-shadow:0 2px 12px var(--accent-glow);
+}
+.btn-primary:hover{background:var(--accent-pale);box-shadow:0 4px 20px var(--accent-glow);}
+.btn-danger{background:var(--red);color:#fff;border-radius:2px;}
+.btn-danger:hover{background:#e04040;}
+.btn-ghost{background:transparent;border:1px solid #333;color:var(--text);border-radius:2px;}
+.btn-ghost:hover{background:#222;border-color:#555;color:#fff;}
 .btn-sm{padding:5px 12px;font-size:11px;}
-.btn-gold{background:#4a3a0a;color:var(--gold);border:1px solid var(--gold);}
-.btn-gold:hover{background:#6a5a1a;}
-.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:2px;font-size:10px;font-weight:700;letter-spacing:.08em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.tag-green{background:rgba(90,138,30,.2);color:var(--green-bright);border:1px solid rgba(90,138,30,.4);}
-.tag-red{background:rgba(196,58,42,.2);color:#e06050;border:1px solid rgba(196,58,42,.4);}
-.tag-gold{background:rgba(184,150,42,.2);color:var(--gold);border:1px solid rgba(184,150,42,.4);}
-.tag-blue{background:rgba(74,122,170,.2);color:#7aaad4;border:1px solid rgba(74,122,170,.4);}
-.tag-purple{background:rgba(122,90,170,.2);color:#aa8ad4;border:1px solid rgba(122,90,170,.4);}
-.tag-teal{background:rgba(42,138,106,.2);color:#5abca0;border:1px solid rgba(42,138,106,.4);}
+.btn-gold{background:#3a2a08;color:var(--gold);border:1px solid var(--gold);border-radius:2px;}
+.btn-gold:hover{background:#4a3a12;}
+
+/* ── TAGS ── */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:1px;font-size:10px;font-weight:700;letter-spacing:.1em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
+.tag-green{background:rgba(90,170,48,.15);color:#7dd348;border:1px solid rgba(90,170,48,.35);}
+.tag-red{background:rgba(214,48,48,.15);color:#e06060;border:1px solid rgba(214,48,48,.35);}
+.tag-gold{background:rgba(200,146,42,.15);color:var(--gold);border:1px solid rgba(200,146,42,.35);}
+.tag-blue{background:rgba(58,120,176,.15);color:#6aaae0;border:1px solid rgba(58,120,176,.35);}
+.tag-purple{background:rgba(122,90,170,.15);color:#aa8ad4;border:1px solid rgba(122,90,170,.35);}
+.tag-teal{background:rgba(42,138,114,.15);color:#5abca0;border:1px solid rgba(42,138,114,.35);}
+.tag-orange{background:rgba(224,92,0,.15);color:var(--accent-pale);border:1px solid rgba(224,92,0,.35);}
+
+/* ── FORMS ── */
 .form-group{margin-bottom:14px;}
-.form-group label{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
-input,select,textarea{background:var(--bg4);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:3px;font-family:'Barlow',sans-serif;font-size:14px;width:100%;outline:none;transition:border .15s;}
-input:focus,select:focus,textarea:focus{border-color:var(--green);}
-input[type=checkbox]{width:auto;accent-color:var(--green);cursor:pointer;}
+.form-group label{display:block;font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin-bottom:5px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
+input,select,textarea{background:#1a1a1a;border:1px solid #2e2e2e;color:var(--text);padding:10px 12px;border-radius:2px;font-family:'Barlow',sans-serif;font-size:14px;width:100%;outline:none;transition:border .12s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow);}
+input[type=checkbox]{width:auto;accent-color:var(--accent);cursor:pointer;}
 input[type=file]{padding:6px;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:3px;}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .data-table{width:100%;border-collapse:collapse;min-width:500px;}
-.data-table th{text-align:left;padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;}
-.data-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid rgba(42,48,32,.6);}
-.data-table tbody tr:hover td{background:rgba(126,200,50,.03);}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
-.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:28px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.8);}
+.data-table th{text-align:left;padding:8px 14px;font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--muted);border-bottom:1px solid #2e2e2e;text-transform:uppercase;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;background:#111;}
+.data-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid #1e1e1e;}
+.data-table tbody tr:hover td{background:rgba(224,92,0,.04);}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal-box{background:#161616;border:1px solid #2e2e2e;border-top:2px solid var(--accent);border-radius:2px;padding:28px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.9);}
 .modal-box.wide{max-width:780px;}
-@media(max-width:768px){.overlay{align-items:flex-end;padding:0;}.modal-box,.modal-box.wide{border-radius:8px 8px 0 0;max-width:100%;}}
-.modal-title{font-size:18px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:10px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em;text-transform:uppercase;}
-.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
-.alert{padding:10px 14px;border-radius:3px;font-size:13px;margin-bottom:12px;line-height:1.5;border-left:3px solid;}
-.alert-green{background:rgba(90,138,30,.1);border-color:var(--green);color:#9adf42;}
-.alert-red{background:rgba(196,58,42,.1);border-color:var(--red);color:#e07060;}
-.alert-gold{background:rgba(184,150,42,.1);border-color:var(--gold);color:var(--gold);}
-.alert-blue{background:rgba(74,122,170,.1);border-color:var(--blue);color:#8abde4;}
+@media(max-width:768px){.overlay{align-items:flex-end;padding:0;}.modal-box,.modal-box.wide{border-radius:4px 4px 0 0;max-width:100%;}}
+.modal-title{font-size:20px;font-weight:900;margin-bottom:18px;display:flex;align-items:center;gap:10px;font-family:'Bebas Neue',sans-serif;letter-spacing:.08em;}
+
+/* ── MISC ── */
+.divider{border:none;border-top:1px solid #222;margin:16px 0;}
+.alert{padding:10px 14px;border-radius:2px;font-size:13px;margin-bottom:12px;line-height:1.5;border-left:3px solid;}
+.alert-green{background:rgba(90,170,48,.08);border-color:#5aaa30;color:#7dd348;}
+.alert-red{background:rgba(214,48,48,.08);border-color:var(--red);color:#e07060;}
+.alert-gold{background:rgba(200,146,42,.08);border-color:var(--gold);color:var(--gold);}
+.alert-blue{background:rgba(58,120,176,.08);border-color:var(--blue);color:#6aaae0;}
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.page-title{font-size:24px;font-weight:900;letter-spacing:.05em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
+.page-title{font-size:26px;font-weight:900;letter-spacing:.06em;font-family:'Bebas Neue',sans-serif;}
 .page-sub{font-size:13px;color:var(--muted);margin-top:2px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
@@ -300,85 +532,174 @@ input[type=file]{padding:6px;}
 .mt-1{margin-top:8px;}.mt-2{margin-top:16px;}.mt-3{margin-top:24px;}
 .mb-1{margin-bottom:8px;}.mb-2{margin-bottom:16px;}
 .text-muted{color:var(--muted);}
-.text-green{color:var(--green-bright);}
+.text-green{color:#7dd348;}
 .text-red{color:var(--red);}
 .text-gold{color:var(--gold);}
-.text-blue{color:#8abde4;}
+.text-blue{color:#6aaae0;}
 .mono{font-family:'Share Tech Mono',monospace;}
-.progress-bar{background:var(--bg4);border-radius:2px;height:5px;overflow:hidden;border:1px solid var(--border);}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--green2),var(--green-bright));border-radius:2px;transition:width .4s;}
-.progress-fill.red{background:linear-gradient(90deg,#8b1a1a,var(--red));}
-.countdown-wrap{display:flex;gap:16px;justify-content:center;}
-.countdown-unit{text-align:center;}
-.countdown-num{font-size:48px;font-weight:900;color:var(--green-bright);line-height:1;font-family:'Barlow Condensed',sans-serif;text-shadow:0 0 20px rgba(126,200,50,.35);}
-.countdown-lbl{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-top:4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;}
-.photo-cell{aspect-ratio:4/3;border-radius:3px;overflow:hidden;background:var(--bg4);position:relative;cursor:pointer;border:1px solid var(--border);}
+.progress-bar{background:#222;border-radius:1px;height:4px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .4s;}
+.progress-fill.red{background:var(--red);}
+
+/* ── COUNTDOWN ── */
+.countdown-wrap{display:flex;gap:20px;justify-content:center;}
+.countdown-unit{text-align:center;min-width:64px;}
+.countdown-num{font-size:52px;font-weight:900;color:#fff;line-height:1;font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;}
+.countdown-lbl{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-top:2px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
+
+/* ── PHOTO GRID ── */
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;}
+.photo-cell{aspect-ratio:4/3;overflow:hidden;background:#1e1e1e;position:relative;cursor:pointer;border:1px solid #222;}
 .photo-cell img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
 .photo-cell:hover img{transform:scale(1.08);}
-.qr-box{width:120px;height:120px;background:#fff;padding:8px;border-radius:3px;margin:0 auto;}
+.qr-box{width:120px;height:120px;background:#fff;padding:8px;border-radius:2px;margin:0 auto;}
 .qr-inner{width:100%;height:100%;background:repeating-conic-gradient(#000 0% 25%,#fff 0% 50%) 0 0/16px 16px;}
-.nav-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.nav-tab{padding:10px 18px;font-size:12px;font-weight:700;background:transparent;border:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:0;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.08em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
-.nav-tab:hover{color:var(--text);}
-.nav-tab.active{color:var(--green-bright);border-bottom-color:var(--green-bright);}
-.event-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:pointer;transition:all .2s;}
-.event-card:hover{border-color:var(--green);box-shadow:0 4px 24px rgba(90,138,30,.18);transform:translateY(-2px);}
-.event-banner-img{height:130px;background:linear-gradient(135deg,var(--camo4),var(--camo2),var(--camo1));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:var(--green-bright);letter-spacing:.1em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;position:relative;overflow:hidden;}
-.event-banner-img::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 12px,rgba(0,0,0,.04) 12px,rgba(0,0,0,.04) 24px);}
+
+/* ── TABS ── */
+.nav-tabs{display:flex;gap:0;border-bottom:1px solid #2e2e2e;margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.nav-tab{padding:10px 18px;font-size:11px;font-weight:700;background:transparent;border:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .12s;}
+.nav-tab:hover{color:#fff;}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── EVENT CARDS ── */
+.event-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all .15s;position:relative;}
+.event-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);opacity:0;transition:opacity .15s;}
+.event-card:hover{border-color:#444;box-shadow:0 8px 32px rgba(0,0,0,.5);transform:translateY(-2px);}
+.event-card:hover::before{opacity:1;}
+.event-banner-img{
+  height:140px;overflow:hidden;position:relative;
+  background:#1a1a1a;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:900;color:var(--accent);
+  letter-spacing:.1em;font-family:'Bebas Neue',sans-serif;
+}
 .event-card-body{padding:14px;}
-.shop-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;transition:all .2s;}
-.shop-card:hover{border-color:var(--green);box-shadow:0 4px 20px rgba(90,138,30,.15);}
-.shop-img{height:140px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);overflow:hidden;border-bottom:1px solid var(--border);}
+
+/* ── SHOP CARDS ── */
+.shop-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;transition:all .15s;}
+.shop-card:hover{border-color:#444;box-shadow:0 8px 32px rgba(0,0,0,.5);transform:translateY(-2px);}
+.shop-img{height:160px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);overflow:hidden;border-bottom:1px solid #222;position:relative;}
 .shop-img img{width:100%;height:100%;object-fit:cover;}
 .shop-body{padding:14px;}
-.lb-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:3px;margin-bottom:4px;background:var(--bg2);border:1px solid var(--border);}
-.lb-row:hover{border-color:var(--subtle);}
-.lb-rank{font-size:18px;font-weight:900;width:32px;text-align:center;font-family:'Barlow Condensed',sans-serif;color:var(--muted);}
+
+/* ── LEADERBOARD ── */
+.lb-row{display:flex;align-items:center;gap:14px;padding:12px 16px;margin-bottom:3px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid transparent;transition:all .12s;}
+.lb-row:hover{border-left-color:var(--accent);background:#1a1a1a;}
+.lb-rank{font-size:20px;font-weight:900;width:32px;text-align:center;font-family:'Bebas Neue',sans-serif;color:var(--muted);}
 .lb-rank.top{color:var(--gold);}
-.lb-avatar{width:38px;height:38px;border-radius:3px;background:var(--bg4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;overflow:hidden;flex-shrink:0;}
+.lb-avatar{width:38px;height:38px;background:#222;border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;overflow:hidden;flex-shrink:0;}
 .lb-avatar img{width:100%;height:100%;object-fit:cover;}
-.lb-games{margin-left:auto;font-size:22px;font-weight:900;color:var(--green-bright);font-family:'Barlow Condensed',sans-serif;}
-.accordion-item{border:1px solid var(--border);border-radius:3px;margin-bottom:6px;overflow:hidden;}
-.accordion-q{padding:14px 16px;cursor:pointer;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;}
-.accordion-q:hover{background:var(--bg4);}
-.accordion-a{padding:14px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);line-height:1.7;background:var(--bg4);}
+.lb-games{margin-left:auto;font-size:24px;font-weight:900;color:var(--accent);font-family:'Bebas Neue',sans-serif;}
+
+/* ── ACCORDION ── */
+.accordion-item{border:1px solid #222;margin-bottom:4px;overflow:hidden;}
+.accordion-q{padding:14px 16px;cursor:pointer;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;transition:background .1s;}
+.accordion-q:hover{background:#1e1e1e;}
+.accordion-a{padding:14px 16px;border-top:1px solid #222;font-size:13px;color:var(--muted);line-height:1.7;background:#111;}
+
+/* ── ADMIN SHELL ── */
 .admin-shell{display:flex;min-height:100vh;}
-.admin-sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;transition:transform .25s;}
+.admin-sidebar{width:var(--sidebar-w);background:#0f0f0f;border-right:1px solid #222;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;transition:transform .25s;}
 .admin-main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
-.admin-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
+.admin-topbar{background:#111;border-bottom:1px solid #222;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
 .admin-content{padding:16px;flex:1;}
-.sb-logo{padding:16px 14px 12px;border-bottom:1px solid var(--border);}
-.sb-logo-text{font-size:17px;font-weight:900;letter-spacing:.06em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.sb-logo-text span{color:var(--green-bright);}
-.sb-time{font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-top:3px;}
-.sb-label{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--subtle);padding:0 10px;margin-bottom:4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);transition:all .15s;position:relative;margin-bottom:1px;letter-spacing:.06em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
-.sb-item:hover{background:var(--bg4);color:var(--text);}
-.sb-item.active{background:rgba(90,138,30,.2);color:var(--green-bright);border-left:2px solid var(--green-bright);}
+.sb-logo{padding:14px 14px 12px;border-bottom:2px solid var(--accent);margin-bottom:8px;}
+.sb-logo-text{font-size:20px;font-weight:900;letter-spacing:.1em;font-family:'Bebas Neue',sans-serif;}
+.sb-logo-text span{color:var(--accent);}
+.sb-time{font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-top:2px;}
+.sb-label{font-size:9px;font-weight:700;letter-spacing:.18em;color:#444;padding:8px 12px 4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);transition:all .1s;position:relative;margin-bottom:1px;letter-spacing:.08em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;border-left:2px solid transparent;}
+.sb-item:hover{background:#1a1a1a;color:#fff;border-left-color:#444;}
+.sb-item.active{background:#1e1a18;color:var(--accent);border-left-color:var(--accent);}
 .sb-icon{font-size:15px;flex-shrink:0;}
-.sb-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:2px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;font-family:'Barlow Condensed',sans-serif;}
 .sb-badge.gold{background:var(--gold);color:#000;}
-.sb-badge.blue{background:var(--blue);color:#fff;}
-.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:49;}
-.bar-chart{display:flex;align-items:flex-end;gap:4px;height:80px;}
-.bar{background:linear-gradient(180deg,var(--green),var(--green2));border-radius:2px 2px 0 0;flex:1;min-height:4px;transition:height .4s;}
-.bar:hover{background:linear-gradient(180deg,var(--green-bright),var(--green));}
-.bar-labels{display:flex;gap:4px;}
+.sb-badge.blue{background:var(--blue);}
+.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:49;}
+
+/* ── BAR CHART ── */
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;}
+.bar{background:var(--accent);opacity:.7;flex:1;min-height:4px;transition:all .4s;}
+.bar:hover{opacity:1;}
+.bar-labels{display:flex;gap:3px;}
 .bar-label{flex:1;text-align:center;font-size:9px;color:var(--muted);padding-top:4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.toast{position:fixed;bottom:80px;right:16px;z-index:999;padding:12px 18px;border-radius:4px;font-size:13px;font-weight:700;animation:slideUp .2s ease;max-width:300px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em;text-transform:uppercase;border-left:3px solid;}
-.toast-green{background:rgba(10,20,8,.97);border-color:var(--green-bright);color:var(--green-bright);box-shadow:0 4px 20px rgba(90,138,30,.4);}
-.toast-red{background:rgba(20,8,8,.97);border-color:var(--red);color:#e07060;box-shadow:0 4px 20px rgba(196,58,42,.4);}
-.toast-gold{background:rgba(20,16,8,.97);border-color:var(--gold);color:var(--gold);box-shadow:0 4px 20px rgba(184,150,42,.3);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:80px;right:16px;z-index:999;padding:12px 18px;font-size:13px;font-weight:700;animation:slideUp .2s ease;max-width:300px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;border-left:3px solid;border-radius:1px;}
+.toast-green{background:#0f1f0a;border-color:#5aaa30;color:#7dd348;box-shadow:0 4px 20px rgba(90,170,48,.3);}
+.toast-red{background:#1f0a0a;border-color:var(--red);color:#e07060;box-shadow:0 4px 20px rgba(214,48,48,.3);}
+.toast-gold{background:#1f180a;border-color:var(--gold);color:var(--gold);box-shadow:0 4px 20px rgba(200,146,42,.3);}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+/* ── QR SCANNER ── */
 .qr-scanner-wrap{position:relative;width:100%;max-width:340px;margin:0 auto;}
-.qr-scanner-wrap video{width:100%;border-radius:4px;display:block;}
-.qr-overlay{position:absolute;inset:0;border-radius:4px;border:2px solid var(--green-bright);pointer-events:none;}
-.qr-corner{position:absolute;width:24px;height:24px;border-color:var(--green-bright);border-style:solid;}
+.qr-scanner-wrap video{width:100%;display:block;}
+.qr-overlay{position:absolute;inset:0;border:2px solid var(--accent);pointer-events:none;}
+.qr-corner{position:absolute;width:24px;height:24px;border-color:var(--accent);border-style:solid;}
 .qr-corner.tl{top:8px;left:8px;border-width:3px 0 0 3px;}
 .qr-corner.tr{top:8px;right:8px;border-width:3px 3px 0 0;}
 .qr-corner.bl{bottom:8px;left:8px;border-width:0 0 3px 3px;}
 .qr-corner.br{bottom:8px;right:8px;border-width:0 3px 3px 0;}
+
+/* ── HERO ── */
+.hero-bg{
+  position:relative;min-height:480px;overflow:hidden;
+  display:flex;align-items:center;
+  background:#0a0a0a;
+  margin-bottom:20px;
+}
+.hero-bg::before{
+  content:'';position:absolute;inset:0;
+  background-image:url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1400&q=80&auto=format&fit=crop');
+  background-size:cover;background-position:center 30%;
+  opacity:.28;
+  filter:grayscale(40%) contrast(1.1);
+}
+.hero-bg::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(100deg,rgba(0,0,0,.95) 0%,rgba(0,0,0,.7) 55%,rgba(0,0,0,.2) 100%);
+}
+.hero-content{position:relative;z-index:1;padding:clamp(40px,6vw,70px) clamp(20px,5vw,60px);max-width:640px;}
+.hero-eyebrow{font-size:11px;letter-spacing:.3em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.hero-eyebrow::before{content:'';width:30px;height:2px;background:var(--accent);display:block;}
+.hero-h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(60px,9vw,110px);line-height:.9;color:#fff;letter-spacing:.04em;margin-bottom:20px;}
+.hero-h1 span{color:var(--accent);}
+.hero-p{color:#aaa;font-size:15px;line-height:1.7;max-width:420px;margin-bottom:32px;}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;}
+
+/* ── FEATURE STRIP ── */
+.feature-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#222;border:1px solid #222;margin-bottom:20px;}
+.feature-item{background:var(--bg2);padding:20px;transition:background .15s;}
+.feature-item:hover{background:#1e1e1e;}
+.feature-icon{font-size:26px;margin-bottom:10px;}
+.feature-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;color:#fff;margin-bottom:6px;}
+.feature-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+@media(max-width:700px){.feature-strip{grid-template-columns:1fr;}}
+
+/* ── COUNTDOWN PANEL ── */
+.countdown-panel{
+  background:#111;
+  border:1px solid #2e2e2e;
+  border-left:4px solid var(--accent);
+  padding:24px 32px;margin-bottom:20px;
+  display:flex;align-items:center;gap:32px;flex-wrap:wrap;
+}
+.countdown-panel-info{flex:1;min-width:200px;}
+.countdown-panel-label{font-size:9px;letter-spacing:.25em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:4px;}
+.countdown-panel-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;color:#fff;}
+.countdown-panel-meta{font-size:12px;color:var(--muted);margin-top:4px;}
+.countdown-panel-timer{display:flex;gap:0;}
+.countdown-panel-unit{text-align:center;padding:0 12px;border-right:1px solid #222;}
+.countdown-panel-unit:last-child{border-right:none;}
+.countdown-panel-num{font-family:'Bebas Neue',sans-serif;font-size:44px;color:#fff;line-height:1;}
+.countdown-panel-lbl{font-size:9px;letter-spacing:.15em;color:var(--muted);font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
+
+/* ── EVENTS SECTION HEADER ── */
+.section-header{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.section-header-line{flex:1;height:1px;background:#222;}
+.section-header-text{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.2em;color:var(--muted);}
+
+/* ── RESPONSIVE ── */
 @media(max-width:768px){
   .pub-nav-links{display:none;}
   .pub-nav-hamburger{display:block;}
@@ -388,13 +709,12 @@ input[type=file]{padding:6px;}
   .admin-sidebar.open{transform:translateX(0);}
   .admin-main{margin-left:0;}
   .admin-overlay.open{display:block;}
-  .admin-topbar .hamburger{display:flex;}
 }
 @media(max-width:480px){
-  .countdown-num{font-size:36px;}
-  .stat-val{font-size:26px;}
+  .countdown-num{font-size:38px;}
+  .hero-cta{flex-direction:column;}
 }
-`;
+`
 
 function Toast({ msg, type }) {
   return msg ? <div className={`toast toast-${type || "green"}`}>{msg}</div> : null;
@@ -715,7 +1035,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
           {/* Logo */}
           <div className="pub-nav-logo" onClick={() => go("home")}>
             <div className="pub-nav-logo-box">SA</div>
-            <span className="pub-nav-logo-text">SWINDON <span style={{ color: "var(--green)" }}>AIRSOFT</span></span>
+            <span className="pub-nav-logo-text">SWINDON <span>AIRSOFT</span></span>
           </div>
           {/* Desktop links */}
           <div className="pub-nav-links">
@@ -751,7 +1071,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
       <div className={`pub-nav-drawer ${drawerOpen ? "open" : ""}`} onClick={() => setDrawerOpen(false)}>
         <div className="pub-nav-drawer-panel" onClick={e => e.stopPropagation()}>
           <div className="pub-nav-drawer-logo">
-            SWINDON <span style={{ color: "var(--green)" }}>AIRSOFT</span>
+            SWINDON <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
           </div>
           {links.map(l => (
             <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
@@ -814,138 +1134,146 @@ function HomePage({ data, setPage }) {
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
-      {data.homeMsg && <div className="alert alert-green mb-2">{data.homeMsg}</div>}
+    <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      {data.homeMsg && <div className="alert alert-green mb-2" style={{ margin: "16px 16px 0" }}>{data.homeMsg}</div>}
 
-      {/* ── HERO ── */}
-      <div style={{
-        position: "relative", overflow: "hidden", borderRadius: 4,
-        background: "linear-gradient(135deg, #0a0e06 0%, #111a08 40%, #0e1a0a 100%)",
-        border: "1px solid var(--border)", marginBottom: 16, padding: "clamp(28px,6vw,56px) clamp(20px,5vw,48px)",
-      }}>
-        {/* Camo pattern overlay */}
-        <div style={{
-          position: "absolute", inset: 0, opacity: 0.07,
-          backgroundImage: `radial-gradient(ellipse 80px 60px at 20% 30%, #4a5a2a 0%, transparent 100%),
-            radial-gradient(ellipse 120px 80px at 70% 20%, #3a4820 0%, transparent 100%),
-            radial-gradient(ellipse 60px 90px at 85% 70%, #2a3818 0%, transparent 100%),
-            radial-gradient(ellipse 100px 50px at 10% 80%, #4a5a2a 0%, transparent 100%),
-            radial-gradient(ellipse 90px 70px at 50% 60%, #3a4820 0%, transparent 100%)`,
-        }} />
-        {/* Crosshair decoration */}
-        <div style={{
-          position: "absolute", right: "clamp(20px,6vw,60px)", top: "50%", transform: "translateY(-50%)",
-          width: 120, height: 120, opacity: 0.08,
-          backgroundImage: `
-            radial-gradient(circle, transparent 38%, #7ec832 38%, #7ec832 40%, transparent 40%),
-            radial-gradient(circle, transparent 58%, #7ec832 58%, #7ec832 60%, transparent 60%),
-            linear-gradient(#7ec832 1px, transparent 1px),
-            linear-gradient(90deg, #7ec832 1px, transparent 1px)`,
-          backgroundSize: "120px 120px, 120px 120px, 120px 20px, 20px 120px",
-          backgroundPosition: "center",
-        }} />
-        {/* Corner brackets */}
-        {[["0","0","top","left"],["0","0","top","right"],["0","0","bottom","left"],["0","0","bottom","right"]].map(([t,l,v,h]) => (
-          <div key={v+h} style={{
-            position: "absolute", [v]: 12, [h]: 12, width: 20, height: 20,
-            borderColor: "var(--green)", borderStyle: "solid",
-            borderWidth: v==="top" && h==="left" ? "2px 0 0 2px" : v==="top" ? "2px 2px 0 0" : h==="left" ? "0 0 2px 2px" : "0 2px 2px 0",
-          }} />
-        ))}
-
-        <div style={{ position: "relative", maxWidth: 560 }}>
-          <div style={{ fontSize: 11, letterSpacing: ".25em", color: "var(--green-bright)", marginBottom: 14, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ display: "inline-block", width: 24, height: 1, background: "var(--green)" }} />
-            SWINDON'S NO.1 AIRSOFT SITE
-            <span style={{ display: "inline-block", width: 24, height: 1, background: "var(--green)" }} />
-          </div>
-          <h1 style={{ fontSize: "clamp(40px,7vw,78px)", fontWeight: 900, lineHeight: .95, marginBottom: 16, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".02em" }}>
-            LOCK<br /><span style={{ color: "var(--green-bright)", textShadow: "0 0 30px rgba(126,200,50,.4)" }}>AND</span><br />LOAD
+      {/* ── HERO with real airsoft photo ── */}
+      <div className="hero-bg">
+        <div className="hero-content">
+          <div className="hero-eyebrow">Swindon's No.1 Airsoft Site</div>
+          <h1 className="hero-h1">
+            LOCK<br />&amp;<br /><span>LOAD</span>
           </h1>
-          <p style={{ color: "var(--muted)", maxWidth: 400, marginBottom: 28, lineHeight: 1.65, fontSize: 15 }}>
-            Swindon's premier airsoft experience. Tactical skirmishes, competitive events, and the full tactical package — rain or shine.
+          <p className="hero-p">
+            Tactical skirmishes, competitive events and full kit rental — Swindon's premier airsoft experience, rain or shine.
           </p>
-          <div className="gap-2">
-            <button className="btn btn-primary" style={{ padding: "11px 32px", fontSize: 14 }} onClick={() => setPage("events")}>
-              🎯 Book a Game Day
+          <div className="hero-cta">
+            <button className="btn btn-primary" style={{ padding: "13px 36px", fontSize: 15 }} onClick={() => setPage("events")}>
+              Book a Game Day
             </button>
-            <button className="btn btn-ghost" style={{ padding: "11px 28px", fontSize: 14 }} onClick={() => setPage("shop")}>
-              🛒 Visit Shop
+            <button className="btn btn-ghost" style={{ padding: "13px 30px", fontSize: 15 }} onClick={() => setPage("shop")}>
+              Visit Shop
             </button>
           </div>
         </div>
+
+        {/* Side image panel — hidden on mobile */}
+        <div style={{
+          position: "absolute", right: 0, top: 0, bottom: 0, width: "35%",
+          backgroundImage: "url('https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80&auto=format&fit=crop')",
+          backgroundSize: "cover", backgroundPosition: "center",
+          clipPath: "polygon(15% 0, 100% 0, 100% 100%, 0% 100%)",
+          opacity: 0.35,
+          display: "var(--side-panel-display, block)",
+        }} />
       </div>
 
       {/* ── Feature strip ── */}
-      <div className="grid-3 mb-2">
+      <div className="feature-strip" style={{ margin: "0 0 20px" }}>
         {[
-          { icon: "🎯", title: "Tactical Skirmishes", desc: "Multiple game modes across varied terrain — indoors and outdoors." },
-          { icon: "🪖", title: "Kit Rental Available", desc: "Full rental packages available. Just show up, we handle the gear." },
-          { icon: "⭐", title: "VIP Membership", desc: "Attend 3 games and unlock discounts, priority booking, and more." },
+          { icon: "🎯", title: "Tactical Skirmishes", desc: "Multiple game modes across varied terrain. CQB, woodland and mixed environments." },
+          { icon: "🪖", title: "Full Kit Rental", desc: "Gun, mask, BBs and full protective gear included. Just show up ready to play." },
+          { icon: "⭐", title: "VIP Membership", desc: "Play 3 games and apply. Unlock 10% off all bookings and shop purchases — £30/year." },
         ].map(f => (
-          <div key={f.title} style={{
-            background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 4, padding: "18px 16px",
-            borderLeft: "3px solid var(--green)", position: "relative", overflow: "hidden",
-          }}>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>{f.icon}</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 6, color: "var(--text)" }}>{f.title}</div>
-            <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>{f.desc}</div>
+          <div key={f.title} className="feature-item">
+            <div className="feature-icon">{f.icon}</div>
+            <div className="feature-title">{f.title}</div>
+            <div className="feature-desc">{f.desc}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Next event countdown ── */}
-      {nextEvent && (
-        <div style={{
-          background: "linear-gradient(135deg, #0d1a08, #111c0a)", border: "1px solid var(--green)", borderRadius: 4,
-          padding: "24px 28px", marginBottom: 16, textAlign: "center", position: "relative", overflow: "hidden",
-        }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, rgba(126,200,50,.06) 0%, transparent 70%)" }} />
-          <div style={{ position: "relative" }}>
-            <div style={{ fontSize: 10, letterSpacing: ".25em", color: "var(--muted)", marginBottom: 6, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: "uppercase" }}>⚡ Next Game Day</div>
-            <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: ".04em", textTransform: "uppercase" }}>{nextEvent.title}</div>
-            <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>{nextEvent.date} · {nextEvent.time} GMT · {nextEvent.location}</div>
-            <Countdown target={nextEvent.date + "T" + nextEvent.time + ":00"} />
-            <button className="btn btn-primary mt-2" style={{ padding: "10px 28px" }} onClick={() => setPage("events")}>View &amp; Book →</button>
-          </div>
-        </div>
-      )}
+      <div style={{ padding: "0 0 24px" }}>
+        {/* ── Countdown ── */}
+        {nextEvent && (() => {
+          const target = nextEvent.date + "T" + nextEvent.time + ":00";
+          return (
+            <div className="countdown-panel" style={{ margin: "0 0 20px" }}>
+              <div className="countdown-panel-info">
+                <div className="countdown-panel-label">⚡ Next Game Day</div>
+                <div className="countdown-panel-title">{nextEvent.title}</div>
+                <div className="countdown-panel-meta">📍 {nextEvent.location} · {nextEvent.date} · {nextEvent.time} GMT</div>
+                <button className="btn btn-primary mt-2" style={{ padding: "9px 24px" }} onClick={() => setPage("events")}>
+                  View &amp; Book →
+                </button>
+              </div>
+              <div className="countdown-panel-timer">
+                <CountdownPanel target={target} />
+              </div>
+            </div>
+          );
+        })()}
 
-      {/* ── Upcoming events grid ── */}
-      {data.events.filter(e => e.published).length > 0 && (
-        <>
-          <div style={{ fontSize: 11, letterSpacing: ".2em", fontWeight: 700, color: "var(--muted)", marginBottom: 12, fontFamily: "'Barlow Condensed', sans-serif", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            UPCOMING EVENTS
-            <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
-          </div>
-          <div className="grid-3 mb-2">
-            {data.events.filter(e => e.published).slice(0, 3).map(ev => {
-              const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
-              const total = ev.walkOnSlots + ev.rentalSlots;
-              const pct = total > 0 ? Math.min(100, booked / total * 100) : 0;
-              return (
-                <div key={ev.id} className="event-card" onClick={() => setPage("events")}>
-                  <div className="event-banner-img">
-                    {ev.banner ? <img src={ev.banner} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : ev.title}
-                  </div>
-                  <div className="event-card-body">
-                    <div className="gap-2 mb-1">
-                      <span className="tag tag-green">{ev.date}</span>
-                      <span className="tag tag-blue">{ev.time}</span>
+        {/* ── Upcoming events ── */}
+        {data.events.filter(e => e.published).length > 0 && (
+          <>
+            <div className="section-header">
+              <div className="section-header-line" />
+              <div className="section-header-text">Upcoming Events</div>
+              <div className="section-header-line" />
+            </div>
+            <div className="grid-3">
+              {data.events.filter(e => e.published).slice(0, 3).map(ev => {
+                const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
+                const total = ev.walkOnSlots + ev.rentalSlots;
+                const pct = total > 0 ? Math.min(100, booked / total * 100) : 0;
+                return (
+                  <div key={ev.id} className="event-card" onClick={() => setPage("events")}>
+                    <div className="event-banner-img">
+                      {ev.banner
+                        ? <img src={ev.banner} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                        : <img
+                            src="https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&q=70&auto=format&fit=crop"
+                            style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .5 }}
+                            alt=""
+                          />
+                      }
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", padding: "10px 12px", background: "linear-gradient(transparent 40%, rgba(0,0,0,.8))" }}>
+                        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: ".06em", color: "#fff" }}>{ev.title}</div>
+                      </div>
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: 15, margin: "8px 0 4px", fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".04em" }}>{ev.title}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>📍 {ev.location}</div>
-                    <div className="progress-bar mb-1"><div className={`progress-fill ${pct > 80 ? "red" : ""}`} style={{ width: pct + "%" }} /></div>
-                    <div style={{ fontSize: 11, color: pct > 80 ? "var(--red)" : "var(--muted)" }}>{booked}/{total} slots filled</div>
+                    <div className="event-card-body">
+                      <div className="gap-2 mb-1">
+                        <span className="tag tag-orange">{ev.date}</span>
+                        <span className="tag tag-blue">{ev.time}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>📍 {ev.location}</div>
+                      <div className="progress-bar mb-1"><div className={`progress-fill ${pct > 80 ? "red" : ""}`} style={{ width: pct + "%" }} /></div>
+                      <div style={{ fontSize: 11, color: pct > 80 ? "var(--red)" : "var(--muted)" }}>{booked}/{total} slots filled</div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
     </div>
+  );
+}
+
+// Inline countdown for panel (returns JSX segments)
+function CountdownPanel({ target }) {
+  const [diff, setDiff] = useState(0);
+  useEffect(() => {
+    const tick = () => setDiff(Math.max(0, new Date(target) - new Date()));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [target]);
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return (
+    <>
+      {[["DAYS", d], ["HRS", h], ["MIN", m], ["SEC", s]].map(([l, n]) => (
+        <div className="countdown-panel-unit" key={l}>
+          <div className="countdown-panel-num">{String(n).padStart(2, "0")}</div>
+          <div className="countdown-panel-lbl">{l}</div>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -999,7 +1327,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "16px" }}>
         <button className="btn btn-ghost btn-sm mb-2" onClick={() => { setDetail(null); setTab("info"); setExtras({}); }}>← Back to Events</button>
         <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 20 }}>
-          <div style={{ height: 160, background: "linear-gradient(135deg,#0d2010,#111827)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: "var(--green)", letterSpacing: ".04em" }}>
+          <div style={{ height: 160, background: "linear-gradient(135deg,#150e08,#111827)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: "var(--accent)", letterSpacing: ".04em" }}>
             {ev.banner ? <img src={ev.banner} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : ev.title}
           </div>
           <div style={{ padding: 20 }}>
@@ -1029,7 +1357,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               <p style={{ color: "var(--muted)", lineHeight: 1.7, marginBottom: 18 }}>{ev.description}</p>
               <div className="form-row mb-2">
                 <div style={{ background: "var(--bg4)", borderRadius: 6, padding: 16, textAlign: "center" }}>
-                  <div style={{ fontSize: 32, fontWeight: 900, color: "var(--green)" }}>£{ev.walkOnPrice}</div>
+                  <div style={{ fontSize: 32, fontWeight: 900, color: "var(--accent)" }}>£{ev.walkOnPrice}</div>
                   <div style={{ color: "var(--muted)", fontSize: 12 }}>Walk-On Ticket</div>
                   <div style={{ fontSize: 11, color: "var(--subtle)", marginTop: 2 }}>{ev.walkOnSlots} slots</div>
                 </div>
@@ -1053,7 +1381,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             </div>
 
             {/* ── Inline booking on Info tab ── */}
-            <div className="card" style={{ borderTop: "3px solid var(--green)" }}>
+            <div className="card" style={{ borderTop: "3px solid var(--accent)" }}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 16 }}>BOOK THIS EVENT</div>
               {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft: 4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ A signed waiver is required before booking. <button className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
@@ -1149,7 +1477,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 <p className="text-muted" style={{ fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{ev.description?.slice(0, 90)}…</p>
                 <div className="form-row" style={{ gap: 8 }}>
                   <div style={{ background: "var(--bg4)", padding: "8px 0", borderRadius: 6, textAlign: "center" }}>
-                    <div style={{ fontWeight: 900, color: "var(--green)" }}>£{ev.walkOnPrice}</div>
+                    <div style={{ fontWeight: 900, color: "var(--accent)" }}>£{ev.walkOnPrice}</div>
                     <div style={{ fontSize: 10, color: "var(--muted)" }}>Walk-On</div>
                   </div>
                   <div style={{ background: "var(--bg4)", padding: "8px 0", borderRadius: 6, textAlign: "center" }}>
@@ -1234,7 +1562,7 @@ function ShopPage({ data, cu, showToast }) {
       <div className="page-header">
         <div><div className="page-title">Shop</div><div className="page-sub">Gear up for battle</div></div>
         <button className="btn btn-ghost" onClick={() => setCartOpen(true)}>
-          🛒 Cart {cart.length > 0 && <span style={{ background: "var(--green)", color: "#000", borderRadius: 10, padding: "1px 7px", fontSize: 11, marginLeft: 6, fontWeight: 700 }}>{cart.reduce((s, i) => s + i.qty, 0)}</span>}
+          🛒 Cart {cart.length > 0 && <span style={{ background: "var(--accent)", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, marginLeft: 6, fontWeight: 700 }}>{cart.reduce((s, i) => s + i.qty, 0)}</span>}
         </button>
       </div>
       {cu?.vipStatus === "active" && <div className="alert alert-gold mb-2">⭐ VIP member — 10% discount applied</div>}
@@ -1256,7 +1584,7 @@ function ShopPage({ data, cu, showToast }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div>
                     {item.onSale && <span className="text-muted" style={{ textDecoration: "line-through", fontSize: 12, marginRight: 6 }}>£{item.price}</span>}
-                    <span style={{ fontWeight: 900, fontSize: 22, color: "var(--green)" }}>£{vipP || dp}</span>
+                    <span style={{ fontWeight: 900, fontSize: 22, color: "var(--accent)" }}>£{vipP || dp}</span>
                     {vipP && <span className="text-gold" style={{ fontSize: 10, marginLeft: 4 }}>VIP</span>}
                   </div>
                   <span className="text-muted" style={{ fontSize: 11 }}>Stock: {item.stock}</span>
@@ -1476,10 +1804,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
       <div className="page-header">
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ position: "relative" }}>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", border: "2px solid var(--green)", overflow: "hidden", background: "var(--bg4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700 }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", border: "2px solid var(--accent)", overflow: "hidden", background: "var(--bg4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700 }}>
               {cu.profilePic ? <img src={cu.profilePic} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : cu.name[0]}
             </div>
-            <label style={{ position: "absolute", bottom: 0, right: 0, background: "var(--green)", color: "#000", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 12 }}>
+            <label style={{ position: "absolute", bottom: 0, right: 0, background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 12 }}>
               📷<input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePic} />
             </label>
           </div>
@@ -1557,7 +1885,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
                     <div className="text-muted" style={{ fontSize: 12 }}>{b.eventDate} — {b.type === "walkOn" ? "Walk-On" : "Rental"} ×{b.qty}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 900, fontSize: 20, color: "var(--green)" }}>£{b.total.toFixed(2)}</div>
+                    <div style={{ fontWeight: 900, fontSize: 20, color: "var(--accent)" }}>£{b.total.toFixed(2)}</div>
                     <div className="mt-1">{b.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div>
                   </div>
                 </div>
@@ -1586,7 +1914,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
           ].map(({ label, value, ok }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg4)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
               <span className="text-muted">{label}</span>
-              <span style={{ display: "flex", gap: 8, alignItems: "center" }}>{value} <span style={{ color: ok ? "var(--green)" : "var(--subtle)" }}>{ok ? "✓" : "○"}</span></span>
+              <span style={{ display: "flex", gap: 8, alignItems: "center" }}>{value} <span style={{ color: ok ? "var(--accent)" : "var(--subtle)" }}>{ok ? "✓" : "○"}</span></span>
             </div>
           ))}
           {canApplyVip && <button className="btn btn-gold mt-2" onClick={() => { updateUser(cu.id, { vipApplied: true }); showToast("VIP application submitted!"); }}>Apply for VIP Membership</button>}
@@ -2135,7 +2463,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No bookings for this event</td></tr>
                   )}
                   {ev.bookings.map(b => (
-                    <tr key={b.id} style={{ background: b.checkedIn ? "#0d2818" : "transparent" }}>
+                    <tr key={b.id} style={{ background: b.checkedIn ? "#1a0e08" : "transparent" }}>
                       <td style={{ fontWeight: 600 }}>{b.userName}</td>
                       <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                       <td>{b.qty}</td>
@@ -2336,7 +2664,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   <td>{u.gamesAttended}</td>
                   <td>
                     {u.vipStatus === "active" ? <span className="tag tag-gold">⭐ VIP</span> : u.vipApplied ? <span className="tag tag-blue">Applied</span> : "—"}
-                    {u.ukara && <span className="mono" style={{ fontSize: 10, color: "var(--green)", marginLeft: 6 }}>{u.ukara}</span>}
+                    {u.ukara && <span className="mono" style={{ fontSize: 10, color: "var(--accent)", marginLeft: 6 }}>{u.ukara}</span>}
                   </td>
                   <td>{u.waiverSigned && u.waiverYear === new Date().getFullYear() ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
                   <td>{u.credits > 0 ? <span className="text-gold">£{u.credits}</span> : "—"}</td>
@@ -3528,7 +3856,7 @@ function AdminStaff({ data, save, showToast }) {
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 10 }}>PERMISSIONS</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
               {PERMS.map(p => (
-                <label key={p} style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", padding: "5px 10px", borderRadius: 4, background: form.permissions.includes(p) ? "#1a3d1a" : "var(--bg4)", border: `1px solid ${form.permissions.includes(p) ? "var(--green2)" : "var(--border)"}`, fontSize: 12 }}>
+                <label key={p} style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", padding: "5px 10px", borderRadius: 4, background: form.permissions.includes(p) ? "#1a3d1a" : "var(--bg4)", border: `1px solid ${form.permissions.includes(p) ? "var(--accent2)" : "var(--border)"}`, fontSize: 12 }}>
                   <input type="checkbox" checked={form.permissions.includes(p)} onChange={() => toggle(p)} style={{ width: 12 }} />{p}
                 </label>
               ))}
@@ -3641,7 +3969,7 @@ export default function App() {
   if (loading) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "var(--green)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#000", fontSize: 20, animation: "pulse 1s infinite" }}>SA</div>
+        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Bebas Neue',sans-serif" }}>SA</div>
         <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
       </div>
