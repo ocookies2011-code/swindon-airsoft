@@ -1174,6 +1174,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const [ticketType, setTicketType] = useState("walkOn");
   const [qty, setQty] = useState(1);
   const [extras, setExtras] = useState({});
+  const [paypalError, setPaypalError] = useState(null);
+  const [bookingBusy, setBookingBusy] = useState(false);
 
   const ev = detail ? data.events.find(e => e.id === detail) : null;
 
@@ -1186,9 +1188,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const grandTotal = price * qty * (1 - vipDisc) + extrasTotal;
     const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin" || cu?.role === "staff";
     const myBooking = cu && ev.bookings.find(b => b.userId === cu.id);
-
-    const [paypalError, setPaypalError] = useState(null);
-    const [bookingBusy, setBookingBusy] = useState(false);
 
     const confirmBookingAfterPayment = async (paypalOrder) => {
       setBookingBusy(true);
@@ -3838,7 +3837,7 @@ export default function App() {
             const profile = await api.profiles.getById(session.user.id);
             setCu(normaliseProfile(profile));
             api.profiles.getAll().catch(() => []).then(list =>
-              setData(prev => prev ? { ...prev, users: list.map(normaliseProfile) } : prev)
+              save({ users: list.map(normaliseProfile) })
             );
           } catch { setCu(null); }
           setAuthLoading(false);
