@@ -907,7 +907,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     { id: "qa", label: "Q&A", icon: "❓" },
   ];
   const go = (id) => {
-    // Guard: admin page requires admin/staff role — never navigate there otherwise
+    // Guard: admin page requires admin role — never navigate there otherwise
     if (id === "admin" && cu?.role !== "admin") return;
     setPage(id);
     setDrawerOpen(false);
