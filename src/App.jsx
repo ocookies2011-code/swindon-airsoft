@@ -278,10 +278,14 @@ input[type=file]{padding:6px;}
 .data-table tbody tr:hover td{background:#ffffff05;}
 
 /* ── Modal ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:0;}
-.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:24px;
-  width:100%;max-width:600px;max-height:92vh;overflow-y:auto;}
-.modal-box.wide{max-width:100%;border-radius:16px 16px 0 0;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:28px;
+  width:100%;max-width:520px;max-height:92vh;overflow-y:auto;}
+.modal-box.wide{max-width:780px;}
+@media(max-width:768px){
+  .overlay{align-items:flex-end;padding:0;}
+  .modal-box,.modal-box.wide{border-radius:16px 16px 0 0;max-width:100%;}
+}
 .modal-title{font-size:17px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:10px;}
 
 /* ── Misc ── */
@@ -415,8 +419,7 @@ input[type=file]{padding:6px;}
   .admin-content{padding:12px;}
   /* Shrink page titles */
   .page-title{font-size:18px;}
-  /* Modals full width */
-  .modal-box,.modal-box.wide{border-radius:16px 16px 0 0;max-width:100%;}
+  /* Modals handled by .overlay media query above */
   /* Toast above bottom nav */
   .toast{bottom:calc(var(--bottom-nav-h) + 12px);right:12px;}
   /* Stat cards 2 col */
