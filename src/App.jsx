@@ -2580,16 +2580,23 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
 
-  // Fetch fresh from DB on mount — don't rely on global data.users timing
-  useEffect(() => {
+  const loadUsers = () =>
     api.profiles.getAll()
       .then(list => {
         const users = list.map(normaliseProfile);
         setLocalUsers(users);
-        save({ users }); // also update global state
+        save({ users });
       })
       .catch(e => showToast("Failed to load players: " + e.message, "red"));
-  }, []);
+
+  // Fetch fresh from DB on mount
+  useEffect(() => { loadUsers(); }, []);
+
+  // Wrapper that updates DB then refreshes localUsers
+  const updateUserAndRefresh = async (id, patch) => {
+    await updateUser(id, patch);
+    await loadUsers(); // pull fresh data so VIP tab updates immediately
+  };
 
   // Use local (fresh) users if available, fall back to global data.users
   const allUsers = localUsers ?? data.users;
@@ -2678,6 +2685,10 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 
       {tab === "vip" && (
         <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: "var(--muted)" }}>{vipApps.length} pending application{vipApps.length !== 1 ? "s" : ""}</div>
+            <button className="btn btn-ghost btn-sm" onClick={loadUsers}>🔄 Refresh</button>
+          </div>
           {localUsers === null ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading players…</div>
           ) : vipApps.length === 0 ? (
@@ -2694,13 +2705,13 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
                     <td>
                       <div className="gap-2">
-                        <button className="btn btn-sm btn-primary" onClick={() => {
+                        <button className="btn btn-sm btn-primary" onClick={async () => {
                           const ukara = `UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`;
-                          updateUser(u.id, { vipStatus: "active", vipApplied: true, ukara });
+                          await updateUserAndRefresh(u.id, { vipStatus: "active", vipApplied: true, ukara });
                           showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}`);
                         }}>Approve</button>
-                        <button className="btn btn-sm btn-danger" onClick={() => {
-                          updateUser(u.id, { vipApplied: false });
+                        <button className="btn btn-sm btn-danger" onClick={async () => {
+                          await updateUserAndRefresh(u.id, { vipApplied: false });
                           showToast(`VIP application rejected for ${u.name}`, "red");
                         }}>Reject</button>
                       </div>
@@ -3001,7 +3012,6 @@ function AdminOrders({ showToast }) {
                     <div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div>
                     <div class="addr">${addr}</div>
                     <div class="from">FROM: Swindon Airsoft</div>
-                    <div class="items">Contains: ${items}</div>
                     <script>window.onload=()=>window.print();<\/script>
                   </body></html>`);
                 win.document.close();
