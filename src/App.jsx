@@ -1094,8 +1094,17 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 function ShopPage({ data, cu, showToast }) {
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
-  const [postageId, setPostageId] = useState("post1");
-  const postage = (data.postageOptions || []).find(p => p.id === postageId) || { name: "Collection", price: 0 };
+  const [placing, setPlacing] = useState(false);
+
+  // Default postage to first option (real UUID), not hardcoded "post1"
+  const postageOptions = data.postageOptions || [];
+  const [postageId, setPostageId] = useState(() => postageOptions[0]?.id || "");
+  // Keep postageId in sync if options load after mount
+  useEffect(() => {
+    if (!postageId && postageOptions.length > 0) setPostageId(postageOptions[0].id);
+  }, [postageOptions.length]);
+
+  const postage = postageOptions.find(p => p.id === postageId) || postageOptions[0] || { name: "Collection", price: 0 };
   const hasNoPost = cart.some(i => i.noPost);
 
   const addToCart = (item) => {
@@ -1104,6 +1113,40 @@ function ShopPage({ data, cu, showToast }) {
   };
 
   const subTotal = cart.reduce((s, i) => { const p = i.onSale && i.salePrice ? i.salePrice : i.price; return s + p * i.qty * (cu?.vipStatus === "active" ? 0.9 : 1); }, 0);
+  const postageTotal = hasNoPost ? 0 : (postage?.price || 0);
+  const grandTotal = subTotal + postageTotal;
+
+  const placeOrder = async () => {
+    if (!cu) { showToast("Please log in to place an order", "red"); return; }
+    if (cart.length === 0) return;
+    setPlacing(true);
+    try {
+      // Save order to DB
+      await api.shopOrders.create({
+        customerName:  cu.name,
+        customerEmail: cu.email || "",
+        userId:        cu.id,
+        items:         cart.map(i => ({ id: i.id, name: i.name, price: i.onSale && i.salePrice ? i.salePrice : i.price, qty: i.qty })),
+        subtotal:      subTotal,
+        postage:       postageTotal,
+        postageName:   hasNoPost ? "Collection Only" : (postage?.name || ""),
+        total:         grandTotal,
+      });
+
+      // Deduct stock via DB function (runs with security definer, bypasses RLS)
+      for (const item of cart) {
+        await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
+      }
+
+      showToast("✅ Order placed! We'll be in touch shortly.");
+      setCart([]);
+      setCartOpen(false);
+    } catch (e) {
+      showToast("Order failed: " + e.message, "red");
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
@@ -1161,44 +1204,34 @@ function ShopPage({ data, cu, showToast }) {
                     </div>
                   </div>
                 ))}
-                {!hasNoPost && (data.postageOptions || []).length > 0 && (
+
+                {!hasNoPost && postageOptions.length > 0 && (
                   <div className="form-group mt-2">
                     <label>Postage</label>
                     <select value={postageId} onChange={e => setPostageId(e.target.value)}>
-                      {(data.postageOptions || []).map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
+                      {postageOptions.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
                     </select>
                   </div>
                 )}
-                {hasNoPost && <div className="alert alert-gold mt-1">Pyro items — collect at game day only</div>}
+                {!hasNoPost && postageOptions.length === 0 && (
+                  <div className="alert alert-gold mt-2">No postage options set up — admin must add them in Shop settings</div>
+                )}
+                {hasNoPost && <div className="alert alert-gold mt-1">🔥 Pyro/collect-only items — collection at game day</div>}
+
                 <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 20, marginTop: 14 }}>
                   <span>TOTAL</span>
-                  <span className="text-green">£{(subTotal + (hasNoPost ? 0 : postage.price)).toFixed(2)}</span>
+                  <span className="text-green">£{grandTotal.toFixed(2)}</span>
                 </div>
-                <button className="btn btn-primary mt-2" style={{ width: "100%", padding: "11px" }} onClick={async () => {
-                  try {
-                    const orderTotal = subTotal + (hasNoPost ? 0 : postage.price);
-                    await api.shopOrders.create({
-                      customerName:  cu ? cu.name : "Guest",
-                      customerEmail: cu ? (cu.email || "") : "",
-                      userId:        cu ? cu.id : null,
-                      items:         cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
-                      subtotal:      subTotal,
-                      postage:       hasNoPost ? 0 : postage.price,
-                      postageName:   hasNoPost ? "Collection" : postage.name,
-                      total:         orderTotal,
-                    });
-                    // Deduct stock for each item
-                    for (const item of cart) {
-                      const newStock = Math.max(0, (item.stock ?? 0) - item.qty);
-                      await supabase.from('shop_products').update({ stock: newStock }).eq('id', item.id);
-                    }
-                    showToast("✅ Order placed! We'll be in touch shortly.");
-                    setCart([]); setCartOpen(false);
-                  } catch (e) {
-                    showToast("Order failed: " + e.message, "red");
-                  }
-                }}>
-                  Place Order
+                {!hasNoPost && postage && (
+                  <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "right", marginTop: 2 }}>
+                    Incl. {postage.name} £{postageTotal.toFixed(2)}
+                  </div>
+                )}
+
+                {!cu && <div className="alert alert-red mt-2">Please log in to place an order</div>}
+                <button className="btn btn-primary mt-2" style={{ width: "100%", padding: "11px" }}
+                  disabled={placing || !cu} onClick={placeOrder}>
+                  {placing ? "Placing Order…" : "Place Order"}
                 </button>
               </>
             )}
@@ -3051,13 +3084,9 @@ function AdminCash({ data, cu, showToast }) {
         setLastError("DB Error: " + msg);
         showToast("DB Error: " + msg, "red");
       } else {
-        // Deduct stock for each sold item
+        // Deduct stock via DB function (bypasses RLS)
         for (const item of items) {
-          const shopItem = data.shop.find(s => s.id === item.id);
-          if (shopItem) {
-            const newStock = Math.max(0, (shopItem.stock ?? 0) - item.qty);
-            await supabase.from('shop_products').update({ stock: newStock }).eq('id', item.id);
-          }
+          await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
         }
         showToast(`✅ Sale £${total.toFixed(2)} saved!`);
         setItems([]);
