@@ -447,3 +447,34 @@ function toSnakeProduct(p) {
     no_post:     p.noPost,
   }
 }
+
+// ── Shop Orders ───────────────────────────────────────────────
+export const shopOrders = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('shop_orders').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    return data
+  },
+
+  async create(order) {
+    const { data, error } = await supabase.from('shop_orders').insert({
+      customer_name:  order.customerName,
+      customer_email: order.customerEmail || '',
+      user_id:        order.userId || null,
+      items:          order.items,
+      subtotal:       order.subtotal,
+      postage:        order.postage,
+      total:          order.total,
+      postage_name:   order.postageName || '',
+      status:         'pending',
+    }).select().single()
+    if (error) throw error
+    return data
+  },
+
+  async updateStatus(id, status) {
+    const { error } = await supabase.from('shop_orders').update({ status }).eq('id', id)
+    if (error) throw error
+  }
+}

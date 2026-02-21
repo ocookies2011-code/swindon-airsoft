@@ -1174,7 +1174,30 @@ function ShopPage({ data, cu, showToast }) {
                   <span>TOTAL</span>
                   <span className="text-green">£{(subTotal + (hasNoPost ? 0 : postage.price)).toFixed(2)}</span>
                 </div>
-                <button className="btn btn-primary mt-2" style={{ width: "100%", padding: "11px" }} onClick={() => { showToast("Order placed! (Demo — connect payment gateway)"); setCart([]); setCartOpen(false); }}>
+                <button className="btn btn-primary mt-2" style={{ width: "100%", padding: "11px" }} onClick={async () => {
+                  try {
+                    const orderTotal = subTotal + (hasNoPost ? 0 : postage.price);
+                    await api.shopOrders.create({
+                      customerName:  cu ? cu.name : "Guest",
+                      customerEmail: cu ? (cu.email || "") : "",
+                      userId:        cu ? cu.id : null,
+                      items:         cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+                      subtotal:      subTotal,
+                      postage:       hasNoPost ? 0 : postage.price,
+                      postageName:   hasNoPost ? "Collection" : postage.name,
+                      total:         orderTotal,
+                    });
+                    // Deduct stock for each item
+                    for (const item of cart) {
+                      const newStock = Math.max(0, (item.stock ?? 0) - item.qty);
+                      await supabase.from('shop_products').update({ stock: newStock }).eq('id', item.id);
+                    }
+                    showToast("✅ Order placed! We'll be in touch shortly.");
+                    setCart([]); setCartOpen(false);
+                  } catch (e) {
+                    showToast("Order failed: " + e.message, "red");
+                  }
+                }}>
                   Place Order
                 </button>
               </>
@@ -1232,7 +1255,22 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
 // ── Gallery ───────────────────────────────────────────────
 function GalleryPage({ data }) {
   const [active, setActive] = useState(null);
+  const [lightbox, setLightbox] = useState(null); // { url, album, index }
   const albums = active ? data.albums.filter(a => a.id === active) : data.albums;
+
+  const openLightbox = (url, album, index) => setLightbox({ url, album, index });
+  const closeLightbox = () => setLightbox(null);
+  const prevImg = () => {
+    const imgs = lightbox.album.images;
+    const i = (lightbox.index - 1 + imgs.length) % imgs.length;
+    setLightbox({ ...lightbox, url: imgs[i], index: i });
+  };
+  const nextImg = () => {
+    const imgs = lightbox.album.images;
+    const i = (lightbox.index + 1) % imgs.length;
+    setLightbox({ ...lightbox, url: imgs[i], index: i });
+  };
+
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
       <div className="page-header"><div className="page-title">Gallery</div></div>
@@ -1245,9 +1283,38 @@ function GalleryPage({ data }) {
           <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>{album.title.toUpperCase()}</div>
           {album.images.length === 0
             ? <div className="card" style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No photos yet.</div>
-            : <div className="photo-grid">{album.images.map((img, i) => <div key={i} className="photo-cell"><img src={img} alt="" /></div>)}</div>}
+            : <div className="photo-grid">
+                {album.images.map((img, i) => (
+                  <div key={i} className="photo-cell" onClick={() => openLightbox(img, album, i)}>
+                    <img src={img} alt="" />
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "all .2s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,.4)"; e.currentTarget.style.opacity = 1; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0)"; e.currentTarget.style.opacity = 0; }}>
+                      <span style={{ fontSize: 28, color: "#fff" }}>🔍</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+          }
         </div>
       ))}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div onClick={closeLightbox} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={e => { e.stopPropagation(); prevImg(); }}
+            style={{ position: "absolute", left: 16, background: "rgba(255,255,255,.1)", border: "none", color: "#fff", fontSize: 28, width: 52, height: 52, borderRadius: "50%", cursor: "pointer" }}>‹</button>
+          <img src={lightbox.url} alt="" onClick={e => e.stopPropagation()}
+            style={{ maxWidth: "90vw", maxHeight: "88vh", objectFit: "contain", borderRadius: 8, boxShadow: "0 0 60px rgba(0,0,0,.8)" }} />
+          <button onClick={e => { e.stopPropagation(); nextImg(); }}
+            style={{ position: "absolute", right: 16, background: "rgba(255,255,255,.1)", border: "none", color: "#fff", fontSize: 28, width: 52, height: 52, borderRadius: "50%", cursor: "pointer" }}>›</button>
+          <button onClick={closeLightbox}
+            style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", fontSize: 20, width: 40, height: 40, borderRadius: "50%", cursor: "pointer" }}>✕</button>
+          <div style={{ position: "absolute", bottom: 16, color: "rgba(255,255,255,.5)", fontSize: 13 }}>
+            {lightbox.index + 1} / {lightbox.album.images.length}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1441,6 +1508,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
     { id: "waivers", label: "Waivers", icon: "📋", badge: pendingWaivers || unsigned || null, group: null },
     { id: "shop", label: "Shop", icon: "🛒", group: null },
+    { id: "orders", label: "Shop Orders", icon: "📦", group: null },
     { id: "leaderboard-admin", label: "Leaderboard", icon: "🏆", group: null },
     { id: "revenue", label: "Revenue", icon: "💰", group: "ANALYTICS" },
     { id: "gallery-admin", label: "Gallery", icon: "🖼", group: null },
@@ -1504,6 +1572,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
+          {section === "orders" && <AdminOrders showToast={showToast} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && <AdminRevenue data={data} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
@@ -2217,6 +2286,129 @@ function AdminWaivers({ data, updateUser, showToast }) {
 }
 
 // ── Admin Shop ────────────────────────────────────────────
+function AdminOrders({ showToast }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState(null);
+  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
+
+  useEffect(() => {
+    api.shopOrders.getAll()
+      .then(setOrders)
+      .catch(e => showToast("Failed to load orders: " + e.message, "red"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const setStatus = async (id, status) => {
+    try {
+      await api.shopOrders.updateStatus(id, status);
+      setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
+      if (detail?.id === id) setDetail(d => ({ ...d, status }));
+      showToast("Status updated!");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
+  const pending = orders.filter(o => o.status === "pending").length;
+
+  return (
+    <div>
+      <div className="page-header">
+        <div><div className="page-title">Shop Orders</div><div className="page-sub">{orders.length} orders · £{totalRevenue.toFixed(2)} total</div></div>
+      </div>
+      <div className="grid-4 mb-2">
+        {[
+          { label: "Total Orders", val: orders.length, color: "" },
+          { label: "Pending", val: pending, color: "blue" },
+          { label: "Dispatched", val: orders.filter(o => o.status === "dispatched").length, color: "gold" },
+          { label: "Revenue", val: `£${totalRevenue.toFixed(2)}`, color: "teal" },
+        ].map(s => (
+          <div key={s.label} className={`stat-card ${s.color}`}>
+            <div className="stat-val">{s.val}</div>
+            <div className="stat-label">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {loading ? <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading orders…</div> : (
+        <div className="card">
+          <div className="table-wrap"><table className="data-table">
+            <thead><tr><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {orders.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No orders yet</td></tr>}
+              {orders.map(o => {
+                const items = Array.isArray(o.items) ? o.items : [];
+                return (
+                  <tr key={o.id}>
+                    <td className="mono" style={{ fontSize: 11 }}>{gmtShort(o.created_at)}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      <button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }} onClick={() => setDetail(o)}>
+                        {o.customer_name}
+                      </button>
+                    </td>
+                    <td style={{ fontSize: 12, color: "var(--muted)" }}>{items.map(i => `${i.name} ×${i.qty}`).join(", ")}</td>
+                    <td style={{ fontSize: 12 }}>{o.postage_name || "—"}</td>
+                    <td className="text-green">£{Number(o.total).toFixed(2)}</td>
+                    <td><span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span></td>
+                    <td>
+                      <select value={o.status} onChange={e => setStatus(o.id, e.target.value)}
+                        style={{ fontSize: 12, padding: "4px 8px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4 }}>
+                        {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table></div>
+        </div>
+      )}
+
+      {detail && (
+        <div className="overlay" onClick={() => setDetail(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">📦 Order Details</div>
+            <div className="grid-2 mb-2">
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>CUSTOMER</div><div style={{ fontWeight: 700 }}>{detail.customer_name}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>EMAIL</div><div>{detail.customer_email || "—"}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>STATUS</div>
+                <select value={detail.status} onChange={e => setStatus(detail.id, e.target.value)}
+                  style={{ fontSize: 12, padding: "4px 8px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4 }}>
+                  {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 8, letterSpacing: ".1em" }}>ITEMS</div>
+            <div className="table-wrap"><table className="data-table">
+              <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Line Total</th></tr></thead>
+              <tbody>
+                {(Array.isArray(detail.items) ? detail.items : []).map((i, idx) => (
+                  <tr key={idx}>
+                    <td>{i.name}</td><td>{i.qty}</td>
+                    <td>£{Number(i.price).toFixed(2)}</td>
+                    <td className="text-green">£{(Number(i.price) * i.qty).toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: "2px solid var(--border)" }}>
+                  <td colSpan={3} style={{ fontWeight: 700 }}>Postage ({detail.postage_name})</td>
+                  <td>£{Number(detail.postage).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={3} style={{ fontWeight: 900, fontSize: 15 }}>TOTAL</td>
+                  <td className="text-green" style={{ fontWeight: 900, fontSize: 15 }}>£{Number(detail.total).toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table></div>
+            <button className="btn btn-ghost mt-2" onClick={() => setDetail(null)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Admin Shop ─────────────────────────────────────────────
 function AdminShop({ data, save, showToast }) {
   const [tab, setTab] = useState("products");
   const [modal, setModal] = useState(null);
@@ -2859,6 +3051,14 @@ function AdminCash({ data, cu, showToast }) {
         setLastError("DB Error: " + msg);
         showToast("DB Error: " + msg, "red");
       } else {
+        // Deduct stock for each sold item
+        for (const item of items) {
+          const shopItem = data.shop.find(s => s.id === item.id);
+          if (shopItem) {
+            const newStock = Math.max(0, (shopItem.stock ?? 0) - item.qty);
+            await supabase.from('shop_products').update({ stock: newStock }).eq('id', item.id);
+          }
+        }
         showToast(`✅ Sale £${total.toFixed(2)} saved!`);
         setItems([]);
         setManual({ name: "", email: "" });
