@@ -3962,30 +3962,53 @@ function AdminExtras({ data, save, showToast }) {
   const [evId, setEvId] = useState(data.events[0]?.id || "");
   const blank = { name: "", price: 0, noPost: false, productId: "", variantId: "" };
   const [form, setForm] = useState(blank);
+  const [editId, setEditId] = useState(null); // which extra row is being edited
+  const [editForm, setEditForm] = useState({});
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v, ...(k === "productId" ? { variantId: "" } : {}) }));
+  const ef = (k, v) => setEditForm(p => ({ ...p, [k]: v, ...(k === "productId" ? { variantId: "" } : {}) }));
   const ev = data.events.find(e => e.id === evId);
   const linkedProduct = data.shop.find(p => p.id === form.productId);
+  const editLinkedProduct = data.shop.find(p => p.id === editForm.productId);
+
+  const saveAll = async (updatedExtras) => {
+    await api.events.update(evId, { extras: updatedExtras });
+    save({ events: await api.events.getAll() });
+  };
 
   const addExtra = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
     try {
-      const extra = { id: uid(), name: form.name, price: Number(form.price), noPost: form.noPost };
-      if (form.productId) extra.productId = form.productId;
-      if (form.variantId) extra.variantId = form.variantId;
-      const updatedExtras = [...(ev.extras || []), extra];
-      await api.events.update(evId, { extras: updatedExtras });
-      save({ events: await api.events.getAll() });
+      const extra = { id: uid(), name: form.name, price: Number(form.price), noPost: form.noPost,
+        productId: form.productId || null, variantId: form.variantId || null };
+      await saveAll([...(ev.extras || []), extra]);
       setForm(blank);
       showToast("Extra added!");
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
+  const saveEdit = async () => {
+    try {
+      const updatedExtras = ev.extras.map(x => x.id === editId
+        ? { ...x, name: editForm.name, price: Number(editForm.price), noPost: editForm.noPost,
+            productId: editForm.productId || null, variantId: editForm.variantId || null }
+        : x);
+      await saveAll(updatedExtras);
+      setEditId(null);
+      showToast("Extra updated!");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
   const del = async (id) => {
     try {
-      await api.events.update(evId, { extras: ev.extras.filter(x => x.id !== id) });
-      save({ events: await api.events.getAll() });
+      await saveAll(ev.extras.filter(x => x.id !== id));
       showToast("Removed");
     } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  const startEdit = (ex) => {
+    setEditId(ex.id);
+    setEditForm({ name: ex.name, price: ex.price, noPost: ex.noPost,
+      productId: ex.productId || "", variantId: ex.variantId || "" });
   };
 
   return (
@@ -4002,6 +4025,40 @@ function AdminExtras({ data, save, showToast }) {
           {ev.extras.map(ex => {
             const linked = data.shop.find(p => p.id === ex.productId);
             const linkedVariant = linked?.variants?.find(v => v.id === ex.variantId);
+            const isEditing = editId === ex.id;
+            if (isEditing) return (
+              <div key={ex.id} style={{ padding:"12px 0", borderBottom:"1px solid var(--border)", background:"#0d0d0d", margin:"0 -16px", padding:"12px 16px" }}>
+                <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:10 }}>EDITING: {ex.name}</div>
+                <div className="form-row">
+                  <div className="form-group"><label>Name</label><input value={editForm.name} onChange={e => ef("name", e.target.value)} /></div>
+                  <div className="form-group"><label>Price (£)</label><input type="number" step="0.01" value={editForm.price} onChange={e => ef("price", +e.target.value)} /></div>
+                </div>
+                <div className="form-group">
+                  <label>Link to Shop Product (for stock deduction + variants)</label>
+                  <select value={editForm.productId} onChange={e => ef("productId", e.target.value)}>
+                    <option value="">— None —</option>
+                    {data.shop.map(p => <option key={p.id} value={p.id}>{p.name} (stock: {p.stock})</option>)}
+                  </select>
+                </div>
+                {editLinkedProduct?.variants?.length > 0 && (
+                  <div className="form-group">
+                    <label>Variant (leave blank = player chooses)</label>
+                    <select value={editForm.variantId} onChange={e => ef("variantId", e.target.value)}>
+                      <option value="">— Player chooses —</option>
+                      {editLinkedProduct.variants.map(v => <option key={v.id} value={v.id}>{v.name} (stock: {v.stock})</option>)}
+                    </select>
+                  </div>
+                )}
+                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
+                  <input type="checkbox" id={`np-${ex.id}`} checked={editForm.noPost} onChange={e => ef("noPost", e.target.checked)} />
+                  <label htmlFor={`np-${ex.id}`} style={{ fontSize:13, cursor:"pointer" }}>Collection only</label>
+                </div>
+                <div className="gap-2">
+                  <button className="btn btn-primary btn-sm" onClick={saveEdit}>Save</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEditId(null)}>Cancel</button>
+                </div>
+              </div>
+            );
             return (
               <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
                 <div>
@@ -4009,15 +4066,16 @@ function AdminExtras({ data, save, showToast }) {
                     {ex.name}
                     {ex.noPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>No Post</span>}
                   </div>
-                  {linked && (
-                    <div style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>
-                      🔗 {linked.name}{linkedVariant ? ` — ${linkedVariant.name}` : ""} · stock: {linkedVariant ? linkedVariant.stock : linked.stock}
-                    </div>
-                  )}
-                  {!linked && ex.productId && <div style={{ fontSize:11, color:"var(--red)", marginTop:2 }}>⚠️ Linked product not found</div>}
+                  {linked
+                    ? <div style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>
+                        🔗 {linked.name}{linkedVariant ? ` — ${linkedVariant.name}` : " (player picks variant)"} · stock: {linkedVariant ? linkedVariant.stock : linked.stock}
+                      </div>
+                    : <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>No product linked — click Edit to link one</div>
+                  }
                 </div>
-                <div className="gap-2" style={{ alignItems:"center" }}>
+                <div className="gap-2" style={{ alignItems:"center", flexShrink:0 }}>
                   <span className="text-green" style={{ fontFamily:"'Russo One',sans-serif" }}>£{ex.price}</span>
+                  <button className="btn btn-sm btn-ghost" onClick={() => startEdit(ex)}>Edit</button>
                   <button className="btn btn-sm btn-danger" onClick={() => del(ex.id)}>Del</button>
                 </div>
               </div>
