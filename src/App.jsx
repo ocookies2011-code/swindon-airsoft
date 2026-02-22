@@ -1398,7 +1398,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     // Cart totals
     const walkOnTotal  = bCart.walkOn  * ev.walkOnPrice * (1 - vipDisc);
     const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
-    const extrasTotal  = ev.extras.reduce((s, ex) => { const e = bCart.extras[ex.id]; const qty = e?.qty ?? e ?? 0; return s + qty * ex.price; }, 0);
+    const shopData = data.shop || [];
+    const visibleExtras = ev.extras.filter(ex => { const prod = shopData.find(s => s.id === ex.productId); return prod?.gameExtra === true; });
+    const extrasTotal  = visibleExtras.reduce((s, ex) => { const e = bCart.extras[ex.id]; const qty = e?.qty ?? e ?? 0; return s + qty * ex.price; }, 0);
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
     const getExtraQty = (id) => { const e = bCart.extras[id]; return e?.qty ?? e ?? 0; }
@@ -1439,7 +1441,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           for (const [extraId, cartExtra] of Object.entries(bCart.extras)) {
             const qty = cartExtra?.qty ?? cartExtra ?? 0;
             if (!qty || qty < 1) continue;
-            const extra = ev.extras.find(e => e.id === extraId);
+            const extra = visibleExtras.find(e => e.id === extraId);
             if (!extra?.productId) continue;
             // Use variant from cart selection (player chose) or from extra config (admin fixed it)
             const chosenVariantId = cartExtra?.variantId || extra.variantId || null;
@@ -1572,10 +1574,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   <div style={{ padding:"0 16px 14px" }}>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
                     {ev.extras.filter(ex => {
-                      const p = data.shop.find(p => p.id === ex.productId);
-                      return p?.gameExtra === true;
+                      const prod = (data.shop || []).find(s => s.id === ex.productId);
+                      return prod?.gameExtra === true;
                     }).map(ex => {
-                      const linkedProduct = data.shop.find(p => p.id === ex.productId);
+                      const linkedProduct = (data.shop || []).find(s => s.id === ex.productId);
                       // Needs variant selection if product has variants AND extra doesn't have a fixed variant
                       const needsVariantPick = linkedProduct?.variants?.length > 0 && !ex.variantId;
                       const pickedVariantId = getExtraVariant(ex.id);
@@ -1660,10 +1662,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <span>£{rentalTotal.toFixed(2)}</span>
                     </div>
                   )}
-                  {ev.extras.filter(ex => getExtraQty(ex.id) > 0).map(ex => {
+                  {visibleExtras.filter(ex => getExtraQty(ex.id) > 0).map(ex => {
                     const q = getExtraQty(ex.id);
                     const vid = getExtraVariant(ex.id);
-                    const vname = data.shop.find(p => p.id === ex.productId)?.variants?.find(v => v.id === vid)?.name;
+                    const vname = (data.shop || []).find(s => s.id === ex.productId)?.variants?.find(v => v.id === vid)?.name;
                     return (
                       <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
                         <span className="text-muted">{ex.name}{vname ? ` (${vname})` : ""} ×{q}</span>
