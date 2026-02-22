@@ -212,15 +212,12 @@ export const shop = {
     const { data, error } = await supabase
       .from('shop_products').insert(snake).select().single()
     if (error) {
-      // Strip unknown columns and retry
+      // Retry stripping any columns that don't exist yet
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
-      if (error.message?.includes('game_extra') || error.message?.includes('variants')) {
-        const { data: d2, error: e2 } = await supabase
-          .from('shop_products').insert(snakeStripped).select().single()
-        if (e2) throw new Error('Product create failed: ' + e2.message)
-        return normaliseProduct(d2)
-      }
-      throw error
+      const { data: d2, error: e2 } = await supabase
+        .from('shop_products').insert(snakeStripped).select().single()
+      if (e2) throw new Error('Product create failed: ' + e2.message)
+      return normaliseProduct(d2)
     }
     return normaliseProduct(data)
   },
@@ -230,17 +227,15 @@ export const shop = {
     const { data, error } = await supabase
       .from('shop_products').update(snake).eq('id', id).select().single()
     if (error) {
-      // Strip unknown columns and retry
+      // Retry stripping any columns that don't exist yet (game_extra, variants if missing)
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
-      if (error.message?.includes('variants') || error.message?.includes('game_extra')) {
-        const { data: d2, error: e2 } = await supabase
-          .from('shop_products').update(snakeStripped).eq('id', id).select().single()
-        if (e2) throw new Error('Product save failed: ' + e2.message)
-        return normaliseProduct(d2)
-      }
-      throw new Error('Product save failed: ' + error.message)
+      const { data: d2, error: e2 } = await supabase
+        .from('shop_products').update(snakeStripped).eq('id', id).select().single()
+      if (e2) throw new Error('Product save failed: ' + e2.message)
+      if (!d2) throw new Error('Product save failed — no data returned.')
+      return normaliseProduct(d2)
     }
-    if (!data) throw new Error('Product save failed — no data returned. Check you are logged in as admin.')
+    if (!data) throw new Error('Product save failed — no data returned.')
     return normaliseProduct(data)
   },
 

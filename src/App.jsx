@@ -3851,14 +3851,17 @@ function AdminShop({ data, save, showToast }) {
   const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
     setSavingProduct(true);
+    const safety = setTimeout(() => setSavingProduct(false), 20000);
     try {
       if (modal === "new") await api.shop.create(form);
       else await api.shop.update(form.id, form);
       save({ shop: await api.shop.getAll() });
       showToast("Product saved!"); setModal(null);
     } catch (e) {
+      console.error("saveItem failed:", e);
       showToast("Save failed: " + (e.message || String(e)), "red");
     } finally {
+      clearTimeout(safety);
       setSavingProduct(false);
     }
   };
