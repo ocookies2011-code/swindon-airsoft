@@ -95,15 +95,15 @@ export const events = {
       .from('events').insert(toSnakeEvent(evData)).select().single()
     if (error) throw error
     if (extras?.length) {
-      await supabase.from('event_extras').insert(
-        extras.map((ex, i) => ({
-          event_id:   data.id,
-          name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
-          price:      ex.price,
-          no_post:    ex.noPost ?? ex.no_post ?? false,
-          sort_order: i,
-        }))
-      )
+      const extraRows = extras.map((ex, i) => ({
+        event_id:   data.id,
+        name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
+        price:      Number(ex.price) || 0,
+        no_post:    ex.noPost ?? false,
+        sort_order: i,
+      }))
+      const { error: extErr } = await supabase.from('event_extras').insert(extraRows)
+      if (extErr) console.warn('event_extras insert warning:', extErr.message) // non-fatal
     }
     return data
   },
@@ -119,29 +119,16 @@ export const events = {
     if (extras !== undefined) {
       await supabase.from('event_extras').delete().eq('event_id', id)
       if (extras.length) {
-        // Try inserting with product_id/variant_id columns
+        // Always encode productId/variantId in name field — works without migration
         const rows = extras.map((ex, i) => ({
           event_id:   id,
-          name:       ex.name,
-          price:      ex.price,
+          name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
+          price:      Number(ex.price) || 0,
           no_post:    ex.noPost ?? ex.no_post ?? false,
           sort_order: i,
-          product_id: ex.productId || null,
-          variant_id: ex.variantId || null,
         }))
         const { error: ie } = await supabase.from('event_extras').insert(rows)
-        if (ie) {
-          // product_id/variant_id columns missing — insert without them, encode in name
-          const rowsFallback = extras.map((ex, i) => ({
-            event_id:   id,
-            name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
-            price:      ex.price,
-            no_post:    ex.noPost ?? ex.no_post ?? false,
-            sort_order: i,
-          }))
-          const { error: ie2 } = await supabase.from('event_extras').insert(rowsFallback)
-          if (ie2) throw ie2
-        }
+        if (ie) throw ie
       }
     }
   },

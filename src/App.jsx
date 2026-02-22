@@ -2919,15 +2919,23 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     setSavingEvent(true);
+    // Safety: always reset button after 30s even if something hangs
+    const safetyTimer = setTimeout(() => setSavingEvent(false), 30000);
     try {
-      if (modal === "new") await api.events.create(form);
-      else await api.events.update(form.id, form);
+      if (modal === "new") {
+        await api.events.create(form);
+      } else {
+        await api.events.update(form.id, form);
+      }
       const evList = await api.events.getAll();
       save({ events: evList });
-      showToast("Event saved!"); setModal(null);
+      showToast("Event saved!");
+      setModal(null);
     } catch (e) {
+      console.error("saveEvent failed:", e);
       showToast("Save failed: " + (e.message || String(e)), "red");
     } finally {
+      clearTimeout(safetyTimer);
       setSavingEvent(false);
     }
   };
