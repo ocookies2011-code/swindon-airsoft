@@ -1409,13 +1409,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     // Cart totals
     const walkOnTotal  = bCart.walkOn  * ev.walkOnPrice * (1 - vipDisc);
     const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
-    const extrasTotal  = ev.extras.reduce((s, ex) => s + (bCart.extras[ex.id] || 0) * ex.price, 0);
+    const extrasTotal  = ev.extras.reduce((s, ex) => { const e = bCart.extras[ex.id]; const qty = e?.qty ?? e ?? 0; return s + qty * ex.price; }, 0);
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
+    const getExtraQty = (id) => { const e = bCart.extras[id]; return e?.qty ?? e ?? 0; }
+    const getExtraVariant = (id) => bCart.extras[id]?.variantId ?? null;
+    const setExtra = (id, qty, variantId) => setBCart(p => ({ ...p, extras: { ...p.extras, [id]: qty > 0 ? { qty: Math.max(0, qty), variantId: variantId ?? null } : undefined } }));
 
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, walkOnLeft)) }));
     const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, rentalLeft)) }));
-    const setExtra  = (id, n) => setBCart(p => ({ ...p, extras: { ...p.extras, [id]: Math.max(0, n) } }));
+
 
     const confirmBookingAfterPayment = async (paypalOrder) => {
       setBookingBusy(true);
@@ -1427,7 +1430,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           promises.push(api.bookings.create({
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "walkOn", qty: bCart.walkOn,
-            extras: bCart.extras,
+            extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => (v?.qty ?? v ?? 0) > 0).map(([k,v]) => [k, v?.qty ?? v])),
             total: walkOnTotal + (promises.length === 0 ? extrasTotal : 0),
             paypalOrderId: paypalOrder.id,
           }));
@@ -1436,7 +1439,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           promises.push(api.bookings.create({
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "rental", qty: bCart.rental,
-            extras: promises.length === 0 ? bCart.extras : {},
+            extras: promises.length === 0 ? Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => (v?.qty ?? v ?? 0) > 0).map(([k,v]) => [k, v?.qty ?? v])) : {},
             total: rentalTotal + (promises.length === 0 ? extrasTotal : 0),
             paypalOrderId: paypalOrder.id,
           }));
@@ -1444,20 +1447,19 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         await Promise.all(promises);
         // Deduct stock for any extra products ordered
         if (Object.keys(bCart.extras).length > 0) {
-          for (const [extraId, qty] of Object.entries(bCart.extras)) {
+          for (const [extraId, cartExtra] of Object.entries(bCart.extras)) {
+            const qty = cartExtra?.qty ?? cartExtra ?? 0;
             if (!qty || qty < 1) continue;
             const extra = ev.extras.find(e => e.id === extraId);
-            if (!extra) continue;
-            // Deduct from linked shop product if configured
-            if (extra.productId) {
-              if (extra.variantId) {
-                await supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: extra.variantId, qty });
-              } else {
-                await supabase.rpc("deduct_stock", { product_id: extra.productId, qty });
-              }
+            if (!extra?.productId) continue;
+            // Use variant from cart selection (player chose) or from extra config (admin fixed it)
+            const chosenVariantId = cartExtra?.variantId || extra.variantId || null;
+            if (chosenVariantId) {
+              await supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: chosenVariantId, qty });
+            } else {
+              await supabase.rpc("deduct_stock", { product_id: extra.productId, qty });
             }
           }
-          // Refresh shop stock
           const freshShop = await api.shop.getAll();
           save({ shop: freshShop });
         }
@@ -1580,20 +1582,72 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 {ev.extras.length > 0 && (
                   <div style={{ padding:"0 16px 14px" }}>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
-                    {ev.extras.map(ex => (
-                      <div key={ex.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid #1a1a1a" }}>
-                        <div>
-                          <span style={{ fontSize:13 }}>{ex.name}</span>
-                          {ex.noPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
-                          <div style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>£{ex.price}</div>
+                    {ev.extras.map(ex => {
+                      const linkedProduct = data.shop.find(p => p.id === ex.productId);
+                      // Needs variant selection if product has variants AND extra doesn't have a fixed variant
+                      const needsVariantPick = linkedProduct?.variants?.length > 0 && !ex.variantId;
+                      const pickedVariantId = getExtraVariant(ex.id);
+                      const pickedVariant = linkedProduct?.variants?.find(v => v.id === pickedVariantId);
+                      const exQty = getExtraQty(ex.id);
+                      // Stock limit: from picked variant, or fixed variant, or product base stock
+                      const fixedVariant = linkedProduct?.variants?.find(v => v.id === ex.variantId);
+                      const stockLimit = fixedVariant ? Number(fixedVariant.stock)
+                        : pickedVariant ? Number(pickedVariant.stock)
+                        : linkedProduct ? linkedProduct.stock
+                        : 999;
+                      const canAdd = !needsVariantPick || pickedVariantId;
+                      return (
+                        <div key={ex.id} style={{ padding:"12px 0", borderBottom:"1px solid #1a1a1a" }}>
+                          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:13, fontWeight:600, color:"#fff", marginBottom:2 }}>
+                                {ex.name}
+                                {ex.noPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
+                              </div>
+                              {/* Show fixed variant label if admin pinned one */}
+                              {fixedVariant && (
+                                <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:4 }}>
+                                  Variant: {fixedVariant.name} · stock: {fixedVariant.stock}
+                                </div>
+                              )}
+                              {/* Variant picker if player must choose */}
+                              {needsVariantPick && (
+                                <div style={{ marginTop:6, marginBottom:4 }}>
+                                  <select
+                                    value={pickedVariantId || ""}
+                                    onChange={e => setExtra(ex.id, exQty > 0 ? exQty : 0, e.target.value || null)}
+                                    style={{ fontSize:12, padding:"5px 8px", background:"#111", border:"1px solid #333", color:"var(--text)", width:"100%" }}
+                                  >
+                                    <option value="">— Select variant —</option>
+                                    {linkedProduct.variants.map(v => (
+                                      <option key={v.id} value={v.id} disabled={Number(v.stock) < 1}>
+                                        {v.name} — £{Number(v.price).toFixed(2)} {Number(v.stock) < 1 ? "(Out of stock)" : `(${v.stock} left)`}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                              <div style={{ fontSize:12, color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{ex.price}</div>
+                            </div>
+                            <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111", flexShrink:0, opacity: (!canAdd && exQty === 0) ? 0.4 : 1 }}>
+                              <button onClick={() => setExtra(ex.id, exQty - 1, pickedVariantId)} disabled={exQty === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer" }}>−</button>
+                              <span style={{ padding:"0 12px", fontFamily:"'Russo One',sans-serif", fontSize:16, color: exQty > 0 ? "var(--accent)" : "var(--text)", minWidth:30, textAlign:"center" }}>{exQty}</span>
+                              <button
+                                onClick={() => {
+                                  if (needsVariantPick && !pickedVariantId) { return; }
+                                  setExtra(ex.id, Math.min(exQty + 1, stockLimit), pickedVariantId);
+                                }}
+                                disabled={!canAdd || exQty >= stockLimit}
+                                title={needsVariantPick && !pickedVariantId ? "Select a variant first" : ""}
+                                style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor: (!canAdd || exQty >= stockLimit) ? "not-allowed" : "pointer", opacity: (!canAdd || exQty >= stockLimit) ? 0.3 : 1 }}>+</button>
+                            </div>
+                          </div>
+                          {needsVariantPick && !pickedVariantId && exQty === 0 && (
+                            <div style={{ fontSize:10, color:"#a07800", fontFamily:"'Share Tech Mono',monospace", marginTop:4 }}>↑ Pick a variant to add this extra</div>
+                          )}
                         </div>
-                        <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111" }}>
-                          <button onClick={() => setExtra(ex.id, (bCart.extras[ex.id]||0) - 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer" }}>−</button>
-                          <span style={{ padding:"0 12px", fontFamily:"'Russo One',sans-serif", fontSize:16, color: (bCart.extras[ex.id]||0)>0?"var(--accent)":"var(--text)", minWidth:30, textAlign:"center" }}>{bCart.extras[ex.id]||0}</span>
-                          <button onClick={() => setExtra(ex.id, (bCart.extras[ex.id]||0) + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer" }}>+</button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1614,12 +1668,17 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <span>£{rentalTotal.toFixed(2)}</span>
                     </div>
                   )}
-                  {ev.extras.filter(ex => (bCart.extras[ex.id]||0) > 0).map(ex => (
-                    <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
-                      <span className="text-muted">{ex.name} ×{bCart.extras[ex.id]}</span>
-                      <span>£{(bCart.extras[ex.id] * ex.price).toFixed(2)}</span>
-                    </div>
-                  ))}
+                  {ev.extras.filter(ex => getExtraQty(ex.id) > 0).map(ex => {
+                    const q = getExtraQty(ex.id);
+                    const vid = getExtraVariant(ex.id);
+                    const vname = data.shop.find(p => p.id === ex.productId)?.variants?.find(v => v.id === vid)?.name;
+                    return (
+                      <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
+                        <span className="text-muted">{ex.name}{vname ? ` (${vname})` : ""} ×{q}</span>
+                        <span>£{(q * ex.price).toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
                   {vipDisc > 0 && (
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6, color:"var(--gold)" }}>
                       <span>VIP 10% discount applied</span>
