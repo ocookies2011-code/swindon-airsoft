@@ -5,13 +5,15 @@ import { normaliseProfile } from "./api";
 // jsQR is loaded via CDN in the QRScanner component — no import needed
 
 // ── PayPal SDK loader ─────────────────────────────────────────────────
-const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
+// Sandbox client ID for testing — replace with live ID in VITE_PAYPAL_CLIENT_ID env var for production
+const PAYPAL_SANDBOX_CLIENT_ID = "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PjwTchpeBlRj21gsit2zu-Uxd9pM7";
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || PAYPAL_SANDBOX_CLIENT_ID;
+const PAYPAL_ENV = import.meta.env.VITE_PAYPAL_CLIENT_ID ? "live" : "sandbox";
 
 function usePayPal() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
   useEffect(() => {
-    if (!PAYPAL_CLIENT_ID) { setError("PayPal Client ID not configured"); return; }
     if (window.paypal) { setReady(true); return; }
     const existing = document.getElementById("paypal-sdk");
     if (existing) { existing.addEventListener("load", () => setReady(true)); return; }
@@ -68,16 +70,21 @@ function PayPalCheckoutButton({ amount, description, onSuccess, onError, disable
     }).render(containerRef.current);
   }, [ready, disabled, amount]);
 
-  if (!PAYPAL_CLIENT_ID) return (
-    <div className="alert alert-red">⚠️ PayPal not configured — add VITE_PAYPAL_CLIENT_ID to your .env file</div>
-  );
   if (sdkError) return <div className="alert alert-red">⚠️ {sdkError}</div>;
   if (!ready) return (
-    <div style={{ textAlign: "center", padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>
-      Loading PayPal…
+    <div style={{ textAlign: "center", padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>Loading PayPal…</div>
+  );
+  return (
+    <div style={{ marginTop: 12 }}>
+      {PAYPAL_ENV === "sandbox" && (
+        <div style={{ background: "#1a1200", border: "1px solid #554400", padding: "6px 12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ background: "#e5a800", color: "#000", fontSize: 9, fontWeight: 800, padding: "2px 6px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif" }}>SANDBOX</span>
+          <span style={{ fontSize: 11, color: "#a07800", fontFamily: "'Share Tech Mono',monospace" }}>Test mode — no real payments taken. Use PayPal sandbox account to test.</span>
+        </div>
+      )}
+      <div ref={containerRef} />
     </div>
   );
-  return <div ref={containerRef} style={{ marginTop: 12 }} />;
 }
 
 
