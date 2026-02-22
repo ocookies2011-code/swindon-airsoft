@@ -83,7 +83,7 @@ export const profiles = {
 export const events = {
   async getAll() {
     const { data: evs, error } = await supabase
-      .from('events').select('*, event_extras(*), bookings(*)').order('date')
+      .from('events').select('*, extras_json, event_extras(*), bookings(*)').order('date')
     if (error) throw error
     // Normalise to camelCase shape the app expects
     return evs.map(normaliseEvent)
@@ -397,9 +397,24 @@ function normaliseEvent(ev) {
     banner:       ev.banner,
     mapEmbed:     ev.map_embed,
     published:    ev.published,
-    extras: (ev.event_extras || [])
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map(ex => ({ id: ex.id, name: ex.name, price: Number(ex.price), noPost: ex.no_post, productId: ex.product_id || null, variantId: ex.variant_id || null })),
+    extras: (() => {
+      // Prefer extras_json (full data including productId/variantId) over event_extras rows
+      if (ev.extras_json) {
+        try {
+          const parsed = JSON.parse(ev.extras_json)
+          if (Array.isArray(parsed)) return parsed.map(ex => ({
+            id: ex.id, name: ex.name, price: Number(ex.price),
+            noPost: ex.noPost ?? ex.no_post ?? false,
+            productId: ex.productId || null,
+            variantId: ex.variantId || null,
+          }))
+        } catch {}
+      }
+      // Fall back to event_extras rows (no productId/variantId without migration)
+      return (ev.event_extras || [])
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(ex => ({ id: ex.id, name: ex.name, price: Number(ex.price), noPost: ex.no_post, productId: ex.product_id || null, variantId: ex.variant_id || null }))
+    })(),
     bookings: (ev.bookings || []).map(b => ({
       id:        b.id,
       userId:    b.user_id,
@@ -475,6 +490,7 @@ function toSnakeEvent(ev) {
     banner:         ev.banner,
     map_embed:      ev.mapEmbed,
     published:      ev.published,
+    extras_json:    ev.extras ? JSON.stringify(ev.extras) : null,
   }
 }
 
