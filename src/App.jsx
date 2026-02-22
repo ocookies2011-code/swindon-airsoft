@@ -1784,7 +1784,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 }
 
 // ── Shop ──────────────────────────────────────────────────
-function ShopPage({ data, cu, showToast, onProductClick, cart, setCart, cartOpen, setCartOpen }) {
+function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen }) {
   const [placing, setPlacing] = useState(false);
   const [shopPaypalError, setShopPaypalError] = useState(null);
 
@@ -4748,7 +4748,7 @@ export default function App() {
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} />}
         {page === "shop" && !selectedProduct && (
           <ShopPage
-            data={data} cu={cu} showToast={showToast}
+            data={data} cu={cu} showToast={showToast} save={save}
             cart={shopCart} setCart={setShopCart}
             cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
             onProductClick={(item) => setSelectedProduct(item)}
