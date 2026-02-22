@@ -2934,7 +2934,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 
   const clone = async (ev) => {
     try {
-      // Strip bookings and id — create fresh event with same details
       const { id: _id, bookings: _b, ...evData } = ev;
       await api.events.create({ ...evData, title: ev.title + " (Copy)", published: false });
       const evList = await api.events.getAll();
@@ -2942,6 +2941,24 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       showToast("Event cloned! (saved as draft)");
     } catch (e) {
       showToast("Clone failed: " + e.message, "red");
+    }
+  };
+
+  const [delEventConfirm, setDelEventConfirm] = useState(null);
+  const [deletingEvent, setDeletingEvent] = useState(false);
+  const deleteEvent = async () => {
+    if (!delEventConfirm) return;
+    setDeletingEvent(true);
+    try {
+      await api.events.delete(delEventConfirm.id);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Event deleted!");
+      setDelEventConfirm(null);
+    } catch (e) {
+      showToast("Delete failed: " + e.message, "red");
+    } finally {
+      setDeletingEvent(false);
     }
   };
 
@@ -2991,6 +3008,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <div className="gap-2">
                       <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...ev }); setModal(ev.id); }}>Edit</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => clone(ev)}>Clone</button>
+                      <button className="btn btn-sm btn-danger" onClick={() => setDelEventConfirm(ev)}>Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -3222,6 +3240,26 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       )}
 
       {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
+
+      {delEventConfirm && (
+        <div className="overlay" onClick={() => !deletingEvent && setDelEventConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🗑 Delete Event?</div>
+            <p style={{ fontSize:13, color:"var(--muted)", margin:"12px 0 4px" }}>
+              Permanently delete <strong style={{ color:"var(--text)" }}>{delEventConfirm.title}</strong>?
+            </p>
+            <p style={{ fontSize:12, color:"var(--red)", marginBottom:20 }}>
+              ⚠️ This will also delete all {delEventConfirm.bookings?.length || 0} booking(s) for this event. This cannot be undone.
+            </p>
+            <div className="gap-2">
+              <button className="btn btn-danger" disabled={deletingEvent} onClick={deleteEvent}>
+                {deletingEvent ? "Deleting…" : "Yes, Delete Event"}
+              </button>
+              <button className="btn btn-ghost" disabled={deletingEvent} onClick={() => setDelEventConfirm(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
