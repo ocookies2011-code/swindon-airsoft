@@ -98,12 +98,10 @@ export const events = {
       await supabase.from('event_extras').insert(
         extras.map((ex, i) => ({
           event_id:   data.id,
-          name:       ex.name,
+          name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
           price:      ex.price,
           no_post:    ex.noPost ?? ex.no_post ?? false,
           sort_order: i,
-          product_id: ex.productId || null,
-          variant_id: ex.variantId || null,
         }))
       )
     }
@@ -122,12 +120,10 @@ export const events = {
         await supabase.from('event_extras').insert(
           extras.map((ex, i) => ({
             event_id:   id,
-            name:       ex.name,
+            name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
             price:      ex.price,
             no_post:    ex.noPost ?? ex.no_post ?? false,
             sort_order: i,
-            product_id: ex.productId || null,
-            variant_id: ex.variantId || null,
           }))
         )
       }
@@ -410,10 +406,17 @@ function normaliseEvent(ev) {
           }))
         } catch {}
       }
-      // Fall back to event_extras rows (no productId/variantId without migration)
+      // Fall back to event_extras rows — decode JSON-encoded name field
       return (ev.event_extras || [])
         .sort((a, b) => a.sort_order - b.sort_order)
-        .map(ex => ({ id: ex.id, name: ex.name, price: Number(ex.price), noPost: ex.no_post, productId: ex.product_id || null, variantId: ex.variant_id || null }))
+        .map(ex => {
+          let name = ex.name, productId = ex.product_id || null, variantId = ex.variant_id || null
+          try {
+            const parsed = JSON.parse(ex.name)
+            if (parsed?.n) { name = parsed.n; productId = parsed.pid || null; variantId = parsed.vid || null }
+          } catch {}
+          return { id: ex.id, name, price: Number(ex.price), noPost: ex.no_post, productId, variantId }
+        })
     })(),
     bookings: (ev.bookings || []).map(b => ({
       id:        b.id,
