@@ -373,6 +373,8 @@ body,#root{
 .bottom-nav-btn.active{color:var(--accent);}
 .bottom-nav-icon{font-size:20px;line-height:1;}
 .pub-page-wrap{padding-bottom:80px;}
+.page-content{max-width:1200px;margin:0 auto;padding:20px 16px;}
+.page-content-sm{max-width:900px;margin:0 auto;padding:20px 16px;}
 
 /* ── MILITARY CARDS ── */
 .card{
@@ -1243,7 +1245,7 @@ function HomePage({ data, setPage }) {
         ))}
       </div>
 
-      <div style={{ maxWidth:1200, margin:"0 auto", padding:"24px 16px 40px" }}>
+      <div className="page-content">
 
         {/* ══ MISSION COUNTDOWN ════════════════════════════════ */}
         {nextEvent && (() => {
@@ -1493,7 +1495,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const bookingBlocked = !cu || !waiverValid || (booked + qty > total) || !!myBooking;
 
     return (
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "16px" }}>
+      <div className="page-content">
         <button className="btn btn-ghost btn-sm mb-2" onClick={() => { setDetail(null); setTab("info"); setExtras({}); }}>← Back to Events</button>
         <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 20 }}>
           <div style={{ height: 160, background: "linear-gradient(135deg,#150e08,#111827)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: "var(--accent)", letterSpacing: ".04em" }}>
@@ -1674,7 +1676,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
+    <div className="page-content">
       <div className="page-header">
         <div><div className="page-title">Events</div><div className="page-sub">Book your next game day</div></div>
       </div>
@@ -1776,7 +1778,7 @@ function ShopPage({ data, cu, showToast }) {
   };
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
+    <div className="page-content">
       <div className="page-header">
         <div><div className="page-title">Shop</div><div className="page-sub">Gear up for battle</div></div>
         <button className="btn btn-ghost" onClick={() => setCartOpen(true)}>
@@ -1887,7 +1889,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
     .sort((a, b) => b.gamesAttended - a.gamesAttended);
 
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", padding: "16px" }}>
+    <div className="page-content-sm">
       <div className="page-header">
         <div><div className="page-title">Leaderboard</div><div className="page-sub">Ranked by game days attended — dedication, not kills</div></div>
       </div>
@@ -1942,7 +1944,7 @@ function GalleryPage({ data }) {
   };
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px" }}>
+    <div className="page-content">
       <div className="page-header"><div className="page-title">Gallery</div></div>
       <div className="gap-2 mb-2">
         <button className={`btn btn-sm ${!active ? "btn-primary" : "btn-ghost"}`} onClick={() => setActive(null)}>All</button>
@@ -1993,7 +1995,7 @@ function GalleryPage({ data }) {
 function QAPage({ data }) {
   const [open, setOpen] = useState(null);
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", padding: "16px" }}>
+    <div className="page-content-sm">
       <div className="page-header"><div><div className="page-title">Q&amp;A</div><div className="page-sub">Got questions? We've got answers.</div></div></div>
       {data.qa.map(item => (
         <div key={item.id} className="accordion-item">
@@ -2058,7 +2060,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "16px" }}>
+    <div className="page-content">
       <div className="page-header">
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ position: "relative" }}>
