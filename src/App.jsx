@@ -3757,14 +3757,20 @@ function AdminShop({ data, save, showToast }) {
     reader2.readAsDataURL(file);
   };
 
+  const [savingProduct, setSavingProduct] = useState(false);
   const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
+    setSavingProduct(true);
     try {
       if (modal === "new") await api.shop.create(form);
       else await api.shop.update(form.id, form);
       save({ shop: await api.shop.getAll() });
       showToast("Product saved!"); setModal(null);
-    } catch (e) { showToast("Save failed: " + e.message, "red"); }
+    } catch (e) {
+      showToast("Save failed: " + (e.message || String(e)), "red");
+    } finally {
+      setSavingProduct(false);
+    }
   };
 
   const savePostage = async () => {
@@ -3937,7 +3943,7 @@ function AdminShop({ data, save, showToast }) {
             {form.image && <img src={form.image} style={{width:"100%",maxHeight:110,objectFit:"cover",marginBottom:10}} alt="" />}
 
             <div className="gap-2">
-              <button className="btn btn-primary" onClick={saveItem}>Save Product</button>
+              <button className="btn btn-primary" onClick={saveItem} disabled={savingProduct}>{savingProduct ? "Saving…" : "Save Product"}</button>
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Cancel</button>
             </div>
           </div>
@@ -4032,7 +4038,7 @@ function AdminExtras({ data, save, showToast }) {
             const linkedVariant = linked?.variants?.find(v => v.id === ex.variantId);
             const isEditing = editId === ex.id;
             if (isEditing) return (
-              <div key={ex.id} style={{ padding:"12px 0", borderBottom:"1px solid var(--border)", background:"#0d0d0d", margin:"0 -16px", padding:"12px 16px" }}>
+              <div key={ex.id} style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)", background:"#0d0d0d", margin:"0 -16px" }}>
                 <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:10 }}>EDITING: {ex.name}</div>
                 <div className="form-row">
                   <div className="form-group"><label>Name</label><input value={editForm.name} onChange={e => ef("name", e.target.value)} /></div>
@@ -4717,7 +4723,19 @@ export default function App() {
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
-          setCu(normaliseProfile(profile));
+          if (profile) setCu(normaliseProfile(profile));
+          else {
+            // Profile may not exist yet (new signup before confirmation) — try creating it
+            try {
+              const meta = session.user.user_metadata || {};
+              await supabase.from('profiles').insert({
+                id: session.user.id, name: meta.name || session.user.email?.split('@')[0] || 'Player',
+                phone: meta.phone || '', role: 'player', games_attended: 0,
+              }).select().single();
+              const profile2 = await api.profiles.getById(session.user.id);
+              if (profile2) setCu(normaliseProfile(profile2));
+            } catch { setCu(null); }
+          }
         } catch { setCu(null); }
         if (event === "SIGNED_IN") refresh();
       } else {

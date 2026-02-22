@@ -205,9 +205,20 @@ export const shop = {
   },
 
   async create(product) {
+    const snake = toSnakeProduct(product)
     const { data, error } = await supabase
-      .from('shop_products').insert(toSnakeProduct(product)).select().single()
-    if (error) throw error
+      .from('shop_products').insert(snake).select().single()
+    if (error) {
+      // Strip unknown columns and retry
+      const { variants: _v, game_extra: _g, ...snakeStripped } = snake
+      if (error.message?.includes('game_extra') || error.message?.includes('variants')) {
+        const { data: d2, error: e2 } = await supabase
+          .from('shop_products').insert(snakeStripped).select().single()
+        if (e2) throw new Error('Product create failed: ' + e2.message)
+        return normaliseProduct(d2)
+      }
+      throw error
+    }
     return normaliseProduct(data)
   },
 
@@ -216,11 +227,11 @@ export const shop = {
     const { data, error } = await supabase
       .from('shop_products').update(snake).eq('id', id).select().single()
     if (error) {
-      // If variants column missing, retry without it
-      if (error.message && error.message.includes('variants')) {
-        const { variants: _v, ...snakeNoVariants } = snake
+      // Strip unknown columns and retry
+      const { variants: _v, game_extra: _g, ...snakeStripped } = snake
+      if (error.message?.includes('variants') || error.message?.includes('game_extra')) {
         const { data: d2, error: e2 } = await supabase
-          .from('shop_products').update(snakeNoVariants).eq('id', id).select().single()
+          .from('shop_products').update(snakeStripped).eq('id', id).select().single()
         if (e2) throw new Error('Product save failed: ' + e2.message)
         return normaliseProduct(d2)
       }
