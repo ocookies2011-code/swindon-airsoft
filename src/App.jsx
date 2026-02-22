@@ -1691,13 +1691,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 }
 
 // ── Shop ──────────────────────────────────────────────────
-function ShopPage({ data, cu, showToast }) {
-  const [cart, setCart] = useState([]);
-  const [cartOpen, setCartOpen] = useState(false);
+function ShopPage({ data, cu, showToast, onProductClick, cart, setCart, cartOpen, setCartOpen }) {
   const [placing, setPlacing] = useState(false);
-  const [productModal, setProductModal] = useState(null); // item object
-  const [selectedVariant, setSelectedVariant] = useState(null);
-  const [qtyPick, setQtyPick] = useState(1);
   const [shopPaypalError, setShopPaypalError] = useState(null);
 
   const postageOptions = data.postageOptions || [];
@@ -1709,30 +1704,21 @@ function ShopPage({ data, cu, showToast }) {
   const postage = postageOptions.find(p => p.id === postageId) || postageOptions[0] || { name: "Collection", price: 0 };
   const hasNoPost = cart.some(i => i.noPost);
 
-  // Cart key = productId + optional variantId
   const cartKey = (item, variant) => variant ? `${item.id}::${variant.id}` : item.id;
 
   const addToCart = (item, variant, qty = 1) => {
     const key = cartKey(item, variant);
-    const price = variant ? Number(variant.price)
-                : (item.onSale && item.salePrice ? item.salePrice : item.price);
+    const price = variant ? Number(variant.price) : (item.onSale && item.salePrice ? item.salePrice : item.price);
     const label = variant ? `${item.name} — ${variant.name}` : item.name;
     const availStock = variant ? Number(variant.stock) : item.stock;
-
     setCart(c => {
       const ex = c.find(x => x.key === key);
       const currentQty = ex ? ex.qty : 0;
-      if (currentQty + qty > availStock) {
-        showToast("Not enough stock", "red");
-        return c;
-      }
+      if (currentQty + qty > availStock) { showToast("Not enough stock", "red"); return c; }
       if (ex) return c.map(x => x.key === key ? { ...x, qty: x.qty + qty } : x);
       return [...c, { key, id: item.id, variantId: variant?.id || null, name: label, price, qty, noPost: item.noPost, stock: availStock }];
     });
     showToast(`${label} × ${qty} added to cart`);
-    setProductModal(null);
-    setSelectedVariant(null);
-    setQtyPick(1);
   };
 
   const removeFromCart = (key) => setCart(c => c.filter(x => x.key !== key));
@@ -1747,61 +1733,34 @@ function ShopPage({ data, cu, showToast }) {
 
   const placeOrderAfterPayment = async (paypalOrder) => {
     if (!cu || cart.length === 0) return;
-    setPlacing(true);
-    setShopPaypalError(null);
+    setPlacing(true); setShopPaypalError(null);
     try {
       await api.shopOrders.create({
-        customerName:    cu.name,
-        customerEmail:   cu.email || "",
-        customerAddress: cu.address || "",
-        userId:          cu.id,
-        items:           cart.map(i => ({ id: i.id, variantId: i.variantId, name: i.name, price: i.price, qty: i.qty })),
-        subtotal:        subTotal,
-        postage:         postageTotal,
-        postageName:     hasNoPost ? "Collection Only" : (postage?.name || ""),
-        total:           grandTotal,
-        paypalOrderId:   paypalOrder.id,
+        customerName: cu.name, customerEmail: cu.email || "",
+        customerAddress: cu.address || "", userId: cu.id,
+        items: cart.map(i => ({ id: i.id, variantId: i.variantId, name: i.name, price: i.price, qty: i.qty })),
+        subtotal: subTotal, postage: postageTotal,
+        postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
+        total: grandTotal, paypalOrderId: paypalOrder.id,
       });
-      // Deduct stock — variant-aware
       for (const ci of cart) {
-        if (ci.variantId) {
-          // Deduct from variant stock via RPC
-          await supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty });
-        } else {
-          await supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty });
-        }
+        if (ci.variantId) await supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty });
+        else await supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty });
       }
       showToast("✅ Payment successful — order confirmed!");
-      setCart([]);
-      setCartOpen(false);
-    } catch (e) {
-      showToast("Payment taken but order failed — contact us: " + e.message, "red");
-    } finally {
-      setPlacing(false);
-    }
+      setCart([]); setCartOpen(false);
+    } catch (e) { showToast("Payment taken but order failed — contact us: " + e.message, "red"); }
+    finally { setPlacing(false); }
   };
 
-  const handleShopPaypalError = (msg) => { if (msg) setShopPaypalError(msg); };
-
-  // Open product detail modal
-  const openProduct = (item) => {
-    setProductModal(item);
-    setSelectedVariant(item.variants?.length > 0 ? null : null);
-    setQtyPick(1);
-  };
-
-  const modalVariant = selectedVariant;
-  const modalPrice = modalVariant ? Number(modalVariant.price)
-    : (productModal?.onSale && productModal?.salePrice ? productModal.salePrice : productModal?.price);
-  const modalStock = modalVariant ? Number(modalVariant.stock) : (productModal?.stock || 0);
-  const hasVariants = productModal?.variants?.length > 0;
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
     <div className="page-content">
       <div className="page-header">
         <div><div className="page-title">Armoury</div><div className="page-sub">Gear up for battle</div></div>
         <button className="btn btn-ghost" onClick={() => setCartOpen(true)}>
-          🛒 Cart {cart.length > 0 && <span style={{ background:"var(--accent)", color:"#fff", padding:"1px 7px", fontSize:11, marginLeft:6, fontWeight:700 }}>{cart.reduce((s,i)=>s+i.qty,0)}</span>}
+          🛒 Cart {cartCount > 0 && <span style={{ background:"var(--accent)", color:"#fff", padding:"1px 7px", fontSize:11, marginLeft:6, fontWeight:700 }}>{cartCount}</span>}
         </button>
       </div>
 
@@ -1810,158 +1769,77 @@ function ShopPage({ data, cu, showToast }) {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:16 }}>
         {data.shop.map(item => {
           const hasV = item.variants?.length > 0;
-          const displayPrice = hasV ? Math.min(...item.variants.map(v => Number(v.price))) : (item.onSale && item.salePrice ? item.salePrice : item.price);
+          const displayPrice = hasV
+            ? Math.min(...item.variants.map(v => Number(v.price)))
+            : (item.onSale && item.salePrice ? item.salePrice : item.price);
           const inStock = item.stock > 0;
-          const vipP = cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : null;
           return (
-            <div key={item.id} className="shop-card" style={{ cursor:"pointer" }} onClick={() => openProduct(item)}>
+            <div key={item.id} className="shop-card" style={{ cursor:"pointer" }} onClick={() => onProductClick(item)}>
               <div className="shop-img">
-                {item.image ? <img src={item.image} alt="" /> : <span style={{fontSize:40}}>🎯</span>}
-                {item.onSale && !hasV && <div style={{position:"absolute",top:8,left:8}}><span className="tag tag-red">SALE</span></div>}
-                {!inStock && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center"}}><span className="tag tag-red" style={{fontSize:11}}>OUT OF STOCK</span></div>}
+                {item.image ? <img src={item.image} alt="" /> : <span style={{ fontSize:40 }}>🎯</span>}
+                {!inStock && (
+                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.65)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <span className="tag tag-red" style={{ fontSize:11 }}>OUT OF STOCK</span>
+                  </div>
+                )}
               </div>
               <div className="shop-body">
                 <div className="gap-2 mb-1">
                   {item.noPost && <span className="tag tag-gold">Collect Only</span>}
                   {hasV && <span className="tag tag-blue">{item.variants.length} variants</span>}
+                  {item.onSale && !hasV && <span className="tag tag-red">SALE</span>}
                 </div>
                 <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:14, marginBottom:4, letterSpacing:".03em", color:"#fff" }}>{item.name}</div>
                 <p style={{ fontSize:11, color:"var(--muted)", marginBottom:10, lineHeight:1.5, fontFamily:"'Share Tech Mono',monospace" }}>{item.description}</p>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                   <div>
-                    {hasV ? <span style={{fontSize:11,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>from </span> : null}
-                    <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:20, color:"var(--accent)" }}>£{vipP || Number(displayPrice).toFixed(2)}</span>
-                    {vipP && <span className="text-gold" style={{fontSize:10,marginLeft:4}}>VIP</span>}
+                    {hasV && <span style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>from </span>}
+                    <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:20, color:"var(--accent)" }}>
+                      £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
+                    </span>
+                    {cu?.vipStatus === "active" && <span className="text-gold" style={{ fontSize:10, marginLeft:4 }}>VIP</span>}
                   </div>
-                  <span style={{fontSize:10,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>
+                  <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
                     {hasV ? `${item.variants.length} options` : `Stock: ${item.stock}`}
                   </span>
                 </div>
-                <button className="btn btn-primary mt-1" style={{width:"100%",padding:"8px",fontSize:12}} disabled={!inStock}>
-                  {!inStock ? "OUT OF STOCK" : hasV ? "SELECT VARIANT →" : "VIEW PRODUCT →"}
+                <button className="btn btn-primary" style={{ width:"100%", padding:"8px", fontSize:12 }} disabled={!inStock}>
+                  {!inStock ? "OUT OF STOCK" : "VIEW PRODUCT →"}
                 </button>
               </div>
             </div>
           );
         })}
-        {data.shop.length === 0 && <div style={{gridColumn:"1/-1",textAlign:"center",padding:60,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>No products in the armoury yet.</div>}
+        {data.shop.length === 0 && (
+          <div style={{ gridColumn:"1/-1", textAlign:"center", padding:60, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
+            No products in the armoury yet.
+          </div>
+        )}
       </div>
 
-      {/* ── PRODUCT DETAIL MODAL ── */}
-      {productModal && (
-        <div className="overlay" onClick={() => setProductModal(null)}>
-          <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{maxWidth:680}}>
-            <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
-              {/* Image */}
-              <div style={{width:220,flexShrink:0,background:"#111",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",minHeight:180}}>
-                {productModal.image ? <img src={productModal.image} style={{width:"100%",height:220,objectFit:"cover"}} alt="" /> : <span style={{fontSize:60}}>🎯</span>}
-              </div>
-              {/* Info */}
-              <div style={{flex:1,minWidth:200}}>
-                <div style={{fontFamily:"'Russo One',sans-serif",fontSize:22,color:"#fff",letterSpacing:".04em",marginBottom:6,textTransform:"uppercase"}}>{productModal.name}</div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>{productModal.description}</div>
-
-                {/* Variant selector */}
-                {hasVariants ? (
-                  <div style={{marginBottom:14}}>
-                    <div style={{fontSize:9,letterSpacing:".2em",color:"var(--muted)",fontFamily:"'Barlow Condensed',sans-serif",marginBottom:8,textTransform:"uppercase",fontWeight:700}}>SELECT VARIANT</div>
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      {productModal.variants.map(v => {
-                        const outV = Number(v.stock) < 1;
-                        const sel = selectedVariant?.id === v.id;
-                        return (
-                          <button key={v.id}
-                            onClick={() => { if (!outV) { setSelectedVariant(v); setQtyPick(1); }}}
-                            style={{
-                              padding:"7px 14px",fontFamily:"'Barlow Condensed',sans-serif",
-                              fontSize:12,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",
-                              background: sel ? "var(--accent)" : outV ? "#111" : "#1a1a1a",
-                              border: sel ? "1px solid var(--accent)" : "1px solid #333",
-                              color: sel ? "#fff" : outV ? "#333" : "var(--text)",
-                              cursor: outV ? "not-allowed" : "pointer",
-                              position:"relative",
-                            }}>
-                            {v.name}
-                            <div style={{fontSize:10,color:sel?"rgba(255,255,255,.7)":outV?"#333":"var(--muted)"}}>{outV ? "Out of stock" : `£${Number(v.price).toFixed(2)}`}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* Price display */}
-                <div style={{marginBottom:14}}>
-                  {(!hasVariants || selectedVariant) && (
-                    <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                      <span style={{fontFamily:"'Russo One',sans-serif",fontSize:32,color:"var(--accent)"}}>
-                        £{cu?.vipStatus === "active" ? (modalPrice * 0.9).toFixed(2) : Number(modalPrice).toFixed(2)}
-                      </span>
-                      {cu?.vipStatus === "active" && <span className="tag tag-gold">VIP PRICE</span>}
-                      {!hasVariants && productModal.onSale && productModal.salePrice && (
-                        <span style={{textDecoration:"line-through",color:"var(--muted)",fontSize:14}}>£{productModal.price}</span>
-                      )}
-                    </div>
-                  )}
-                  {hasVariants && !selectedVariant && (
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:13,color:"var(--muted)"}}>Select a variant to see price</div>
-                  )}
-                </div>
-
-                {/* Qty + Add to Cart */}
-                {(!hasVariants || selectedVariant) && modalStock > 0 && (
-                  <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
-                    <div style={{display:"flex",alignItems:"center",border:"1px solid #333",background:"#111"}}>
-                      <button onClick={() => setQtyPick(q => Math.max(1, q-1))} style={{background:"none",border:"none",color:"var(--text)",padding:"8px 14px",fontSize:18,cursor:"pointer"}}>−</button>
-                      <span style={{padding:"0 14px",fontFamily:"'Russo One',sans-serif",fontSize:18,color:"#fff",minWidth:36,textAlign:"center"}}>{qtyPick}</span>
-                      <button onClick={() => setQtyPick(q => Math.min(modalStock, q+1))} style={{background:"none",border:"none",color:"var(--text)",padding:"8px 14px",fontSize:18,cursor:"pointer"}}>+</button>
-                    </div>
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--muted)"}}>/ {modalStock} in stock</span>
-                  </div>
-                )}
-
-                {(!hasVariants || selectedVariant) && modalStock > 0 ? (
-                  <button className="btn btn-primary" style={{width:"100%",padding:"12px",fontSize:13,letterSpacing:".15em"}}
-                    onClick={() => addToCart(productModal, hasVariants ? selectedVariant : null, qtyPick)}>
-                    ADD TO CART × {qtyPick}
-                  </button>
-                ) : hasVariants && !selectedVariant ? (
-                  <button className="btn btn-ghost" style={{width:"100%",padding:"12px"}} disabled>SELECT A VARIANT FIRST</button>
-                ) : (
-                  <button className="btn btn-danger" style={{width:"100%",padding:"12px"}} disabled>OUT OF STOCK</button>
-                )}
-
-                <div style={{marginTop:10,fontFamily:"'Share Tech Mono',monospace",fontSize:10,color:"var(--muted)"}}>
-                  {productModal.noPost ? "⚠️ Collection only — cannot be posted" : "✓ Standard shipping available"}
-                </div>
-              </div>
-            </div>
-            <button className="btn btn-ghost mt-2" style={{width:"100%"}} onClick={() => setProductModal(null)}>← Back to Shop</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── CART MODAL ── */}
+      {/* CART MODAL */}
       {cartOpen && (
         <div className="overlay" onClick={() => setCartOpen(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-title">🛒 Cart</div>
-            {cart.length === 0 ? <p className="text-muted" style={{fontFamily:"'Share Tech Mono',monospace"}}>Your cart is empty.</p> : (
+            {cart.length === 0
+              ? <p className="text-muted" style={{ fontFamily:"'Share Tech Mono',monospace" }}>Your cart is empty.</p>
+              : (
               <>
                 {cart.map(item => (
-                  <div key={item.key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid var(--border)",fontSize:13}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:".05em"}}>{item.name}</div>
-                      <div style={{fontSize:11,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>£{item.price.toFixed(2)} each</div>
+                  <div key={item.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".05em", fontSize:14 }}>{item.name}</div>
+                      <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>£{item.price.toFixed(2)} each</div>
                     </div>
-                    <div className="gap-2" style={{alignItems:"center"}}>
-                      <div style={{display:"flex",alignItems:"center",border:"1px solid #333",background:"#111"}}>
-                        <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{background:"none",border:"none",color:"var(--text)",padding:"4px 10px",cursor:"pointer"}}>−</button>
-                        <span style={{padding:"0 8px",fontFamily:"'Russo One',sans-serif",fontSize:14}}>{item.qty}</span>
-                        <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{background:"none",border:"none",color:"var(--text)",padding:"4px 10px",cursor:"pointer"}}>+</button>
+                    <div className="gap-2" style={{ alignItems:"center" }}>
+                      <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111" }}>
+                        <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"4px 10px", cursor:"pointer" }}>−</button>
+                        <span style={{ padding:"0 8px", fontFamily:"'Russo One',sans-serif", fontSize:14 }}>{item.qty}</span>
+                        <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"4px 10px", cursor:"pointer" }}>+</button>
                       </div>
-                      <span className="text-green" style={{fontFamily:"'Russo One',sans-serif",minWidth:60,textAlign:"right"}}>£{(item.price * item.qty).toFixed(2)}</span>
-                      <button style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:16}} onClick={() => removeFromCart(item.key)}>✕</button>
+                      <span className="text-green" style={{ fontFamily:"'Russo One',sans-serif", minWidth:60, textAlign:"right" }}>£{(item.price * item.qty).toFixed(2)}</span>
+                      <button style={{ background:"none", border:"none", color:"var(--red)", cursor:"pointer", fontSize:16 }} onClick={() => removeFromCart(item.key)}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -1974,16 +1852,15 @@ function ShopPage({ data, cu, showToast }) {
                     </select>
                   </div>
                 )}
-                {!hasNoPost && postageOptions.length === 0 && <div className="alert alert-gold mt-2">No postage options configured</div>}
                 {hasNoPost && <div className="alert alert-gold mt-1">🔥 Collection-only items in cart — no posting</div>}
                 {cu?.vipStatus === "active" && <div className="alert alert-gold mt-1">⭐ VIP 10% discount applied</div>}
 
-                <div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Russo One',sans-serif",fontSize:22,marginTop:14,color:"#fff"}}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Russo One',sans-serif", fontSize:22, marginTop:14, color:"#fff" }}>
                   <span>TOTAL</span>
-                  <span style={{color:"var(--accent)"}}>£{grandTotal.toFixed(2)}</span>
+                  <span style={{ color:"var(--accent)" }}>£{grandTotal.toFixed(2)}</span>
                 </div>
-                {!hasNoPost && postage && postageTotal > 0 && (
-                  <div style={{fontSize:11,color:"var(--muted)",textAlign:"right",marginTop:2,fontFamily:"'Share Tech Mono',monospace"}}>
+                {!hasNoPost && postageTotal > 0 && (
+                  <div style={{ fontSize:11, color:"var(--muted)", textAlign:"right", marginTop:2, fontFamily:"'Share Tech Mono',monospace" }}>
                     incl. {postage.name} £{postageTotal.toFixed(2)}
                   </div>
                 )}
@@ -1996,16 +1873,190 @@ function ShopPage({ data, cu, showToast }) {
                     amount={grandTotal}
                     description={`Swindon Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
                     onSuccess={placeOrderAfterPayment}
-                    onError={handleShopPaypalError}
+                    onError={(msg) => { if (msg) setShopPaypalError(msg); }}
                     disabled={placing}
                   />
                 )}
               </>
             )}
-            <button className="btn btn-ghost mt-1" style={{width:"100%"}} onClick={() => setCartOpen(false)}>Close</button>
+            <button className="btn btn-ghost mt-1" style={{ width:"100%" }} onClick={() => setCartOpen(false)}>Close</button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Product Page ──────────────────────────────────────────
+function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [qty, setQty] = useState(1);
+
+  const hasVariants = item.variants?.length > 0;
+  const effectivePrice = selectedVariant
+    ? Number(selectedVariant.price)
+    : hasVariants ? null
+    : (item.onSale && item.salePrice ? item.salePrice : item.price);
+  const vipPrice = effectivePrice !== null && cu?.vipStatus === "active"
+    ? (effectivePrice * 0.9).toFixed(2) : null;
+  const displayPrice = vipPrice || (effectivePrice !== null ? Number(effectivePrice).toFixed(2) : null);
+  const stockAvail = selectedVariant ? Number(selectedVariant.stock) : hasVariants ? 0 : item.stock;
+  const canAdd = (!hasVariants || selectedVariant) && stockAvail > 0;
+
+  const handleAdd = () => {
+    if (!canAdd) return;
+    onAddToCart(item, hasVariants ? selectedVariant : null, qty);
+    setQty(1);
+  };
+
+  // Related items — same category approximated by stock/naming, just show a few others
+  return (
+    <div className="page-content">
+      {/* Breadcrumb */}
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20, fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)" }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:"var(--accent)", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".1em", fontSize:12 }}>
+          ← ARMOURY
+        </button>
+        <span style={{ color:"#333" }}>/</span>
+        <span style={{ color:"var(--text)", textTransform:"uppercase", letterSpacing:".1em" }}>{item.name}</span>
+        <div style={{ marginLeft:"auto" }}>
+          <button className="btn btn-ghost btn-sm" onClick={onCartOpen}>
+            🛒 {cartCount > 0 && <span style={{ background:"var(--accent)", color:"#fff", padding:"1px 6px", fontSize:10, marginLeft:4, fontWeight:700 }}>{cartCount}</span>}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32, marginBottom:40 }}>
+
+        {/* LEFT — Image */}
+        <div>
+          <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", borderTop:"3px solid var(--accent)", position:"relative", overflow:"hidden" }}>
+            {/* Corner brackets */}
+            <div style={{ position:"absolute", top:10, left:10, width:18, height:18, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
+            <div style={{ position:"absolute", top:10, right:10, width:18, height:18, borderTop:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
+            <div style={{ position:"absolute", bottom:10, left:10, width:18, height:18, borderBottom:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
+            <div style={{ position:"absolute", bottom:10, right:10, width:18, height:18, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
+            {item.image
+              ? <img src={item.image} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", filter:"contrast(1.05)" }} />
+              : <div style={{ aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", fontSize:80, color:"#333" }}>🎯</div>
+            }
+            {!item.stock && (
+              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:28, letterSpacing:".2em", color:"var(--red)", border:"3px solid var(--red)", padding:"8px 24px", transform:"rotate(-5deg)" }}>OUT OF STOCK</span>
+              </div>
+            )}
+          </div>
+
+          {/* Spec strip */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:1, marginTop:2 }}>
+            {[
+              { label:"STOCK", val: hasVariants ? `${item.stock} total` : `${item.stock} units` },
+              { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
+              { label:"STATUS", val: item.stock > 0 ? "IN STOCK" : "OUT OF STOCK" },
+            ].map(s => (
+              <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
+                <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
+                <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:s.label === "STATUS" ? (item.stock > 0 ? "#7dc840" : "var(--red)") : "var(--text)" }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* RIGHT — Details */}
+        <div>
+          {/* Tags */}
+          <div className="gap-2 mb-2">
+            {item.noPost && <span className="tag tag-gold">⚠️ Collect Only</span>}
+            {item.onSale && !hasVariants && <span className="tag tag-red">ON SALE</span>}
+            {hasVariants && <span className="tag tag-blue">{item.variants.length} variants</span>}
+            {item.stock > 0 ? <span className="tag tag-green">IN STOCK</span> : <span className="tag tag-red">OUT OF STOCK</span>}
+          </div>
+
+          {/* Name */}
+          <h1 style={{ fontFamily:"'Russo One',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
+
+          {/* Description */}
+          <p style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}>
+            {item.description || "No description available."}
+          </p>
+
+          {/* Variant selector */}
+          {hasVariants && (
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:10 }}>
+                SELECT VARIANT
+              </div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {item.variants.map(v => {
+                  const outV = Number(v.stock) < 1;
+                  const sel = selectedVariant?.id === v.id;
+                  return (
+                    <button key={v.id}
+                      onClick={() => { if (!outV) { setSelectedVariant(v); setQty(1); } }}
+                      style={{
+                        padding:"10px 18px", fontFamily:"'Barlow Condensed',sans-serif",
+                        fontSize:13, fontWeight:700, letterSpacing:".1em", textTransform:"uppercase",
+                        background: sel ? "var(--accent)" : outV ? "#0a0a0a" : "#1a1a1a",
+                        border: `2px solid ${sel ? "var(--accent)" : outV ? "#222" : "#333"}`,
+                        color: sel ? "#fff" : outV ? "#333" : "var(--text)",
+                        cursor: outV ? "not-allowed" : "pointer",
+                        position:"relative",
+                      }}>
+                      <div>{v.name}</div>
+                      <div style={{ fontSize:11, color: sel ? "rgba(255,255,255,.8)" : outV ? "#2a2a2a" : "var(--muted)", marginTop:2 }}>
+                        {outV ? "Out of stock" : `£${Number(v.price).toFixed(2)}`}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Price */}
+          <div style={{ marginBottom:20 }}>
+            {displayPrice ? (
+              <div style={{ display:"flex", alignItems:"baseline", gap:12 }}>
+                <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:48, color:"var(--accent)", lineHeight:1 }}>£{displayPrice}</span>
+                {vipPrice && <span className="tag tag-gold">VIP PRICE</span>}
+                {!hasVariants && item.onSale && item.salePrice && (
+                  <span style={{ textDecoration:"line-through", color:"var(--muted)", fontSize:18 }}>£{item.price}</span>
+                )}
+                {cu?.vipStatus === "active" && !vipPrice && (
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--gold)" }}>10% VIP applied</span>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:"var(--muted)" }}>
+                {hasVariants && !selectedVariant ? "↑ Select a variant to see price" : "—"}
+              </div>
+            )}
+          </div>
+
+          {/* Qty + Add to Cart */}
+          {canAdd ? (
+            <div style={{ display:"flex", gap:12, alignItems:"stretch", marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#0d0d0d" }}>
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Russo One',sans-serif" }}>−</button>
+                <span style={{ padding:"0 16px", fontFamily:"'Russo One',sans-serif", fontSize:22, color:"#fff", minWidth:50, textAlign:"center" }}>{qty}</span>
+                <button onClick={() => setQty(q => Math.min(stockAvail, q + 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Russo One',sans-serif" }}>+</button>
+              </div>
+              <button className="btn btn-primary" style={{ flex:1, padding:"12px 24px", fontSize:14, letterSpacing:".15em" }} onClick={handleAdd}>
+                ADD TO CART × {qty}
+              </button>
+            </div>
+          ) : (
+            <button className="btn btn-ghost" style={{ width:"100%", padding:"14px", marginBottom:12, cursor:"default", opacity:.5 }} disabled>
+              {hasVariants && !selectedVariant ? "SELECT A VARIANT FIRST" : "OUT OF STOCK"}
+            </button>
+          )}
+
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", display:"flex", gap:16 }}>
+            <span>{item.noPost ? "⚠️ Collection at game day only" : "✓ Standard postage available"}</span>
+            {stockAvail > 0 && <span style={{ color:"#7dc840" }}>✓ {stockAvail} in stock</span>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -4325,6 +4376,13 @@ export default function App() {
   const [authModal, setAuthModal] = useState(null);
   const [toast, showToast] = useToast();
 
+  // Shop state — lifted to App level so cart persists between shop & product page
+  const [shopCart, setShopCart] = useState([]);
+  const [shopCartOpen, setShopCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  // Reset product view when navigating away from shop
+  useEffect(() => { if (page !== "shop") setSelectedProduct(null); }, [page]);
+
   // Auth — runs in background, never blocks site from rendering
   useEffect(() => {
     const timeout = setTimeout(() => setAuthLoading(false), 3000);
@@ -4471,7 +4529,38 @@ export default function App() {
       <div className="pub-page-wrap">
         {page === "home"        && <HomePage data={data} setPage={setPage} />}
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} />}
-        {page === "shop"        && <ShopPage data={data} cu={cu} showToast={showToast} />}
+        {page === "shop" && !selectedProduct && (
+          <ShopPage
+            data={data} cu={cu} showToast={showToast}
+            cart={shopCart} setCart={setShopCart}
+            cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
+            onProductClick={(item) => setSelectedProduct(item)}
+          />
+        )}
+        {page === "shop" && selectedProduct && (
+          <ProductPage
+            item={selectedProduct}
+            cu={cu}
+            onBack={() => setSelectedProduct(null)}
+            cartCount={shopCart.reduce((s, i) => s + i.qty, 0)}
+            onCartOpen={() => { setShopCartOpen(true); setSelectedProduct(null); }}
+            onAddToCart={(item, variant, qty) => {
+              const key = variant ? `${item.id}::${variant.id}` : item.id;
+              const price = variant ? Number(variant.price) : (item.onSale && item.salePrice ? item.salePrice : item.price);
+              const label = variant ? `${item.name} — ${variant.name}` : item.name;
+              const availStock = variant ? Number(variant.stock) : item.stock;
+              setShopCart(c => {
+                const ex = c.find(x => x.key === key);
+                const currentQty = ex ? ex.qty : 0;
+                if (currentQty + qty > availStock) { showToast("Not enough stock", "red"); return c; }
+                if (ex) return c.map(x => x.key === key ? { ...x, qty: x.qty + qty } : x);
+                return [...c, { key, id: item.id, variantId: variant?.id || null, name: label, price, qty, noPost: item.noPost, stock: availStock }];
+              });
+              showToast(`${label} × ${qty} added to cart`);
+              setSelectedProduct(null);
+            }}
+          />
+        )}
         {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} />}
         {page === "gallery"     && <GalleryPage data={data} />}
         {page === "qa"          && <QAPage data={data} />}
