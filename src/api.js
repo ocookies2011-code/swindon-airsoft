@@ -83,7 +83,7 @@ export const profiles = {
 export const events = {
   async getAll() {
     const { data: evs, error } = await supabase
-      .from('events').select('*, extras_json, event_extras(*), bookings(*)').order('date')
+      .from('events').select('*, event_extras(*), bookings(*)').order('date')
     if (error) throw error
     // Normalise to camelCase shape the app expects
     return evs.map(normaliseEvent)
@@ -112,19 +112,10 @@ export const events = {
     const { extras, bookings, ...evData } = patch
     // Write event row — strip unknown columns with progressive retry
     const eventRow = toSnakeEvent(evData)
-    if (extras !== undefined) {
-      eventRow.extras_json = JSON.stringify(
-        extras.map(ex => ({ id: ex.id, name: ex.name, price: ex.price,
-          noPost: ex.noPost ?? false, productId: ex.productId || null, variantId: ex.variantId || null }))
-      )
-    }
-    let { error } = await supabase.from('events').update(eventRow).eq('id', id)
-    if (error) {
-      // Strip unknown columns one by one and retry
-      const { extras_json: _ej, ...row2 } = eventRow
-      const { error: e2 } = await supabase.from('events').update(row2).eq('id', id)
-      if (e2) throw e2
-    }
+    // Remove extras_json — not a guaranteed column, data lives in event_extras rows
+    delete eventRow.extras_json
+    const { error } = await supabase.from('events').update(eventRow).eq('id', id)
+    if (error) throw error
     if (extras !== undefined) {
       await supabase.from('event_extras').delete().eq('event_id', id)
       if (extras.length) {
@@ -429,33 +420,16 @@ function normaliseEvent(ev) {
     banner:       ev.banner,
     mapEmbed:     ev.map_embed,
     published:    ev.published,
-    extras: (() => {
-      // Primary: event_extras rows (with real product_id/variant_id columns if migration ran,
-      // or JSON-encoded name field if not)
-      const rows = (ev.event_extras || []).sort((a, b) => a.sort_order - b.sort_order)
-      if (rows.length > 0) {
-        return rows.map(ex => {
-          let name = ex.name, productId = ex.product_id || null, variantId = ex.variant_id || null
-          // Try JSON-decode name (fallback encoding when columns missing)
-          try {
-            const parsed = JSON.parse(ex.name)
-            if (parsed?.n) { name = parsed.n; productId = parsed.pid || productId; variantId = parsed.vid || variantId }
-          } catch {}
-          return { id: ex.id, name, price: Number(ex.price), noPost: ex.no_post, productId, variantId }
-        })
-      }
-      // Fallback: extras_json on event row
-      if (ev.extras_json) {
+    extras: (ev.event_extras || [])
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(ex => {
+        let name = ex.name, productId = ex.product_id || null, variantId = ex.variant_id || null
         try {
-          const parsed = JSON.parse(ev.extras_json)
-          if (Array.isArray(parsed)) return parsed.map(ex => ({
-            id: ex.id, name: ex.name, price: Number(ex.price),
-            noPost: ex.noPost ?? false, productId: ex.productId || null, variantId: ex.variantId || null,
-          }))
+          const parsed = JSON.parse(ex.name)
+          if (parsed?.n) { name = parsed.n; productId = parsed.pid || productId; variantId = parsed.vid || variantId }
         } catch {}
-      }
-      return []
-    })(),
+        return { id: ex.id, name, price: Number(ex.price), noPost: ex.no_post, productId, variantId }
+      }),
     bookings: (ev.bookings || []).map(b => ({
       id:        b.id,
       userId:    b.user_id,
@@ -532,7 +506,7 @@ function toSnakeEvent(ev) {
     banner:         ev.banner,
     map_embed:      ev.mapEmbed,
     published:      ev.published,
-    extras_json:    ev.extras ? JSON.stringify(ev.extras) : null,
+
   }
 }
 

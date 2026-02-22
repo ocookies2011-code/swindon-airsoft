@@ -1400,7 +1400,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
     const shopData = data.shop || [];
     const visibleExtras = ev.extras; // show all event extras
-    const extrasTotal  = visibleExtras.reduce((s, ex) => { const e = bCart.extras[ex.id]; const qty = e?.qty ?? e ?? 0; return s + qty * ex.price; }, 0);
+    const extrasTotal  = visibleExtras.reduce((s, ex) => { const e = bCart.extras[ex.id]; const qty = e?.qty ?? e ?? 0; const lp = shopData.find(s => s.id === ex.productId); return s + qty * (lp ? lp.price : ex.price); }, 0);
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
     const getExtraQty = (id) => { const e = bCart.extras[id]; return e?.qty ?? e ?? 0; }
@@ -1575,6 +1575,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
                     {visibleExtras.map(ex => {
                       const linkedProduct = (data.shop || []).find(s => s.id === ex.productId);
+                      // Use live shop price/noPost — overrides what was stored on the extra
+                      const livePrice = linkedProduct ? linkedProduct.price : ex.price;
+                      const liveNoPost = linkedProduct ? linkedProduct.noPost : ex.noPost;
                       // Needs variant selection if product has variants AND extra doesn't have a fixed variant
                       const needsVariantPick = linkedProduct?.variants?.length > 0 && !ex.variantId;
                       const pickedVariantId = getExtraVariant(ex.id);
@@ -1593,7 +1596,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                             <div style={{ flex:1 }}>
                               <div style={{ fontSize:13, fontWeight:600, color:"#fff", marginBottom:2 }}>
                                 {ex.name}
-                                {ex.noPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
+                                {liveNoPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
                               </div>
                               {/* Show fixed variant label if admin pinned one */}
                               {fixedVariant && (
@@ -1618,7 +1621,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                                   </select>
                                 </div>
                               )}
-                              <div style={{ fontSize:12, color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{ex.price}</div>
+                              <div style={{ fontSize:12, color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{livePrice}</div>
                             </div>
                             <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111", flexShrink:0, opacity: (!canAdd && exQty === 0) ? 0.4 : 1 }}>
                               <button onClick={() => setExtra(ex.id, exQty - 1, pickedVariantId)} disabled={exQty === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer" }}>−</button>
@@ -3209,16 +3212,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                         <span style={{ fontSize:11, color:"var(--muted)", marginLeft:8 }}>£{p.price} · stock: {p.stock}</span>
                         {p.variants?.length > 0 && <span style={{ fontSize:11, color:"var(--accent)", marginLeft:8 }}>{p.variants.length} variants</span>}
                       </div>
-                      {alreadyAdded && (() => {
-                        const ex = (form.extras || []).find(e => e.productId === p.id);
-                        return (
-                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                            <span style={{ fontSize:11, color:"var(--muted)" }}>Price override:</span>
-                            <input type="number" step="0.01" value={ex.price} style={{ width:70, padding:"3px 6px", fontSize:12, background:"#111", border:"1px solid #333", color:"#fff" }}
-                              onChange={e => f("extras", (form.extras||[]).map(x => x.productId === p.id ? {...x, price: +e.target.value} : x))} />
-                          </div>
-                        );
-                      })()}
+
                     </div>
                   );
                 })}
