@@ -3853,13 +3853,19 @@ function AdminShop({ data, save, showToast }) {
     setSavingProduct(true);
     const safety = setTimeout(() => setSavingProduct(false), 20000);
     try {
+      console.log("saveItem: step 1 — saving product");
       if (modal === "new") await api.shop.create(form);
       else await api.shop.update(form.id, form);
-      save({ shop: await api.shop.getAll() });
-      showToast("Product saved!"); setModal(null);
+      console.log("saveItem: step 2 — reloading shop");
+      const freshShop = await api.shop.getAll();
+      console.log("saveItem: step 3 — updating state");
+      save({ shop: freshShop });
+      console.log("saveItem: done");
+      showToast("Product saved!");
+      setModal(null);
     } catch (e) {
-      console.error("saveItem failed:", e);
-      showToast("Save failed: " + (e.message || String(e)), "red");
+      console.error("saveItem FAILED at:", e?.message, e);
+      showToast("Save failed: " + (e?.message || String(e)), "red");
     } finally {
       clearTimeout(safety);
       setSavingProduct(false);
