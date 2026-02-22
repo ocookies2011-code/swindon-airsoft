@@ -2866,15 +2866,18 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     setSavingEvent(true);
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("Request timed out — banner image may be too large. Try a URL instead of uploading.")), 12000));
     try {
-      if (modal === "new") {
-        await api.events.create(form);
-      } else {
-        await api.events.update(form.id, form);
-      }
-      const evList = await api.events.getAll();
-      save({ events: evList });
-      showToast("Event saved!"); setModal(null);
+      await Promise.race([
+        (async () => {
+          if (modal === "new") await api.events.create(form);
+          else await api.events.update(form.id, form);
+          const evList = await api.events.getAll();
+          save({ events: evList });
+          showToast("Event saved!"); setModal(null);
+        })(),
+        timeout,
+      ]);
     } catch (e) {
       showToast("Save failed: " + (e.message || String(e)), "red");
     } finally {
@@ -3077,7 +3080,21 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <div className="btn btn-ghost btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>📁 Upload Image</div>
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                       const file = e.target.files[0]; if (!file) return;
-                      const r = new FileReader(); r.onload = ev => f("banner", ev.target.result); r.readAsDataURL(file);
+                      const img = new Image();
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        img.onload = () => {
+                          const MAX = 1200;
+                          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+                          const canvas = document.createElement("canvas");
+                          canvas.width  = Math.round(img.width  * scale);
+                          canvas.height = Math.round(img.height * scale);
+                          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                          f("banner", canvas.toDataURL("image/jpeg", 0.75));
+                        };
+                        img.src = ev.target.result;
+                      };
+                      reader.readAsDataURL(file);
                     }} />
                   </label>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>Or paste a URL:</div>
@@ -3658,7 +3675,21 @@ function AdminShop({ data, save, showToast }) {
 
   const handleImg = (e) => {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = ev => f("image", ev.target.result); r.readAsDataURL(file);
+    const img2 = new Image();
+    const reader2 = new FileReader();
+    reader2.onload = ev => {
+      img2.onload = () => {
+        const MAX2 = 900;
+        const scale2 = Math.min(1, MAX2 / Math.max(img2.width, img2.height));
+        const canvas2 = document.createElement("canvas");
+        canvas2.width  = Math.round(img2.width  * scale2);
+        canvas2.height = Math.round(img2.height * scale2);
+        canvas2.getContext("2d").drawImage(img2, 0, 0, canvas2.width, canvas2.height);
+        f("image", canvas2.toDataURL("image/jpeg", 0.75));
+      };
+      img2.src = ev.target.result;
+    };
+    reader2.readAsDataURL(file);
   };
 
   const saveItem = async () => {
