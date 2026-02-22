@@ -96,7 +96,15 @@ export const events = {
     if (error) throw error
     if (extras?.length) {
       await supabase.from('event_extras').insert(
-        extras.map((ex, i) => ({ ...ex, event_id: data.id, sort_order: i }))
+        extras.map((ex, i) => ({
+          event_id:   data.id,
+          name:       ex.name,
+          price:      ex.price,
+          no_post:    ex.noPost ?? ex.no_post ?? false,
+          sort_order: i,
+          product_id: ex.productId || null,
+          variant_id: ex.variantId || null,
+        }))
       )
     }
     return data
@@ -113,8 +121,13 @@ export const events = {
       if (extras.length) {
         await supabase.from('event_extras').insert(
           extras.map((ex, i) => ({
-            event_id: id, name: ex.name, price: ex.price,
-            no_post: ex.noPost ?? ex.no_post ?? false, sort_order: i
+            event_id:   id,
+            name:       ex.name,
+            price:      ex.price,
+            no_post:    ex.noPost ?? ex.no_post ?? false,
+            sort_order: i,
+            product_id: ex.productId || null,
+            variant_id: ex.variantId || null,
           }))
         )
       }
@@ -386,7 +399,7 @@ function normaliseEvent(ev) {
     published:    ev.published,
     extras: (ev.event_extras || [])
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map(ex => ({ id: ex.id, name: ex.name, price: Number(ex.price), noPost: ex.no_post })),
+      .map(ex => ({ id: ex.id, name: ex.name, price: Number(ex.price), noPost: ex.no_post, productId: ex.product_id || null, variantId: ex.variant_id || null })),
     bookings: (ev.bookings || []).map(b => ({
       id:        b.id,
       userId:    b.user_id,
