@@ -4,85 +4,41 @@ import * as api from "./api";
 import { normaliseProfile } from "./api";
 // jsQR is loaded via CDN in the QRScanner component — no import needed
 
-// ── PayPal SDK loader ─────────────────────────────────────────────────
-// Sandbox client ID for testing — replace with live ID in VITE_PAYPAL_CLIENT_ID env var for production
-const PAYPAL_SANDBOX_CLIENT_ID = "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PjwTchpeBlRj21gsit2zu-Uxd9pM7";
-const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || PAYPAL_SANDBOX_CLIENT_ID;
-const PAYPAL_ENV = import.meta.env.VITE_PAYPAL_CLIENT_ID ? "live" : "sandbox";
+// ── Mock Payment Button ───────────────────────────────────────────────
+// Replace PayPalCheckoutButton with real payment provider when ready.
+// Set VITE_PAYMENT_MODE=live in .env to hide the mock button.
+const PAYMENT_MODE = import.meta.env.VITE_PAYMENT_MODE || "mock";
 
-function usePayPal() {
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState(null);
-  useEffect(() => {
-    if (window.paypal) { setReady(true); return; }
-    const existing = document.getElementById("paypal-sdk");
-    if (existing) { existing.addEventListener("load", () => setReady(true)); return; }
-    const script = document.createElement("script");
-    script.id = "paypal-sdk";
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=GBP&intent=capture`;
-    script.onload = () => setReady(true);
-    script.onerror = () => setError("Failed to load PayPal — check your internet connection");
-    document.head.appendChild(script);
-  }, []);
-  return { ready, error };
-}
-
-// ── PayPal Button component ───────────────────────────────────────────
 function PayPalCheckoutButton({ amount, description, onSuccess, onError, disabled }) {
-  const containerRef = useRef(null);
-  const rendered = useRef(false);
-  const { ready, error: sdkError } = usePayPal();
+  const [confirming, setConfirming] = useState(false);
 
-  useEffect(() => {
-    if (!ready || !containerRef.current || rendered.current || disabled) return;
-    if (!window.paypal) return;
-    rendered.current = true;
-    containerRef.current.innerHTML = "";
+  const handleMockPay = async () => {
+    setConfirming(true);
+    // Simulate a brief network delay
+    await new Promise(r => setTimeout(r, 900));
+    setConfirming(false);
+    // Return a fake order object matching PayPal's shape
+    onSuccess({ id: "MOCK-" + Date.now(), status: "COMPLETED", mock: true });
+  };
 
-    window.paypal.Buttons({
-      style: {
-        layout: "vertical",
-        color: "black",
-        shape: "rect",
-        label: "pay",
-        height: 44,
-      },
-      createOrder: (_data, actions) => actions.order.create({
-        purchase_units: [{
-          amount: { value: Number(amount).toFixed(2), currency_code: "GBP" },
-          description,
-        }],
-      }),
-      onApprove: async (_data, actions) => {
-        try {
-          const order = await actions.order.capture();
-          onSuccess(order);
-        } catch (e) {
-          onError(e.message || "Payment capture failed");
-        }
-      },
-      onError: (err) => {
-        onError(err?.message || "PayPal error — please try again");
-      },
-      onCancel: () => {
-        onError(null); // null = cancelled, not an error
-      },
-    }).render(containerRef.current);
-  }, [ready, disabled, amount]);
-
-  if (sdkError) return <div className="alert alert-red">⚠️ {sdkError}</div>;
-  if (!ready) return (
-    <div style={{ textAlign: "center", padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>Loading PayPal…</div>
-  );
   return (
     <div style={{ marginTop: 12 }}>
-      {PAYPAL_ENV === "sandbox" && (
-        <div style={{ background: "#1a1200", border: "1px solid #554400", padding: "6px 12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ background: "#e5a800", color: "#000", fontSize: 9, fontWeight: 800, padding: "2px 6px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif" }}>SANDBOX</span>
-          <span style={{ fontSize: 11, color: "#a07800", fontFamily: "'Share Tech Mono',monospace" }}>Test mode — no real payments taken. Use PayPal sandbox account to test.</span>
-        </div>
-      )}
-      <div ref={containerRef} />
+      <div style={{ background: "#0d1a0d", border: "1px solid #1e3a1e", padding: "8px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
+        <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments active — no real money taken. Click below to simulate a successful payment.</span>
+      </div>
+      <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
+        <span>{description}</span>
+        <span style={{ color: "var(--accent)", fontFamily: "'Russo One',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
+      </div>
+      <button
+        className="btn btn-primary"
+        style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: (disabled || confirming) ? .5 : 1 }}
+        disabled={disabled || confirming}
+        onClick={handleMockPay}
+      >
+        {confirming ? "⏳ Processing…" : `✓ CONFIRM TEST PAYMENT · £${Number(amount).toFixed(2)}`}
+      </button>
     </div>
   );
 }
