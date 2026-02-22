@@ -1400,12 +1400,27 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
     const shopData = data.shop || [];
     const visibleExtras = ev.extras; // show all event extras
-    const extrasTotal  = visibleExtras.reduce((s, ex) => { const e = bCart.extras[ex.id]; const qty = e?.qty ?? e ?? 0; const lp = shopData.find(s => s.id === ex.productId); return s + qty * (lp ? lp.price : ex.price); }, 0);
+    const extrasTotal = visibleExtras.reduce((s, ex) => {
+      const lp = shopData.find(p => p.id === ex.productId);
+      if (lp?.variants?.length > 0) {
+        // Sum across all variant rows
+        return s + lp.variants.reduce((vs, v) => vs + getExtraQty(ex.id, v.id) * Number(v.price), 0);
+      }
+      return s + getExtraQty(ex.id, null) * (lp ? lp.price : ex.price);
+    }, 0);
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
-    const getExtraQty = (id) => { const e = bCart.extras[id]; return e?.qty ?? e ?? 0; }
-    const getExtraVariant = (id) => bCart.extras[id]?.variantId ?? null;
-    const setExtra = (id, qty, variantId) => setBCart(p => ({ ...p, extras: { ...p.extras, [id]: qty > 0 ? { qty: Math.max(0, qty), variantId: variantId ?? null } : undefined } }));
+    // extras keyed by "extraId" (no variant) or "extraId:variantId"
+    const extraKey = (id, variantId) => variantId ? id + ":" + variantId : id;
+    const getExtraQty = (id, variantId) => bCart.extras[extraKey(id, variantId)] || 0;
+    const setExtra = (id, qty, variantId) => {
+      const k = extraKey(id, variantId);
+      setBCart(p => {
+        const next = { ...p.extras };
+        if (qty > 0) next[k] = Math.max(0, qty); else delete next[k];
+        return { ...p, extras: next };
+      });
+    };
 
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, walkOnLeft)) }));
     const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, rentalLeft)) }));
@@ -1421,7 +1436,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           promises.push(api.bookings.create({
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "walkOn", qty: bCart.walkOn,
-            extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => (v?.qty ?? v ?? 0) > 0).map(([k,v]) => [k, v?.qty ?? v])),
+            extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)),
             total: walkOnTotal + (promises.length === 0 ? extrasTotal : 0),
             paypalOrderId: paypalOrder.id,
           }));
@@ -1430,7 +1445,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           promises.push(api.bookings.create({
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "rental", qty: bCart.rental,
-            extras: promises.length === 0 ? Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => (v?.qty ?? v ?? 0) > 0).map(([k,v]) => [k, v?.qty ?? v])) : {},
+            extras: promises.length === 0 ? Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) : {},
             total: rentalTotal + (promises.length === 0 ? extrasTotal : 0),
             paypalOrderId: paypalOrder.id,
           }));
@@ -1438,15 +1453,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         await Promise.all(promises);
         // Deduct stock for any extra products ordered
         if (Object.keys(bCart.extras).length > 0) {
-          for (const [extraId, cartExtra] of Object.entries(bCart.extras)) {
-            const qty = cartExtra?.qty ?? cartExtra ?? 0;
+          for (const [key, qty] of Object.entries(bCart.extras)) {
             if (!qty || qty < 1) continue;
+            const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
             const extra = visibleExtras.find(e => e.id === extraId);
             if (!extra?.productId) continue;
-            // Use variant from cart selection (player chose) or from extra config (admin fixed it)
-            const chosenVariantId = cartExtra?.variantId || extra.variantId || null;
-            if (chosenVariantId) {
-              await supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: chosenVariantId, qty });
+            if (variantId) {
+              await supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: variantId, qty });
             } else {
               await supabase.rpc("deduct_stock", { product_id: extra.productId, qty });
             }
@@ -1574,70 +1587,54 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   <div style={{ padding:"0 16px 14px" }}>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
                     {visibleExtras.map(ex => {
-                      const linkedProduct = (data.shop || []).find(s => s.id === ex.productId);
-                      // Use live shop price/noPost — overrides what was stored on the extra
-                      const livePrice = linkedProduct ? linkedProduct.price : ex.price;
-                      const liveNoPost = linkedProduct ? linkedProduct.noPost : ex.noPost;
-                      // Needs variant selection if product has variants AND extra doesn't have a fixed variant
-                      const needsVariantPick = linkedProduct?.variants?.length > 0 && !ex.variantId;
-                      const pickedVariantId = getExtraVariant(ex.id);
-                      const pickedVariant = linkedProduct?.variants?.find(v => v.id === pickedVariantId);
-                      const exQty = getExtraQty(ex.id);
-                      // Stock limit: from picked variant, or fixed variant, or product base stock
-                      const fixedVariant = linkedProduct?.variants?.find(v => v.id === ex.variantId);
-                      const stockLimit = fixedVariant ? Number(fixedVariant.stock)
-                        : pickedVariant ? Number(pickedVariant.stock)
-                        : linkedProduct ? linkedProduct.stock
-                        : 999;
-                      const canAdd = !needsVariantPick || pickedVariantId;
+                      const lp = (data.shop || []).find(s => s.id === ex.productId);
+                      const liveNoPost = lp ? lp.noPost : ex.noPost;
+                      const hasVariants = lp?.variants?.length > 0;
                       return (
                         <div key={ex.id} style={{ padding:"12px 0", borderBottom:"1px solid #1a1a1a" }}>
-                          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
-                            <div style={{ flex:1 }}>
-                              <div style={{ fontSize:13, fontWeight:600, color:"#fff", marginBottom:2 }}>
-                                {ex.name}
-                                {liveNoPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
-                              </div>
-                              {/* Show fixed variant label if admin pinned one */}
-                              {fixedVariant && (
-                                <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:4 }}>
-                                  Variant: {fixedVariant.name} · stock: {fixedVariant.stock}
-                                </div>
-                              )}
-                              {/* Variant picker if player must choose */}
-                              {needsVariantPick && (
-                                <div style={{ marginTop:6, marginBottom:4 }}>
-                                  <select
-                                    value={pickedVariantId || ""}
-                                    onChange={e => setExtra(ex.id, exQty > 0 ? exQty : 0, e.target.value || null)}
-                                    style={{ fontSize:12, padding:"5px 8px", background:"#111", border:"1px solid #333", color:"var(--text)", width:"100%" }}
-                                  >
-                                    <option value="">— Select variant —</option>
-                                    {linkedProduct.variants.map(v => (
-                                      <option key={v.id} value={v.id} disabled={Number(v.stock) < 1}>
-                                        {v.name} — £{Number(v.price).toFixed(2)} {Number(v.stock) < 1 ? "(Out of stock)" : `(${v.stock} left)`}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-                              <div style={{ fontSize:12, color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{livePrice}</div>
-                            </div>
-                            <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111", flexShrink:0, opacity: (!canAdd && exQty === 0) ? 0.4 : 1 }}>
-                              <button onClick={() => setExtra(ex.id, exQty - 1, pickedVariantId)} disabled={exQty === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer" }}>−</button>
-                              <span style={{ padding:"0 12px", fontFamily:"'Russo One',sans-serif", fontSize:16, color: exQty > 0 ? "var(--accent)" : "var(--text)", minWidth:30, textAlign:"center" }}>{exQty}</span>
-                              <button
-                                onClick={() => {
-                                  if (needsVariantPick && !pickedVariantId) { return; }
-                                  setExtra(ex.id, Math.min(exQty + 1, stockLimit), pickedVariantId);
-                                }}
-                                disabled={!canAdd || exQty >= stockLimit}
-                                title={needsVariantPick && !pickedVariantId ? "Select a variant first" : ""}
-                                style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor: (!canAdd || exQty >= stockLimit) ? "not-allowed" : "pointer", opacity: (!canAdd || exQty >= stockLimit) ? 0.3 : 1 }}>+</button>
-                            </div>
+                          {/* Extra name header */}
+                          <div style={{ fontSize:13, fontWeight:600, color:"#fff", marginBottom:8 }}>
+                            {ex.name}
+                            {liveNoPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
                           </div>
-                          {needsVariantPick && !pickedVariantId && exQty === 0 && (
-                            <div style={{ fontSize:10, color:"#a07800", fontFamily:"'Share Tech Mono',monospace", marginTop:4 }}>↑ Pick a variant to add this extra</div>
+                          {hasVariants ? (
+                            /* One counter row per variant */
+                            lp.variants.map(v => {
+                              const qty = getExtraQty(ex.id, v.id);
+                              const stock = Number(v.stock);
+                              const outOfStock = stock < 1;
+                              return (
+                                <div key={v.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 0", opacity: outOfStock ? 0.4 : 1 }}>
+                                  <div>
+                                    <span style={{ fontSize:12, color:"var(--text)" }}>{v.name}</span>
+                                    <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Russo One',sans-serif", marginLeft:10 }}>£{Number(v.price).toFixed(2)}</span>
+                                    <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginLeft:8 }}>{outOfStock ? "Out of stock" : `${stock} left`}</span>
+                                  </div>
+                                  <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111", flexShrink:0 }}>
+                                    <button onClick={() => setExtra(ex.id, qty - 1, v.id)} disabled={qty === 0 || outOfStock} style={{ background:"none", border:"none", color:"var(--text)", padding:"5px 11px", cursor:"pointer", opacity: qty===0?0.3:1 }}>−</button>
+                                    <span style={{ padding:"0 10px", fontFamily:"'Russo One',sans-serif", fontSize:15, color: qty > 0 ? "var(--accent)" : "var(--text)", minWidth:26, textAlign:"center" }}>{qty}</span>
+                                    <button onClick={() => setExtra(ex.id, qty + 1, v.id)} disabled={outOfStock || qty >= stock} style={{ background:"none", border:"none", color:"var(--text)", padding:"5px 11px", cursor:"pointer", opacity: (outOfStock||qty>=stock)?0.3:1 }}>+</button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            /* No variants — single counter */
+                            (() => {
+                              const qty = getExtraQty(ex.id, null);
+                              const livePrice = lp ? lp.price : ex.price;
+                              const stock = lp ? lp.stock : 999;
+                              return (
+                                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                                  <span style={{ fontSize:12, color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{Number(livePrice).toFixed(2)}</span>
+                                  <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111" }}>
+                                    <button onClick={() => setExtra(ex.id, qty - 1, null)} disabled={qty === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer", opacity: qty===0?0.3:1 }}>−</button>
+                                    <span style={{ padding:"0 12px", fontFamily:"'Russo One',sans-serif", fontSize:16, color: qty > 0 ? "var(--accent)" : "var(--text)", minWidth:30, textAlign:"center" }}>{qty}</span>
+                                    <button onClick={() => setExtra(ex.id, qty + 1, null)} disabled={qty >= stock} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer", opacity: qty>=stock?0.3:1 }}>+</button>
+                                  </div>
+                                </div>
+                              );
+                            })()
                           )}
                         </div>
                       );
@@ -1662,16 +1659,30 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <span>£{rentalTotal.toFixed(2)}</span>
                     </div>
                   )}
-                  {visibleExtras.filter(ex => getExtraQty(ex.id) > 0).map(ex => {
-                    const q = getExtraQty(ex.id);
-                    const vid = getExtraVariant(ex.id);
-                    const vname = (data.shop || []).find(s => s.id === ex.productId)?.variants?.find(v => v.id === vid)?.name;
-                    return (
+                  {visibleExtras.flatMap(ex => {
+                    const lp = (data.shop || []).find(s => s.id === ex.productId);
+                    if (lp?.variants?.length > 0) {
+                      return lp.variants
+                        .filter(v => getExtraQty(ex.id, v.id) > 0)
+                        .map(v => {
+                          const q = getExtraQty(ex.id, v.id);
+                          return (
+                            <div key={ex.id + ":" + v.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
+                              <span className="text-muted">{ex.name} — {v.name} ×{q}</span>
+                              <span>£{(q * Number(v.price)).toFixed(2)}</span>
+                            </div>
+                          );
+                        });
+                    }
+                    const q = getExtraQty(ex.id, null);
+                    if (!q) return [];
+                    const livePrice = lp ? lp.price : ex.price;
+                    return [(
                       <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
-                        <span className="text-muted">{ex.name}{vname ? ` (${vname})` : ""} ×{q}</span>
-                        <span>£{(q * ex.price).toFixed(2)}</span>
+                        <span className="text-muted">{ex.name} ×{q}</span>
+                        <span>£{(q * Number(livePrice)).toFixed(2)}</span>
                       </div>
-                    );
+                    )];
                   })}
                   {vipDisc > 0 && (
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6, color:"var(--gold)" }}>
