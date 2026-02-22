@@ -1400,19 +1400,18 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
     const shopData = data.shop || [];
     const visibleExtras = ev.extras; // show all event extras
+    // extras keyed by "extraId" (no variant) or "extraId:variantId"
+    const extraKey = (id, variantId) => variantId ? id + ":" + variantId : id;
+    const getExtraQty = (id, variantId) => bCart.extras[extraKey(id, variantId)] || 0;
     const extrasTotal = visibleExtras.reduce((s, ex) => {
       const lp = shopData.find(p => p.id === ex.productId);
       if (lp?.variants?.length > 0) {
-        // Sum across all variant rows
         return s + lp.variants.reduce((vs, v) => vs + getExtraQty(ex.id, v.id) * Number(v.price), 0);
       }
       return s + getExtraQty(ex.id, null) * (lp ? lp.price : ex.price);
     }, 0);
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
-    // extras keyed by "extraId" (no variant) or "extraId:variantId"
-    const extraKey = (id, variantId) => variantId ? id + ":" + variantId : id;
-    const getExtraQty = (id, variantId) => bCart.extras[extraKey(id, variantId)] || 0;
     const setExtra = (id, qty, variantId) => {
       const k = extraKey(id, variantId);
       setBCart(p => {
