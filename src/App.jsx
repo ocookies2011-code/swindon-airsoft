@@ -1399,7 +1399,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const walkOnTotal  = bCart.walkOn  * ev.walkOnPrice * (1 - vipDisc);
     const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
     const shopData = data.shop || [];
-    const visibleExtras = ev.extras.filter(ex => { const prod = shopData.find(s => s.id === ex.productId); return prod?.gameExtra === true; });
+    const visibleExtras = ev.extras; // show all event extras
     const extrasTotal  = visibleExtras.reduce((s, ex) => { const e = bCart.extras[ex.id]; const qty = e?.qty ?? e ?? 0; return s + qty * ex.price; }, 0);
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
@@ -1573,10 +1573,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 {ev.extras.length > 0 && (
                   <div style={{ padding:"0 16px 14px" }}>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
-                    {ev.extras.filter(ex => {
-                      const prod = (data.shop || []).find(s => s.id === ex.productId);
-                      return prod?.gameExtra === true;
-                    }).map(ex => {
+                    {visibleExtras.map(ex => {
                       const linkedProduct = (data.shop || []).find(s => s.id === ex.productId);
                       // Needs variant selection if product has variants AND extra doesn't have a fixed variant
                       const needsVariantPick = linkedProduct?.variants?.length > 0 && !ex.variantId;
@@ -4002,7 +3999,9 @@ function AdminExtras({ data, save, showToast }) {
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
+  const [savingExtra, setSavingExtra] = useState(false);
   const saveEdit = async () => {
+    setSavingExtra(true);
     try {
       const updatedExtras = ev.extras.map(x => x.id === editId
         ? { ...x, name: editForm.name, price: Number(editForm.price), noPost: editForm.noPost,
@@ -4011,7 +4010,11 @@ function AdminExtras({ data, save, showToast }) {
       await saveAll(updatedExtras);
       setEditId(null);
       showToast("Extra updated!");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    } catch (e) {
+      showToast("Failed: " + (e.message || String(e)), "red");
+    } finally {
+      setSavingExtra(false);
+    }
   };
 
   const del = async (id) => {
@@ -4070,7 +4073,7 @@ function AdminExtras({ data, save, showToast }) {
                   <label htmlFor={`np-${ex.id}`} style={{ fontSize:13, cursor:"pointer" }}>Collection only</label>
                 </div>
                 <div className="gap-2">
-                  <button className="btn btn-primary btn-sm" onClick={saveEdit}>Save</button>
+                  <button className="btn btn-primary btn-sm" onClick={saveEdit} disabled={savingExtra}>{savingExtra ? "Saving…" : "Save"}</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => setEditId(null)}>Cancel</button>
                 </div>
               </div>
