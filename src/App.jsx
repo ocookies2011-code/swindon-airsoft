@@ -4597,7 +4597,6 @@ export default function App() {
                 return [...c, { key, id: item.id, variantId: variant?.id || null, name: label, price, qty, noPost: item.noPost, stock: availStock }];
               });
               showToast(`${label} × ${qty} added to cart`);
-              setSelectedProduct(null);
             }}
           />
         )}
