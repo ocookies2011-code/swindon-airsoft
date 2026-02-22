@@ -9,23 +9,12 @@ import { normaliseProfile } from "./api";
 // Set VITE_PAYMENT_MODE=live in .env to hide the mock button.
 const PAYMENT_MODE = import.meta.env.VITE_PAYMENT_MODE || "mock";
 
-function PayPalCheckoutButton({ amount, description, onSuccess, onError, disabled }) {
-  const [confirming, setConfirming] = useState(false);
-
-  const handleMockPay = async () => {
-    setConfirming(true);
-    // Simulate a brief network delay
-    await new Promise(r => setTimeout(r, 900));
-    setConfirming(false);
-    // Return a fake order object matching PayPal's shape
-    onSuccess({ id: "MOCK-" + Date.now(), status: "COMPLETED", mock: true });
-  };
-
+function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ background: "#0d1a0d", border: "1px solid #1e3a1e", padding: "8px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
-        <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments active — no real money taken. Click below to simulate a successful payment.</span>
+        <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken.</span>
       </div>
       <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
         <span>{description}</span>
@@ -33,11 +22,11 @@ function PayPalCheckoutButton({ amount, description, onSuccess, onError, disable
       </div>
       <button
         className="btn btn-primary"
-        style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: (disabled || confirming) ? .5 : 1 }}
-        disabled={disabled || confirming}
-        onClick={handleMockPay}
+        style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: disabled ? .5 : 1 }}
+        disabled={disabled}
+        onClick={() => onSuccess({ id: "MOCK-" + Date.now(), status: "COMPLETED", mock: true })}
       >
-        {confirming ? "⏳ Processing…" : `✓ CONFIRM TEST PAYMENT · £${Number(amount).toFixed(2)}`}
+        ✓ CONFIRM TEST PAYMENT · £{Number(amount).toFixed(2)}
       </button>
     </div>
   );
@@ -1710,13 +1699,12 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   SIGN WAIVER TO CONTINUE
                 </button>
               )}
-              {!bookingBlocked && !bookingBusy && (
+              {!bookingBlocked && (
                 <PayPalCheckoutButton
                   amount={grandTotal}
                   description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
                   onSuccess={confirmBookingAfterPayment}
-                  onError={(msg) => { if (msg) setPaypalError(msg); }}
-                  disabled={bookingBlocked}
+                  disabled={bookingBusy}
                 />
               )}
             </div>
@@ -1987,12 +1975,11 @@ function ShopPage({ data, cu, showToast, onProductClick, cart, setCart, cartOpen
                 {!cu && <div className="alert alert-red mt-2">Log in to checkout with PayPal</div>}
                 {shopPaypalError && <div className="alert alert-red mt-1">⚠️ {shopPaypalError}</div>}
                 {placing && <div className="alert alert-blue mt-1">⏳ Confirming your order…</div>}
-                {cu && !placing && grandTotal > 0 && (
+                {cu && grandTotal > 0 && (
                   <PayPalCheckoutButton
                     amount={grandTotal}
                     description={`Swindon Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
                     onSuccess={placeOrderAfterPayment}
-                    onError={(msg) => { if (msg) setShopPaypalError(msg); }}
                     disabled={placing}
                   />
                 )}
