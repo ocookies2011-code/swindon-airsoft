@@ -373,8 +373,8 @@ body,#root{
 .bottom-nav-btn.active{color:var(--accent);}
 .bottom-nav-icon{font-size:20px;line-height:1;}
 .pub-page-wrap{padding-bottom:80px;}
-.page-content{max-width:1200px;margin:0 auto;padding:20px 16px;}
-.page-content-sm{max-width:900px;margin:0 auto;padding:20px 16px;}
+.page-content{max-width:1100px;margin:0 auto;padding:20px 20px;}
+.page-content-sm{max-width:820px;margin:0 auto;padding:20px 20px;}
 
 /* ── MILITARY CARDS ── */
 .card{
@@ -665,7 +665,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
     repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(224,92,0,.025) 39px,rgba(224,92,0,.025) 40px),
     repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(224,92,0,.025) 39px,rgba(224,92,0,.025) 40px);
 }
-.hero-content{position:relative;z-index:1;padding:clamp(50px,7vw,90px) clamp(20px,5vw,70px);max-width:680px;}
+.hero-content{padding:clamp(40px,6vw,80px) clamp(20px,4vw,60px);max-width:680px;}
 .hero-eyebrow{
   font-size:10px;letter-spacing:.4em;color:var(--accent);
   font-family:'Share Tech Mono',monospace;font-weight:400;
@@ -692,6 +692,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
   border-bottom:1px solid #1e1e1e;
 }
+.hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;}
 .hero-stat{flex:1;padding:16px 20px;text-align:center;border-right:1px solid #1e1e1e;}
 .hero-stat:last-child{border-right:none;}
 .hero-stat-num{font-family:'Russo One',sans-serif;font-size:28px;color:var(--accent);}
@@ -1195,7 +1196,7 @@ function HomePage({ data, setPage }) {
 
       {/* ══ HERO ══════════════════════════════════════════════ */}
       <div className="hero-bg">
-        <div className="hero-content">
+        <div style={{maxWidth:1100,margin:"0 auto",width:"100%",position:"relative",zIndex:1}}><div className="hero-content" style={{position:"static",zIndex:"auto"}}>
           <div className="hero-eyebrow">// SWINDON'S PREMIER AIRSOFT SITE</div>
           <h1 className="hero-h1">
             LOCK &amp;<br/><span>LOAD.</span>
@@ -1216,22 +1217,22 @@ function HomePage({ data, setPage }) {
       </div>
 
       {/* ══ LIVE STAT BAR ═════════════════════════════════════ */}
-      <div className="hero-stats">
+      <div className="hero-stats"><div className="hero-stats-inner">
         {[
           { num: totalPlayers || "—", label: "ACTIVE OPERATORS" },
           { num: totalEvents  || "—", label: "SCHEDULED OPS" },
           { num: totalBookings|| "—", label: "CONFIRMED BOOTS" },
           { num: "10%",              label: "VIP DISCOUNT" },
         ].map(s => (
-          <div key={s.label} className="hero-stat">
+          <div key={s.label} className="hero-stat" style={{flex:1}}>
             <div className="hero-stat-num">{s.num}</div>
             <div className="hero-stat-label">{s.label}</div>
           </div>
         ))}
-      </div>
+      </div></div>
 
       {/* ══ FEATURE STRIP ═════════════════════════════════════ */}
-      <div className="feature-strip">
+      <div style={{background:"#0d0d0d",borderTop:"1px solid #1a1a1a",borderBottom:"3px solid var(--accent)"}}><div className="feature-strip" style={{maxWidth:1100,margin:"0 auto"}}>
         {[
           { icon:"🎯", title:"Tactical Skirmishes", desc:"CQB, woodland & mixed-environment game modes. Every op is different." },
           { icon:"🪖", title:"Full Kit Rental",     desc:"Rifle, mask, full-body protection & BBs included. Just show up." },
@@ -1243,7 +1244,7 @@ function HomePage({ data, setPage }) {
             <div className="feature-desc">{f.desc}</div>
           </div>
         ))}
-      </div>
+      </div></div>
 
       <div className="page-content">
 
@@ -1376,8 +1377,8 @@ function HomePage({ data, setPage }) {
             </div>
             {[
               "Eye protection mandatory at all times on site",
-              "Minimum engagement distance: 5m",
-              "Full-auto restricted to designated zones",
+              "Minimum engagement distance: 20m for DMR, 30m for snipers",
+              "Full-auto and semi-auto game modes available",
               "Call your hits — honesty is non-negotiable",
               "Marshals' decisions are final",
             ].map((r, i) => (
