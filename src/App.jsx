@@ -2919,18 +2919,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     setSavingEvent(true);
-    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("Request timed out — banner image may be too large. Try a URL instead of uploading.")), 12000));
     try {
-      await Promise.race([
-        (async () => {
-          if (modal === "new") await api.events.create(form);
-          else await api.events.update(form.id, form);
-          const evList = await api.events.getAll();
-          save({ events: evList });
-          showToast("Event saved!"); setModal(null);
-        })(),
-        timeout,
-      ]);
+      if (modal === "new") await api.events.create(form);
+      else await api.events.update(form.id, form);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Event saved!"); setModal(null);
     } catch (e) {
       showToast("Save failed: " + (e.message || String(e)), "red");
     } finally {
