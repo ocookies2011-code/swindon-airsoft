@@ -449,6 +449,7 @@ function normaliseProduct(p) {
     stock:       variantStock !== null ? variantStock : p.stock,
     baseStock:   p.stock, // raw DB stock (only used when no variants)
     noPost:      p.no_post,
+    gameExtra:   p.game_extra || false,
     variants,
   }
 }
@@ -505,8 +506,9 @@ function toSnakeProduct(p) {
     sale_price:  p.salePrice,
     on_sale:     p.onSale,
     image:       p.image,
-    stock:       p.variants && p.variants.length > 0 ? 0 : p.stock, // base stock unused when variants exist
+    stock:       p.variants && p.variants.length > 0 ? 0 : p.stock,
     no_post:     p.noPost,
+    game_extra:  p.gameExtra || false,
     variants:    p.variants || [],
   }
 }

@@ -3714,7 +3714,7 @@ function AdminShop({ data, save, showToast }) {
   const [tab, setTab] = useState("products");
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, variants: [] };
   const [form, setForm] = useState(blank);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -3803,7 +3803,7 @@ function AdminShop({ data, save, showToast }) {
       {tab === "products" && (
         <div className="card">
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Product</th><th>Base Price</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th></th></tr></thead>
+            <thead><tr><th>Product</th><th>Base Price</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
             <tbody>
               {data.shop.map(item => (
                 <tr key={item.id}>
@@ -3827,6 +3827,7 @@ function AdminShop({ data, save, showToast }) {
                   </td>
                   <td>{item.onSale ? <span className="tag tag-red">£{item.salePrice}</span> : "—"}</td>
                   <td>{item.noPost ? <span className="tag tag-gold">Yes</span> : "—"}</td>
+                  <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
                   <td>
                     <div className="gap-2">
                       <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setModal(item.id); }}>Edit</button>
@@ -3896,9 +3897,13 @@ function AdminShop({ data, save, showToast }) {
               </>
             )}
 
-            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
+            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
               <input type="checkbox" checked={form.noPost} onChange={e => f("noPost", e.target.checked)} />
               <label style={{fontSize:13}}>No Post — Collection Only (e.g. Pyro)</label>
+            </div>
+            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
+              <input type="checkbox" checked={form.gameExtra || false} onChange={e => f("gameExtra", e.target.checked)} />
+              <label style={{fontSize:13}}>Available as Game Day Extra <span style={{color:"var(--muted)",fontSize:11}}>(shows in event extras product picker)</span></label>
             </div>
 
             {/* ── VARIANTS EDITOR ── */}
@@ -4099,7 +4104,8 @@ function AdminExtras({ data, save, showToast }) {
               <label>Link to Shop Product (optional — deducts stock when ordered)</label>
               <select value={form.productId} onChange={e => ff("productId", e.target.value)}>
                 <option value="">— None —</option>
-                {data.shop.map(p => <option key={p.id} value={p.id}>{p.name} (stock: {p.stock})</option>)}
+                {data.shop.filter(p => p.gameExtra).map(p => <option key={p.id} value={p.id}>{p.name} (stock: {p.stock})</option>)}
+                {data.shop.filter(p => p.gameExtra).length === 0 && <option disabled>No products marked as Game Day Extra yet</option>}
               </select>
             </div>
             {linkedProduct?.variants?.length > 0 && (
