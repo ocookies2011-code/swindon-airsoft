@@ -1182,8 +1182,8 @@ function HomePage({ data, setPage }) {
     .filter(e => e.published && new Date(e.date + "T" + e.time) > new Date())
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
-  const totalPlayers = data.users.filter(u => u.role === "player").length;
-  const totalEvents  = data.events.filter(e => e.published).length;
+  const totalPlayers  = data.users.filter(u => u.role === "player").length;
+  const totalEvents   = data.events.filter(e => e.published).length;
   const totalBookings = data.events.flatMap(e => e.bookings).length;
 
   return (
@@ -1194,70 +1194,69 @@ function HomePage({ data, setPage }) {
         </div>
       )}
 
-      {/* ══ HERO ══════════════════════════════════════════════ */}
+      {/* HERO */}
       <div className="hero-bg">
-        <div style={{maxWidth:1100,margin:"0 auto",width:"100%",position:"relative",zIndex:1}}><div className="hero-content" style={{position:"static",zIndex:"auto"}}>
-          <div className="hero-eyebrow">// SWINDON'S PREMIER AIRSOFT SITE</div>
-          <h1 className="hero-h1">
-            LOCK &amp;<br/><span>LOAD.</span>
-          </h1>
-          <p className="hero-p">
-            TACTICAL SKIRMISHES · FULL KIT RENTAL · VIP MEMBERSHIP<br/>
-            Swindon's premier airsoft arena — gear up and get in the game.
-          </p>
-          <div className="hero-cta">
-            <button className="btn btn-primary" style={{ padding:"14px 40px", fontSize:14, letterSpacing:".2em" }} onClick={() => setPage("events")}>
-              ▶ BOOK A GAME DAY
-            </button>
-            <button className="btn btn-ghost" style={{ padding:"14px 32px", fontSize:14, letterSpacing:".2em" }} onClick={() => setPage("shop")}>
-              VISIT ARMOURY
-            </button>
+        <div style={{ maxWidth:1100, margin:"0 auto", width:"100%", position:"relative", zIndex:1 }}>
+          <div className="hero-content">
+            <div className="hero-eyebrow">// SWINDON'S PREMIER AIRSOFT SITE</div>
+            <h1 className="hero-h1">LOCK &amp;<br /><span>LOAD.</span></h1>
+            <p className="hero-p">
+              TACTICAL SKIRMISHES · FULL KIT RENTAL · VIP MEMBERSHIP<br />
+              Swindon's premier airsoft arena — gear up and get in the game.
+            </p>
+            <div className="hero-cta">
+              <button className="btn btn-primary" style={{ padding:"14px 40px", fontSize:14, letterSpacing:".2em" }} onClick={() => setPage("events")}>▶ BOOK A GAME DAY</button>
+              <button className="btn btn-ghost"   style={{ padding:"14px 32px", fontSize:14, letterSpacing:".2em" }} onClick={() => setPage("shop")}>VISIT ARMOURY</button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ══ LIVE STAT BAR ═════════════════════════════════════ */}
-      <div className="hero-stats"><div className="hero-stats-inner">
-        {[
-          { num: totalPlayers || "—", label: "ACTIVE OPERATORS" },
-          { num: totalEvents  || "—", label: "SCHEDULED OPS" },
-          { num: totalBookings|| "—", label: "CONFIRMED BOOTS" },
-          { num: "10%",              label: "VIP DISCOUNT" },
-        ].map(s => (
-          <div key={s.label} className="hero-stat" style={{flex:1}}>
-            <div className="hero-stat-num">{s.num}</div>
-            <div className="hero-stat-label">{s.label}</div>
-          </div>
-        ))}
-      </div></div>
+      {/* STAT BAR */}
+      <div className="hero-stats">
+        <div className="hero-stats-inner">
+          {[
+            { num: totalPlayers  || "—", label: "ACTIVE OPERATORS" },
+            { num: totalEvents   || "—", label: "SCHEDULED OPS"   },
+            { num: totalBookings || "—", label: "CONFIRMED BOOTS"  },
+            { num: "10%",               label: "VIP DISCOUNT"     },
+          ].map(s => (
+            <div key={s.label} className="hero-stat" style={{ flex:1 }}>
+              <div className="hero-stat-num">{s.num}</div>
+              <div className="hero-stat-label">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      {/* ══ FEATURE STRIP ═════════════════════════════════════ */}
-      <div style={{background:"#0d0d0d",borderTop:"1px solid #1a1a1a",borderBottom:"3px solid var(--accent)"}}><div className="feature-strip" style={{maxWidth:1100,margin:"0 auto"}}>
-        {[
-          { icon:"🎯", title:"Tactical Skirmishes", desc:"CQB, woodland & mixed-environment game modes. Every op is different." },
-          { icon:"🪖", title:"Full Kit Rental",     desc:"Rifle, mask, full-body protection & BBs included. Just show up." },
-          { icon:"⭐", title:"VIP Membership",      desc:"Play 3 games, apply for VIP. 10% off all bookings & shop orders." },
-        ].map(f => (
-          <div key={f.title} className="feature-item">
-            <div className="feature-icon">{f.icon}</div>
-            <div className="feature-title">{f.title}</div>
-            <div className="feature-desc">{f.desc}</div>
-          </div>
-        ))}
-      </div></div>
+      {/* FEATURE STRIP */}
+      <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
+        <div className="feature-strip" style={{ maxWidth:1100, margin:"0 auto" }}>
+          {[
+            { icon:"🎯", title:"Tactical Skirmishes", desc:"CQB, woodland & mixed-environment game modes. Every op is different."        },
+            { icon:"🪖", title:"Full Kit Rental",     desc:"Rifle, mask, full-body protection & BBs included. Just show up."             },
+            { icon:"⭐", title:"VIP Membership",      desc:"Play 3 games, apply for VIP. 10% off all bookings & shop orders."           },
+          ].map(feat => (
+            <div key={feat.title} className="feature-item">
+              <div className="feature-icon">{feat.icon}</div>
+              <div className="feature-title">{feat.title}</div>
+              <div className="feature-desc">{feat.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="page-content">
 
-        {/* ══ MISSION COUNTDOWN ════════════════════════════════ */}
+        {/* MISSION COUNTDOWN */}
         {nextEvent && (() => {
           const target = nextEvent.date + "T" + nextEvent.time + ":00";
           return (
-            <div style={{ marginBottom:28, position:"relative", overflow:"hidden" }}>
-              {/* Classified-style header */}
+            <div style={{ marginBottom:28 }}>
               <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12, marginBottom:2 }}>
                 <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:10, letterSpacing:".4em", color:"#fff" }}>MISSION BRIEFING</span>
                 <span style={{ marginLeft:"auto", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"rgba(255,255,255,.7)", letterSpacing:".1em" }}>
-                  OP-{nextEvent.id?.slice(0,8).toUpperCase() || "ALPHA"}
+                  OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
                 </span>
               </div>
               <div className="countdown-panel">
@@ -1265,14 +1264,12 @@ function HomePage({ data, setPage }) {
                   <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
                   <div className="countdown-panel-title">{nextEvent.title}</div>
                   <div className="countdown-panel-meta">
-                    📍 {nextEvent.location}<br/>
+                    📍 {nextEvent.location}<br />
                     🗓 {nextEvent.date} · {nextEvent.time} HRS GMT
                   </div>
-                  <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => setPage("events")}>
-                    DEPLOY →
-                  </button>
+                  <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => setPage("events")}>DEPLOY →</button>
                 </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:0, alignItems:"flex-end" }}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end" }}>
                   <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
                   <div className="countdown-panel-timer">
                     <CountdownPanel target={target} />
@@ -1283,11 +1280,10 @@ function HomePage({ data, setPage }) {
           );
         })()}
 
-        {/* ══ INTEL BOARD — event cards ════════════════════════ */}
+        {/* INTEL BOARD */}
         {data.events.filter(e => e.published).length > 0 && (
-          <>
-            {/* Section header — classified style */}
-            <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:16, overflow:"hidden" }}>
+          <div style={{ marginBottom:32 }}>
+            <div style={{ display:"flex", alignItems:"center", marginBottom:16, overflow:"hidden" }}>
               <div style={{ background:"var(--accent)", padding:"6px 14px", flexShrink:0 }}>
                 <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:9, letterSpacing:".35em", color:"#fff" }}>INTEL BOARD</span>
               </div>
@@ -1295,10 +1291,8 @@ function HomePage({ data, setPage }) {
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", padding:"0 12px", letterSpacing:".1em", flexShrink:0 }}>
                 {data.events.filter(e => e.published).length} OPS ACTIVE
               </div>
-              <div style={{ width:40, height:2, background:"#1e1e1e" }} />
             </div>
-
-            <div className="grid-3" style={{ marginBottom:32 }}>
+            <div className="grid-3">
               {data.events.filter(e => e.published).slice(0, 3).map(ev => {
                 const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
                 const total  = ev.walkOnSlots + ev.rentalSlots;
@@ -1306,21 +1300,9 @@ function HomePage({ data, setPage }) {
                 const full   = booked >= total;
                 return (
                   <div key={ev.id} className="event-card" onClick={() => setPage("events")}>
-                    {/* Banner image with military overlay */}
                     <div className="event-banner-img">
-                      <img
-                        src={ev.banner || "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&q=70&auto=format&fit=crop"}
-                        style={{ width:"100%", height:"100%", objectFit:"cover", filter:"grayscale(25%) contrast(1.1)" }}
-                        alt=""
-                      />
-                      {/* HUD overlay */}
+                      <img src={ev.banner || "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&q=70&auto=format&fit=crop"} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"grayscale(25%) contrast(1.1)" }} alt="" />
                       <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg,rgba(0,0,0,.1) 0%,rgba(0,0,0,.75) 100%)" }} />
-                      <div style={{ position:"absolute", top:8, left:8 }}>
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"var(--accent)", letterSpacing:".15em", marginBottom:2 }}>
-                          {full ? "// SLOTS FULL" : `// SLOTS OPEN`}
-                        </div>
-                      </div>
-                      {/* Corner brackets — HUD style */}
                       <div style={{ position:"absolute", top:6, left:6, width:12, height:12, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)" }} />
                       <div style={{ position:"absolute", top:6, right:6, width:12, height:12, borderTop:"2px solid var(--accent)", borderRight:"2px solid var(--accent)" }} />
                       <div style={{ position:"absolute", bottom:6, left:6, width:12, height:12, borderBottom:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)" }} />
@@ -1338,7 +1320,7 @@ function HomePage({ data, setPage }) {
                       <div className="progress-bar mb-1" style={{ height:4 }}>
                         <div className={`progress-fill ${pct > 80 ? "red" : ""}`} style={{ width:pct + "%" }} />
                       </div>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color: full ? "var(--red)" : pct > 80 ? "var(--gold)" : "var(--muted)", letterSpacing:".06em" }}>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:full ? "var(--red)" : pct > 80 ? "var(--gold)" : "var(--muted)", letterSpacing:".06em" }}>
                         {full ? "⛔ FULL" : `${booked}/${total} SLOTS FILLED`}
                       </div>
                     </div>
@@ -1346,68 +1328,60 @@ function HomePage({ data, setPage }) {
                 );
               })}
             </div>
-          </>
+          </div>
         )}
 
-        {/* ══ IMAGE STRIP — real airsoft photos ════════════════ */}
+        {/* IMAGE STRIP */}
         <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:3, marginBottom:32, height:220 }}>
           {[
             "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&q=70&auto=format&fit=crop",
             "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=500&q=70&auto=format&fit=crop",
             "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=500&q=70&auto=format&fit=crop",
-          ].map((src, i) => (
-            <div key={i} style={{ overflow:"hidden", position:"relative", background:"#111" }}>
-              <img src={src} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"grayscale(30%) contrast(1.1)", transition:"transform .4s, filter .4s" }}
+          ].map((src, idx) => (
+            <div key={idx} style={{ overflow:"hidden", position:"relative", background:"#111" }}>
+              <img src={src}
+                style={{ width:"100%", height:"100%", objectFit:"cover", filter:"grayscale(30%) contrast(1.1)", transition:"transform .4s, filter .4s" }}
                 onMouseEnter={e => { e.currentTarget.style.transform="scale(1.05)"; e.currentTarget.style.filter="grayscale(0%) contrast(1)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform="scale(1)";    e.currentTarget.style.filter="grayscale(30%) contrast(1.1)"; }}
                 alt=""
               />
-              {/* Corner HUD brackets */}
               <div style={{ position:"absolute", top:8, left:8, width:16, height:16, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", opacity:.7 }} />
               <div style={{ position:"absolute", bottom:8, right:8, width:16, height:16, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", opacity:.7 }} />
             </div>
           ))}
         </div>
 
-        {/* ══ RULES OF ENGAGEMENT ══════════════════════════════ */}
+        {/* RULES + LOADOUT */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
           <div className="card">
-            <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".3em", color:"var(--accent)", marginBottom:14, textTransform:"uppercase" }}>
-              // RULES OF ENGAGEMENT
-            </div>
+            <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".3em", color:"var(--accent)", marginBottom:14, textTransform:"uppercase" }}>// RULES OF ENGAGEMENT</div>
             {[
               "Eye protection mandatory at all times on site",
               "Minimum engagement distance: 20m for DMR, 30m for snipers",
               "Full-auto and semi-auto game modes available",
               "Call your hits — honesty is non-negotiable",
               "Marshals' decisions are final",
-            ].map((r, i) => (
-              <div key={i} style={{ display:"flex", gap:10, padding:"7px 0", borderBottom:"1px solid #1a1a1a", fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--text)" }}>
-                <span style={{ color:"var(--accent)", fontFamily:"'Russo One',sans-serif", fontSize:11, flexShrink:0, minWidth:20 }}>{String(i+1).padStart(2,"0")}.</span>
-                {r}
+            ].map((rule, ri) => (
+              <div key={ri} style={{ display:"flex", gap:10, padding:"7px 0", borderBottom:"1px solid #1a1a1a", fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--text)" }}>
+                <span style={{ color:"var(--accent)", fontFamily:"'Russo One',sans-serif", fontSize:11, flexShrink:0, minWidth:20 }}>{String(ri + 1).padStart(2,"0")}.</span>
+                {rule}
               </div>
             ))}
           </div>
           <div className="card">
-            <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".3em", color:"var(--accent)", marginBottom:14, textTransform:"uppercase" }}>
-              // LOADOUT GUIDE
-            </div>
+            <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".3em", color:"var(--accent)", marginBottom:14, textTransform:"uppercase" }}>// LOADOUT GUIDE</div>
             {[
               ["WALK-ON", `£${data.events[0]?.walkOnPrice || 25}`, "Your own gear — gun, eye-pro, BBs"],
-              ["RENTAL",  `£${data.events[0]?.rentalPrice || 35}`, "Full kit provided — just turn up"],
-              ["VIP",     "10% OFF",                               "Discount on all bookings & shop"],
-            ].map(([t, p, d]) => (
-              <div key={t} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid #1a1a1a" }}>
-                <div style={{ background:"rgba(224,92,0,.1)", border:"1px solid var(--accent)", padding:"3px 8px", fontFamily:"'Russo One',sans-serif", fontSize:9, letterSpacing:".2em", color:"var(--accent)", flexShrink:0 }}>{t}</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--text)" }}>{d}</div>
-                </div>
-                <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:18, color:"#fff", flexShrink:0 }}>{p}</div>
+              ["RENTAL",  `£${data.events[0]?.rentalPrice || 35}`, "Full kit provided — just turn up"  ],
+              ["VIP",     "10% OFF",                               "Discount on all bookings & shop"   ],
+            ].map(([label, price, desc]) => (
+              <div key={label} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid #1a1a1a" }}>
+                <div style={{ background:"rgba(224,92,0,.1)", border:"1px solid var(--accent)", padding:"3px 8px", fontFamily:"'Russo One',sans-serif", fontSize:9, letterSpacing:".2em", color:"var(--accent)", flexShrink:0 }}>{label}</div>
+                <div style={{ flex:1, fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--text)" }}>{desc}</div>
+                <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:18, color:"#fff", flexShrink:0 }}>{price}</div>
               </div>
             ))}
-            <button className="btn btn-primary mt-2" style={{ width:"100%", padding:"10px", letterSpacing:".2em" }} onClick={() => setPage("events")}>
-              BOOK NOW →
-            </button>
+            <button className="btn btn-primary mt-2" style={{ width:"100%", padding:"10px", letterSpacing:".2em" }} onClick={() => setPage("events")}>BOOK NOW →</button>
           </div>
         </div>
 
