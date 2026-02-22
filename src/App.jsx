@@ -3181,6 +3181,50 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
               <input type="checkbox" id="epub" checked={form.published} onChange={e => f("published", e.target.checked)} />
               <label htmlFor="epub" style={{ cursor: "pointer", fontSize: 13 }}>Published (visible to players)</label>
             </div>
+
+            {/* ── Game Day Extras ── */}
+            <div style={{ border:"1px solid #2a2a2a", borderLeft:"3px solid var(--accent)", marginBottom:16 }}>
+              <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>
+                GAME DAY EXTRAS — tick shop products to offer on this event
+              </div>
+              <div style={{ padding:14 }}>
+                {data.shop.filter(p => p.gameExtra).length === 0 && (
+                  <div style={{ fontSize:12, color:"var(--muted)" }}>No products marked as Game Day Extra yet. Tick "Available as Game Day Extra" on a product in the Shop section.</div>
+                )}
+                {data.shop.filter(p => p.gameExtra).map(p => {
+                  const alreadyAdded = (form.extras || []).some(ex => ex.productId === p.id);
+                  return (
+                    <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"6px 0", borderBottom:"1px solid #1a1a1a" }}>
+                      <input type="checkbox" checked={alreadyAdded} onChange={e => {
+                        const extras = form.extras || [];
+                        if (e.target.checked) {
+                          f("extras", [...extras, { id: uid(), name: p.name, price: p.price, noPost: p.noPost, productId: p.id, variantId: null }]);
+                        } else {
+                          f("extras", extras.filter(ex => ex.productId !== p.id));
+                        }
+                      }} />
+                      <div style={{ flex:1 }}>
+                        <span style={{ fontSize:13, fontWeight:600 }}>{p.name}</span>
+                        {p.noPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
+                        <span style={{ fontSize:11, color:"var(--muted)", marginLeft:8 }}>£{p.price} · stock: {p.stock}</span>
+                        {p.variants?.length > 0 && <span style={{ fontSize:11, color:"var(--accent)", marginLeft:8 }}>{p.variants.length} variants</span>}
+                      </div>
+                      {alreadyAdded && (() => {
+                        const ex = (form.extras || []).find(e => e.productId === p.id);
+                        return (
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span style={{ fontSize:11, color:"var(--muted)" }}>Price override:</span>
+                            <input type="number" step="0.01" value={ex.price} style={{ width:70, padding:"3px 6px", fontSize:12, background:"#111", border:"1px solid #333", color:"#fff" }}
+                              onChange={e => f("extras", (form.extras||[]).map(x => x.productId === p.id ? {...x, price: +e.target.value} : x))} />
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveEvent} disabled={savingEvent}>{savingEvent ? "Saving…" : "Save Event"}</button>
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Cancel</button>
@@ -3963,179 +4007,6 @@ function AdminShop({ data, save, showToast }) {
               <button className="btn btn-primary" onClick={savePostage}>Save</button>
               <button className="btn btn-ghost" onClick={() => setPostModal(null)}>Cancel</button>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Admin Extras (per-event) ──────────────────────────────
-function AdminExtras({ data, save, showToast }) {
-  const [evId, setEvId] = useState(data.events[0]?.id || "");
-  const blank = { name: "", price: 0, noPost: false, productId: "", variantId: "" };
-  const [form, setForm] = useState(blank);
-  const [editId, setEditId] = useState(null); // which extra row is being edited
-  const [editForm, setEditForm] = useState({});
-  const ff = (k, v) => setForm(p => ({ ...p, [k]: v, ...(k === "productId" ? { variantId: "" } : {}) }));
-  const ef = (k, v) => setEditForm(p => ({ ...p, [k]: v, ...(k === "productId" ? { variantId: "" } : {}) }));
-  const ev = data.events.find(e => e.id === evId);
-  const linkedProduct = data.shop.find(p => p.id === form.productId);
-  const editLinkedProduct = data.shop.find(p => p.id === editForm.productId);
-
-  const saveAll = async (updatedExtras) => {
-    await api.events.update(evId, { extras: updatedExtras });
-    save({ events: await api.events.getAll() });
-  };
-
-  const addExtra = async () => {
-    if (!form.name) { showToast("Name required", "red"); return; }
-    try {
-      const extra = { id: uid(), name: form.name, price: Number(form.price), noPost: form.noPost,
-        productId: form.productId || null, variantId: form.variantId || null };
-      await saveAll([...(ev.extras || []), extra]);
-      setForm(blank);
-      showToast("Extra added!");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
-  };
-
-  const [savingExtra, setSavingExtra] = useState(false);
-  const saveEdit = async () => {
-    setSavingExtra(true);
-    try {
-      const updatedExtras = ev.extras.map(x => x.id === editId
-        ? { ...x, name: editForm.name, price: Number(editForm.price), noPost: editForm.noPost,
-            productId: editForm.productId || null, variantId: editForm.variantId || null }
-        : x);
-      await saveAll(updatedExtras);
-      setEditId(null);
-      showToast("Extra updated!");
-    } catch (e) {
-      showToast("Failed: " + (e.message || String(e)), "red");
-    } finally {
-      setSavingExtra(false);
-    }
-  };
-
-  const del = async (id) => {
-    try {
-      await saveAll(ev.extras.filter(x => x.id !== id));
-      showToast("Removed");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
-  };
-
-  const startEdit = (ex) => {
-    setEditId(ex.id);
-    setEditForm({ name: ex.name, price: ex.price, noPost: ex.noPost,
-      productId: ex.productId || "", variantId: ex.variantId || "" });
-  };
-
-  return (
-    <div>
-      <div className="page-header"><div><div className="page-title">Game Extras</div><div className="page-sub">Per-event add-ons — link to shop products to auto-deduct stock</div></div></div>
-      <div className="form-group" style={{ maxWidth: 320 }}>
-        <label>Select Event</label>
-        <select value={evId} onChange={e => setEvId(e.target.value)}>{data.events.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}</select>
-      </div>
-      {ev && (
-        <div className="card">
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 14 }}>EXTRAS FOR: {ev.title}</div>
-          {ev.extras.length === 0 && <div style={{ color:"var(--muted)", fontSize:12, marginBottom:14, fontFamily:"'Share Tech Mono',monospace" }}>No extras yet — add one below.</div>}
-          {ev.extras.map(ex => {
-            const linked = data.shop.find(p => p.id === ex.productId);
-            const linkedVariant = linked?.variants?.find(v => v.id === ex.variantId);
-            const isEditing = editId === ex.id;
-            if (isEditing) return (
-              <div key={ex.id} style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)", background:"#0d0d0d", margin:"0 -16px" }}>
-                <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:10 }}>EDITING: {ex.name}</div>
-                <div className="form-row">
-                  <div className="form-group"><label>Name</label><input value={editForm.name} onChange={e => ef("name", e.target.value)} /></div>
-                  <div className="form-group"><label>Price (£)</label><input type="number" step="0.01" value={editForm.price} onChange={e => ef("price", +e.target.value)} /></div>
-                </div>
-                <div className="form-group">
-                  <label>Link to Shop Product (for stock deduction + variants)</label>
-                  <select value={editForm.productId} onChange={e => ef("productId", e.target.value)}>
-                    <option value="">— None —</option>
-                    {data.shop.map(p => <option key={p.id} value={p.id}>{p.name} (stock: {p.stock})</option>)}
-                  </select>
-                </div>
-                {editLinkedProduct?.variants?.length > 0 && (
-                  <div className="form-group">
-                    <label>Variant (leave blank = player chooses)</label>
-                    <select value={editForm.variantId} onChange={e => ef("variantId", e.target.value)}>
-                      <option value="">— Player chooses —</option>
-                      {editLinkedProduct.variants.map(v => <option key={v.id} value={v.id}>{v.name} (stock: {v.stock})</option>)}
-                    </select>
-                  </div>
-                )}
-                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
-                  <input type="checkbox" id={`np-${ex.id}`} checked={editForm.noPost} onChange={e => ef("noPost", e.target.checked)} />
-                  <label htmlFor={`np-${ex.id}`} style={{ fontSize:13, cursor:"pointer" }}>Collection only</label>
-                </div>
-                <div className="gap-2">
-                  <button className="btn btn-primary btn-sm" onClick={saveEdit} disabled={savingExtra}>{savingExtra ? "Saving…" : "Save"}</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setEditId(null)}>Cancel</button>
-                </div>
-              </div>
-            );
-            return (
-              <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
-                <div>
-                  <div style={{ fontWeight:600, fontSize:13 }}>
-                    {ex.name}
-                    {ex.noPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>No Post</span>}
-                  </div>
-                  {linked
-                    ? <div style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>
-                        🔗 {linked.name}{linkedVariant ? ` — ${linkedVariant.name}` : " (player picks variant)"} · stock: {linkedVariant ? linkedVariant.stock : linked.stock}
-                      </div>
-                    : <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>No product linked — click Edit to link one</div>
-                  }
-                </div>
-                <div className="gap-2" style={{ alignItems:"center", flexShrink:0 }}>
-                  <span className="text-green" style={{ fontFamily:"'Russo One',sans-serif" }}>£{ex.price}</span>
-                  <button className="btn btn-sm btn-ghost" onClick={() => startEdit(ex)}>Edit</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => del(ex.id)}>Del</button>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Add extra form */}
-          <div style={{ marginTop:18, paddingTop:14, borderTop:"2px solid var(--accent)" }}>
-            <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:12 }}>ADD EXTRA</div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Name</label>
-                <input value={form.name} onChange={e => ff("name", e.target.value)} placeholder="e.g. Pyro Grenade" />
-              </div>
-              <div className="form-group">
-                <label>Price (£)</label>
-                <input type="number" step="0.01" value={form.price} onChange={e => ff("price", +e.target.value)} />
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Link to Shop Product (optional — deducts stock when ordered)</label>
-              <select value={form.productId} onChange={e => ff("productId", e.target.value)}>
-                <option value="">— None —</option>
-                {data.shop.filter(p => p.gameExtra).map(p => <option key={p.id} value={p.id}>{p.name} (stock: {p.stock})</option>)}
-                {data.shop.filter(p => p.gameExtra).length === 0 && <option disabled>No products marked as Game Day Extra yet</option>}
-              </select>
-            </div>
-            {linkedProduct?.variants?.length > 0 && (
-              <div className="form-group">
-                <label>Variant</label>
-                <select value={form.variantId} onChange={e => ff("variantId", e.target.value)}>
-                  <option value="">— Select variant —</option>
-                  {linkedProduct.variants.map(v => <option key={v.id} value={v.id}>{v.name} (stock: {v.stock})</option>)}
-                </select>
-              </div>
-            )}
-            <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:14 }}>
-              <input type="checkbox" id="nopost" checked={form.noPost} onChange={e => ff("noPost", e.target.checked)} />
-              <label htmlFor="nopost" style={{ fontSize:13, cursor:"pointer" }}>Collection only (no post)</label>
-            </div>
-            <button className="btn btn-primary" onClick={addExtra}>+ Add Extra</button>
           </div>
         </div>
       )}
