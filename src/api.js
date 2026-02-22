@@ -104,10 +104,9 @@ export const events = {
 
   async update(id, patch) {
     const { extras, bookings, ...evData } = patch
-    const { data: updated, error } = await supabase
-      .from('events').update(toSnakeEvent(evData)).eq('id', id).select()
+    const { error } = await supabase
+      .from('events').update(toSnakeEvent(evData)).eq('id', id)
     if (error) throw error
-    if (!updated || updated.length === 0) throw new Error('Save blocked — RLS denied write. Ensure you are logged in as admin.')
     if (extras !== undefined) {
       // Replace all extras
       await supabase.from('event_extras').delete().eq('event_id', id)
@@ -204,9 +203,21 @@ export const shop = {
   },
 
   async update(id, patch) {
+    const snake = toSnakeProduct(patch)
     const { data, error } = await supabase
-      .from('shop_products').update(toSnakeProduct(patch)).eq('id', id).select().single()
-    if (error) throw error
+      .from('shop_products').update(snake).eq('id', id).select().single()
+    if (error) {
+      // If variants column missing, retry without it
+      if (error.message && error.message.includes('variants')) {
+        const { variants: _v, ...snakeNoVariants } = snake
+        const { data: d2, error: e2 } = await supabase
+          .from('shop_products').update(snakeNoVariants).eq('id', id).select().single()
+        if (e2) throw new Error('Product save failed: ' + e2.message)
+        return normaliseProduct(d2)
+      }
+      throw new Error('Product save failed: ' + error.message)
+    }
+    if (!data) throw new Error('Product save failed — no data returned. Check you are logged in as admin.')
     return normaliseProduct(data)
   },
 

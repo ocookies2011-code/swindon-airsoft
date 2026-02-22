@@ -1434,9 +1434,20 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const price = ticketType === "walkOn" ? ev.walkOnPrice : ev.rentalPrice;
     const vipDisc = cu?.vipStatus === "active" ? 0.1 : 0;
     const extrasTotal = ev.extras.reduce((s, ex) => s + (extras[ex.id] || 0) * ex.price, 0);
-    const grandTotal = price * qty * (1 - vipDisc) + extrasTotal;
+    const grandTotal = (price * qty * (1 - vipDisc) + extrasTotal);
     const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
-    const myBooking = cu && ev.bookings.find(b => b.userId === cu.id);
+    // All bookings this user has for this event (can have walkOn + rental separately)
+    const myBookings = cu ? ev.bookings.filter(b => b.userId === cu.id) : [];
+    const myWalkOn   = myBookings.find(b => b.type === "walkOn");
+    const myRental   = myBookings.find(b => b.type === "rental");
+    const alreadyBookedThisType = ticketType === "walkOn" ? !!myWalkOn : !!myRental;
+
+    // Per-type slot tracking
+    const walkOnBooked  = ev.bookings.filter(b => b.type === "walkOn").reduce((s, b) => s + b.qty, 0);
+    const rentalBooked  = ev.bookings.filter(b => b.type === "rental").reduce((s, b) => s + b.qty, 0);
+    const slotsLeft = ticketType === "walkOn"
+      ? ev.walkOnSlots - walkOnBooked
+      : ev.rentalSlots - rentalBooked;
 
     const confirmBookingAfterPayment = async (paypalOrder) => {
       setBookingBusy(true);
@@ -1462,12 +1473,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       }
     };
 
-    const handlePaypalError = (msg) => {
-      if (msg) setPaypalError(msg);
-    };
+    const handlePaypalError = (msg) => { if (msg) setPaypalError(msg); };
 
-    // Pre-flight check before showing PayPal button
-    const bookingBlocked = !cu || !waiverValid || (booked + qty > total) || !!myBooking;
+    const bookingBlocked = !cu || !waiverValid || alreadyBookedThisType || qty > slotsLeft;
 
     return (
       <div className="page-content">
@@ -1479,7 +1487,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           <div style={{ padding: 20 }}>
             <div className="gap-2 mb-1">
               <h2 style={{ fontSize: 24, fontWeight: 800 }}>{ev.title}</h2>
-              {myBooking && <span className="tag tag-green">✓ BOOKED</span>}
+              {myBookings.length > 0 && <span className="tag tag-green">✓ BOOKED</span>}
             </div>
             <div className="gap-2 mb-2">
               <span className="tag tag-green">{ev.date}</span>
@@ -1532,13 +1540,31 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft: 4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ A signed waiver is required before booking. <button className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
               {cu?.vipStatus === "active" && <div className="alert alert-green mb-2">⭐ VIP 10% discount applied</div>}
-              {myBooking ? (
-                <div>
-                  <div className="alert alert-green">✓ You're booked in for this event!</div>
-                  <div className="mt-2 text-muted" style={{ fontSize: 12 }}>Your check-in QR code:</div>
-                  <div style={{ margin: "10px 0" }}><QRCode value={myBooking.id} size={120} /></div>
-                  <div className="text-muted mt-1" style={{ fontSize: 10 }}>Booking ID: {myBooking.id}</div>
+              {/* Show existing bookings */}
+              {myBookings.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  {myBookings.map(b => (
+                    <div key={b.id} style={{ background: "var(--bg4)", border: "1px solid #2a2a2a", borderLeft: "3px solid var(--accent)", padding: 14, marginBottom: 10 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontFamily: "'Russo One',sans-serif", fontSize: 13, letterSpacing: ".05em" }}>
+                          {b.type === "walkOn" ? "🎯 Walk-On Ticket" : "🪖 Rental Package"}
+                          {b.qty > 1 && <span style={{ marginLeft: 6, color: "var(--muted)", fontSize: 11 }}>×{b.qty}</span>}
+                        </span>
+                        <span className="tag tag-green">✓ BOOKED</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", marginBottom: 8 }}>
+                        Total paid: £{b.total.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>Check-in QR:</div>
+                      <QRCode value={b.id} size={100} />
+                      <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, fontFamily: "'Share Tech Mono',monospace" }}>ID: {b.id}</div>
+                    </div>
+                  ))}
                 </div>
+              )}
+              {/* Allow booking if not yet booked every type / not full */}
+              {(myWalkOn && myRental) ? (
+                <div className="alert alert-green">✓ You have both Walk-On and Rental tickets for this event.</div>
               ) : (
                 <>
                   <div className="form-row">
@@ -1581,6 +1607,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <span>TOTAL</span><span className="text-green">£{grandTotal.toFixed(2)}</span>
                     </div>
                   </div>
+                  {alreadyBookedThisType && (
+                    <div className="alert alert-gold mt-1">
+                      ✓ You already have a {ticketType === "walkOn" ? "Walk-On" : "Rental"} booking for this event.
+                      {ticketType === "walkOn" && !myRental && <span style={{marginLeft:6}}>Switch to <strong>Rental Package</strong> to add that too.</span>}
+                      {ticketType === "rental" && !myWalkOn && <span style={{marginLeft:6}}>Switch to <strong>Walk-On</strong> to add that too.</span>}
+                    </div>
+                  )}
+                  {!alreadyBookedThisType && slotsLeft < qty && (
+                    <div className="alert alert-red mt-1">Only {slotsLeft} {ticketType === "walkOn" ? "Walk-On" : "Rental"} slot{slotsLeft === 1 ? "" : "s"} remaining.</div>
+                  )}
                   {paypalError && <div className="alert alert-red mt-1">⚠️ {paypalError}</div>}
                   {bookingBusy && <div className="alert alert-blue mt-1">⏳ Confirming your booking…</div>}
                   {!bookingBlocked && !bookingBusy && (
