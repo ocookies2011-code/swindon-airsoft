@@ -110,11 +110,31 @@ export const events = {
 
   async update(id, patch) {
     const { extras, bookings, ...evData } = patch
-    const { error } = await supabase
-      .from('events').update(toSnakeEvent(evData)).eq('id', id)
-    if (error) throw error
+    // Also write extras_json when extras are provided (used as primary source on read)
+    const eventRow = toSnakeEvent(evData)
     if (extras !== undefined) {
-      // Replace all extras
+      eventRow.extras_json = JSON.stringify(
+        extras.map(ex => ({
+          id: ex.id, name: ex.name, price: ex.price,
+          noPost: ex.noPost ?? false,
+          productId: ex.productId || null,
+          variantId: ex.variantId || null,
+        }))
+      )
+    }
+    const { error } = await supabase.from('events').update(eventRow).eq('id', id)
+    // If extras_json column missing, retry without it
+    if (error) {
+      if (error.message?.includes('extras_json')) {
+        const { extras_json: _ej, ...rowNoJson } = eventRow
+        const { error: e2 } = await supabase.from('events').update(rowNoJson).eq('id', id)
+        if (e2) throw e2
+      } else {
+        throw error
+      }
+    }
+    if (extras !== undefined) {
+      // Also write event_extras rows for backward compat
       await supabase.from('event_extras').delete().eq('event_id', id)
       if (extras.length) {
         await supabase.from('event_extras').insert(

@@ -1571,7 +1571,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 {ev.extras.length > 0 && (
                   <div style={{ padding:"0 16px 14px" }}>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
-                    {ev.extras.map(ex => {
+                    {ev.extras.filter(ex => {
+                      const p = data.shop.find(p => p.id === ex.productId);
+                      return p?.gameExtra === true;
+                    }).map(ex => {
                       const linkedProduct = data.shop.find(p => p.id === ex.productId);
                       // Needs variant selection if product has variants AND extra doesn't have a fixed variant
                       const needsVariantPick = linkedProduct?.variants?.length > 0 && !ex.variantId;
