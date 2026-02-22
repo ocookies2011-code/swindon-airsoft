@@ -390,6 +390,11 @@ function normaliseEvent(ev) {
 }
 
 function normaliseProduct(p) {
+  const variants = Array.isArray(p.variants) ? p.variants : []
+  // If variants exist, total stock = sum of variant stocks
+  const variantStock = variants.length > 0
+    ? variants.reduce((s, v) => s + (Number(v.stock) || 0), 0)
+    : null
   return {
     id:          p.id,
     name:        p.name,
@@ -398,8 +403,10 @@ function normaliseProduct(p) {
     salePrice:   p.sale_price ? Number(p.sale_price) : null,
     onSale:      p.on_sale,
     image:       p.image,
-    stock:       p.stock,
+    stock:       variantStock !== null ? variantStock : p.stock,
+    baseStock:   p.stock, // raw DB stock (only used when no variants)
     noPost:      p.no_post,
+    variants,
   }
 }
 
@@ -454,8 +461,9 @@ function toSnakeProduct(p) {
     sale_price:  p.salePrice,
     on_sale:     p.onSale,
     image:       p.image,
-    stock:       p.stock,
+    stock:       p.variants && p.variants.length > 0 ? 0 : p.stock, // base stock unused when variants exist
     no_post:     p.noPost,
+    variants:    p.variants || [],
   }
 }
 

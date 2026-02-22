@@ -1721,11 +1721,13 @@ function ShopPage({ data, cu, showToast }) {
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [productModal, setProductModal] = useState(null); // item object
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [qtyPick, setQtyPick] = useState(1);
+  const [shopPaypalError, setShopPaypalError] = useState(null);
 
-  // Default postage to first option (real UUID), not hardcoded "post1"
   const postageOptions = data.postageOptions || [];
   const [postageId, setPostageId] = useState(() => postageOptions[0]?.id || "");
-  // Keep postageId in sync if options load after mount
   useEffect(() => {
     if (!postageId && postageOptions.length > 0) setPostageId(postageOptions[0].id);
   }, [postageOptions.length]);
@@ -1733,16 +1735,41 @@ function ShopPage({ data, cu, showToast }) {
   const postage = postageOptions.find(p => p.id === postageId) || postageOptions[0] || { name: "Collection", price: 0 };
   const hasNoPost = cart.some(i => i.noPost);
 
-  const addToCart = (item) => {
-    setCart(c => { const ex = c.find(x => x.id === item.id); return ex ? c.map(x => x.id === item.id ? { ...x, qty: x.qty + 1 } : x) : [...c, { ...item, qty: 1 }]; });
-    showToast(item.name + " added to cart");
+  // Cart key = productId + optional variantId
+  const cartKey = (item, variant) => variant ? `${item.id}::${variant.id}` : item.id;
+
+  const addToCart = (item, variant, qty = 1) => {
+    const key = cartKey(item, variant);
+    const price = variant ? Number(variant.price)
+                : (item.onSale && item.salePrice ? item.salePrice : item.price);
+    const label = variant ? `${item.name} — ${variant.name}` : item.name;
+    const availStock = variant ? Number(variant.stock) : item.stock;
+
+    setCart(c => {
+      const ex = c.find(x => x.key === key);
+      const currentQty = ex ? ex.qty : 0;
+      if (currentQty + qty > availStock) {
+        showToast("Not enough stock", "red");
+        return c;
+      }
+      if (ex) return c.map(x => x.key === key ? { ...x, qty: x.qty + qty } : x);
+      return [...c, { key, id: item.id, variantId: variant?.id || null, name: label, price, qty, noPost: item.noPost, stock: availStock }];
+    });
+    showToast(`${label} × ${qty} added to cart`);
+    setProductModal(null);
+    setSelectedVariant(null);
+    setQtyPick(1);
   };
 
-  const subTotal = cart.reduce((s, i) => { const p = i.onSale && i.salePrice ? i.salePrice : i.price; return s + p * i.qty * (cu?.vipStatus === "active" ? 0.9 : 1); }, 0);
+  const removeFromCart = (key) => setCart(c => c.filter(x => x.key !== key));
+  const updateCartQty = (key, qty) => {
+    if (qty < 1) { removeFromCart(key); return; }
+    setCart(c => c.map(x => x.key === key ? { ...x, qty: Math.min(qty, x.stock) } : x));
+  };
+
+  const subTotal = cart.reduce((s, i) => s + i.price * i.qty * (cu?.vipStatus === "active" ? 0.9 : 1), 0);
   const postageTotal = hasNoPost ? 0 : (postage?.price || 0);
   const grandTotal = subTotal + postageTotal;
-
-  const [shopPaypalError, setShopPaypalError] = useState(null);
 
   const placeOrderAfterPayment = async (paypalOrder) => {
     if (!cu || cart.length === 0) return;
@@ -1754,15 +1781,21 @@ function ShopPage({ data, cu, showToast }) {
         customerEmail:   cu.email || "",
         customerAddress: cu.address || "",
         userId:          cu.id,
-        items:           cart.map(i => ({ id: i.id, name: i.name, price: i.onSale && i.salePrice ? i.salePrice : i.price, qty: i.qty })),
+        items:           cart.map(i => ({ id: i.id, variantId: i.variantId, name: i.name, price: i.price, qty: i.qty })),
         subtotal:        subTotal,
         postage:         postageTotal,
         postageName:     hasNoPost ? "Collection Only" : (postage?.name || ""),
         total:           grandTotal,
         paypalOrderId:   paypalOrder.id,
       });
-      for (const item of cart) {
-        await supabase.rpc("deduct_stock", { product_id: item.id, qty: item.qty });
+      // Deduct stock — variant-aware
+      for (const ci of cart) {
+        if (ci.variantId) {
+          // Deduct from variant stock via RPC
+          await supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty });
+        } else {
+          await supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty });
+        }
       }
       showToast("✅ Payment successful — order confirmed!");
       setCart([]);
@@ -1774,63 +1807,187 @@ function ShopPage({ data, cu, showToast }) {
     }
   };
 
-  const handleShopPaypalError = (msg) => {
-    if (msg) setShopPaypalError(msg);
+  const handleShopPaypalError = (msg) => { if (msg) setShopPaypalError(msg); };
+
+  // Open product detail modal
+  const openProduct = (item) => {
+    setProductModal(item);
+    setSelectedVariant(item.variants?.length > 0 ? null : null);
+    setQtyPick(1);
   };
+
+  const modalVariant = selectedVariant;
+  const modalPrice = modalVariant ? Number(modalVariant.price)
+    : (productModal?.onSale && productModal?.salePrice ? productModal.salePrice : productModal?.price);
+  const modalStock = modalVariant ? Number(modalVariant.stock) : (productModal?.stock || 0);
+  const hasVariants = productModal?.variants?.length > 0;
 
   return (
     <div className="page-content">
       <div className="page-header">
-        <div><div className="page-title">Shop</div><div className="page-sub">Gear up for battle</div></div>
+        <div><div className="page-title">Armoury</div><div className="page-sub">Gear up for battle</div></div>
         <button className="btn btn-ghost" onClick={() => setCartOpen(true)}>
-          🛒 Cart {cart.length > 0 && <span style={{ background: "var(--accent)", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, marginLeft: 6, fontWeight: 700 }}>{cart.reduce((s, i) => s + i.qty, 0)}</span>}
+          🛒 Cart {cart.length > 0 && <span style={{ background:"var(--accent)", color:"#fff", padding:"1px 7px", fontSize:11, marginLeft:6, fontWeight:700 }}>{cart.reduce((s,i)=>s+i.qty,0)}</span>}
         </button>
       </div>
+
       {cu?.vipStatus === "active" && <div className="alert alert-gold mb-2">⭐ VIP member — 10% discount applied</div>}
-      {hasNoPost && <div className="alert alert-red mb-2">🔥 Your cart contains pyro/collection-only items — these cannot be posted</div>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 16 }}>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:16 }}>
         {data.shop.map(item => {
-          const dp = item.onSale && item.salePrice ? item.salePrice : item.price;
-          const vipP = cu?.vipStatus === "active" ? (dp * 0.9).toFixed(2) : null;
+          const hasV = item.variants?.length > 0;
+          const displayPrice = hasV ? Math.min(...item.variants.map(v => Number(v.price))) : (item.onSale && item.salePrice ? item.salePrice : item.price);
+          const inStock = item.stock > 0;
+          const vipP = cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : null;
           return (
-            <div key={item.id} className="shop-card">
-              <div className="shop-img">{item.image ? <img src={item.image} alt="" /> : "📦"}</div>
+            <div key={item.id} className="shop-card" style={{ cursor:"pointer" }} onClick={() => openProduct(item)}>
+              <div className="shop-img">
+                {item.image ? <img src={item.image} alt="" /> : <span style={{fontSize:40}}>🎯</span>}
+                {item.onSale && !hasV && <div style={{position:"absolute",top:8,left:8}}><span className="tag tag-red">SALE</span></div>}
+                {!inStock && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center"}}><span className="tag tag-red" style={{fontSize:11}}>OUT OF STOCK</span></div>}
+              </div>
               <div className="shop-body">
                 <div className="gap-2 mb-1">
-                  {item.onSale && <span className="tag tag-red">SALE</span>}
                   {item.noPost && <span className="tag tag-gold">Collect Only</span>}
+                  {hasV && <span className="tag tag-blue">{item.variants.length} variants</span>}
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.name}</div>
-                <p className="text-muted" style={{ fontSize: 12, marginBottom: 10, lineHeight: 1.4 }}>{item.description}</p>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:14, marginBottom:4, letterSpacing:".03em", color:"#fff" }}>{item.name}</div>
+                <p style={{ fontSize:11, color:"var(--muted)", marginBottom:10, lineHeight:1.5, fontFamily:"'Share Tech Mono',monospace" }}>{item.description}</p>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <div>
-                    {item.onSale && <span className="text-muted" style={{ textDecoration: "line-through", fontSize: 12, marginRight: 6 }}>£{item.price}</span>}
-                    <span style={{ fontWeight: 900, fontSize: 22, color: "var(--accent)" }}>£{vipP || dp}</span>
-                    {vipP && <span className="text-gold" style={{ fontSize: 10, marginLeft: 4 }}>VIP</span>}
+                    {hasV ? <span style={{fontSize:11,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>from </span> : null}
+                    <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:20, color:"var(--accent)" }}>£{vipP || Number(displayPrice).toFixed(2)}</span>
+                    {vipP && <span className="text-gold" style={{fontSize:10,marginLeft:4}}>VIP</span>}
                   </div>
-                  <span className="text-muted" style={{ fontSize: 11 }}>Stock: {item.stock}</span>
+                  <span style={{fontSize:10,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>
+                    {hasV ? `${item.variants.length} options` : `Stock: ${item.stock}`}
+                  </span>
                 </div>
-                <button className="btn btn-primary" style={{ width: "100%" }} disabled={item.stock < 1} onClick={() => addToCart(item)}>
-                  {item.stock < 1 ? "Out of Stock" : "Add to Cart"}
+                <button className="btn btn-primary mt-1" style={{width:"100%",padding:"8px",fontSize:12}} disabled={!inStock}>
+                  {!inStock ? "OUT OF STOCK" : hasV ? "SELECT VARIANT →" : "VIEW PRODUCT →"}
                 </button>
               </div>
             </div>
           );
         })}
+        {data.shop.length === 0 && <div style={{gridColumn:"1/-1",textAlign:"center",padding:60,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>No products in the armoury yet.</div>}
       </div>
 
+      {/* ── PRODUCT DETAIL MODAL ── */}
+      {productModal && (
+        <div className="overlay" onClick={() => setProductModal(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{maxWidth:680}}>
+            <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+              {/* Image */}
+              <div style={{width:220,flexShrink:0,background:"#111",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",minHeight:180}}>
+                {productModal.image ? <img src={productModal.image} style={{width:"100%",height:220,objectFit:"cover"}} alt="" /> : <span style={{fontSize:60}}>🎯</span>}
+              </div>
+              {/* Info */}
+              <div style={{flex:1,minWidth:200}}>
+                <div style={{fontFamily:"'Russo One',sans-serif",fontSize:22,color:"#fff",letterSpacing:".04em",marginBottom:6,textTransform:"uppercase"}}>{productModal.name}</div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>{productModal.description}</div>
+
+                {/* Variant selector */}
+                {hasVariants ? (
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:9,letterSpacing:".2em",color:"var(--muted)",fontFamily:"'Barlow Condensed',sans-serif",marginBottom:8,textTransform:"uppercase",fontWeight:700}}>SELECT VARIANT</div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      {productModal.variants.map(v => {
+                        const outV = Number(v.stock) < 1;
+                        const sel = selectedVariant?.id === v.id;
+                        return (
+                          <button key={v.id}
+                            onClick={() => { if (!outV) { setSelectedVariant(v); setQtyPick(1); }}}
+                            style={{
+                              padding:"7px 14px",fontFamily:"'Barlow Condensed',sans-serif",
+                              fontSize:12,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",
+                              background: sel ? "var(--accent)" : outV ? "#111" : "#1a1a1a",
+                              border: sel ? "1px solid var(--accent)" : "1px solid #333",
+                              color: sel ? "#fff" : outV ? "#333" : "var(--text)",
+                              cursor: outV ? "not-allowed" : "pointer",
+                              position:"relative",
+                            }}>
+                            {v.name}
+                            <div style={{fontSize:10,color:sel?"rgba(255,255,255,.7)":outV?"#333":"var(--muted)"}}>{outV ? "Out of stock" : `£${Number(v.price).toFixed(2)}`}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Price display */}
+                <div style={{marginBottom:14}}>
+                  {(!hasVariants || selectedVariant) && (
+                    <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                      <span style={{fontFamily:"'Russo One',sans-serif",fontSize:32,color:"var(--accent)"}}>
+                        £{cu?.vipStatus === "active" ? (modalPrice * 0.9).toFixed(2) : Number(modalPrice).toFixed(2)}
+                      </span>
+                      {cu?.vipStatus === "active" && <span className="tag tag-gold">VIP PRICE</span>}
+                      {!hasVariants && productModal.onSale && productModal.salePrice && (
+                        <span style={{textDecoration:"line-through",color:"var(--muted)",fontSize:14}}>£{productModal.price}</span>
+                      )}
+                    </div>
+                  )}
+                  {hasVariants && !selectedVariant && (
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:13,color:"var(--muted)"}}>Select a variant to see price</div>
+                  )}
+                </div>
+
+                {/* Qty + Add to Cart */}
+                {(!hasVariants || selectedVariant) && modalStock > 0 && (
+                  <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
+                    <div style={{display:"flex",alignItems:"center",border:"1px solid #333",background:"#111"}}>
+                      <button onClick={() => setQtyPick(q => Math.max(1, q-1))} style={{background:"none",border:"none",color:"var(--text)",padding:"8px 14px",fontSize:18,cursor:"pointer"}}>−</button>
+                      <span style={{padding:"0 14px",fontFamily:"'Russo One',sans-serif",fontSize:18,color:"#fff",minWidth:36,textAlign:"center"}}>{qtyPick}</span>
+                      <button onClick={() => setQtyPick(q => Math.min(modalStock, q+1))} style={{background:"none",border:"none",color:"var(--text)",padding:"8px 14px",fontSize:18,cursor:"pointer"}}>+</button>
+                    </div>
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--muted)"}}>/ {modalStock} in stock</span>
+                  </div>
+                )}
+
+                {(!hasVariants || selectedVariant) && modalStock > 0 ? (
+                  <button className="btn btn-primary" style={{width:"100%",padding:"12px",fontSize:13,letterSpacing:".15em"}}
+                    onClick={() => addToCart(productModal, hasVariants ? selectedVariant : null, qtyPick)}>
+                    ADD TO CART × {qtyPick}
+                  </button>
+                ) : hasVariants && !selectedVariant ? (
+                  <button className="btn btn-ghost" style={{width:"100%",padding:"12px"}} disabled>SELECT A VARIANT FIRST</button>
+                ) : (
+                  <button className="btn btn-danger" style={{width:"100%",padding:"12px"}} disabled>OUT OF STOCK</button>
+                )}
+
+                <div style={{marginTop:10,fontFamily:"'Share Tech Mono',monospace",fontSize:10,color:"var(--muted)"}}>
+                  {productModal.noPost ? "⚠️ Collection only — cannot be posted" : "✓ Standard shipping available"}
+                </div>
+              </div>
+            </div>
+            <button className="btn btn-ghost mt-2" style={{width:"100%"}} onClick={() => setProductModal(null)}>← Back to Shop</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── CART MODAL ── */}
       {cartOpen && (
         <div className="overlay" onClick={() => setCartOpen(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-title">🛒 Cart</div>
-            {cart.length === 0 ? <p className="text-muted">Your cart is empty.</p> : (
+            {cart.length === 0 ? <p className="text-muted" style={{fontFamily:"'Share Tech Mono',monospace"}}>Your cart is empty.</p> : (
               <>
                 {cart.map(item => (
-                  <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
-                    <span>{item.name} ×{item.qty}</span>
-                    <div className="gap-2">
-                      <span className="text-green">£{((item.onSale && item.salePrice ? item.salePrice : item.price) * item.qty).toFixed(2)}</span>
-                      <button style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }} onClick={() => setCart(c => c.filter(x => x.id !== item.id))}>✕</button>
+                  <div key={item.key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid var(--border)",fontSize:13}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:".05em"}}>{item.name}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace"}}>£{item.price.toFixed(2)} each</div>
+                    </div>
+                    <div className="gap-2" style={{alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",border:"1px solid #333",background:"#111"}}>
+                        <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{background:"none",border:"none",color:"var(--text)",padding:"4px 10px",cursor:"pointer"}}>−</button>
+                        <span style={{padding:"0 8px",fontFamily:"'Russo One',sans-serif",fontSize:14}}>{item.qty}</span>
+                        <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{background:"none",border:"none",color:"var(--text)",padding:"4px 10px",cursor:"pointer"}}>+</button>
+                      </div>
+                      <span className="text-green" style={{fontFamily:"'Russo One',sans-serif",minWidth:60,textAlign:"right"}}>£{(item.price * item.qty).toFixed(2)}</span>
+                      <button style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:16}} onClick={() => removeFromCart(item.key)}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -1839,26 +1996,25 @@ function ShopPage({ data, cu, showToast }) {
                   <div className="form-group mt-2">
                     <label>Postage</label>
                     <select value={postageId} onChange={e => setPostageId(e.target.value)}>
-                      {postageOptions.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
+                      {postageOptions.map(p => <option key={p.id} value={p.id}>{p.name} — £{Number(p.price).toFixed(2)}</option>)}
                     </select>
                   </div>
                 )}
-                {!hasNoPost && postageOptions.length === 0 && (
-                  <div className="alert alert-gold mt-2">No postage options set up — admin must add them in Shop settings</div>
-                )}
-                {hasNoPost && <div className="alert alert-gold mt-1">🔥 Pyro/collect-only items — collection at game day</div>}
+                {!hasNoPost && postageOptions.length === 0 && <div className="alert alert-gold mt-2">No postage options configured</div>}
+                {hasNoPost && <div className="alert alert-gold mt-1">🔥 Collection-only items in cart — no posting</div>}
+                {cu?.vipStatus === "active" && <div className="alert alert-gold mt-1">⭐ VIP 10% discount applied</div>}
 
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 20, marginTop: 14 }}>
+                <div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Russo One',sans-serif",fontSize:22,marginTop:14,color:"#fff"}}>
                   <span>TOTAL</span>
-                  <span className="text-green">£{grandTotal.toFixed(2)}</span>
+                  <span style={{color:"var(--accent)"}}>£{grandTotal.toFixed(2)}</span>
                 </div>
-                {!hasNoPost && postage && (
-                  <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "right", marginTop: 2 }}>
-                    Incl. {postage.name} £{postageTotal.toFixed(2)}
+                {!hasNoPost && postage && postageTotal > 0 && (
+                  <div style={{fontSize:11,color:"var(--muted)",textAlign:"right",marginTop:2,fontFamily:"'Share Tech Mono',monospace"}}>
+                    incl. {postage.name} £{postageTotal.toFixed(2)}
                   </div>
                 )}
 
-                {!cu && <div className="alert alert-red mt-2">Please log in to place an order</div>}
+                {!cu && <div className="alert alert-red mt-2">Log in to checkout with PayPal</div>}
                 {shopPaypalError && <div className="alert alert-red mt-1">⚠️ {shopPaypalError}</div>}
                 {placing && <div className="alert alert-blue mt-1">⏳ Confirming your order…</div>}
                 {cu && !placing && grandTotal > 0 && (
@@ -1870,12 +2026,9 @@ function ShopPage({ data, cu, showToast }) {
                     disabled={placing}
                   />
                 )}
-                {!cu && (
-                  <div className="alert alert-red mt-2" style={{ fontSize: 12 }}>Log in to checkout with PayPal</div>
-                )}
               </>
             )}
-            <button className="btn btn-ghost mt-1" style={{ width: "100%" }} onClick={() => setCartOpen(false)}>Close</button>
+            <button className="btn btn-ghost mt-1" style={{width:"100%"}} onClick={() => setCartOpen(false)}>Close</button>
           </div>
         </div>
       )}
@@ -3378,9 +3531,24 @@ function AdminOrders({ showToast }) {
 function AdminShop({ data, save, showToast }) {
   const [tab, setTab] = useState("products");
   const [modal, setModal] = useState(null);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false };
+  const uid = () => Math.random().toString(36).slice(2,10);
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, variants: [] };
   const [form, setForm] = useState(blank);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  // Variant editor state
+  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "" });
+
+  const addVariant = () => {
+    if (!newVariant.name) { showToast("Variant name required", "red"); return; }
+    const v = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0 };
+    f("variants", [...(form.variants || []), v]);
+    setNewVariant({ name: "", price: "", stock: "" });
+  };
+  const removeVariant = (id) => f("variants", form.variants.filter(v => v.id !== id));
+  const updateVariant = (id, key, val) => f("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
+
+  const hasVariants = (form.variants || []).length > 0;
 
   // Postage state
   const [postModal, setPostModal] = useState(null);
@@ -3400,32 +3568,25 @@ function AdminShop({ data, save, showToast }) {
       else await api.shop.update(form.id, form);
       save({ shop: await api.shop.getAll() });
       showToast("Product saved!"); setModal(null);
-    } catch (e) {
-      showToast("Save failed: " + e.message, "red");
-    }
+    } catch (e) { showToast("Save failed: " + e.message, "red"); }
   };
 
   const savePostage = async () => {
     if (!postForm.name) { showToast("Name required", "red"); return; }
     try {
-      const opts = data.postageOptions || [];
       if (postModal === "new") await api.postage.create(postForm);
       else await api.postage.update(postForm.id, postForm);
       save({ postageOptions: await api.postage.getAll() });
-      showToast("Postage option saved!"); setPostModal(null);
-    } catch (e) {
-      showToast("Save failed: " + e.message, "red");
-    }
+      showToast("Postage saved!"); setPostModal(null);
+    } catch (e) { showToast("Save failed: " + e.message, "red"); }
   };
 
   const deletePostage = async (id) => {
     try {
       await api.postage.delete(id);
       save({ postageOptions: await api.postage.getAll() });
-      showToast("Postage option removed");
-    } catch (e) {
-      showToast("Delete failed: " + e.message, "red");
-    }
+      showToast("Removed");
+    } catch (e) { showToast("Delete failed: " + e.message, "red"); }
   };
 
   return (
@@ -3433,8 +3594,8 @@ function AdminShop({ data, save, showToast }) {
       <div className="page-header">
         <div><div className="page-title">Shop</div></div>
         {tab === "products"
-          ? <button className="btn btn-primary" onClick={() => { setForm(blank); setModal("new"); }}>+ Add Product</button>
-          : <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage Option</button>
+          ? <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>
+          : <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>
         }
       </div>
 
@@ -3446,24 +3607,39 @@ function AdminShop({ data, save, showToast }) {
       {tab === "products" && (
         <div className="card">
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Product</th><th>Price</th><th>Sale</th><th>Stock</th><th>No Post</th><th></th></tr></thead>
+            <thead><tr><th>Product</th><th>Base Price</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th></th></tr></thead>
             <tbody>
               {data.shop.map(item => (
                 <tr key={item.id}>
-                  <td style={{ fontWeight: 600 }}>{item.name}</td>
-                  <td className="text-green">£{item.price}</td>
-                  <td>{item.onSale ? <span className="tag tag-red">SALE £{item.salePrice}</span> : "—"}</td>
-                  <td>{item.stock}</td>
+                  <td style={{ fontWeight:600 }}>{item.name}</td>
+                  <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
+                  <td>
+                    {item.variants?.length > 0
+                      ? <span className="tag tag-blue">{item.variants.length} variants</span>
+                      : <span style={{color:"var(--muted)"}}>—</span>
+                    }
+                  </td>
+                  <td>
+                    {item.variants?.length > 0
+                      ? item.variants.map(v => (
+                          <div key={v.id} style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>
+                            {v.name}: <span style={{color:Number(v.stock)>0?"var(--accent)":"var(--red)"}}>{v.stock}</span>
+                          </div>
+                        ))
+                      : item.stock
+                    }
+                  </td>
+                  <td>{item.onSale ? <span className="tag tag-red">£{item.salePrice}</span> : "—"}</td>
                   <td>{item.noPost ? <span className="tag tag-gold">Yes</span> : "—"}</td>
                   <td>
                     <div className="gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item }); setModal(item.id); }}>Edit</button>
-                      <button className="btn btn-sm btn-danger" onClick={async () => { try { await api.shop.delete(item.id); save({ shop: await api.shop.getAll() }); showToast("Deleted"); } catch(e) { showToast("Delete failed: " + e.message, "red"); } }}>Del</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setModal(item.id); }}>Edit</button>
+                      <button className="btn btn-sm btn-danger" onClick={async () => { try { await api.shop.delete(item.id); save({ shop: await api.shop.getAll() }); showToast("Deleted"); } catch(e) { showToast("Delete failed", "red"); } }}>Del</button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {data.shop.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No products yet</td></tr>}
+              {data.shop.length === 0 && <tr><td colSpan={7} style={{textAlign:"center",color:"var(--muted)",padding:30}}>No products yet</td></tr>}
             </tbody>
           </table></div>
         </div>
@@ -3471,55 +3647,98 @@ function AdminShop({ data, save, showToast }) {
 
       {tab === "postage" && (
         <div className="card">
-          <p className="text-muted mb-2" style={{ fontSize: 13 }}>
-            These options appear in the shop cart. Items marked <strong>No Post</strong> (e.g. Pyro) are always collection-only regardless of postage selection.
-          </p>
+          <p className="text-muted mb-2" style={{fontSize:13}}>Postage options shown at checkout. Items marked <strong>No Post</strong> are always collection-only.</p>
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Option Name</th><th>Price</th><th></th></tr></thead>
             <tbody>
               {(data.postageOptions || []).map(p => (
                 <tr key={p.id}>
-                  <td style={{ fontWeight: 600 }}>{p.name}</td>
+                  <td style={{fontWeight:600}}>{p.name}</td>
                   <td className="text-green">£{Number(p.price).toFixed(2)}</td>
-                  <td>
-                    <div className="gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setPostForm({ ...p }); setPostModal(p.id); }}>Edit</button>
-                      <button className="btn btn-sm btn-danger" onClick={() => deletePostage(p.id)}>Del</button>
-                    </div>
-                  </td>
+                  <td><div className="gap-2">
+                    <button className="btn btn-sm btn-ghost" onClick={() => { setPostForm({ ...p }); setPostModal(p.id); }}>Edit</button>
+                    <button className="btn btn-sm btn-danger" onClick={() => deletePostage(p.id)}>Del</button>
+                  </div></td>
                 </tr>
               ))}
-              {(data.postageOptions || []).length === 0 && (
-                <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No postage options configured</td></tr>
-              )}
+              {(data.postageOptions || []).length === 0 && <tr><td colSpan={3} style={{textAlign:"center",color:"var(--muted)",padding:30}}>No postage options configured</td></tr>}
             </tbody>
           </table></div>
         </div>
       )}
 
-      {/* Product modal */}
+      {/* ── PRODUCT MODAL ── */}
       {modal && (
         <div className="overlay" onClick={() => setModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div className="modal-title">{modal === "new" ? "Add Product" : "Edit Product"}</div>
-            <div className="form-group"><label>Name</label><input value={form.name} onChange={e => f("name", e.target.value)} /></div>
-            <div className="form-group"><label>Description</label><input value={form.description} onChange={e => f("description", e.target.value)} /></div>
+
             <div className="form-row">
-              <div className="form-group"><label>Price (£)</label><input type="number" value={form.price} onChange={e => f("price", +e.target.value)} /></div>
-              <div className="form-group"><label>Stock</label><input type="number" value={form.stock} onChange={e => f("stock", +e.target.value)} /></div>
+              <div className="form-group"><label>Name</label><input value={form.name} onChange={e => f("name", e.target.value)} /></div>
+              <div className="form-group"><label>Description</label><input value={form.description} onChange={e => f("description", e.target.value)} /></div>
             </div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
-              <input type="checkbox" checked={form.onSale} onChange={e => f("onSale", e.target.checked)} />
-              <label style={{ fontSize: 13 }}>On Sale</label>
-            </div>
-            {form.onSale && <div className="form-group"><label>Sale Price (£)</label><input type="number" value={form.salePrice || ""} onChange={e => f("salePrice", +e.target.value)} /></div>}
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
+
+            {/* Base price + stock — only relevant if no variants */}
+            {!hasVariants && (
+              <div className="form-row">
+                <div className="form-group"><label>Base Price (£)</label><input type="number" step="0.01" value={form.price} onChange={e => f("price", +e.target.value)} /></div>
+                <div className="form-group"><label>Stock</label><input type="number" value={form.stock} onChange={e => f("stock", +e.target.value)} /></div>
+              </div>
+            )}
+            {hasVariants && (
+              <div className="alert alert-blue mb-2" style={{fontSize:12}}>ℹ️ Variants are active — base price and stock are ignored. Each variant has its own price and stock.</div>
+            )}
+
+            {/* Sale price — only if no variants */}
+            {!hasVariants && (
+              <>
+                <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
+                  <input type="checkbox" checked={form.onSale} onChange={e => f("onSale", e.target.checked)} />
+                  <label style={{fontSize:13}}>On Sale</label>
+                </div>
+                {form.onSale && <div className="form-group"><label>Sale Price (£)</label><input type="number" step="0.01" value={form.salePrice || ""} onChange={e => f("salePrice", +e.target.value)} /></div>}
+              </>
+            )}
+
+            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
               <input type="checkbox" checked={form.noPost} onChange={e => f("noPost", e.target.checked)} />
-              <label style={{ fontSize: 13 }}>No Post — Collection Only (e.g. Pyro)</label>
+              <label style={{fontSize:13}}>No Post — Collection Only (e.g. Pyro)</label>
             </div>
+
+            {/* ── VARIANTS EDITOR ── */}
+            <div style={{border:"1px solid #2a2a2a",borderLeft:"3px solid var(--accent)",marginBottom:14}}>
+              <div style={{background:"#0d0d0d",padding:"8px 14px",fontSize:9,letterSpacing:".25em",color:"var(--accent)",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #2a2a2a"}}>
+                VARIANTS (optional) — e.g. sizes, colours
+              </div>
+              <div style={{padding:14}}>
+                {(form.variants || []).length === 0 && (
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--muted)",marginBottom:10}}>No variants — product uses base price and stock above.</div>
+                )}
+                {(form.variants || []).map(v => (
+                  <div key={v.id} style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 36px",gap:8,alignItems:"center",marginBottom:8}}>
+                    <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
+                    <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Price £" style={{fontSize:12}} />
+                    <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
+                    <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
+                  </div>
+                ))}
+                {/* Add new variant row */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px auto",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
+                  <input value={newVariant.name} onChange={e => setNewVariant(p => ({...p, name: e.target.value}))} placeholder="New variant name" style={{fontSize:12}} />
+                  <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="£" style={{fontSize:12}} />
+                  <input type="number" value={newVariant.stock} onChange={e => setNewVariant(p => ({...p, stock: e.target.value}))} placeholder="Stock" style={{fontSize:12}} />
+                  <button className="btn btn-sm btn-primary" onClick={addVariant} style={{whiteSpace:"nowrap"}}>+ Add</button>
+                </div>
+              </div>
+            </div>
+
             <div className="form-group"><label>Product Image</label><input type="file" accept="image/*" onChange={handleImg} /></div>
-            {form.image && <img src={form.image} style={{ width: "100%", maxHeight: 110, objectFit: "cover", borderRadius: 6, marginBottom: 10 }} alt="" />}
-            <div className="gap-2"><button className="btn btn-primary" onClick={saveItem}>Save</button><button className="btn btn-ghost" onClick={() => setModal(null)}>Cancel</button></div>
+            {form.image && <img src={form.image} style={{width:"100%",maxHeight:110,objectFit:"cover",marginBottom:10}} alt="" />}
+
+            <div className="gap-2">
+              <button className="btn btn-primary" onClick={saveItem}>Save Product</button>
+              <button className="btn btn-ghost" onClick={() => setModal(null)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
@@ -3528,7 +3747,7 @@ function AdminShop({ data, save, showToast }) {
       {postModal && (
         <div className="overlay" onClick={() => setPostModal(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">{postModal === "new" ? "Add Postage Option" : "Edit Postage Option"}</div>
+            <div className="modal-title">{postModal === "new" ? "Add Postage Option" : "Edit Postage"}</div>
             <div className="form-group"><label>Option Name</label><input value={postForm.name} onChange={e => pf("name", e.target.value)} placeholder="e.g. Standard (3-5 days)" /></div>
             <div className="form-group"><label>Price (£) — set 0 for free/collection</label><input type="number" min={0} step={0.01} value={postForm.price} onChange={e => pf("price", +e.target.value)} /></div>
             <div className="gap-2 mt-2">
