@@ -1420,262 +1420,287 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const [detail, setDetail] = useState(null);
   const [waiverModal, setWaiverModal] = useState(false);
   const [tab, setTab] = useState("info");
-  const [ticketType, setTicketType] = useState("walkOn");
-  const [qty, setQty] = useState(1);
-  const [extras, setExtras] = useState({});
   const [paypalError, setPaypalError] = useState(null);
   const [bookingBusy, setBookingBusy] = useState(false);
 
+  // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
+  const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
+
   const ev = detail ? data.events.find(e => e.id === detail) : null;
 
-  if (ev) {
-    const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
-    const total = ev.walkOnSlots + ev.rentalSlots;
-    const price = ticketType === "walkOn" ? ev.walkOnPrice : ev.rentalPrice;
-    const vipDisc = cu?.vipStatus === "active" ? 0.1 : 0;
-    const extrasTotal = ev.extras.reduce((s, ex) => s + (extras[ex.id] || 0) * ex.price, 0);
-    const grandTotal = (price * qty * (1 - vipDisc) + extrasTotal);
-    const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
-    // All bookings this user has for this event (can have walkOn + rental separately)
-    const myBookings = cu ? ev.bookings.filter(b => b.userId === cu.id) : [];
-    const myWalkOn   = myBookings.find(b => b.type === "walkOn");
-    const myRental   = myBookings.find(b => b.type === "rental");
-    const alreadyBookedThisType = ticketType === "walkOn" ? !!myWalkOn : !!myRental;
+  const resetCart = () => setBCart({ walkOn: 0, rental: 0, extras: {} });
 
-    // Per-type slot tracking
-    const walkOnBooked  = ev.bookings.filter(b => b.type === "walkOn").reduce((s, b) => s + b.qty, 0);
-    const rentalBooked  = ev.bookings.filter(b => b.type === "rental").reduce((s, b) => s + b.qty, 0);
-    const slotsLeft = ticketType === "walkOn"
-      ? ev.walkOnSlots - walkOnBooked
-      : ev.rentalSlots - rentalBooked;
+  if (ev) {
+    const vipDisc   = cu?.vipStatus === "active" ? 0.1 : 0;
+    const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
+    const myBookings  = cu ? ev.bookings.filter(b => b.userId === cu.id) : [];
+
+    // Per-type slots remaining
+    const walkOnBooked = ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + b.qty, 0);
+    const rentalBooked = ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + b.qty, 0);
+    const walkOnLeft   = ev.walkOnSlots - walkOnBooked;
+    const rentalLeft   = ev.rentalSlots - rentalBooked;
+    const totalBooked  = walkOnBooked + rentalBooked;
+    const totalSlots   = ev.walkOnSlots + ev.rentalSlots;
+
+    // Cart totals
+    const walkOnTotal  = bCart.walkOn  * ev.walkOnPrice * (1 - vipDisc);
+    const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
+    const extrasTotal  = ev.extras.reduce((s, ex) => s + (bCart.extras[ex.id] || 0) * ex.price, 0);
+    const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
+    const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
+
+    const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, walkOnLeft)) }));
+    const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, rentalLeft)) }));
+    const setExtra  = (id, n) => setBCart(p => ({ ...p, extras: { ...p.extras, [id]: Math.max(0, n) } }));
 
     const confirmBookingAfterPayment = async (paypalOrder) => {
       setBookingBusy(true);
       setPaypalError(null);
       try {
-        await api.bookings.create({
-          eventId:      ev.id,
-          userId:       cu.id,
-          userName:     cu.name,
-          type:         ticketType,
-          qty,
-          extras,
-          total:        grandTotal,
-          paypalOrderId: paypalOrder.id,
-        });
+        // Create one booking record per ticket type in cart
+        const promises = [];
+        if (bCart.walkOn > 0) {
+          promises.push(api.bookings.create({
+            eventId: ev.id, userId: cu.id, userName: cu.name,
+            type: "walkOn", qty: bCart.walkOn,
+            extras: bCart.extras,
+            total: walkOnTotal + (promises.length === 0 ? extrasTotal : 0),
+            paypalOrderId: paypalOrder.id,
+          }));
+        }
+        if (bCart.rental > 0) {
+          promises.push(api.bookings.create({
+            eventId: ev.id, userId: cu.id, userName: cu.name,
+            type: "rental", qty: bCart.rental,
+            extras: promises.length === 0 ? bCart.extras : {},
+            total: rentalTotal + (promises.length === 0 ? extrasTotal : 0),
+            paypalOrderId: paypalOrder.id,
+          }));
+        }
+        await Promise.all(promises);
         const evList = await api.events.getAll();
         save({ events: evList });
+        resetCart();
         showToast("🎉 Payment successful — you're booked in!");
       } catch (e) {
-        showToast("Payment taken but booking failed — please contact us: " + e.message, "red");
+        showToast("Payment taken but booking failed — contact us: " + e.message, "red");
       } finally {
         setBookingBusy(false);
       }
     };
 
-    const handlePaypalError = (msg) => { if (msg) setPaypalError(msg); };
-
-    const bookingBlocked = !cu || !waiverValid || alreadyBookedThisType || qty > slotsLeft;
+    const bookingBlocked = !cu || !waiverValid || cartEmpty;
 
     return (
       <div className="page-content">
-        <button className="btn btn-ghost btn-sm mb-2" onClick={() => { setDetail(null); setTab("info"); setExtras({}); }}>← Back to Events</button>
-        <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 20 }}>
-          <div style={{ height: 160, background: "linear-gradient(135deg,#150e08,#111827)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: "var(--accent)", letterSpacing: ".04em" }}>
-            {ev.banner ? <img src={ev.banner} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : ev.title}
+        <button className="btn btn-ghost btn-sm mb-2" onClick={() => { setDetail(null); setTab("info"); resetCart(); }}>← Back to Events</button>
+
+        {/* Banner */}
+        <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, overflow:"hidden", marginBottom:20 }}>
+          <div style={{ height:160, background:"linear-gradient(135deg,#150e08,#111827)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            {ev.banner ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : <span style={{ fontSize:28, fontWeight:900, color:"var(--accent)" }}>{ev.title}</span>}
           </div>
-          <div style={{ padding: 20 }}>
+          <div style={{ padding:20 }}>
             <div className="gap-2 mb-1">
-              <h2 style={{ fontSize: 24, fontWeight: 800 }}>{ev.title}</h2>
+              <h2 style={{ fontSize:24, fontWeight:800 }}>{ev.title}</h2>
               {myBookings.length > 0 && <span className="tag tag-green">✓ BOOKED</span>}
             </div>
             <div className="gap-2 mb-2">
               <span className="tag tag-green">{ev.date}</span>
               <span className="tag tag-blue">{ev.time} GMT</span>
               <span className="tag tag-purple">{ev.location}</span>
-              <span style={{ fontSize: 12, color: booked / total > 0.8 ? "var(--red)" : "var(--muted)" }}>{booked}/{total} slots</span>
+              <span style={{ fontSize:12, color: totalBooked/totalSlots > 0.8 ? "var(--red)" : "var(--muted)" }}>{totalBooked}/{totalSlots} slots</span>
             </div>
-            <div className="progress-bar" style={{ marginBottom: 16 }}>
-              <div className={`progress-fill ${booked / total > 0.8 ? "red" : ""}`} style={{ width: Math.min(100, booked / total * 100) + "%" }} />
+            <div className="progress-bar" style={{ marginBottom:16 }}>
+              <div className={`progress-fill ${totalBooked/totalSlots > 0.8 ? "red" : ""}`} style={{ width:Math.min(100, totalBooked/totalSlots*100)+"%" }} />
             </div>
           </div>
         </div>
 
         <div className="nav-tabs">
-          {["info", "map"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
+          {["info","map"].map(t => <button key={t} className={`nav-tab ${tab===t?"active":""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
         </div>
 
         {tab === "info" && (
           <div>
+            {/* Description */}
             <div className="card mb-2">
-              <p style={{ color: "var(--muted)", lineHeight: 1.7, marginBottom: 18 }}>{ev.description}</p>
-              <div className="form-row mb-2">
-                <div style={{ background: "var(--bg4)", borderRadius: 6, padding: 16, textAlign: "center" }}>
-                  <div style={{ fontSize: 32, fontWeight: 900, color: "var(--accent)" }}>£{ev.walkOnPrice}</div>
-                  <div style={{ color: "var(--muted)", fontSize: 12 }}>Walk-On Ticket</div>
-                  <div style={{ fontSize: 11, color: "var(--subtle)", marginTop: 2 }}>{ev.walkOnSlots} slots</div>
-                </div>
-                <div style={{ background: "var(--bg4)", borderRadius: 6, padding: 16, textAlign: "center" }}>
-                  <div style={{ fontSize: 32, fontWeight: 900, color: "var(--gold)" }}>£{ev.rentalPrice}</div>
-                  <div style={{ color: "var(--muted)", fontSize: 12 }}>Rental Package</div>
-                  <div style={{ fontSize: 11, color: "var(--subtle)", marginTop: 2 }}>{ev.rentalSlots} slots</div>
-                </div>
-              </div>
-              {ev.extras.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>AVAILABLE EXTRAS</div>
-                  {ev.extras.map(ex => (
-                    <div key={ex.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                      <span>{ex.name} {ex.noPost && <span className="tag tag-red" style={{ fontSize: 10, marginLeft: 6 }}>Collection Only</span>}</span>
-                      <span className="text-green">£{ex.price}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <p style={{ color:"var(--muted)", lineHeight:1.7, marginBottom:0 }}>{ev.description}</p>
             </div>
 
-            {/* ── Inline booking on Info tab ── */}
-            <div className="card" style={{ borderTop: "3px solid var(--accent)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 16 }}>BOOK THIS EVENT</div>
-              {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft: 4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
-              {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ A signed waiver is required before booking. <button className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
-              {cu?.vipStatus === "active" && <div className="alert alert-green mb-2">⭐ VIP 10% discount applied</div>}
-              {/* Show existing bookings */}
+            {/* ── BOOKING CARD ── */}
+            <div className="card" style={{ borderTop:"3px solid var(--accent)" }}>
+              <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".25em", color:"var(--accent)", marginBottom:16 }}>BOOK THIS EVENT</div>
+
+              {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
+              {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
+              {cu?.vipStatus === "active" && <div className="alert alert-gold mb-2">⭐ VIP 10% discount applied</div>}
+
+              {/* Existing bookings */}
               {myBookings.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:8 }}>YOUR EXISTING BOOKINGS</div>
                   {myBookings.map(b => (
-                    <div key={b.id} style={{ background: "var(--bg4)", border: "1px solid #2a2a2a", borderLeft: "3px solid var(--accent)", padding: 14, marginBottom: 10 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontFamily: "'Russo One',sans-serif", fontSize: 13, letterSpacing: ".05em" }}>
-                          {b.type === "walkOn" ? "🎯 Walk-On Ticket" : "🪖 Rental Package"}
-                          {b.qty > 1 && <span style={{ marginLeft: 6, color: "var(--muted)", fontSize: 11 }}>×{b.qty}</span>}
-                        </span>
-                        <span className="tag tag-green">✓ BOOKED</span>
+                    <div key={b.id} style={{ background:"var(--bg4)", border:"1px solid #2a2a2a", borderLeft:"3px solid #7dc840", padding:"10px 14px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:12, color:"#fff" }}>
+                          {b.type === "walkOn" ? "🎯 Walk-On" : "🪖 Rental"} ×{b.qty}
+                        </div>
+                        <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>£{b.total.toFixed(2)} · ID: {b.id.slice(0,8)}</div>
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", marginBottom: 8 }}>
-                        Total paid: £{b.total.toFixed(2)}
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:10, color:"var(--muted)", marginBottom:4 }}>Check-in QR</div>
+                        <QRCode value={b.id} size={56} />
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>Check-in QR:</div>
-                      <QRCode value={b.id} size={100} />
-                      <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, fontFamily: "'Share Tech Mono',monospace" }}>ID: {b.id}</div>
                     </div>
                   ))}
                 </div>
               )}
-              {/* Allow booking if not yet booked every type / not full */}
-              {(myWalkOn && myRental) ? (
-                <div className="alert alert-green">✓ You have both Walk-On and Rental tickets for this event.</div>
-              ) : (
-                <>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Ticket Type</label>
-                      <select value={ticketType} onChange={e => setTicketType(e.target.value)}>
-                        <option value="walkOn">Walk-On — £{ev.walkOnPrice}</option>
-                        <option value="rental">Rental Package — £{ev.rentalPrice}</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Number of Tickets</label>
-                      <input type="number" min={1} max={10} value={qty} onChange={e => setQty(Math.max(1, +e.target.value))} />
+
+              {/* ── TICKET BUILDER ── */}
+              <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
+                <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #1e1e1e" }}>
+                  ADD TICKETS TO ORDER
+                </div>
+
+                {/* Walk-On row */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #1a1a1a" }}>
+                  <div>
+                    <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
+                    <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
+                      £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft} slots left
                     </div>
                   </div>
-                  {ev.extras.length > 0 && (
-                    <div className="mb-2">
-                      <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>ADD EXTRAS</div>
-                      {ev.extras.map(ex => (
-                        <div key={ex.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                          <span style={{ fontSize: 13 }}>{ex.name} — <span className="text-green">£{ex.price}</span>{ex.noPost && <span className="tag tag-red" style={{ fontSize: 10, marginLeft: 6 }}>Collect Only</span>}</span>
-                          <input type="number" min={0} max={20} value={extras[ex.id] || 0} onChange={e => setExtras(p => ({ ...p, [ex.id]: +e.target.value }))} style={{ width: 70 }} />
-                        </div>
-                      ))}
+                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #333", background:"#111" }}>
+                    <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
+                    <span style={{ padding:"0 14px", fontFamily:"'Russo One',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
+                    <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
+                  </div>
+                </div>
+
+                {/* Rental row */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none" }}>
+                  <div>
+                    <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
+                    <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
+                      £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft} slots left
                     </div>
-                  )}
-                  <div style={{ background: "var(--bg4)", padding: 14, borderRadius: 6, marginBottom: 16 }}>
-                    {[
-                      ["Tickets", `£${(price * qty).toFixed(2)}`],
-                      vipDisc > 0 ? ["VIP Discount", `-£${(price * qty * vipDisc).toFixed(2)}`] : null,
-                      extrasTotal > 0 ? ["Extras", `£${extrasTotal.toFixed(2)}`] : null,
-                      cu?.credits > 0 ? [`Credits (£${cu.credits} available)`, "Applied at checkout"] : null,
-                    ].filter(Boolean).map(([k, v]) => (
-                      <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
-                        <span className="text-muted">{k}</span><span>{v}</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #333", background:"#111" }}>
+                    <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
+                    <span style={{ padding:"0 14px", fontFamily:"'Russo One',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
+                    <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
+                  </div>
+                </div>
+
+                {/* Extras */}
+                {ev.extras.length > 0 && (
+                  <div style={{ padding:"0 16px 14px" }}>
+                    <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
+                    {ev.extras.map(ex => (
+                      <div key={ex.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid #1a1a1a" }}>
+                        <div>
+                          <span style={{ fontSize:13 }}>{ex.name}</span>
+                          {ex.noPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
+                          <div style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>£{ex.price}</div>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111" }}>
+                          <button onClick={() => setExtra(ex.id, (bCart.extras[ex.id]||0) - 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer" }}>−</button>
+                          <span style={{ padding:"0 12px", fontFamily:"'Russo One',sans-serif", fontSize:16, color: (bCart.extras[ex.id]||0)>0?"var(--accent)":"var(--text)", minWidth:30, textAlign:"center" }}>{bCart.extras[ex.id]||0}</span>
+                          <button onClick={() => setExtra(ex.id, (bCart.extras[ex.id]||0) + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer" }}>+</button>
+                        </div>
                       </div>
                     ))}
-                    <div className="divider" style={{ margin: "8px 0" }} />
-                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 20 }}>
-                      <span>TOTAL</span><span className="text-green">£{grandTotal.toFixed(2)}</span>
-                    </div>
                   </div>
-                  {alreadyBookedThisType && (
-                    <div className="alert alert-gold mt-1">
-                      ✓ You already have a {ticketType === "walkOn" ? "Walk-On" : "Rental"} booking for this event.
-                      {ticketType === "walkOn" && !myRental && <span style={{marginLeft:6}}>Switch to <strong>Rental Package</strong> to add that too.</span>}
-                      {ticketType === "rental" && !myWalkOn && <span style={{marginLeft:6}}>Switch to <strong>Walk-On</strong> to add that too.</span>}
+                )}
+              </div>
+
+              {/* Order summary */}
+              {!cartEmpty && (
+                <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16 }}>
+                  <div style={{ fontSize:9, letterSpacing:".25em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:12 }}>ORDER SUMMARY</div>
+                  {bCart.walkOn > 0 && (
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
+                      <span className="text-muted">🎯 Walk-On ×{bCart.walkOn}</span>
+                      <span>£{walkOnTotal.toFixed(2)}</span>
                     </div>
                   )}
-                  {!alreadyBookedThisType && slotsLeft < qty && (
-                    <div className="alert alert-red mt-1">Only {slotsLeft} {ticketType === "walkOn" ? "Walk-On" : "Rental"} slot{slotsLeft === 1 ? "" : "s"} remaining.</div>
+                  {bCart.rental > 0 && (
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
+                      <span className="text-muted">🪖 Rental ×{bCart.rental}</span>
+                      <span>£{rentalTotal.toFixed(2)}</span>
+                    </div>
                   )}
-                  {paypalError && <div className="alert alert-red mt-1">⚠️ {paypalError}</div>}
-                  {bookingBusy && <div className="alert alert-blue mt-1">⏳ Confirming your booking…</div>}
-                  {!bookingBlocked && !bookingBusy && (
-                    <PayPalCheckoutButton
-                      amount={grandTotal}
-                      description={`${ev.title} — ${qty}x ${ticketType === "walkOn" ? "Walk-On" : "Rental"} ticket`}
-                      onSuccess={confirmBookingAfterPayment}
-                      onError={handlePaypalError}
-                      disabled={bookingBlocked}
-                    />
+                  {ev.extras.filter(ex => (bCart.extras[ex.id]||0) > 0).map(ex => (
+                    <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
+                      <span className="text-muted">{ex.name} ×{bCart.extras[ex.id]}</span>
+                      <span>£{(bCart.extras[ex.id] * ex.price).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  {vipDisc > 0 && (
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6, color:"var(--gold)" }}>
+                      <span>VIP 10% discount applied</span>
+                    </div>
                   )}
-                  {!cu && (
-                    <button className="btn btn-primary" style={{ width: "100%", padding: "11px", fontSize: 14 }} onClick={() => setAuthModal("login")}>
-                      Log In to Book
-                    </button>
-                  )}
-                  {cu && !waiverValid && (
-                    <button className="btn btn-primary" style={{ width: "100%", padding: "11px", fontSize: 14 }} onClick={() => setWaiverModal(true)}>
-                      Sign Waiver to Continue
-                    </button>
-                  )}
-                </>
+                  <div style={{ borderTop:"1px solid #2a2a2a", marginTop:10, paddingTop:10, display:"flex", justifyContent:"space-between", fontFamily:"'Russo One',sans-serif", fontSize:22, color:"#fff" }}>
+                    <span>TOTAL</span>
+                    <span style={{ color:"var(--accent)" }}>£{grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              {cartEmpty && cu && waiverValid && (
+                <div style={{ textAlign:"center", padding:"20px 0", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", fontSize:12 }}>
+                  Add tickets above to continue
+                </div>
+              )}
+
+              {paypalError && <div className="alert alert-red mt-1">⚠️ {paypalError}</div>}
+              {bookingBusy && <div className="alert alert-blue mt-1">⏳ Confirming your booking…</div>}
+
+              {!cu && (
+                <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14, letterSpacing:".1em" }} onClick={() => setAuthModal("login")}>
+                  LOG IN TO BOOK
+                </button>
+              )}
+              {cu && !waiverValid && (
+                <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14 }} onClick={() => setWaiverModal(true)}>
+                  SIGN WAIVER TO CONTINUE
+                </button>
+              )}
+              {!bookingBlocked && !bookingBusy && (
+                <PayPalCheckoutButton
+                  amount={grandTotal}
+                  description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
+                  onSuccess={confirmBookingAfterPayment}
+                  onError={(msg) => { if (msg) setPaypalError(msg); }}
+                  disabled={bookingBlocked}
+                />
               )}
             </div>
           </div>
         )}
 
         {tab === "map" && (
-          <div style={{ borderRadius: 4, overflow: "hidden", border: "1px solid var(--border)" }}>
+          <div style={{ borderRadius:4, overflow:"hidden", border:"1px solid var(--border)" }}>
             {ev.mapEmbed ? (
               <div
-                style={{ width: "100%", height: "clamp(340px, 60vh, 620px)", lineHeight: 0 }}
-                dangerouslySetInnerHTML={{ __html: ev.mapEmbed.replace(
-                  /height="[^"]*"/g, 'height="100%"'
-                ).replace(
-                  /width="[^"]*"/g, 'width="100%"'
-                ).replace(
-                  /<iframe /g, '<iframe style="width:100%;height:100%;border:0;display:block;" '
-                ) }}
+                style={{ width:"100%", height:"clamp(340px,60vh,620px)", lineHeight:0 }}
+                dangerouslySetInnerHTML={{ __html: ev.mapEmbed.replace(/height="[^"]*"/g,'height="100%"').replace(/width="[^"]*"/g,'width="100%"').replace(/<iframe /g,'<iframe style="width:100%;height:100%;border:0;display:block;" ') }}
               />
             ) : (
-              <div style={{ height: 260, background: "var(--bg4)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 13 }}>
+              <div style={{ height:260, background:"var(--bg4)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--muted)", fontSize:13 }}>
                 No map configured for this event
               </div>
             )}
-            <div style={{ background: "var(--bg2)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ background:"var(--bg2)", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>📍 {ev.location}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{ev.date} · {ev.time} GMT</div>
+                <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>📍 {ev.location}</div>
+                <div style={{ fontSize:12, color:"var(--muted)" }}>{ev.date} · {ev.time} GMT</div>
               </div>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: "none" }}
-              >
-                <button className="btn btn-primary" style={{ padding: "9px 20px", fontSize: 13 }}>
-                  🗺️ Get Directions
-                </button>
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+                <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
               </a>
             </div>
           </div>
@@ -1686,6 +1711,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     );
   }
 
+  // ── Event list ──
   return (
     <div className="page-content">
       <div className="page-header">
@@ -1693,34 +1719,36 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       </div>
       <div className="grid-3">
         {data.events.filter(e => e.published).map(ev => {
-          const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
-          const total = ev.walkOnSlots + ev.rentalSlots;
+          const booked = ev.bookings.reduce((s,b) => s + b.qty, 0);
+          const total  = ev.walkOnSlots + ev.rentalSlots;
           return (
-            <div key={ev.id} className="event-card" onClick={() => { setDetail(ev.id); setTab("info"); setExtras({}); setQty(1); }}>
-              <div className="event-banner-img">{ev.banner ? <img src={ev.banner} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : ev.title}</div>
+            <div key={ev.id} className="event-card" onClick={() => { setDetail(ev.id); setTab("info"); resetCart(); }}>
+              <div className="event-banner-img">{ev.banner ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : ev.title}</div>
               <div className="event-card-body">
                 <div className="gap-2 mb-1"><span className="tag tag-green">{ev.date}</span><span className="tag tag-blue">{ev.time} GMT</span></div>
-                <div style={{ fontWeight: 700, fontSize: 16, margin: "8px 0 4px" }}>{ev.title}</div>
-                <div className="text-muted" style={{ fontSize: 12, marginBottom: 8 }}>{ev.location}</div>
-                <p className="text-muted" style={{ fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{ev.description?.slice(0, 90)}…</p>
-                <div className="form-row" style={{ gap: 8 }}>
-                  <div style={{ background: "var(--bg4)", padding: "8px 0", borderRadius: 6, textAlign: "center" }}>
-                    <div style={{ fontWeight: 900, color: "var(--accent)" }}>£{ev.walkOnPrice}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted)" }}>Walk-On</div>
+                <div style={{ fontWeight:700, fontSize:16, margin:"8px 0 4px" }}>{ev.title}</div>
+                <div className="text-muted" style={{ fontSize:12, marginBottom:8 }}>{ev.location}</div>
+                <p className="text-muted" style={{ fontSize:12, marginBottom:12, lineHeight:1.5 }}>{ev.description?.slice(0,90)}…</p>
+                <div className="form-row" style={{ gap:8 }}>
+                  <div style={{ background:"var(--bg4)", padding:"8px 0", borderRadius:6, textAlign:"center" }}>
+                    <div style={{ fontWeight:900, color:"var(--accent)" }}>£{ev.walkOnPrice}</div>
+                    <div style={{ fontSize:10, color:"var(--muted)" }}>Walk-On</div>
                   </div>
-                  <div style={{ background: "var(--bg4)", padding: "8px 0", borderRadius: 6, textAlign: "center" }}>
-                    <div style={{ fontWeight: 900, color: "var(--gold)" }}>£{ev.rentalPrice}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted)" }}>Rental</div>
+                  <div style={{ background:"var(--bg4)", padding:"8px 0", borderRadius:6, textAlign:"center" }}>
+                    <div style={{ fontWeight:900, color:"var(--gold)" }}>£{ev.rentalPrice}</div>
+                    <div style={{ fontSize:10, color:"var(--muted)" }}>Rental</div>
                   </div>
                 </div>
-                <div className="progress-bar mt-2"><div className="progress-fill" style={{ width: Math.min(100, booked / total * 100) + "%" }} /></div>
-                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{booked}/{total} booked</div>
-                <button className="btn btn-primary mt-2" style={{ width: "100%" }}>View Details & Book →</button>
+                <div className="progress-bar mt-2"><div className="progress-fill" style={{ width:Math.min(100, booked/total*100)+"%" }} /></div>
+                <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>{booked}/{total} booked</div>
+                <button className="btn btn-primary mt-2" style={{ width:"100%" }}>View Details & Book →</button>
               </div>
             </div>
           );
         })}
-        {data.events.filter(e => e.published).length === 0 && <div className="card" style={{ gridColumn: "1/-1", textAlign: "center", color: "var(--muted)", padding: 40 }}>No events published yet.</div>}
+        {data.events.filter(e => e.published).length === 0 && (
+          <div className="card" style={{ gridColumn:"1/-1", textAlign:"center", color:"var(--muted)", padding:40 }}>No events published yet.</div>
+        )}
       </div>
     </div>
   );
