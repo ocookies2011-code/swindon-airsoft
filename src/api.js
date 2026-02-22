@@ -104,9 +104,10 @@ export const events = {
 
   async update(id, patch) {
     const { extras, bookings, ...evData } = patch
-    const { error } = await supabase
-      .from('events').update(toSnakeEvent(evData)).eq('id', id)
+    const { data: updated, error } = await supabase
+      .from('events').update(toSnakeEvent(evData)).eq('id', id).select()
     if (error) throw error
+    if (!updated || updated.length === 0) throw new Error('Save blocked — RLS denied write. Ensure you are logged in as admin.')
     if (extras !== undefined) {
       // Replace all extras
       await supabase.from('event_extras').delete().eq('event_id', id)

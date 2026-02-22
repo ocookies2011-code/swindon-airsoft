@@ -2791,8 +2791,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   };
 
   // ── Events logic ──
+  const [savingEvent, setSavingEvent] = useState(false);
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
+    setSavingEvent(true);
     try {
       if (modal === "new") {
         await api.events.create(form);
@@ -2803,7 +2805,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       save({ events: evList });
       showToast("Event saved!"); setModal(null);
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + (e.message || String(e)), "red");
+    } finally {
+      setSavingEvent(false);
     }
   };
 
@@ -3023,7 +3027,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
               <label htmlFor="epub" style={{ cursor: "pointer", fontSize: 13 }}>Published (visible to players)</label>
             </div>
             <div className="gap-2">
-              <button className="btn btn-primary" onClick={saveEvent}>Save Event</button>
+              <button className="btn btn-primary" onClick={saveEvent} disabled={savingEvent}>{savingEvent ? "Saving…" : "Save Event"}</button>
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Cancel</button>
             </div>
           </div>
