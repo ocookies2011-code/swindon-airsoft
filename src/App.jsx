@@ -2652,7 +2652,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
       </div>
       <div className="table-wrap"><table className="data-table">
         <thead>
-          <tr><th>Player</th><th>Event</th><th>Date</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th><th>Actions</th></tr>
+          <tr><th>Player</th><th>Event</th><th>Date</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Status</th><th>Actions</th></tr>
         </thead>
         <tbody>
           {filtered.length === 0 && (
@@ -2665,6 +2665,19 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
               <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
               <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
               <td>{b.qty}</td>
+              <td style={{ fontSize: 11 }}>
+                {b.extras && typeof b.extras === "object" && Object.values(b.extras).some(v => v > 0)
+                  ? Object.entries(b.extras).filter(([,v]) => v > 0).map(([id, qty]) => {
+                      const ex = b.eventObj?.extras?.find(e => e.id === id);
+                      return ex ? (
+                        <div key={id} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
+                          {ex.name} ×{qty}
+                        </div>
+                      ) : null;
+                    })
+                  : <span style={{ color: "var(--muted)" }}>—</span>
+                }
+              </td>
               <td className="text-green">£{b.total.toFixed(2)}</td>
               <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
               <td>
@@ -2954,28 +2967,43 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
               </div>
               <div className="table-wrap"><table className="data-table">
                 <thead>
-                  <tr><th>Player</th><th>Type</th><th>Qty</th><th>Total</th><th>Booked</th><th>Status</th><th>Action</th></tr>
+                  <tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Booked</th><th>Status</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                   {ev.bookings.length === 0 && (
                     <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No bookings for this event</td></tr>
                   )}
-                  {ev.bookings.map(b => (
-                    <tr key={b.id} style={{ background: b.checkedIn ? "#1a0e08" : "transparent" }}>
-                      <td style={{ fontWeight: 600 }}>{b.userName}</td>
-                      <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
-                      <td>{b.qty}</td>
-                      <td className="text-green">£{b.total.toFixed(2)}</td>
-                      <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
-                      <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
-                      <td>
-                        {!b.checkedIn
-                          ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ Check In</button>
-                          : <span className="text-muted" style={{ fontSize: 11 }}>✓ Done</span>
-                        }
-                      </td>
-                    </tr>
-                  ))}
+                  {ev.bookings.map(b => {
+                    const bookedExtras = b.extras && typeof b.extras === "object"
+                      ? ev.extras.filter(ex => (b.extras[ex.id] || 0) > 0)
+                      : [];
+                    return (
+                      <tr key={b.id} style={{ background: b.checkedIn ? "#1a0e08" : "transparent" }}>
+                        <td style={{ fontWeight: 600 }}>{b.userName}</td>
+                        <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+                        <td>{b.qty}</td>
+                        <td style={{ fontSize: 11 }}>
+                          {bookedExtras.length === 0
+                            ? <span style={{ color: "var(--muted)" }}>—</span>
+                            : bookedExtras.map(ex => (
+                                <div key={ex.id} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
+                                  {ex.name} ×{b.extras[ex.id]}
+                                </div>
+                              ))
+                          }
+                        </td>
+                        <td className="text-green">£{b.total.toFixed(2)}</td>
+                        <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
+                        <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                        <td>
+                          {!b.checkedIn
+                            ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ Check In</button>
+                            : <span className="text-muted" style={{ fontSize: 11 }}>✓ Done</span>
+                          }
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table></div>
             </div>
