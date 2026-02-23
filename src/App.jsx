@@ -4182,6 +4182,8 @@ function AdminRevenue({ data }) {
     source: "booking",
     eventTitle: ev.title,
     eventDate: ev.date,
+    eventObj: ev,
+    type: b.type,
     ticketType: b.type === "walkOn" ? "Walk-on" : "Rental",
     qty: b.qty,
     extras: b.extras || {},
@@ -4221,13 +4223,21 @@ function AdminRevenue({ data }) {
     if (t.source === "cash") {
       return t.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, line: i.price * i.qty }));
     } else {
-      const lines = [{ name: `${t.ticketType} ticket`, qty: t.qty, price: t.total, line: null }];
-      if (t.extras && t.eventExtras) {
-        t.eventExtras.forEach(ex => {
-          const qty = t.extras[ex.id];
-          if (qty) lines.push({ name: ex.name, qty, price: ex.price, line: ex.price * qty });
-        });
-      }
+      // Ticket line — work out ticket unit price from event
+      const ev = t.eventObj || data.events.find(e => e.title === t.eventTitle);
+      const unitPrice = t.type === "walkOn" ? (ev?.walkOnPrice || 0) : (ev?.rentalPrice || 0);
+      const ticketLine = unitPrice * t.qty;
+      const lines = [{ name: `${t.ticketType} ticket`, qty: t.qty, price: unitPrice, line: ticketLine }];
+      // Extras — keys are "extraId" or "extraId:variantId"
+      Object.entries(t.extras || {}).filter(([,v]) => v > 0).forEach(([key, qty]) => {
+        const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+        const ex = t.eventExtras?.find(e => e.id === extraId);
+        const lp = (data.shop || []).find(p => p.id === ex?.productId);
+        const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+        const label = ex ? (v ? `${ex.name} — ${v.name}` : ex.name) : key;
+        const unitP = v ? Number(v.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+        lines.push({ name: label, qty, price: unitP, line: unitP * qty });
+      });
       return lines;
     }
   };
@@ -4292,7 +4302,15 @@ function AdminRevenue({ data }) {
               <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => setSelected(t)}>
                 <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
                 <td style={{ fontWeight: 600 }}>{t.userName}</td>
-                <td>{t.source === "cash" ? `Cash Sale (${t.items?.length || 0} items)` : `${t.eventTitle} — ${t.ticketType} ×${t.qty}`}</td>
+                <td>
+                  {t.source === "cash"
+                    ? `Cash Sale (${t.items?.length || 0} items)`
+                    : (() => {
+                        const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
+                        return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
+                      })()
+                  }
+                </td>
                 <td><span className={`tag ${t.source === "cash" ? "tag-gold" : "tag-blue"}`}>{t.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
                 <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
                 <td><button className="btn btn-sm btn-ghost">Detail →</button></td>
@@ -4361,7 +4379,15 @@ function AdminRevenue({ data }) {
                   <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => { setMonthDetail(null); setSelected(t); }}>
                     <td style={{ fontSize: 12, color: "var(--muted)" }}>{gmtFull(t.date)}</td>
                     <td>{t.userName}</td>
-                    <td>{t.source === "cash" ? `Cash Sale (${t.items?.length || 0} items)` : `${t.eventTitle} — ${t.ticketType} ×${t.qty}`}</td>
+                    <td>
+                  {t.source === "cash"
+                    ? `Cash Sale (${t.items?.length || 0} items)`
+                    : (() => {
+                        const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
+                        return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
+                      })()
+                  }
+                </td>
                     <td><span className={`tag ${t.source === "cash" ? "tag-gold" : "tag-blue"}`}>{t.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
                     <td className="text-green">£{t.total.toFixed(2)}</td>
                   </tr>
