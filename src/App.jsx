@@ -877,7 +877,7 @@ function QRScanner({ onScan, onClose }) {
 
 // ── Supabase Auth Modal ───────────────────────────────────────
 // Replaces the old homebrew AuthModal
-function SupabaseAuthModal({ mode, setMode, onClose, showToast }) {
+function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [busy, setBusy] = useState(false);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -888,10 +888,12 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
       if (error) throw error;
-      // Manually persist session for noopLock environments
-      if (data.session) {
-        const key = `sb-${supabase.supabaseUrl?.split('//')[1]?.split('.')[0]}-auth-token`;
-        try { localStorage.setItem(key, JSON.stringify(data.session)); } catch {}
+      // Immediately load profile and update cu — don't wait for onAuthStateChange
+      if (data.user) {
+        try {
+          const profile = await api.profiles.getById(data.user.id);
+          if (profile && onLogin) onLogin(normaliseProfile(profile));
+        } catch {}
       }
       showToast("Welcome back!");
       onClose();
@@ -4868,6 +4870,7 @@ export default function App() {
         <SupabaseAuthModal
           mode={authModal} setMode={setAuthModal}
           onClose={() => setAuthModal(null)} showToast={showToast}
+          onLogin={profile => { setCu(profile); refresh(); }}
         />
       )}
     </>
