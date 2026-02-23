@@ -7,27 +7,65 @@ import { normaliseProfile } from "./api";
 // ── Mock Payment Button ───────────────────────────────────────────────
 // Replace PayPalCheckoutButton with real payment provider when ready.
 // Set VITE_PAYMENT_MODE=live in .env to hide the mock button.
-const PAYMENT_MODE = import.meta.env.VITE_PAYMENT_MODE || "mock";
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
+const PAYMENT_LIVE = PAYPAL_CLIENT_ID && !PAYPAL_CLIENT_ID.includes("YOUR_LIVE");
 
 function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
+  const [ppReady, setPpReady] = React.useState(!!window.paypal);
+  const [ppError, setPpError] = React.useState(null);
+  const containerRef = React.useRef(null);
+  const rendered = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!PAYMENT_LIVE) return;
+    if (window.paypal) { setPpReady(true); return; }
+    const script = document.createElement("script");
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=GBP`;
+    script.onload = () => setPpReady(true);
+    script.onerror = () => setPpError("PayPal failed to load.");
+    document.head.appendChild(script);
+  }, []);
+
+  React.useEffect(() => {
+    if (!PAYMENT_LIVE || !ppReady || !containerRef.current || rendered.current || disabled) return;
+    rendered.current = true;
+    window.paypal.Buttons({
+      style: { layout: "vertical", color: "black", shape: "rect", label: "pay" },
+      createOrder: (data, actions) => actions.order.create({
+        purchase_units: [{ amount: { value: Number(amount).toFixed(2), currency_code: "GBP" }, description }]
+      }),
+      onApprove: async (data, actions) => {
+        const order = await actions.order.capture();
+        onSuccess({ id: order.id, status: order.status });
+      },
+      onError: (err) => setPpError("Payment failed. Please try again."),
+    }).render(containerRef.current);
+  }, [ppReady, disabled, amount]);
+
+  if (!PAYMENT_LIVE) {
+    return (
+      <div style={{ marginTop: 12 }}>
+        <div style={{ background: "#0d1a0d", border: "1px solid #1e3a1e", padding: "8px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
+          <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken.</span>
+        </div>
+        <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
+          <span>{description}</span>
+          <span style={{ color: "var(--accent)", fontFamily: "'Russo One',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
+        </div>
+        <button className="btn btn-primary" style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: disabled ? .5 : 1 }}
+          disabled={disabled} onClick={() => onSuccess({ id: "MOCK-" + Date.now(), status: "COMPLETED", mock: true })}>
+          ✓ CONFIRM TEST PAYMENT · £{Number(amount).toFixed(2)}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginTop: 12 }}>
-      <div style={{ background: "#0d1a0d", border: "1px solid #1e3a1e", padding: "8px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
-        <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken.</span>
-      </div>
-      <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
-        <span>{description}</span>
-        <span style={{ color: "var(--accent)", fontFamily: "'Russo One',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
-      </div>
-      <button
-        className="btn btn-primary"
-        style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: disabled ? .5 : 1 }}
-        disabled={disabled}
-        onClick={() => onSuccess({ id: "MOCK-" + Date.now(), status: "COMPLETED", mock: true })}
-      >
-        ✓ CONFIRM TEST PAYMENT · £{Number(amount).toFixed(2)}
-      </button>
+      {ppError && <div className="alert alert-red" style={{ marginBottom: 8 }}>{ppError}</div>}
+      {!ppReady && <div style={{ color: "var(--muted)", fontSize: 12, padding: 8 }}>Loading PayPal...</div>}
+      <div ref={containerRef} style={{ opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? "none" : "auto" }} />
     </div>
   );
 }
@@ -3921,14 +3959,10 @@ function AdminShop({ data, save, showToast }) {
     setSavingProduct(true);
     const safety = setTimeout(() => setSavingProduct(false), 20000);
     try {
-      console.log("saveItem: step 1 — saving product");
       if (modal === "new") await api.shop.create(form);
       else await api.shop.update(form.id, form);
-      console.log("saveItem: step 2 — reloading shop");
       const freshShop = await api.shop.getAll();
-      console.log("saveItem: step 3 — updating state");
       save({ shop: freshShop });
-      console.log("saveItem: done");
       showToast("Product saved!");
       setModal(null);
     } catch (e) {
