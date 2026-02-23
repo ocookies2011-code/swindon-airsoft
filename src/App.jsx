@@ -2699,6 +2699,7 @@ function AdminDash({ data, setSection }) {
 function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
   const [editBooking, setEditBooking] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null);
+  const [viewBooking, setViewBooking] = useState(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -2760,17 +2761,22 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
               <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
               <td>{b.qty}</td>
               <td style={{ fontSize: 11 }}>
-                {b.extras && typeof b.extras === "object" && Object.values(b.extras).some(v => v > 0)
-                  ? Object.entries(b.extras).filter(([,v]) => v > 0).map(([id, qty]) => {
-                      const ex = b.eventObj?.extras?.find(e => e.id === id);
-                      return ex ? (
-                        <div key={id} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
-                          {ex.name} ×{qty}
-                        </div>
-                      ) : null;
-                    })
-                  : <span style={{ color: "var(--muted)" }}>—</span>
-                }
+                {(() => {
+                  const entries = Object.entries(b.extras || {}).filter(([,v]) => v > 0);
+                  if (!entries.length) return <span style={{ color: "var(--muted)" }}>—</span>;
+                  return entries.map(([key, qty]) => {
+                    const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+                    const ex = b.eventObj?.extras?.find(e => e.id === extraId);
+                    const lp = (data?.shop || []).find(p => p.id === ex?.productId);
+                    const v = variantId ? lp?.variants?.find(v => v.id === variantId) : null;
+                    const label = ex ? (v ? `${ex.name} — ${v.name}` : ex.name) : key;
+                    return (
+                      <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
+                        {label} ×{qty}
+                      </div>
+                    );
+                  });
+                })()}
               </td>
               <td className="text-green">£{b.total.toFixed(2)}</td>
               <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
@@ -2779,6 +2785,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                   {!b.checkedIn && (
                     <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, b.eventObj)}>✓ In</button>
                   )}
+                  <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking(b)}>View</button>
                   <button className="btn btn-sm btn-ghost" onClick={() => openEdit(b)}>Edit</button>
                   <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(b)}>Del</button>
                 </div>
@@ -2831,6 +2838,65 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
       )}
 
       {/* Delete confirm modal */}
+      {viewBooking && (() => {
+        const b = viewBooking;
+        const extras = Object.entries(b.extras || {}).filter(([,v]) => v > 0);
+        const ticketLabel = b.type === "walkOn" ? "Walk-On" : "Rental Package";
+        const ticketPrice = b.type === "walkOn" ? b.eventObj?.walkOnPrice : b.eventObj?.rentalPrice;
+        return (
+          <div className="overlay" onClick={() => setViewBooking(null)}>
+            <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+              <div className="modal-title">🎟 Booking Details</div>
+
+              {/* Header info */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{b.userName}</div></div>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{b.eventTitle}</div></div>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(b.date)}</div></div>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{b.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
+              </div>
+
+              {/* Order breakdown */}
+              <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
+                <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>
+                <div style={{ padding:"0 14px" }}>
+                  {/* Ticket */}
+                  <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
+                    <span>{b.type === "walkOn" ? "🎯" : "🪖"} {ticketLabel} ×{b.qty}</span>
+                    <span style={{ color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{(Number(ticketPrice) * b.qty).toFixed(2)}</span>
+                  </div>
+                  {/* Extras */}
+                  {extras.length > 0 && extras.map(([key, qty]) => {
+                    const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+                    const ex = b.eventObj?.extras?.find(e => e.id === extraId);
+                    const lp = (data?.shop || []).find(p => p.id === ex?.productId);
+                    const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+                    const label = ex ? (v ? `${ex.name} — ${v.name}` : ex.name) : key;
+                    const unitPrice = v ? Number(v.price) : (lp ? Number(lp.price) : 0);
+                    return (
+                      <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
+                        <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
+                        <span style={{ color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+                  {/* Total */}
+                  <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Russo One',sans-serif" }}>
+                    <span>TOTAL</span>
+                    <span style={{ color:"var(--accent)" }}>£{b.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="gap-2">
+                <button className="btn btn-ghost" onClick={() => setViewBooking(null)}>Close</button>
+                <button className="btn btn-ghost" onClick={() => { setViewBooking(null); openEdit(b); }}>Edit Booking</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {delConfirm && (
         <div className="overlay" onClick={() => setDelConfirm(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
