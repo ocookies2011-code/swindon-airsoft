@@ -11,12 +11,12 @@ const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
 const PAYMENT_LIVE = PAYPAL_CLIENT_ID && !PAYPAL_CLIENT_ID.includes("YOUR_LIVE");
 
 function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
-  const [ppReady, setPpReady] = React.useState(!!window.paypal);
-  const [ppError, setPpError] = React.useState(null);
-  const containerRef = React.useRef(null);
-  const rendered = React.useRef(false);
+  const [ppReady, setPpReady] = useState(!!window.paypal);
+  const [ppError, setPpError] = useState(null);
+  const containerRef = useRef(null);
+  const rendered = useRef(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!PAYMENT_LIVE) return;
     if (window.paypal) { setPpReady(true); return; }
     const script = document.createElement("script");
@@ -26,7 +26,7 @@ function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
     document.head.appendChild(script);
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!PAYMENT_LIVE || !ppReady || !containerRef.current || rendered.current || disabled) return;
     rendered.current = true;
     window.paypal.Buttons({
@@ -1468,51 +1468,58 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const confirmBookingAfterPayment = async (paypalOrder) => {
       setBookingBusy(true);
       setPaypalError(null);
+      const safety = setTimeout(() => setBookingBusy(false), 30000);
       try {
-        // Create one booking record per ticket type in cart
-        const promises = [];
+        const extrasSnapshot = Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0));
+        // Create booking records in parallel
+        const bookingPromises = [];
         if (bCart.walkOn > 0) {
-          promises.push(api.bookings.create({
+          bookingPromises.push(api.bookings.create({
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "walkOn", qty: bCart.walkOn,
-            extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)),
-            total: walkOnTotal + (promises.length === 0 ? extrasTotal : 0),
+            extras: extrasSnapshot,
+            total: walkOnTotal + extrasTotal,
             paypalOrderId: paypalOrder.id,
           }));
         }
         if (bCart.rental > 0) {
-          promises.push(api.bookings.create({
+          bookingPromises.push(api.bookings.create({
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "rental", qty: bCart.rental,
-            extras: promises.length === 0 ? Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) : {},
-            total: rentalTotal + (promises.length === 0 ? extrasTotal : 0),
+            extras: bCart.walkOn > 0 ? {} : extrasSnapshot,
+            total: rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal),
             paypalOrderId: paypalOrder.id,
           }));
         }
-        await Promise.all(promises);
-        // Deduct stock for any extra products ordered
-        if (Object.keys(bCart.extras).length > 0) {
-          for (const [key, qty] of Object.entries(bCart.extras)) {
-            if (!qty || qty < 1) continue;
-            const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-            const extra = visibleExtras.find(e => e.id === extraId);
-            if (!extra?.productId) continue;
-            if (variantId) {
-              await supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: variantId, qty });
-            } else {
-              await supabase.rpc("deduct_stock", { product_id: extra.productId, qty });
-            }
-          }
-          const freshShop = await api.shop.getAll();
-          save({ shop: freshShop });
-        }
-        const evList = await api.events.getAll();
-        save({ events: evList });
+        await Promise.all(bookingPromises);
+
+        // Show success immediately — stock deduction and refresh happen in background
         resetCart();
         showToast("🎉 Booked! Payment confirmed.");
+
+        // Background: deduct stock (non-blocking)
+        const deductPromises = Object.entries(extrasSnapshot)
+          .filter(([,qty]) => qty > 0)
+          .map(([key, qty]) => {
+            const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+            const extra = visibleExtras.find(e => e.id === extraId);
+            if (!extra?.productId) return Promise.resolve();
+            return variantId
+              ? supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: variantId, qty }).catch(() => {})
+              : supabase.rpc("deduct_stock", { product_id: extra.productId, qty }).catch(() => {});
+          });
+
+        // Refresh data in background
+        Promise.all([
+          ...deductPromises,
+          api.events.getAll().then(evList => save({ events: evList })).catch(() => {}),
+          api.shop.getAll().then(freshShop => save({ shop: freshShop })).catch(() => {}),
+        ]);
+
       } catch (e) {
-        showToast("Payment taken but booking failed — contact us: " + e.message, "red");
+        setPaypalError("Payment taken but booking failed — please contact us. Error: " + (e.message || String(e)));
       } finally {
+        clearTimeout(safety);
         setBookingBusy(false);
       }
     };
@@ -1882,6 +1889,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const placeOrderAfterPayment = async (paypalOrder) => {
     if (!cu || cart.length === 0) return;
     setPlacing(true); setShopPaypalError(null);
+    const safety = setTimeout(() => setPlacing(false), 30000);
     try {
       await api.shopOrders.create({
         customerName: cu.name, customerEmail: cu.email || "",
@@ -1891,26 +1899,26 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         total: grandTotal, paypalOrderId: paypalOrder.id,
       });
-      // Deduct stock — throw if RPC returns an error
-      for (const ci of cart) {
-        let rpcErr;
-        if (ci.variantId) {
-          const { error } = await supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty });
-          rpcErr = error;
-        } else {
-          const { error } = await supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty });
-          rpcErr = error;
-        }
-        if (rpcErr) console.warn("Stock deduct warning:", rpcErr.message); // non-fatal
-      }
-      // Refresh shop stock display
-      const freshShop = await api.shop.getAll();
-      save({ shop: freshShop });
+
+      // Success — clear cart immediately
       showToast("✅ Order confirmed! Thank you.");
       setCart([]); setCartOpen(false);
+
+      // Background: deduct stock + refresh (non-blocking)
+      const cartSnapshot = [...cart];
+      Promise.all([
+        ...cartSnapshot.map(ci => (
+          ci.variantId
+            ? supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty }).catch(() => {})
+            : supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty }).catch(() => {})
+        )),
+        api.shop.getAll().then(freshShop => save({ shop: freshShop })).catch(() => {}),
+      ]);
+
     } catch (e) {
-      showToast("Order failed — contact us: " + (e.message || String(e)), "red");
+      setShopPaypalError("Order failed — please contact us. Error: " + (e.message || String(e)));
     } finally {
+      clearTimeout(safety);
       setPlacing(false);
     }
   };
