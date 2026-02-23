@@ -3064,6 +3064,51 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
     }
   };
 
+  // ── Add Booking (admin) ──
+  const [addBookingModal, setAddBookingModal] = useState(false);
+  const [addBookingForm, setAddBookingForm] = useState({ userId: "", type: "walkOn", qty: 1, extras: {} });
+  const [addBookingBusy, setAddBookingBusy] = useState(false);
+  const abf = (k, v) => setAddBookingForm(p => ({ ...p, [k]: v }));
+
+  const submitAddBooking = async () => {
+    const targetEv = data.events.find(e => e.id === evId);
+    const player = data.users.find(u => u.id === addBookingForm.userId);
+    if (!player) { showToast("Select a player", "red"); return; }
+    if (!targetEv) { showToast("Select an event", "red"); return; }
+    setAddBookingBusy(true);
+    try {
+      const ticketPrice = addBookingForm.type === "walkOn" ? targetEv.walkOnPrice : targetEv.rentalPrice;
+      const extrasTotal = Object.entries(addBookingForm.extras).filter(([,v]) => v > 0).reduce((s, [key, qty]) => {
+        const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+        const ex = targetEv.extras.find(e => e.id === extraId);
+        const lp = (data.shop || []).find(p => p.id === ex?.productId);
+        const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+        const price = v ? Number(v.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+        return s + price * qty;
+      }, 0);
+      const total = ticketPrice * addBookingForm.qty + extrasTotal;
+      await api.bookings.create({
+        eventId: targetEv.id,
+        userId: player.id,
+        userName: player.name,
+        type: addBookingForm.type,
+        qty: addBookingForm.qty,
+        extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)),
+        total,
+        paypalOrderId: "ADMIN-" + Date.now(),
+      });
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast(`Booking added for ${player.name}!`);
+      setAddBookingModal(false);
+      setAddBookingForm({ userId: "", type: "walkOn", qty: 1, extras: {} });
+    } catch (e) {
+      showToast("Failed: " + (e.message || String(e)), "red");
+    } finally {
+      setAddBookingBusy(false);
+    }
+  };
+
   const clone = async (ev) => {
     try {
       const { id: _id, bookings: _b, ...evData } = ev;
@@ -3193,6 +3238,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                   <div className="progress-bar" style={{ width: 100 }}>
                     <div className="progress-fill" style={{ width: ev.bookings.length ? (checkedInCount / ev.bookings.length * 100) + "%" : "0%" }} />
                   </div>
+                  <button className="btn btn-primary btn-sm" onClick={() => { setAddBookingForm({ userId: "", type: "walkOn", qty: 1, extras: {} }); setAddBookingModal(true); }}>+ Add Booking</button>
                 </div>
               </div>
               <div className="table-wrap"><table className="data-table">
@@ -3372,6 +3418,137 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       )}
 
       {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
+
+      {/* ── Add Booking Modal ── */}
+      {addBookingModal && (() => {
+        const targetEv = data.events.find(e => e.id === evId);
+        const players = [...(data.users || [])].filter(u => u.role !== "admin").sort((a,b) => a.name.localeCompare(b.name));
+        const selectedPlayer = players.find(p => p.id === addBookingForm.userId);
+        const ticketPrice = addBookingForm.type === "walkOn" ? (targetEv?.walkOnPrice || 0) : (targetEv?.rentalPrice || 0);
+        // Calculate extras total for price preview
+        const extrasPreviewTotal = Object.entries(addBookingForm.extras).filter(([,v]) => v > 0).reduce((s, [key, qty]) => {
+          const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+          const ex = targetEv?.extras?.find(e => e.id === extraId);
+          const lp = (data.shop || []).find(p => p.id === ex?.productId);
+          const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+          const price = v ? Number(v.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+          return s + price * qty;
+        }, 0);
+        const previewTotal = ticketPrice * addBookingForm.qty + extrasPreviewTotal;
+
+        return (
+          <div className="overlay" onClick={() => !addBookingBusy && setAddBookingModal(false)}>
+            <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+              <div className="modal-title">➕ Add Booking — {targetEv?.title}</div>
+
+              {/* Player picker */}
+              <div className="form-group">
+                <label>Player</label>
+                <select value={addBookingForm.userId} onChange={e => abf("userId", e.target.value)}
+                  style={{ fontSize: 13 }}>
+                  <option value="">— Select a registered player —</option>
+                  {players.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.vipStatus === "active" ? " ⭐ VIP" : ""} — {p.email || "no email"}
+                    </option>
+                  ))}
+                </select>
+                {selectedPlayer && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>
+                    Waiver: {selectedPlayer.waiverSigned && selectedPlayer.waiverYear === new Date().getFullYear()
+                      ? <span style={{ color: "var(--accent)" }}>✓ Signed {selectedPlayer.waiverYear}</span>
+                      : <span style={{ color: "var(--red)" }}>✗ Not signed</span>}
+                    {" · "} UKARA: {selectedPlayer.ukara || "—"}
+                  </div>
+                )}
+              </div>
+
+              {/* Ticket type + qty */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Ticket Type</label>
+                  <select value={addBookingForm.type} onChange={e => abf("type", e.target.value)}>
+                    <option value="walkOn">🎯 Walk-On — £{targetEv?.walkOnPrice}</option>
+                    <option value="rental">🪖 Rental Package — £{targetEv?.rentalPrice}</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Quantity</label>
+                  <input type="number" min={1} max={10} value={addBookingForm.qty}
+                    onChange={e => abf("qty", Math.max(1, +e.target.value))} />
+                </div>
+              </div>
+
+              {/* Game day extras */}
+              {targetEv?.extras?.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", letterSpacing: ".1em" }}>GAME DAY EXTRAS</label>
+                  <div style={{ border: "1px solid #2a2a2a", marginTop: 6 }}>
+                    {targetEv.extras.map(ex => {
+                      const lp = (data.shop || []).find(p => p.id === ex.productId);
+                      const hasVariants = lp?.variants?.length > 0;
+                      return (
+                        <div key={ex.id} style={{ padding: "10px 14px", borderBottom: "1px solid #1a1a1a" }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: hasVariants ? 8 : 0 }}>
+                            {ex.name}
+                            {lp && <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 8 }}>£{lp.price}</span>}
+                          </div>
+                          {hasVariants ? lp.variants.map(v => {
+                            const key = ex.id + ":" + v.id;
+                            const qty = addBookingForm.extras[key] || 0;
+                            return (
+                              <div key={v.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0" }}>
+                                <span style={{ fontSize: 12, color: "var(--muted)" }}>{v.name} — £{Number(v.price).toFixed(2)}</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <button onClick={() => abf("extras", { ...addBookingForm.extras, [key]: Math.max(0, qty - 1) })}
+                                    style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>−</button>
+                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Russo One',sans-serif" }}>{qty}</span>
+                                  <button onClick={() => abf("extras", { ...addBookingForm.extras, [key]: qty + 1 })}
+                                    style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>+</button>
+                                </div>
+                              </div>
+                            );
+                          }) : (() => {
+                            const qty = addBookingForm.extras[ex.id] || 0;
+                            return (
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span style={{ fontSize: 12, color: "var(--accent)" }}>£{lp ? lp.price : ex.price}</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <button onClick={() => abf("extras", { ...addBookingForm.extras, [ex.id]: Math.max(0, qty - 1) })}
+                                    style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>−</button>
+                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Russo One',sans-serif" }}>{qty}</span>
+                                  <button onClick={() => abf("extras", { ...addBookingForm.extras, [ex.id]: qty + 1 })}
+                                    style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>+</button>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Price preview */}
+              <div style={{ background: "#0d0d0d", border: "1px solid #2a2a2a", padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13, color: "var(--muted)" }}>
+                  {addBookingForm.type === "walkOn" ? "Walk-On" : "Rental"} ×{addBookingForm.qty}
+                  {extrasPreviewTotal > 0 && ` + extras`}
+                </span>
+                <span style={{ fontFamily: "'Russo One',sans-serif", fontSize: 20, color: "var(--accent)" }}>£{previewTotal.toFixed(2)}</span>
+              </div>
+
+              <div className="gap-2">
+                <button className="btn btn-primary" onClick={submitAddBooking} disabled={addBookingBusy || !addBookingForm.userId}>
+                  {addBookingBusy ? "Adding…" : "✓ Add Booking"}
+                </button>
+                <button className="btn btn-ghost" onClick={() => setAddBookingModal(false)} disabled={addBookingBusy}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {delEventConfirm && (
         <div className="overlay" onClick={() => !deletingEvent && setDelEventConfirm(null)}>
