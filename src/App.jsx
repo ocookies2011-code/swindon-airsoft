@@ -1048,6 +1048,38 @@ function HomePage({ data, setPage }) {
         </div>
       </div>
 
+      {/* MISSION COUNTDOWN */}
+      {nextEvent && (() => {
+        const target = nextEvent.date + "T" + nextEvent.time + ":00";
+        return (
+          <div style={{ marginBottom:0 }}>
+            <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12 }}>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:".4em", color:"#000", fontWeight:800 }}>MISSION BRIEFING</span>
+              <span style={{ marginLeft:"auto", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"rgba(0,0,0,.6)", letterSpacing:".1em" }}>
+                OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
+              </span>
+            </div>
+            <div className="countdown-panel" style={{ borderRadius:0, border:"none", borderBottom:"1px solid #1a1a1a" }}>
+              <div className="countdown-panel-info">
+                <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
+                <div className="countdown-panel-title">{nextEvent.title}</div>
+                <div className="countdown-panel-meta">
+                  📍 {nextEvent.location}<br />
+                  🗓 {nextEvent.date} · {nextEvent.time} HRS GMT
+                </div>
+                <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => setPage("events")}>DEPLOY →</button>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end" }}>
+                <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
+                <div className="countdown-panel-timer">
+                  <CountdownPanel target={target} />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* STAT BAR */}
       <div className="hero-stats">
         <div className="hero-stats-inner">
@@ -1083,38 +1115,6 @@ function HomePage({ data, setPage }) {
       </div>
 
       <div className="page-content">
-
-        {/* MISSION COUNTDOWN */}
-        {nextEvent && (() => {
-          const target = nextEvent.date + "T" + nextEvent.time + ":00";
-          return (
-            <div style={{ marginBottom:28 }}>
-              <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12, marginBottom:2 }}>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:".4em", color:"#fff" }}>MISSION BRIEFING</span>
-                <span style={{ marginLeft:"auto", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"rgba(255,255,255,.7)", letterSpacing:".1em" }}>
-                  OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
-                </span>
-              </div>
-              <div className="countdown-panel">
-                <div className="countdown-panel-info">
-                  <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
-                  <div className="countdown-panel-title">{nextEvent.title}</div>
-                  <div className="countdown-panel-meta">
-                    📍 {nextEvent.location}<br />
-                    🗓 {nextEvent.date} · {nextEvent.time} HRS GMT
-                  </div>
-                  <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => setPage("events")}>DEPLOY →</button>
-                </div>
-                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end" }}>
-                  <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
-                  <div className="countdown-panel-timer">
-                    <CountdownPanel target={target} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
 
         {/* UPCOMING EVENTS */}
         {data.events.filter(e => e.published).length > 0 && (
