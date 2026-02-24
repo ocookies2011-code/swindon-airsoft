@@ -506,13 +506,13 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .hero-bg{position:relative;min-height:100vh;overflow:hidden;display:flex;align-items:center;background:#000;}
 .hero-bg::before{content:'';position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;}
 .hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.92) 0%,rgba(0,0,0,.7) 55%,rgba(0,0,0,.2) 100%);}
-.hero-content{position:relative;z-index:1;padding:clamp(40px,6vw,80px) clamp(24px,4vw,80px);max-width:700px;}
-.hero-eyebrow{font-size:11px;letter-spacing:.3em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.hero-content{position:relative;z-index:1;padding:clamp(40px,6vw,80px) clamp(24px,4vw,80px);max-width:700px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;}
+.hero-eyebrow{font-size:11px;letter-spacing:.3em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px;justify-content:center;}
 .hero-eyebrow::before{content:'';width:24px;height:2px;background:var(--accent);}
 .hero-h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(56px,9vw,110px);line-height:.9;color:#fff;letter-spacing:.02em;margin-bottom:24px;text-transform:uppercase;font-weight:900;}
 .hero-h1 span{color:var(--accent);}
-.hero-p{color:#888;font-size:15px;line-height:1.7;max-width:460px;margin-bottom:36px;}
-.hero-cta{display:flex;gap:12px;flex-wrap:wrap;}
+.hero-p{color:#888;font-size:15px;line-height:1.7;max-width:460px;margin-bottom:36px;margin-left:auto;margin-right:auto;}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
 .hero-stats{display:flex;gap:0;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f;background:rgba(0,0,0,.8);}
 .hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;}
 .hero-stat{flex:1;padding:20px;text-align:center;border-right:1px solid #1f1f1f;}
@@ -1219,20 +1219,28 @@ function HomePage({ data, setPage }) {
           </div>
         </div>
       </div>
-
       {/* MISSION COUNTDOWN */}
       {nextEvent && (() => {
         const target = nextEvent.date + "T" + nextEvent.time + ":00";
         return (
-          <div style={{ borderTop:"1px solid #1a1a1a", borderBottom:"1px solid #1a1a1a", background:"#0a0a0a" }}>
-            <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 24px" }}>
-              <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12, marginBottom:0 }}>
+          <div style={{ background:"#0a0a0a", padding:"24px" }}>
+            <div style={{ maxWidth:1100, margin:"0 auto", position:"relative",
+              background:"#111", border:"1px solid #2a2a2a",
+              padding:"0" }}>
+              {/* bracket corners — top-left */}
+              <div style={{ position:"absolute", top:0, left:0, width:16, height:16,
+                borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
+              {/* bracket corners — bottom-right */}
+              <div style={{ position:"absolute", bottom:0, right:0, width:16, height:16,
+                borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
+              {/* MISSION BRIEFING header */}
+              <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12 }}>
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:".4em", color:"#000", fontWeight:800 }}>MISSION BRIEFING</span>
                 <span style={{ marginLeft:"auto", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"rgba(0,0,0,.6)", letterSpacing:".1em" }}>
                   OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
                 </span>
               </div>
-              <div className="countdown-panel" style={{ border:"none", borderRadius:0, padding:"24px 0" }}>
+              <div className="countdown-panel" style={{ border:"none", borderRadius:0, padding:"24px" }}>
                 <div className="countdown-panel-info">
                   <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
                   <div className="countdown-panel-title">{nextEvent.title}</div>
