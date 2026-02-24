@@ -578,6 +578,16 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .pub-footer-social-btn{width:34px;height:34px;background:#1a1a1a;border:1px solid #2a2a2a;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;transition:all .15s;color:var(--muted);border-radius:2px;}
 .pub-footer-social-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
 
+/* ── TICKER / MARQUEE ── */
+.ticker-wrap{overflow:hidden;background:#000;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:0;white-space:nowrap;position:relative;}
+.ticker-wrap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:60px;background:linear-gradient(90deg,#000,transparent);z-index:2;pointer-events:none;}
+.ticker-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:60px;background:linear-gradient(270deg,#000,transparent);z-index:2;pointer-events:none;}
+.ticker-track{display:inline-flex;animation:ticker-scroll 18s linear infinite;}
+.ticker-track:hover{animation-play-state:paused;}
+.ticker-item{display:inline-flex;align-items:center;gap:20px;padding:10px 40px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);white-space:nowrap;}
+.ticker-sep{color:#333;font-size:18px;flex-shrink:0;}
+@keyframes ticker-scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .pub-nav-links{display:none;}
@@ -1023,8 +1033,17 @@ function HomePage({ data, setPage }) {
   return (
     <div>
       {data.homeMsg && (
-        <div style={{ background:"rgba(224,92,0,.1)", borderLeft:"4px solid var(--accent)", padding:"10px 20px", fontFamily:"'Share Tech Mono',monospace", fontSize:12, letterSpacing:".06em", color:"var(--accent-pale)" }}>
-          ⚡ NOTICE: {data.homeMsg}
+        <div className="ticker-wrap">
+          {/* Duplicate content so ticker scrolls seamlessly */}
+          <div className="ticker-track">
+            {[...Array(6)].map((_, i) => (
+              <span key={i} className="ticker-item">
+                <span style={{ color:"var(--accent)", fontSize:16 }}>⚡</span>
+                {data.homeMsg}
+                <span className="ticker-sep">◆</span>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
