@@ -2175,17 +2175,199 @@ function GalleryPage({ data }) {
 }
 
 // ── Q&A ───────────────────────────────────────────────────
+// ── VIP Page ──────────────────────────────────────────────
+function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
+  const [applying, setApplying] = useState(false);
+
+  const myBookings = cu ? data.events.flatMap(ev =>
+    ev.bookings.filter(b => b.userId === cu.id && b.checkedIn).map(b => b)
+  ) : [];
+  const gamesAttended = cu ? Math.max(cu.gamesAttended || 0, myBookings.length) : 0;
+  const gamesNeeded = Math.max(0, 3 - gamesAttended);
+  const canApply = cu && gamesAttended >= 3 && cu.vipStatus !== "active" && !cu.vipApplied;
+  const isVip = cu?.vipStatus === "active";
+  const hasPending = cu?.vipApplied && !isVip;
+
+  const applyForVip = async () => {
+    if (!cu) { setAuthModal("login"); return; }
+    setApplying(true);
+    try {
+      await updateUser(cu.id, { vipApplied: true });
+      showToast("VIP application submitted! Admin will review shortly.");
+    } catch(e) { showToast("Failed: " + e.message, "red"); }
+    finally { setApplying(false); }
+  };
+
+  const benefits = [
+    "10% discount on all game day bookings",
+    "10% discount on all shop purchases",
+    "Access to exclusive VIP-only events",
+    "Private game day bookings",
+    "UKARA registration support",
+    "Priority booking for special events",
+    "VIP badge on player profile",
+    "Valid for calendar year",
+  ];
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{ background:"linear-gradient(135deg,#0d1300 0%,#0a0a0a 100%)", borderBottom:"1px solid #2a3a00", padding:"64px 24px", textAlign:"center" }}>
+        <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.2)", padding:"6px 16px", borderRadius:20, marginBottom:20 }}>
+          <span>👑</span>
+          <span style={{ fontSize:11, fontWeight:700, letterSpacing:".2em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase" }}>ELITE MEMBERSHIP</span>
+        </div>
+        <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(44px,8vw,80px)", textTransform:"uppercase", letterSpacing:".04em", marginBottom:16 }}>
+          BECOME A <span style={{ color:"var(--accent)" }}>VIP</span>
+        </h1>
+        <p style={{ fontSize:15, color:"#888", maxWidth:560, margin:"0 auto", lineHeight:1.7 }}>
+          Unlock exclusive benefits, discounts, and VIP-only events. Join our elite squad of dedicated operators.
+        </p>
+      </div>
+
+      <div className="page-content" style={{ maxWidth:960 }}>
+
+        {/* Status banner for logged-in users */}
+        {isVip && (
+          <div className="alert alert-green mb-2" style={{ display:"flex", alignItems:"center", gap:10, fontSize:14 }}>
+            ⭐ You are an active VIP member! Your membership is valid through December {new Date().getFullYear()}.
+          </div>
+        )}
+        {hasPending && (
+          <div className="alert alert-blue mb-2" style={{ fontSize:14 }}>
+            ⏳ Your VIP application is pending admin review. We'll notify you once it's approved.
+          </div>
+        )}
+
+        <div className="grid-2" style={{ gap:24, marginBottom:32 }}>
+
+          {/* Benefits */}
+          <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px", position:"relative" }}>
+            <div style={{ position:"absolute", top:0, left:0, width:16, height:16, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)" }} />
+            <div style={{ position:"absolute", bottom:0, right:0, width:16, height:16, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)" }} />
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>VIP BENEFITS</div>
+            {benefits.map((b, i) => (
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #1a1a1a" }}>
+                <div style={{ width:20, height:20, background:"rgba(200,255,0,.15)", border:"1px solid var(--accent)", borderRadius:2, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <span style={{ color:"var(--accent)", fontSize:11, fontWeight:900 }}>✓</span>
+                </div>
+                <span style={{ fontSize:13, color:"#ccc" }}>{b}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Apply box */}
+          <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px" }}>
+            {/* Price */}
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:64, color:"var(--accent)", lineHeight:1 }}>£30</div>
+              <div style={{ fontSize:13, color:"var(--muted)", marginTop:4 }}>per year</div>
+            </div>
+
+            {/* Requirements */}
+            <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", padding:"16px", marginBottom:20 }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".15em", textTransform:"uppercase", color:"var(--muted)", marginBottom:12 }}>REQUIREMENTS</div>
+              {[
+                { label:"Registered account", met: !!cu },
+                { label:`3 game days completed (${gamesAttended}/3)`, met: gamesAttended >= 3 },
+              ].map(({ label, met }) => (
+                <div key={label} style={{ display:"flex", alignItems:"center", gap:10, padding:"6px 0" }}>
+                  <span style={{ color: met ? "var(--accent)" : "var(--red)", fontSize:16, lineHeight:1 }}>{met ? "✓" : "✗"}</span>
+                  <span style={{ fontSize:13, color: met ? "#ccc" : "var(--muted)" }}>{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Progress bar if not yet eligible */}
+            {cu && !isVip && gamesNeeded > 0 && (
+              <div style={{ marginBottom:20 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--muted)", marginBottom:6 }}>
+                  <span>GAME DAY PROGRESS</span>
+                  <span>{gamesAttended} / 3</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: Math.min(100, gamesAttended / 3 * 100) + "%" }} />
+                </div>
+                <div style={{ fontSize:12, color:"var(--muted)", marginTop:6 }}>{gamesNeeded} more game day{gamesNeeded !== 1 ? "s" : ""} needed to apply</div>
+              </div>
+            )}
+
+            {/* CTA */}
+            {!cu && (
+              <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }}
+                onClick={() => setAuthModal("login")}>LOGIN TO CONTINUE</button>
+            )}
+            {cu && isVip && (
+              <div className="alert alert-green" style={{ textAlign:"center" }}>⭐ You are already a VIP member!</div>
+            )}
+            {cu && hasPending && (
+              <div className="alert alert-blue" style={{ textAlign:"center" }}>⏳ Application under review</div>
+            )}
+            {cu && canApply && (
+              <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }} onClick={applyForVip} disabled={applying}>
+                {applying ? "Submitting…" : "APPLY FOR VIP — £30/YEAR"}
+              </button>
+            )}
+            {cu && !isVip && !hasPending && !canApply && (
+              <div>
+                <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14, opacity:.5, cursor:"not-allowed" }} disabled>
+                  APPLY FOR VIP — £30/YEAR
+                </button>
+                <div style={{ fontSize:12, color:"var(--muted)", textAlign:"center", marginTop:8 }}>
+                  Complete {gamesNeeded} more game day{gamesNeeded !== 1 ? "s" : ""} to unlock
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop:16, fontSize:11, color:"var(--muted)", lineHeight:1.6, textAlign:"center" }}>
+              Payment will be collected by the admin upon approval. VIP status is activated manually after review.
+            </div>
+          </div>
+        </div>
+
+        {/* How it works */}
+        <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px", marginBottom:32 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"#fff", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>HOW IT WORKS</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+            {[
+              { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
+              { num:"02", title:"SUBMIT APPLICATION", desc:"Once eligible, apply for VIP membership through this page. Admin will review your application." },
+              { num:"03", title:"PAY & ACTIVATE", desc:"After approval, pay the £30 annual fee and your VIP status is activated immediately." },
+            ].map(step => (
+              <div key={step.num} style={{ padding:16, background:"#0d0d0d", border:"1px solid #1a1a1a" }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:36, color:"var(--accent)", opacity:.4, lineHeight:1, marginBottom:8 }}>{step.num}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#fff", letterSpacing:".06em", textTransform:"uppercase", marginBottom:6 }}>{step.title}</div>
+                <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.6 }}>{step.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ textAlign:"center" }}>
+          <button className="btn btn-ghost" onClick={() => setPage("events")}>← Browse Events</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QAPage({ data }) {
   const [open, setOpen] = useState(null);
   return (
     <div className="page-content-sm">
       <div className="page-header"><div><div className="page-title">Q&amp;A</div><div className="page-sub">Got questions? We've got answers.</div></div></div>
+      {data.qa.length === 0 && <div style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>No questions yet — check back soon.</div>}
       {data.qa.map(item => (
         <div key={item.id} className="accordion-item">
           <div className="accordion-q" onClick={() => setOpen(open === item.id ? null : item.id)}>
-            <span>{item.q}</span><span className="text-green">{open === item.id ? "−" : "+"}</span>
+            <span>{item.q}</span>
+            <span style={{ color:"var(--accent)", fontSize:20, lineHeight:1 }}>{open === item.id ? "−" : "+"}</span>
           </div>
-          {open === item.id && <div className="accordion-a">{item.a}</div>}
+          {open === item.id && (
+            <div className="accordion-a">
+              {renderQAAnswer(item.a)}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -3526,31 +3708,32 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div style={{ fontSize: 13, color: "var(--muted)" }}>{vipApps.length} pending application{vipApps.length !== 1 ? "s" : ""}</div>
             <button className="btn btn-ghost btn-sm" onClick={loadUsers}>🔄 Refresh</button>
           </div>
-          {localUsers === null ? (
-            <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading players…</div>
-          ) : vipApps.length === 0 ? (
+          {vipApps.length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No pending VIP applications.</div>
           ) : (
             <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Fee (£30)</th><th>Actions</th></tr></thead>
               <tbody>
                 {vipApps.map(u => (
                   <tr key={u.id}>
                     <td style={{ fontWeight: 600 }}>{u.name}</td>
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
-                    <td>{u.gamesAttended}</td>
+                    <td style={{ color: u.gamesAttended >= 3 ? "var(--accent)" : "var(--red)" }}>{u.gamesAttended} / 3</td>
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
+                    <td>
+                      <span style={{ fontSize:11, color:"var(--gold)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>£30 due on approval</span>
+                    </td>
                     <td>
                       <div className="gap-2">
                         <button className="btn btn-sm btn-primary" onClick={async () => {
                           const ukara = `UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`;
                           await updateUserAndRefresh(u.id, { vipStatus: "active", vipApplied: true, ukara });
-                          showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}`);
-                        }}>Approve</button>
+                          showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}. Collect £30 fee.`);
+                        }}>✓ Approve</button>
                         <button className="btn btn-sm btn-danger" onClick={async () => {
                           await updateUserAndRefresh(u.id, { vipApplied: false });
                           showToast(`VIP application rejected for ${u.name}`, "red");
-                        }}>Reject</button>
+                        }}>✗ Reject</button>
                       </div>
                     </td>
                   </tr>
@@ -4519,38 +4702,165 @@ function AdminGallery({ data, save, showToast }) {
 }
 
 // ── Admin Q&A ─────────────────────────────────────────────
+// ── Simple rich-text helpers ──────────────────────────────
+function insertMarkdown(text, setText, before, after = "") {
+  const ta = document.activeElement;
+  if (!ta || ta.tagName !== "TEXTAREA") { setText(p => p + before + after); return; }
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = text.slice(s, e);
+  const newVal = text.slice(0, s) + before + sel + after + text.slice(e);
+  setText(newVal);
+  setTimeout(() => { ta.selectionStart = ta.selectionEnd = s + before.length + sel.length + after.length; ta.focus(); }, 0);
+}
+
+// Render answer markdown for public QA page
+function renderQAAnswer(text) {
+  if (!text) return null;
+  // Parse basic markdown: **bold**, *italic*, # headings, - lists, ![alt](url) images, bare URLs
+  const lines = text.split("\n");
+  return lines.map((line, i) => {
+    // Heading
+    if (line.startsWith("### ")) return <h4 key={i} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, color:"#fff", margin:"10px 0 4px", letterSpacing:".04em", textTransform:"uppercase" }}>{line.slice(4)}</h4>;
+    if (line.startsWith("## "))  return <h3 key={i} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)", margin:"12px 0 6px", letterSpacing:".04em", textTransform:"uppercase" }}>{line.slice(3)}</h3>;
+    if (line.startsWith("# "))   return <h2 key={i} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:"var(--accent)", margin:"14px 0 8px" }}>{line.slice(2)}</h2>;
+    // Image
+    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) return <img key={i} src={imgMatch[2]} alt={imgMatch[1]} style={{ maxWidth:"100%", margin:"8px 0", borderRadius:2 }} />;
+    // List item
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      return <div key={i} style={{ display:"flex", gap:8, padding:"3px 0", fontSize:13, color:"var(--muted)" }}><span style={{ color:"var(--accent)", flexShrink:0 }}>▸</span>{renderInline(line.slice(2))}</div>;
+    }
+    // Blank line
+    if (line.trim() === "") return <div key={i} style={{ height:8 }} />;
+    // Normal paragraph
+    return <p key={i} style={{ fontSize:13, color:"var(--muted)", lineHeight:1.8, margin:"2px 0" }}>{renderInline(line)}</p>;
+  });
+}
+
+function renderInline(text) {
+  // Split by **bold**, *italic*, or backtick code spans
+  const INLINE_RE = new RegExp("(\\*\\*[^*]+\\*\\*|\\*[^*]+\\*|" + String.fromCharCode(96) + "[^" + String.fromCharCode(96) + "]+" + String.fromCharCode(96) + ")", "g");
+  const TICK = String.fromCharCode(96);
+  const parts = text.split(INLINE_RE);
+  return parts.map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) return <strong key={i} style={{ color:"#fff", fontWeight:700 }}>{p.slice(2,-2)}</strong>;
+    if (p.startsWith("*")  && p.endsWith("*"))  return <em key={i} style={{ color:"var(--accent)", fontStyle:"italic" }}>{p.slice(1,-1)}</em>;
+    if (p.startsWith(TICK) && p.endsWith(TICK)) return <code key={i} style={{ background:"#1a1a1a", padding:"1px 5px", fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--accent)" }}>{p.slice(1,-1)}</code>;
+    return p;
+  });
+}
+
 function AdminQA({ data, save, showToast }) {
-  const [form, setForm] = useState({ q: "", a: "" });
-  const add = async () => {
-    if (!form.q || !form.a) return;
+  const blank = { q: "", a: "", image: "" };
+  const [form, setForm] = useState(blank);
+  const [editId, setEditId] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const fq = v => setForm(p => ({ ...p, q: v }));
+  const fa = v => setForm(p => ({ ...p, a: v }));
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    setUploading(true);
     try {
-      await api.qa.create(form);
+      const ext = file.name.split(".").pop();
+      const path = `qa/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("gallery").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("gallery").getPublicUrl(path);
+      const url = urlData.publicUrl;
+      setForm(p => ({ ...p, a: p.a + (p.a && !p.a.endsWith("\n") ? "\n" : "") + `![image](${url})\n`, image: url }));
+      showToast("Image uploaded!");
+    } catch (err) { showToast("Upload failed: " + err.message, "red"); }
+    finally { setUploading(false); }
+  };
+
+  const save_ = async () => {
+    if (!form.q.trim() || !form.a.trim()) { showToast("Fill in both question and answer", "red"); return; }
+    try {
+      if (editId) { await api.qa.update(editId, form); setEditId(null); }
+      else         { await api.qa.create(form); }
       save({ qa: await api.qa.getAll() });
-      setForm({ q: "", a: "" }); showToast("Q&A added!");
+      setForm(blank); setPreview(false);
+      showToast(editId ? "Q&A updated!" : "Q&A added!");
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
+
   const del = async (id) => {
-    try {
-      await api.qa.delete(id);
-      save({ qa: await api.qa.getAll() });
-      showToast("Deleted");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    if (!window.confirm("Delete this Q&A?")) return;
+    try { await api.qa.delete(id); save({ qa: await api.qa.getAll() }); showToast("Deleted"); }
+    catch (e) { showToast("Failed: " + e.message, "red"); }
   };
+
+  const startEdit = (item) => { setForm({ q: item.q, a: item.a, image: item.image || "" }); setEditId(item.id); setPreview(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const cancel = () => { setForm(blank); setEditId(null); setPreview(false); };
+
+  const toolbar = [
+    { label: "B",  title: "Bold",        action: () => insertMarkdown(form.a, fa, "**", "**") },
+    { label: "I",  title: "Italic",      action: () => insertMarkdown(form.a, fa, "*", "*") },
+    { label: "#",  title: "Heading",     action: () => insertMarkdown(form.a, fa, "## ") },
+    { label: "—",  title: "Subheading",  action: () => insertMarkdown(form.a, fa, "### ") },
+    { label: "• ", title: "List item",   action: () => insertMarkdown(form.a, fa, "- ") },
+    { label: "` `",title: "Code",        action: () => insertMarkdown(form.a, fa, "`", "`") },
+  ];
+
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Q&amp;A</div></div></div>
+      <div className="page-header"><div><div className="page-title">Q&amp;A Manager</div><div className="page-sub">Supports **bold**, *italic*, ## headings, - lists, and images</div></div></div>
+
       <div className="card mb-2">
-        <div className="form-group"><label>Question</label><input value={form.q} onChange={e => setForm(p => ({ ...p, q: e.target.value }))} /></div>
-        <div className="form-group"><label>Answer</label><textarea rows={3} value={form.a} onChange={e => setForm(p => ({ ...p, a: e.target.value }))} /></div>
-        <button className="btn btn-primary" onClick={add}>Add Q&amp;A</button>
-      </div>
-      {data.qa.map(item => (
-        <div key={item.id} className="card mb-1" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{item.q}</div>
-            <div className="text-muted" style={{ fontSize: 13, lineHeight: 1.5 }}>{item.a}</div>
+        <div style={{ fontWeight:700, fontSize:15, marginBottom:14, color:"var(--accent)" }}>{editId ? "✏️ Edit Q&A" : "➕ New Q&A"}</div>
+        <div className="form-group"><label>Question</label><input value={form.q} onChange={e => fq(e.target.value)} placeholder="e.g. What should I wear?" /></div>
+
+        {/* Toolbar */}
+        <div style={{ display:"flex", gap:4, marginBottom:6, flexWrap:"wrap", alignItems:"center" }}>
+          {toolbar.map(t => (
+            <button key={t.label} title={t.title} onClick={t.action}
+              style={{ background:"#1a1a1a", border:"1px solid #333", color:"#fff", padding:"4px 10px", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, cursor:"pointer", borderRadius:2 }}>
+              {t.label}
+            </button>
+          ))}
+          <label title="Upload image" style={{ background:"#1a1a1a", border:"1px solid #333", color:uploading ? "var(--muted)" : "var(--accent)", padding:"4px 10px", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, cursor:"pointer", borderRadius:2, display:"flex", alignItems:"center", gap:4 }}>
+            🖼 {uploading ? "Uploading…" : "Add Image"}
+            <input type="file" accept="image/*" style={{ display:"none" }} onChange={handleImageUpload} disabled={uploading} />
+          </label>
+          <button onClick={() => setPreview(p => !p)}
+            style={{ background: preview ? "var(--accent)" : "#1a1a1a", border:"1px solid #333", color: preview ? "#000" : "#fff", padding:"4px 10px", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, cursor:"pointer", borderRadius:2, marginLeft:"auto" }}>
+            👁 {preview ? "Edit" : "Preview"}
+          </button>
+        </div>
+
+        {preview ? (
+          <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", padding:"12px 16px", minHeight:80, borderRadius:2 }}>
+            {renderQAAnswer(form.a)}
           </div>
-          <button className="btn btn-sm btn-danger" style={{ marginLeft: 14, flexShrink: 0 }} onClick={() => del(item.id)}>Del</button>
+        ) : (
+          <div className="form-group" style={{ marginBottom:0 }}>
+            <label>Answer (Markdown supported)</label>
+            <textarea rows={6} value={form.a} onChange={e => fa(e.target.value)} placeholder="Write your answer here. Use the toolbar above for formatting." />
+          </div>
+        )}
+
+        <div className="gap-2 mt-2">
+          <button className="btn btn-primary" onClick={save_}>{editId ? "Save Changes" : "Add Q&A"}</button>
+          {editId && <button className="btn btn-ghost" onClick={cancel}>Cancel</button>}
+        </div>
+      </div>
+
+      {data.qa.length === 0 && <div style={{ textAlign:"center", color:"var(--muted)", padding:32 }}>No Q&A items yet.</div>}
+      {data.qa.map((item, idx) => (
+        <div key={item.id} className="card mb-1" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+              <span style={{ background:"var(--accent)", color:"#000", fontSize:9, fontWeight:800, padding:"2px 6px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em" }}>Q{idx+1}</span>
+              <span style={{ fontWeight:700, fontSize:14, color:"#fff" }}>{item.q}</span>
+            </div>
+            <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.6 }}>{(item.a || "").slice(0, 120)}{(item.a || "").length > 120 ? "…" : ""}</div>
+          </div>
+          <div className="gap-2" style={{ flexShrink:0 }}>
+            <button className="btn btn-sm btn-ghost" onClick={() => startEdit(item)}>Edit</button>
+            <button className="btn btn-sm btn-danger" onClick={() => del(item.id)}>Del</button>
+          </div>
         </div>
       ))}
     </div>
@@ -4942,6 +5252,7 @@ export default function App() {
         {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} />}
         {page === "gallery"     && <GalleryPage data={data} />}
         {page === "qa"          && <QAPage data={data} />}
+        {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
         {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
         {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
       </div>

@@ -343,6 +343,11 @@ export const qa = {
     return { id: data.id, q: data.question, a: data.answer }
   },
 
+  async update(id, item) {
+    const { error } = await supabase.from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
+    if (error) throw error
+  },
+
   async delete(id) {
     const { error } = await supabase.from('qa_items').delete().eq('id', id)
     if (error) throw error
