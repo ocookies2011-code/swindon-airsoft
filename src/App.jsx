@@ -592,8 +592,6 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .bottom-nav{display:none;}
 }
 `
-
-`
 function Toast({ msg, type }) {
   return msg ? <div className={`toast toast-${type || "green"}`}>{msg}</div> : null;
 }
