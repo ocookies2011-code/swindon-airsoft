@@ -1051,11 +1051,164 @@ function HomePage({ data, setPage }) {
       <div className="hero-bg" style={{ backgroundImage:"url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&q=80&auto=format&fit=crop')" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", width:"100%", position:"relative", zIndex:1, padding:"0 24px" }}>
           <div className="hero-content">
-            <div className="hero-eyebrow">🎯 TACTICAL AIRSOFT EXPERIENCE</div>
-            <h1 className="hero-h1">
-              WELCOME TO<br />
-              <span>ZULU'S<br />AIRSOFT</span>
-            </h1>
+            {/* ── MILITARY BANNER ── */}
+            <div style={{ marginBottom:32, maxWidth:640 }}>
+              <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" style={{ width:"100%", height:"auto", display:"block", filter:"drop-shadow(0 8px 32px rgba(0,0,0,.8))" }}>
+                <defs>
+                  {/* Camo pattern */}
+                  <pattern id="camo" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+                    <rect width="60" height="60" fill="#1a2210"/>
+                    <ellipse cx="12" cy="10" rx="10" ry="7" fill="#243015" opacity=".9"/>
+                    <ellipse cx="42" cy="22" rx="14" ry="9" fill="#2d3a18" opacity=".8"/>
+                    <ellipse cx="28" cy="42" rx="12" ry="8" fill="#1e2a10" opacity=".9"/>
+                    <ellipse cx="55" cy="50" rx="8" ry="6" fill="#3a4a20" opacity=".7"/>
+                    <ellipse cx="8" cy="48" rx="7" ry="5" fill="#243015" opacity=".8"/>
+                    <ellipse cx="50" cy="5" rx="9" ry="6" fill="#2d3a18" opacity=".7"/>
+                  </pattern>
+                  {/* Battle damage overlay */}
+                  <filter id="roughen">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" result="noise"/>
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+                  </filter>
+                  {/* Grunge texture */}
+                  <filter id="grunge" x="-5%" y="-5%" width="110%" height="110%">
+                    <feTurbulence type="turbulence" baseFrequency="0.065" numOctaves="3" stitchTiles="stitch" result="t"/>
+                    <feColorMatrix type="saturate" values="0" in="t" result="g"/>
+                    <feBlend in="SourceGraphic" in2="g" mode="multiply" result="b"/>
+                    <feComposite in="b" in2="SourceGraphic" operator="in"/>
+                  </filter>
+                  <clipPath id="bannerClip">
+                    <polygon points="0,0 635,0 640,5 640,215 635,220 5,220 0,215"/>
+                  </clipPath>
+                </defs>
+
+                {/* Base camo background */}
+                <g clipPath="url(#bannerClip)">
+                  <rect width="640" height="220" fill="url(#camo)"/>
+
+                  {/* Dark overlay for text contrast */}
+                  <rect width="640" height="220" fill="rgba(0,0,0,0.55)"/>
+
+                  {/* Top accent stripe */}
+                  <rect x="0" y="0" width="640" height="5" fill="#c8ff00" opacity=".9"/>
+
+                  {/* Bottom accent stripe */}
+                  <rect x="0" y="215" width="640" height="5" fill="#c8ff00" opacity=".9"/>
+
+                  {/* Left tactical stripe */}
+                  <rect x="0" y="0" width="4" height="220" fill="#c8ff00" opacity=".7"/>
+
+                  {/* Right tactical stripe */}
+                  <rect x="636" y="0" width="4" height="220" fill="#c8ff00" opacity=".7"/>
+
+                  {/* Crosshair — top left */}
+                  <g opacity=".25" transform="translate(42,38)">
+                    <circle cx="0" cy="0" r="18" fill="none" stroke="#c8ff00" strokeWidth="1.5"/>
+                    <circle cx="0" cy="0" r="4" fill="none" stroke="#c8ff00" strokeWidth="1"/>
+                    <line x1="-24" y1="0" x2="-8" y2="0" stroke="#c8ff00" strokeWidth="1.5"/>
+                    <line x1="8"  y1="0" x2="24"  y2="0" stroke="#c8ff00" strokeWidth="1.5"/>
+                    <line x1="0" y1="-24" x2="0" y2="-8" stroke="#c8ff00" strokeWidth="1.5"/>
+                    <line x1="0" y1="8"  x2="0" y2="24"  stroke="#c8ff00" strokeWidth="1.5"/>
+                  </g>
+
+                  {/* Crosshair — bottom right */}
+                  <g opacity=".2" transform="translate(596,182)">
+                    <circle cx="0" cy="0" r="14" fill="none" stroke="#c8ff00" strokeWidth="1.2"/>
+                    <circle cx="0" cy="0" r="3" fill="none" stroke="#c8ff00" strokeWidth="1"/>
+                    <line x1="-20" y1="0" x2="-6" y2="0" stroke="#c8ff00" strokeWidth="1.2"/>
+                    <line x1="6"  y1="0" x2="20"  y2="0" stroke="#c8ff00" strokeWidth="1.2"/>
+                    <line x1="0" y1="-20" x2="0" y2="-6" stroke="#c8ff00" strokeWidth="1.2"/>
+                    <line x1="0" y1="6"  x2="0" y2="20"  stroke="#c8ff00" strokeWidth="1.2"/>
+                  </g>
+
+                  {/* Dog-tag shape top-right */}
+                  <g transform="translate(566, 14)" opacity=".18">
+                    <rect x="0" y="0" width="54" height="28" rx="4" fill="none" stroke="#c8ff00" strokeWidth="1.2"/>
+                    <line x1="14" y1="0" x2="14" y2="28" stroke="#c8ff00" strokeWidth=".8" opacity=".5"/>
+                    <text x="6"  y="11" fontFamily="'Share Tech Mono',monospace" fontSize="5" fill="#c8ff00" letterSpacing=".08em">ZULU-ALPHA</text>
+                    <text x="6"  y="18" fontFamily="'Share Tech Mono',monospace" fontSize="4.5" fill="#c8ff00" letterSpacing=".06em">BLOOD: O-POS</text>
+                    <text x="6"  y="25" fontFamily="'Share Tech Mono',monospace" fontSize="4.5" fill="#c8ff00" letterSpacing=".06em">UKARA: ACTIVE</text>
+                  </g>
+
+                  {/* Bullet holes */}
+                  <circle cx="580" cy="58" r="5" fill="#000" opacity=".8"/>
+                  <circle cx="580" cy="58" r="5" fill="none" stroke="#333" strokeWidth="1.5"/>
+                  <line x1="578" y1="54" x2="574" y2="48" stroke="#222" strokeWidth=".8" opacity=".6"/>
+                  <line x1="582" y1="54" x2="587" y2="49" stroke="#222" strokeWidth=".8" opacity=".6"/>
+                  <line x1="584" y1="58" x2="590" y2="58" stroke="#222" strokeWidth=".8" opacity=".6"/>
+                  <line x1="576" y1="62" x2="570" y2="65" stroke="#222" strokeWidth=".8" opacity=".6"/>
+
+                  <circle cx="60" cy="175" r="4" fill="#000" opacity=".8"/>
+                  <circle cx="60" cy="175" r="4" fill="none" stroke="#333" strokeWidth="1.2"/>
+                  <line x1="58" y1="171" x2="55" y2="166" stroke="#222" strokeWidth=".7" opacity=".6"/>
+                  <line x1="62" y1="171" x2="66" y2="167" stroke="#222" strokeWidth=".7" opacity=".6"/>
+                  <line x1="64" y1="175" x2="68" y2="175" stroke="#222" strokeWidth=".7" opacity=".6"/>
+
+                  {/* Grid / tactical overlay lines */}
+                  <line x1="0" y1="40" x2="640" y2="40" stroke="#c8ff00" strokeWidth=".4" opacity=".08"/>
+                  <line x1="0" y1="180" x2="640" y2="180" stroke="#c8ff00" strokeWidth=".4" opacity=".08"/>
+                  <line x1="80" y1="0" x2="80" y2="220" stroke="#c8ff00" strokeWidth=".4" opacity=".06"/>
+                  <line x1="560" y1="0" x2="560" y2="220" stroke="#c8ff00" strokeWidth=".4" opacity=".06"/>
+
+                  {/* OP ZULU-ECHO classification stamp — faint */}
+                  <text x="320" y="195" textAnchor="middle" fontFamily="'Barlow Condensed',sans-serif" fontSize="9" fontWeight="900"
+                    fill="none" stroke="#c8ff00" strokeWidth=".5" letterSpacing=".4em" opacity=".2">
+                    ✦ CLASSIFIED — OP ZULU-ECHO — AUTHORISED PERSONNEL ONLY ✦
+                  </text>
+
+                  {/* TOP LABEL */}
+                  <text x="320" y="42" textAnchor="middle"
+                    fontFamily="'Barlow Condensed',sans-serif" fontSize="11" fontWeight="700"
+                    fill="#c8ff00" letterSpacing=".45em" opacity=".9">
+                    ◆  TACTICAL AIRSOFT EXPERIENCE  ◆
+                  </text>
+
+                  {/* WELCOME TO — outline style */}
+                  <text x="320" y="98" textAnchor="middle"
+                    fontFamily="'Barlow Condensed',sans-serif" fontSize="38" fontWeight="900"
+                    fill="none" stroke="#fff" strokeWidth="1.2"
+                    letterSpacing=".12em" opacity=".55">
+                    WELCOME TO
+                  </text>
+                  <text x="320" y="98" textAnchor="middle"
+                    fontFamily="'Barlow Condensed',sans-serif" fontSize="38" fontWeight="900"
+                    fill="#fff" letterSpacing=".12em" opacity=".9">
+                    WELCOME TO
+                  </text>
+
+                  {/* ZULU'S — large lime stencil */}
+                  <text x="320" y="155" textAnchor="middle"
+                    fontFamily="'Barlow Condensed',sans-serif" fontSize="72" fontWeight="900"
+                    fill="none" stroke="#c8ff00" strokeWidth="2.5"
+                    letterSpacing=".08em" opacity=".3">
+                    ZULU'S
+                  </text>
+                  <text x="320" y="155" textAnchor="middle"
+                    fontFamily="'Barlow Condensed',sans-serif" fontSize="72" fontWeight="900"
+                    fill="#c8ff00" letterSpacing=".08em"
+                    style={{ filter:"drop-shadow(0 0 12px rgba(200,255,0,.6))" }}>
+                    ZULU'S
+                  </text>
+
+                  {/* AIRSOFT — medium white */}
+                  <text x="320" y="185" textAnchor="middle"
+                    fontFamily="'Barlow Condensed',sans-serif" fontSize="30" fontWeight="800"
+                    fill="#fff" letterSpacing=".3em" opacity=".85">
+                    AIRSOFT
+                  </text>
+
+                  {/* Corner bracket marks */}
+                  <g stroke="#c8ff00" strokeWidth="2" fill="none" opacity=".6">
+                    <polyline points="8,22 8,8 22,8"/>
+                    <polyline points="618,8 632,8 632,22"/>
+                    <polyline points="8,198 8,212 22,212"/>
+                    <polyline points="618,212 632,212 632,198"/>
+                  </g>
+
+                </g>
+              </svg>
+            </div>
+
             <p className="hero-p">
               Experience the ultimate airsoft gameplay. From intense skirmishes to special ops events, gear up and join the action.
             </p>
