@@ -51,7 +51,7 @@ function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
         </div>
         <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
           <span>{description}</span>
-          <span style={{ color: "var(--accent)", fontFamily: "'Russo One',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
+          <span style={{ color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
         </div>
         <button className="btn btn-primary" style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: disabled ? .5 : 1 }}
           disabled={disabled} onClick={() => onSuccess({ id: "MOCK-" + Date.now(), status: "COMPLETED", mock: true })}>
@@ -254,27 +254,21 @@ function useAdminUsers(isAdmin) {
 
 // ── CSS ──────────────────────────────────────────────────
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
 
 /* ── RESET ── */
 *{box-sizing:border-box;margin:0;padding:0;}
-body,#root{
-  background:#0a0a0a;color:#d9d4c8;
-  font-family:'Barlow',sans-serif;min-height:100vh;
-  background-image:
-    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.018) 39px,rgba(255,255,255,.018) 40px),
-    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.018) 39px,rgba(255,255,255,.018) 40px);
-}
+body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-height:100vh;}
 
 /* ── VARIABLES ── */
 :root{
-  --bg:#0a0a0a;--bg2:#121212;--bg3:#1a1a1a;--bg4:#222;
-  --border:#2a2a2a;--text:#d9d4c8;--muted:#7a7570;--subtle:#444;
-  --accent:#e05c00;--accent2:#b84800;--accent-glow:rgba(224,92,0,.35);
-  --accent-pale:#ff7020;
-  --red:#cc2a2a;--gold:#c08820;--blue:#2a6898;--teal:#1a7a62;
+  --bg:#0a0a0a;--bg2:#111111;--bg3:#1a1a1a;--bg4:#222;
+  --border:#2a2a2a;--text:#e0e0e0;--muted:#6b6b6b;--subtle:#444;
+  --accent:#c8ff00;--accent2:#a8d900;--accent-glow:rgba(200,255,0,.25);
+  --accent-pale:#d8ff33;--accent-dark:#8ab300;
+  --red:#ef4444;--gold:#f59e0b;--blue:#3b82f6;--teal:#14b8a6;
   --rust:#8b3a0f;
-  --sidebar-w:230px;--nav-h:58px;--bottom-nav-h:64px;
+  --sidebar-w:230px;--nav-h:60px;--bottom-nav-h:64px;
 }
 
 /* ── SCROLLBAR ── */
@@ -282,181 +276,93 @@ body,#root{
 ::-webkit-scrollbar-track{background:#0a0a0a;}
 ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:0;}
 
-/* ── MILITARY TYPOGRAPHY ── */
-.font-mil{font-family:'Russo One',sans-serif;}
+/* ── TYPOGRAPHY ── */
+.font-mil{font-family:'Barlow Condensed',sans-serif;font-weight:800;}
 .font-mono{font-family:'Share Tech Mono',monospace;}
 .font-cond{font-family:'Barlow Condensed',sans-serif;}
 
 /* ── NAV ── */
-.pub-nav{
-  background:#000;
-  border-bottom:3px solid var(--accent);
-  position:sticky;top:0;z-index:100;
-  box-shadow:0 2px 20px rgba(224,92,0,.2);
-}
-.pub-nav::before{
-  content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(
-    90deg,transparent,transparent 8px,rgba(224,92,0,.04) 8px,rgba(224,92,0,.04) 9px
-  );pointer-events:none;
-}
-.pub-nav-inner{max-width:1280px;margin:0 auto;padding:0 20px;height:var(--nav-h);display:flex;align-items:center;gap:2px;position:relative;}
-.pub-nav-logo{display:flex;align-items:center;gap:12px;cursor:pointer;margin-right:20px;flex-shrink:0;}
-.pub-nav-logo-box{
-  background:var(--accent);
-  width:40px;height:40px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Russo One',sans-serif;font-size:11px;color:#fff;letter-spacing:.08em;
-  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
-  position:relative;
-}
-.pub-nav-logo-box::after{content:'';position:absolute;inset:2px;border:1px solid rgba(255,255,255,.2);clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px));}
-.pub-nav-logo-text{font-family:'Russo One',sans-serif;font-size:16px;letter-spacing:.12em;color:#fff;text-transform:uppercase;}
+.pub-nav{background:#000;border-bottom:1px solid #1f1f1f;position:sticky;top:0;z-index:100;}
+.pub-nav-inner{max-width:1280px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:0;position:relative;}
+.pub-nav-logo{display:flex;align-items:center;gap:12px;cursor:pointer;margin-right:32px;flex-shrink:0;}
+.pub-nav-logo-box{background:var(--accent);width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:#000;letter-spacing:.05em;border-radius:2px;}
+.pub-nav-logo-text{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:.12em;color:#fff;text-transform:uppercase;}
 .pub-nav-logo-text span{color:var(--accent);}
 .pub-nav-links{display:flex;gap:0;flex:1;}
-.pub-nav-link{
-  background:none;border:none;color:var(--muted);
-  font-size:11px;font-weight:700;padding:0 14px;height:var(--nav-h);
-  cursor:pointer;white-space:nowrap;letter-spacing:.15em;
-  text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;
-  transition:all .1s;position:relative;
-}
-.pub-nav-link::after{
-  content:'';position:absolute;bottom:0;left:0;right:100%;height:3px;
-  background:var(--accent);transition:right .15s;
-}
-.pub-nav-link.active{color:#fff;background:rgba(224,92,0,.08);}
-.pub-nav-link.active::after{right:0;}
+.pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:0 16px;height:var(--nav-h);cursor:pointer;white-space:nowrap;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:color .15s;}
 .pub-nav-link:hover{color:#fff;}
-.pub-nav-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex-shrink:0;}
-.pub-nav-hamburger{display:none;background:none;border:1px solid #333;color:var(--text);padding:6px 10px;font-size:18px;cursor:pointer;font-family:'Russo One',sans-serif;}
+.pub-nav-link.active{color:#fff;}
+.pub-nav-actions{display:flex;gap:10px;align-items:center;margin-left:auto;flex-shrink:0;}
+.pub-nav-hamburger{display:none;background:none;border:1px solid #333;color:var(--text);padding:6px 10px;font-size:18px;cursor:pointer;}
 
 /* ── MOBILE DRAWER ── */
 .pub-nav-drawer{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.95);}
 .pub-nav-drawer.open{display:block;}
-.pub-nav-drawer-panel{
-  position:absolute;top:0;left:0;width:82%;max-width:320px;height:100%;
-  background:#0d0d0d;border-right:3px solid var(--accent);
-  display:flex;flex-direction:column;overflow-y:auto;
-}
-.pub-nav-drawer-logo{
-  padding:18px 20px 16px;border-bottom:1px solid #1e1e1e;
-  font-family:'Russo One',sans-serif;font-size:20px;letter-spacing:.12em;color:#fff;
-  background:linear-gradient(135deg,#111 0%,#1a0e00 100%);
-}
-.pub-nav-drawer-link{
-  display:flex;align-items:center;gap:14px;
-  padding:14px 20px;font-size:12px;font-weight:700;
-  color:var(--muted);cursor:pointer;border:none;background:none;
-  width:100%;text-align:left;letter-spacing:.14em;text-transform:uppercase;
-  font-family:'Barlow Condensed',sans-serif;transition:all .1s;
-  border-left:3px solid transparent;
-}
-.pub-nav-drawer-link.active{color:var(--accent);border-left-color:var(--accent);background:rgba(224,92,0,.06);}
+.pub-nav-drawer-panel{position:absolute;top:0;left:0;width:82%;max-width:320px;height:100%;background:#0d0d0d;border-right:1px solid #1f1f1f;display:flex;flex-direction:column;overflow-y:auto;}
+.pub-nav-drawer-logo{padding:20px;border-bottom:1px solid #1f1f1f;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:.12em;color:#fff;}
+.pub-nav-drawer-link{display:flex;align-items:center;gap:14px;padding:14px 20px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;letter-spacing:.14em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .1s;border-left:3px solid transparent;}
+.pub-nav-drawer-link.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,255,0,.04);}
 .pub-nav-drawer-link:hover{background:#1a1a1a;color:#fff;}
-.pub-nav-drawer-divider{border:none;border-top:1px solid #1e1e1e;margin:6px 0;}
+.pub-nav-drawer-divider{border:none;border-top:1px solid #1f1f1f;margin:6px 0;}
 
 /* ── BOTTOM NAV ── */
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:#000;border-top:3px solid var(--accent);height:var(--bottom-nav-h);padding:0 4px;padding-bottom:env(safe-area-inset-bottom);}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:#000;border-top:1px solid #1f1f1f;height:var(--bottom-nav-h);padding:0 4px;padding-bottom:env(safe-area-inset-bottom);}
 .bottom-nav-inner{display:flex;height:100%;}
 .bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.1em;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;transition:color .1s;}
 .bottom-nav-btn.active{color:var(--accent);}
 .bottom-nav-icon{font-size:20px;line-height:1;}
 .pub-page-wrap{padding-bottom:80px;}
-.page-content{max-width:1100px;margin:0 auto;padding:20px 20px;}
-.page-content-sm{max-width:820px;margin:0 auto;padding:20px 20px;}
+.page-content{max-width:1100px;margin:0 auto;padding:32px 24px;}
+.page-content-sm{max-width:820px;margin:0 auto;padding:32px 24px;}
 
-/* ── MILITARY CARDS ── */
-.card{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-top:2px solid var(--accent);
-  padding:20px;position:relative;overflow:hidden;
-}
-.card::before{
-  content:'';position:absolute;top:0;right:0;
-  width:0;height:0;border-style:solid;
-  border-width:0 18px 18px 0;
-  border-color:transparent var(--accent) transparent transparent;
-  opacity:.6;
-}
-.card-sm{background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--border);padding:14px 18px;}
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--border);padding:24px;position:relative;}
+.card-sm{background:var(--bg2);border:1px solid var(--border);padding:14px 18px;}
 
 /* ── STAT CARDS ── */
-.stat-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-left:4px solid var(--accent);
-  padding:18px 20px;position:relative;overflow:hidden;
-}
-.stat-card::after{
-  content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,.012) 10px,rgba(255,255,255,.012) 11px);
-  pointer-events:none;
-}
-.stat-card.red{border-left-color:var(--red);}
-.stat-card.blue{border-left-color:var(--blue);}
-.stat-card.gold{border-left-color:var(--gold);}
-.stat-card.purple{border-left-color:#6a4a9a;}
-.stat-card.teal{border-left-color:var(--teal);}
+.stat-card{background:var(--bg2);border:1px solid var(--border);padding:20px 24px;position:relative;}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);}
+.stat-card.red::after{background:var(--red);}
+.stat-card.blue::after{background:var(--blue);}
+.stat-card.gold::after{background:var(--gold);}
+.stat-card.purple::after{background:#a855f7;}
+.stat-card.teal::after{background:var(--teal);}
 .stat-icon{font-size:20px;margin-bottom:8px;opacity:.8;}
-.stat-val{font-size:38px;font-weight:900;color:#fff;line-height:1;font-family:'Russo One',sans-serif;letter-spacing:.02em;}
-.stat-label{font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--muted);margin-top:5px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
-.stat-sub{font-size:11px;color:var(--subtle);margin-top:6px;font-family:'Share Tech Mono',monospace;}
+.stat-val{font-size:36px;font-weight:900;color:#fff;line-height:1;font-family:'Barlow Condensed',sans-serif;letter-spacing:.02em;}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--muted);margin-top:6px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
+.stat-sub{font-size:11px;color:var(--subtle);margin-top:6px;}
 .stat-sub.red{color:var(--red);}
-.stat-sub.green{color:#5a9a2a;}
+.stat-sub.green{color:var(--accent);}
 
 /* ── BUTTONS ── */
-button{cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;border:none;transition:all .12s;letter-spacing:.1em;text-transform:uppercase;}
-.btn{padding:9px 22px;font-size:13px;}
-.btn-primary{
-  background:var(--accent);color:#fff;
-  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);
-  box-shadow:0 0 0 0 var(--accent-glow);
-  position:relative;
-}
-.btn-primary::before{
-  content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,.06) 4px,rgba(255,255,255,.06) 5px);
-}
-.btn-primary:hover{background:var(--accent-pale);box-shadow:0 0 20px var(--accent-glow),0 0 40px var(--accent-glow);}
-.btn-danger{background:var(--red);color:#fff;clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,0 100%);}
-.btn-danger:hover{background:#e03030;}
-.btn-ghost{background:transparent;border:1px solid #333;color:var(--text);}
-.btn-ghost:hover{background:#1a1a1a;border-color:var(--accent);color:var(--accent);}
-.btn-sm{padding:5px 12px;font-size:11px;}
-.btn-gold{background:#2a1e00;color:var(--gold);border:1px solid var(--gold);}
-.btn-gold:hover{background:#3a2a00;}
+button{cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;border:none;transition:all .15s;letter-spacing:.08em;text-transform:uppercase;}
+.btn{padding:10px 24px;font-size:13px;border-radius:2px;}
+.btn-primary{background:var(--accent);color:#000;font-weight:800;}
+.btn-primary:hover{background:var(--accent-pale);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-danger{background:var(--red);color:#fff;border-radius:2px;}
+.btn-danger:hover{background:#dc2626;}
+.btn-ghost{background:transparent;border:1px solid #333;color:var(--text);border-radius:2px;}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:6px 14px;font-size:11px;}
+.btn-gold{background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:2px;}
+.btn-gold:hover{background:rgba(245,158,11,.1);}
 
-/* ── MILITARY TAGS ── */
-.tag{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:2px 8px;font-size:9px;font-weight:700;letter-spacing:.14em;
-  font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
-  border-left:2px solid;
-}
-.tag-green{background:rgba(90,154,42,.12);color:#7dc840;border-color:#5a9a2a;}
-.tag-red{background:rgba(204,42,42,.12);color:#e06060;border-color:var(--red);}
-.tag-gold{background:rgba(192,136,32,.12);color:var(--gold);border-color:var(--gold);}
-.tag-blue{background:rgba(42,104,152,.12);color:#5a9ad0;border-color:var(--blue);}
-.tag-purple{background:rgba(106,74,154,.12);color:#9a7ad0;border-color:#6a4a9a;}
-.tag-teal{background:rgba(26,122,98,.12);color:#4abca0;border-color:var(--teal);}
-.tag-orange{background:rgba(224,92,0,.12);color:var(--accent-pale);border-color:var(--accent);}
+/* ── TAGS ── */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.1em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;border-radius:2px;}
+.tag-green{background:var(--accent);color:#000;}
+.tag-red{background:var(--red);color:#fff;}
+.tag-gold{background:var(--gold);color:#000;}
+.tag-blue{background:var(--blue);color:#fff;}
+.tag-purple{background:#a855f7;color:#fff;}
+.tag-teal{background:var(--teal);color:#000;}
+.tag-orange{background:#f97316;color:#000;}
 
 /* ── FORMS ── */
-.form-group{margin-bottom:14px;}
-.form-group label{
-  display:block;font-size:9px;font-weight:700;letter-spacing:.2em;
-  color:var(--muted);margin-bottom:5px;text-transform:uppercase;
-  font-family:'Barlow Condensed',sans-serif;
-}
-input,select,textarea{
-  background:#0d0d0d;border:1px solid #2a2a2a;
-  border-left:3px solid #2a2a2a;
-  color:var(--text);padding:10px 12px;
-  font-family:'Share Tech Mono',monospace;font-size:13px;width:100%;
-  outline:none;transition:border .12s;
-}
-input:focus,select:focus,textarea:focus{border-color:#444;border-left-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(224,92,0,.15);}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted);margin-bottom:6px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
+input,select,textarea{background:#1a1a1a;border:1px solid #2a2a2a;color:var(--text);padding:10px 14px;font-family:'Barlow',sans-serif;font-size:14px;width:100%;outline:none;transition:border .15s;border-radius:2px;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(200,255,0,.08);}
 input[type=checkbox]{width:auto;accent-color:var(--accent);cursor:pointer;}
 input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -465,44 +371,30 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 /* ── TABLE ── */
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .data-table{width:100%;border-collapse:collapse;min-width:500px;}
-.data-table th{
-  text-align:left;padding:8px 14px;
-  font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--accent);
-  border-bottom:2px solid var(--accent);text-transform:uppercase;
-  white-space:nowrap;font-family:'Barlow Condensed',sans-serif;
-  background:#0d0d0d;
-}
-.data-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid #1a1a1a;font-family:'Share Tech Mono',monospace;}
-.data-table tbody tr:hover td{background:rgba(224,92,0,.04);}
+.data-table th{text-align:left;padding:10px 16px;font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--muted);border-bottom:1px solid #2a2a2a;text-transform:uppercase;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;background:var(--bg2);}
+.data-table td{padding:12px 16px;font-size:13px;border-bottom:1px solid #1a1a1a;}
+.data-table tbody tr:hover td{background:rgba(255,255,255,.02);}
 
 /* ── MODAL ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
-.modal-box{
-  background:#0d0d0d;
-  border:1px solid #2a2a2a;border-top:3px solid var(--accent);
-  padding:28px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;
-  box-shadow:0 0 60px rgba(224,92,0,.1),0 24px 80px rgba(0,0,0,.9);
-  position:relative;
-}
-.modal-box::before{content:'';position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 24px 24px 0;border-color:transparent var(--accent) transparent transparent;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal-box{background:#111;border:1px solid #2a2a2a;padding:28px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;border-radius:4px;box-shadow:0 24px 80px rgba(0,0,0,.9);}
 .modal-box.wide{max-width:780px;}
 @media(max-width:768px){.overlay{align-items:flex-end;padding:0;}.modal-box,.modal-box.wide{max-width:100%;border-radius:0;}}
-.modal-title{font-size:22px;font-weight:900;margin-bottom:18px;display:flex;align-items:center;gap:10px;font-family:'Russo One',sans-serif;letter-spacing:.06em;color:#fff;}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.06em;color:#fff;text-transform:uppercase;}
 
 /* ── MISC ── */
-.divider{border:none;border-top:1px solid #1e1e1e;margin:16px 0;position:relative;}
-.divider::after{content:'///';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--bg2);padding:0 8px;font-size:10px;color:var(--subtle);font-family:'Share Tech Mono',monospace;letter-spacing:.1em;}
-.alert{padding:10px 16px;font-size:13px;margin-bottom:12px;line-height:1.5;border-left:4px solid;font-family:'Share Tech Mono',monospace;}
-.alert-green{background:rgba(90,154,42,.08);border-color:#5a9a2a;color:#7dc840;}
-.alert-red{background:rgba(204,42,42,.08);border-color:var(--red);color:#e07060;}
-.alert-gold{background:rgba(192,136,32,.08);border-color:var(--gold);color:var(--gold);}
-.alert-blue{background:rgba(42,104,152,.08);border-color:var(--blue);color:#5a9ad0;}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.page-title{font-size:28px;font-weight:900;letter-spacing:.06em;font-family:'Russo One',sans-serif;color:#fff;text-transform:uppercase;}
-.page-sub{font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.1em;font-family:'Share Tech Mono',monospace;}
+.divider{border:none;border-top:1px solid #1e1e1e;margin:16px 0;}
+.alert{padding:12px 16px;font-size:13px;margin-bottom:12px;line-height:1.5;border-left:3px solid;border-radius:2px;}
+.alert-green{background:rgba(200,255,0,.05);border-color:var(--accent);color:var(--accent);}
+.alert-red{background:rgba(239,68,68,.06);border-color:var(--red);color:#fca5a5;}
+.alert-gold{background:rgba(245,158,11,.06);border-color:var(--gold);color:var(--gold);}
+.alert-blue{background:rgba(59,130,246,.06);border-color:var(--blue);color:#93c5fd;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.page-title{font-size:32px;font-weight:900;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;color:#fff;text-transform:uppercase;}
+.page-sub{font-size:12px;color:var(--muted);margin-top:3px;letter-spacing:.06em;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
-.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
 .grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
 @media(max-width:1100px){.grid-6{grid-template-columns:repeat(3,1fr);}.grid-4{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:700px){.grid-2,.grid-3,.grid-4,.grid-6{grid-template-columns:1fr;}}
@@ -510,119 +402,94 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .mt-1{margin-top:8px;}.mt-2{margin-top:16px;}.mt-3{margin-top:24px;}
 .mb-1{margin-bottom:8px;}.mb-2{margin-bottom:16px;}
 .text-muted{color:var(--muted);}
-.text-green{color:#7dc840;}
+.text-green{color:var(--accent);}
 .text-red{color:var(--red);}
 .text-gold{color:var(--gold);}
-.text-blue{color:#5a9ad0;}
+.text-blue{color:#93c5fd;}
 .mono{font-family:'Share Tech Mono',monospace;}
-.progress-bar{background:#1a1a1a;border:1px solid #222;height:6px;overflow:hidden;position:relative;}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .4s;}
+.progress-bar{background:#1a1a1a;border:1px solid #222;height:6px;overflow:hidden;border-radius:3px;}
+.progress-fill{height:100%;background:var(--accent);transition:width .4s;}
 .progress-fill.red{background:var(--red);}
 
 /* ── COUNTDOWN ── */
 .countdown-wrap{display:flex;gap:20px;justify-content:center;}
 .countdown-unit{text-align:center;min-width:64px;}
-.countdown-num{font-size:52px;font-weight:900;color:#fff;line-height:1;font-family:'Russo One',sans-serif;}
-.countdown-lbl{font-size:9px;letter-spacing:.25em;color:var(--muted);margin-top:4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
+.countdown-num{font-size:52px;font-weight:900;color:#fff;line-height:1;font-family:'Barlow Condensed',sans-serif;}
+.countdown-lbl{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-top:4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
 
 /* ── PHOTO GRID ── */
-.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:4px;}
-.photo-cell{aspect-ratio:4/3;overflow:hidden;background:#1a1a1a;position:relative;cursor:pointer;border:1px solid #1e1e1e;}
-.photo-cell img{width:100%;height:100%;object-fit:cover;transition:transform .3s;filter:grayscale(20%);}
-.photo-cell:hover img{transform:scale(1.08);filter:grayscale(0%);}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;}
+.photo-cell{aspect-ratio:4/3;overflow:hidden;background:#1a1a1a;position:relative;cursor:pointer;}
+.photo-cell img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+.photo-cell:hover img{transform:scale(1.05);}
 .qr-box{width:120px;height:120px;background:#fff;padding:8px;margin:0 auto;}
 
 /* ── TABS ── */
-.nav-tabs{display:flex;gap:0;border-bottom:2px solid #1e1e1e;margin-bottom:20px;overflow-x:auto;}
-.nav-tab{
-  padding:10px 18px;font-size:11px;font-weight:700;
-  background:transparent;border:none;color:var(--muted);
-  border-bottom:3px solid transparent;margin-bottom:-2px;
-  cursor:pointer;white-space:nowrap;flex-shrink:0;
-  letter-spacing:.15em;text-transform:uppercase;
-  font-family:'Barlow Condensed',sans-serif;transition:all .1s;
-}
+.nav-tabs{display:flex;gap:0;border-bottom:1px solid #2a2a2a;margin-bottom:24px;overflow-x:auto;}
+.nav-tab{padding:12px 20px;font-size:12px;font-weight:700;background:transparent;border:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .15s;}
 .nav-tab:hover{color:#fff;}
-.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(224,92,0,.05);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
 /* ── EVENT CARDS ── */
-.event-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all .15s;position:relative;}
-.event-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .2s;}
-.event-card:hover{border-color:#3a3a3a;box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px rgba(224,92,0,.2);}
-.event-card:hover::after{transform:scaleX(1);}
-.event-banner-img{height:150px;overflow:hidden;position:relative;background:#111;}
-.event-card-body{padding:14px;}
+.event-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all .15s;position:relative;border-radius:4px;}
+.event-card:hover{border-color:#3a3a3a;transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.6);}
+.event-banner-img{height:160px;overflow:hidden;position:relative;background:#1a1a1a;}
+.event-card-body{padding:16px;}
 
 /* ── SHOP CARDS ── */
-.shop-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;transition:all .15s;position:relative;}
-.shop-card:hover{border-color:#3a3a3a;box-shadow:0 8px 40px rgba(0,0,0,.6);}
-.shop-img{height:160px;background:#111;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);overflow:hidden;border-bottom:1px solid #1e1e1e;position:relative;}
+.shop-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;transition:all .15s;border-radius:4px;}
+.shop-card:hover{border-color:#3a3a3a;transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.6);}
+.shop-img{height:180px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);overflow:hidden;border-bottom:1px solid #1e1e1e;position:relative;}
 .shop-img img{width:100%;height:100%;object-fit:cover;}
-.shop-body{padding:14px;}
+.shop-body{padding:16px;}
 
 /* ── LEADERBOARD ── */
-.lb-row{display:flex;align-items:center;gap:14px;padding:10px 16px;margin-bottom:2px;background:var(--bg2);border:1px solid var(--border);border-left:4px solid transparent;transition:all .12s;}
-.lb-row:hover{border-left-color:var(--accent);background:#161616;}
-.lb-rank{font-size:22px;font-weight:900;width:36px;text-align:center;font-family:'Russo One',sans-serif;color:var(--muted);}
-.lb-rank.top{color:var(--gold);}
-.lb-avatar{width:36px;height:36px;background:#1a1a1a;border:1px solid #2a2a2a;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;overflow:hidden;flex-shrink:0;}
+.lb-row{display:flex;align-items:center;gap:14px;padding:12px 16px;margin-bottom:2px;background:var(--bg2);border:1px solid var(--border);border-radius:2px;transition:all .12s;}
+.lb-row:hover{border-color:#3a3a3a;}
+.lb-rank{font-size:20px;font-weight:900;width:36px;text-align:center;font-family:'Barlow Condensed',sans-serif;color:var(--muted);}
+.lb-rank.top{color:var(--accent);}
+.lb-avatar{width:36px;height:36px;background:#1a1a1a;border:1px solid #2a2a2a;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;overflow:hidden;flex-shrink:0;border-radius:2px;}
 .lb-avatar img{width:100%;height:100%;object-fit:cover;}
-.lb-games{margin-left:auto;font-size:28px;font-weight:900;color:var(--accent);font-family:'Russo One',sans-serif;}
+.lb-games{margin-left:auto;font-size:26px;font-weight:900;color:var(--accent);font-family:'Barlow Condensed',sans-serif;}
 
 /* ── ACCORDION ── */
-.accordion-item{border:1px solid #1e1e1e;border-left:3px solid #2a2a2a;margin-bottom:3px;}
-.accordion-q{padding:14px 16px;cursor:pointer;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;transition:background .1s;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em;}
-.accordion-q:hover{background:#111;}
-.accordion-a{padding:14px 16px;border-top:1px solid #1e1e1e;font-size:13px;color:var(--muted);line-height:1.7;background:#080808;font-family:'Share Tech Mono',monospace;}
+.accordion-item{border:1px solid #2a2a2a;margin-bottom:2px;border-radius:2px;}
+.accordion-q{padding:14px 16px;cursor:pointer;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;transition:background .1s;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em;}
+.accordion-q:hover{background:#1a1a1a;}
+.accordion-a{padding:14px 16px;border-top:1px solid #2a2a2a;font-size:13px;color:var(--muted);line-height:1.7;background:#0d0d0d;}
 
 /* ── ADMIN SHELL ── */
 .admin-shell{display:flex;min-height:100vh;}
-.admin-sidebar{
-  width:var(--sidebar-w);background:#080808;
-  border-right:1px solid #1a1a1a;border-right-width:2px;
-  border-right-color:#1a1a1a;
-  flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;transition:transform .25s;
-}
+.admin-sidebar{width:var(--sidebar-w);background:#0a0a0a;border-right:1px solid #1a1a1a;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;transition:transform .25s;}
 .admin-main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
-.admin-topbar{background:#0d0d0d;border-bottom:2px solid #1a1a1a;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
-.admin-content{padding:16px;flex:1;}
-.sb-logo{padding:16px 14px 14px;border-bottom:2px solid var(--accent);margin-bottom:6px;background:linear-gradient(135deg,#0d0d0d,#1a0a00);}
-.sb-logo-text{font-size:18px;font-weight:900;letter-spacing:.12em;font-family:'Russo One',sans-serif;color:#fff;}
+.admin-topbar{background:#0d0d0d;border-bottom:1px solid #1a1a1a;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
+.admin-content{padding:20px;flex:1;}
+.sb-logo{padding:16px 14px 14px;border-bottom:1px solid #1a1a1a;margin-bottom:6px;}
+.sb-logo-text{font-size:16px;font-weight:900;letter-spacing:.1em;font-family:'Barlow Condensed',sans-serif;color:#fff;text-transform:uppercase;}
 .sb-logo-text span{color:var(--accent);}
 .sb-time{font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-top:3px;}
-.sb-label{font-size:8px;font-weight:700;letter-spacing:.25em;color:#333;padding:10px 12px 4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.sb-item{
-  display:flex;align-items:center;gap:10px;padding:9px 14px;
-  cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);
-  transition:all .1s;border-left:3px solid transparent;margin-bottom:1px;
-  letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;
-}
-.sb-item:hover{background:#111;color:#fff;border-left-color:#333;}
-.sb-item.active{background:rgba(224,92,0,.08);color:var(--accent);border-left-color:var(--accent);}
+.sb-label{font-size:9px;font-weight:700;letter-spacing:.2em;color:#333;padding:10px 12px 4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);transition:all .1s;border-left:2px solid transparent;margin-bottom:1px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
+.sb-item:hover{background:#1a1a1a;color:#fff;}
+.sb-item.active{background:rgba(200,255,0,.05);color:var(--accent);border-left-color:var(--accent);}
 .sb-icon{font-size:14px;flex-shrink:0;width:18px;text-align:center;}
-.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;font-family:'Share Tech Mono',monospace;}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;border-radius:2px;}
 .sb-badge.gold{background:var(--gold);color:#000;}
 .sb-badge.blue{background:var(--blue);}
 .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:49;}
 
 /* ── BAR CHART ── */
-.bar-chart{display:flex;align-items:flex-end;gap:2px;height:80px;}
-.bar{background:var(--accent);opacity:.6;flex:1;min-height:4px;transition:all .4s;position:relative;}
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;}
+.bar{background:var(--accent);opacity:.7;flex:1;min-height:4px;transition:all .4s;border-radius:2px 2px 0 0;}
 .bar:hover{opacity:1;}
-.bar-labels{display:flex;gap:2px;}
+.bar-labels{display:flex;gap:3px;}
 .bar-label{flex:1;text-align:center;font-size:8px;color:var(--muted);padding-top:4px;font-family:'Share Tech Mono',monospace;}
 
 /* ── TOAST ── */
-.toast{
-  position:fixed;bottom:80px;right:16px;z-index:999;
-  padding:12px 18px;font-size:12px;font-weight:700;
-  animation:slideUp .2s ease;max-width:320px;
-  font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;
-  border-left:4px solid;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);
-}
-.toast-green{background:#0a1a06;border-color:#5a9a2a;color:#7dc840;box-shadow:0 4px 20px rgba(90,154,42,.3);}
-.toast-red{background:#1a0606;border-color:var(--red);color:#e07060;box-shadow:0 4px 20px rgba(204,42,42,.3);}
-.toast-gold{background:#1a1206;border-color:var(--gold);color:var(--gold);box-shadow:0 4px 20px rgba(192,136,32,.3);}
+.toast{position:fixed;bottom:80px;right:16px;z-index:999;padding:12px 18px;font-size:13px;font-weight:700;animation:slideUp .2s ease;max-width:320px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;border-left:3px solid;border-radius:2px;}
+.toast-green{background:#0d1a00;border-color:var(--accent);color:var(--accent);box-shadow:0 4px 20px rgba(200,255,0,.15);}
+.toast-red{background:#1a0606;border-color:var(--red);color:#fca5a5;box-shadow:0 4px 20px rgba(239,68,68,.2);}
+.toast-gold{background:#1a1200;border-color:var(--gold);color:var(--gold);}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 
 /* ── QR SCANNER ── */
@@ -636,119 +503,96 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .qr-corner.br{bottom:8px;right:8px;border-width:0 3px 3px 0;}
 
 /* ── HERO ── */
-.hero-bg{
-  position:relative;min-height:520px;overflow:hidden;
-  display:flex;align-items:center;
-  background:#000;
-  margin-bottom:0;
-}
-.hero-bg::before{
-  content:'';position:absolute;inset:0;
-  background-image:url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&q=80&auto=format&fit=crop');
-  background-size:cover;background-position:center 25%;
-  opacity:.22;filter:grayscale(30%) contrast(1.15);
-}
-.hero-bg::after{
-  content:'';position:absolute;inset:0;
-  background:
-    linear-gradient(100deg,rgba(0,0,0,.97) 0%,rgba(0,0,0,.8) 55%,rgba(0,0,0,.15) 100%),
-    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(224,92,0,.025) 39px,rgba(224,92,0,.025) 40px),
-    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(224,92,0,.025) 39px,rgba(224,92,0,.025) 40px);
-}
-.hero-content{padding:clamp(40px,6vw,80px) clamp(20px,4vw,60px);max-width:680px;}
-.hero-eyebrow{
-  font-size:10px;letter-spacing:.4em;color:var(--accent);
-  font-family:'Share Tech Mono',monospace;font-weight:400;
-  text-transform:uppercase;margin-bottom:20px;
-  display:flex;align-items:center;gap:12px;
-}
-.hero-eyebrow::before{content:'';width:40px;height:1px;background:var(--accent);}
-.hero-eyebrow::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--accent),transparent);max-width:200px;}
-.hero-h1{
-  font-family:'Russo One',sans-serif;
-  font-size:clamp(64px,10vw,120px);
-  line-height:.88;color:#fff;letter-spacing:.02em;
-  margin-bottom:24px;text-transform:uppercase;
-  text-shadow:0 0 80px rgba(224,92,0,.15);
-}
-.hero-h1 span{
-  color:var(--accent);
-  text-shadow:0 0 40px rgba(224,92,0,.5);
-}
-.hero-p{color:#8a8278;font-size:14px;line-height:1.8;max-width:440px;margin-bottom:36px;font-family:'Share Tech Mono',monospace;letter-spacing:.03em;}
-.hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
-.hero-stats{
-  display:flex;gap:0;border-top:1px solid #1e1e1e;
-  background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
-  border-bottom:1px solid #1e1e1e;
-}
+.hero-bg{position:relative;min-height:100vh;overflow:hidden;display:flex;align-items:center;background:#000;}
+.hero-bg::before{content:'';position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;}
+.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.92) 0%,rgba(0,0,0,.7) 55%,rgba(0,0,0,.2) 100%);}
+.hero-content{position:relative;z-index:1;padding:clamp(40px,6vw,80px) clamp(24px,4vw,80px);max-width:700px;}
+.hero-eyebrow{font-size:11px;letter-spacing:.3em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.hero-eyebrow::before{content:'';width:24px;height:2px;background:var(--accent);}
+.hero-h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(56px,9vw,110px);line-height:.9;color:#fff;letter-spacing:.02em;margin-bottom:24px;text-transform:uppercase;font-weight:900;}
+.hero-h1 span{color:var(--accent);}
+.hero-p{color:#888;font-size:15px;line-height:1.7;max-width:460px;margin-bottom:36px;}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;}
+.hero-stats{display:flex;gap:0;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f;background:rgba(0,0,0,.8);}
 .hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;}
-.hero-stat{flex:1;padding:16px 20px;text-align:center;border-right:1px solid #1e1e1e;}
+.hero-stat{flex:1;padding:20px;text-align:center;border-right:1px solid #1f1f1f;}
 .hero-stat:last-child{border-right:none;}
-.hero-stat-num{font-family:'Russo One',sans-serif;font-size:28px;color:var(--accent);}
-.hero-stat-label{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-top:2px;font-family:'Share Tech Mono',monospace;text-transform:uppercase;}
+.hero-stat-num{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--accent);}
+.hero-stat-label{font-size:10px;letter-spacing:.15em;color:var(--muted);margin-top:2px;text-transform:uppercase;}
 
 /* ── FEATURE STRIP ── */
-.feature-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#1a1a1a;border-top:1px solid #1a1a1a;border-bottom:3px solid var(--accent);}
-.feature-item{background:#0d0d0d;padding:24px 20px;transition:background .15s;position:relative;overflow:hidden;}
-.feature-item::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,var(--accent),transparent);
-  transform:scaleX(0);transform-origin:left;transition:transform .3s;
-}
-.feature-item:hover{background:#111;}
-.feature-item:hover::before{transform:scaleX(1);}
-.feature-icon{font-size:28px;margin-bottom:12px;}
-.feature-title{font-family:'Russo One',sans-serif;font-size:16px;letter-spacing:.06em;color:#fff;margin-bottom:8px;text-transform:uppercase;}
-.feature-desc{font-size:12px;color:var(--muted);line-height:1.7;font-family:'Share Tech Mono',monospace;}
+.feature-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#1a1a1a;}
+.feature-item{background:#111;padding:28px 24px;transition:background .15s;position:relative;overflow:hidden;}
+.feature-item:hover{background:#161616;}
+.feature-icon{font-size:28px;margin-bottom:14px;color:var(--accent);}
+.feature-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:.06em;color:#fff;margin-bottom:8px;text-transform:uppercase;}
+.feature-desc{font-size:13px;color:var(--muted);line-height:1.7;}
 @media(max-width:700px){.feature-strip{grid-template-columns:1fr;}}
 
+/* ── FEATURE CARD (bracket corners) ── */
+.feature-card{background:#111;border:1px solid #2a2a2a;padding:24px;position:relative;}
+.feature-card::before{content:'';position:absolute;top:0;left:0;width:16px;height:16px;border-top:2px solid var(--accent);border-left:2px solid var(--accent);}
+.feature-card::after{content:'';position:absolute;bottom:0;right:0;width:16px;height:16px;border-bottom:2px solid var(--accent);border-right:2px solid var(--accent);}
+
 /* ── COUNTDOWN PANEL ── */
-.countdown-panel{
-  background:#0d0d0d;
-  border:1px solid #1e1e1e;border-left:4px solid var(--accent);
-  padding:24px 28px;margin-bottom:0;
-  display:flex;align-items:center;gap:32px;flex-wrap:wrap;
-  position:relative;overflow:hidden;
-}
-.countdown-panel::before{
-  content:'NEXT OP';
-  position:absolute;right:20px;top:12px;
-  font-family:'Russo One',sans-serif;font-size:60px;
-  color:rgba(224,92,0,.04);letter-spacing:.1em;pointer-events:none;
-}
+.countdown-panel{background:#111;border:1px solid #2a2a2a;padding:24px 28px;margin-bottom:0;display:flex;align-items:center;gap:32px;flex-wrap:wrap;}
 .countdown-panel-info{flex:1;min-width:200px;}
-.countdown-panel-label{font-size:9px;letter-spacing:.3em;color:var(--accent);font-family:'Share Tech Mono',monospace;margin-bottom:6px;}
-.countdown-panel-title{font-family:'Russo One',sans-serif;font-size:24px;letter-spacing:.04em;color:#fff;text-transform:uppercase;}
-.countdown-panel-meta{font-size:11px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace;}
+.countdown-panel-label{font-size:10px;letter-spacing:.25em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;margin-bottom:6px;text-transform:uppercase;}
+.countdown-panel-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:.04em;color:#fff;text-transform:uppercase;}
+.countdown-panel-meta{font-size:12px;color:var(--muted);margin-top:4px;}
 .countdown-panel-timer{display:flex;gap:0;border:1px solid #2a2a2a;}
 .countdown-panel-unit{text-align:center;padding:10px 16px;border-right:1px solid #2a2a2a;}
 .countdown-panel-unit:last-child{border-right:none;}
-.countdown-panel-num{font-family:'Russo One',sans-serif;font-size:42px;color:#fff;line-height:1;}
-.countdown-panel-lbl{font-size:8px;letter-spacing:.2em;color:var(--muted);font-family:'Share Tech Mono',monospace;text-transform:uppercase;}
+.countdown-panel-num{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;color:#fff;line-height:1;}
+.countdown-panel-lbl{font-size:8px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;}
 
 /* ── SECTION HEADERS ── */
-.section-header{display:flex;align-items:center;gap:0;margin-bottom:16px;background:#0d0d0d;border:1px solid #1e1e1e;border-left:4px solid var(--accent);}
-.section-header-text{font-family:'Russo One',sans-serif;font-size:11px;letter-spacing:.25em;color:var(--accent);padding:8px 16px;text-transform:uppercase;}
-.section-header-line{flex:1;height:1px;background:#1e1e1e;margin:0 12px;}
+.section-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.section-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(28px,4vw,40px);text-transform:uppercase;letter-spacing:.04em;color:#fff;}
+.section-title span{color:var(--accent);}
+.section-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+.section-link{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;border:1px solid #333;color:var(--text);cursor:pointer;background:none;transition:all .15s;border-radius:2px;}
+.section-link:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ── VIP BANNER ── */
+.vip-banner{background:linear-gradient(135deg,#1a2000 0%,#0d1300 100%);border:1px solid #2a3a00;padding:48px 40px;text-align:center;position:relative;overflow:hidden;}
+
+/* ── FOOTER ── */
+.pub-footer{background:#0a0a0a;border-top:1px solid #1a1a1a;padding:48px 24px 24px;}
+.pub-footer-inner{max-width:1200px;margin:0 auto;}
+.pub-footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:40px;}
+@media(max-width:900px){.pub-footer-grid{grid-template-columns:1fr 1fr;gap:24px;}}
+@media(max-width:600px){.pub-footer-grid{grid-template-columns:1fr;}}
+.pub-footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.pub-footer-logo-box{background:var(--accent);width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;color:#000;border-radius:2px;}
+.pub-footer-logo-text{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:.1em;color:#fff;text-transform:uppercase;}
+.pub-footer-desc{font-size:13px;color:var(--muted);line-height:1.7;max-width:280px;}
+.pub-footer-col-title{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#fff;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;}
+.pub-footer-link{display:block;font-size:13px;color:var(--muted);padding:4px 0;cursor:pointer;transition:color .15s;background:none;border:none;text-align:left;width:100%;}
+.pub-footer-link:hover{color:var(--accent);}
+.pub-footer-contact{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:4px 0;}
+.pub-footer-bottom{border-top:1px solid #1a1a1a;padding-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+.pub-footer-copy{font-size:12px;color:var(--muted);}
+.pub-footer-legal{font-size:11px;color:#444;}
+.pub-footer-social{display:flex;gap:12px;}
+.pub-footer-social-btn{width:34px;height:34px;background:#1a1a1a;border:1px solid #2a2a2a;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;transition:all .15s;color:var(--muted);border-radius:2px;}
+.pub-footer-social-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .pub-nav-links{display:none;}
-  .pub-nav-hamburger{display:block;}
-  .pub-nav-logo-text{display:none;}
-  .bottom-nav{display:flex;}
-  .admin-sidebar{transform:translateX(-100%);}
-  .admin-sidebar.open{transform:translateX(0);}
-  .admin-main{margin-left:0;}
-  .admin-overlay.open{display:block;}
-}
-@media(max-width:480px){
-  .countdown-num{font-size:38px;}
+  .pub-nav-hamburger{display:flex;align-items:center;justify-content:center;}
+  .bottom-nav{display:block;}
+  .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + 16px);}
+  .hero-bg{min-height:100svh;}
   .hero-cta{flex-direction:column;}
-  .hero-stats{flex-wrap:wrap;}
-  .hero-stat{min-width:50%;}
 }
+@media(min-width:769px){
+  .pub-nav-hamburger{display:none;}
+  .bottom-nav{display:none;}
+}
+`
+
 `
 function Toast({ msg, type }) {
   return msg ? <div className={`toast toast-${type || "green"}`}>{msg}</div> : null;
@@ -1098,7 +942,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
               </>
             ) : (
               <>
-                <button className="btn btn-sm btn-ghost" onClick={() => setAuthModal("login")}>Login</button>
+                <button className="btn btn-sm btn-primary" onClick={() => setAuthModal("login")} style={{ padding:"8px 20px", fontSize:12 }}>LOGIN</button>
                 <button className="btn btn-sm btn-primary" onClick={() => setAuthModal("register")}>Register</button>
               </>
             )}
@@ -1187,18 +1031,20 @@ function HomePage({ data, setPage }) {
       )}
 
       {/* HERO */}
-      <div className="hero-bg">
-        <div style={{ maxWidth:1100, margin:"0 auto", width:"100%", position:"relative", zIndex:1 }}>
+      <div className="hero-bg" style={{ backgroundImage:"url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&q=80&auto=format&fit=crop')" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", width:"100%", position:"relative", zIndex:1, padding:"0 24px" }}>
           <div className="hero-content">
-            <div className="hero-eyebrow">// SWINDON'S PREMIER AIRSOFT SITE</div>
-            <h1 className="hero-h1">LOCK &amp;<br /><span>LOAD.</span></h1>
+            <div className="hero-eyebrow">🎯 TACTICAL AIRSOFT EXPERIENCE</div>
+            <h1 className="hero-h1">
+              WELCOME TO<br />
+              <span>SWINDON<br />AIRSOFT</span>
+            </h1>
             <p className="hero-p">
-              TACTICAL SKIRMISHES · FULL KIT RENTAL · VIP MEMBERSHIP<br />
-              Swindon's premier airsoft arena — gear up and get in the game.
+              Experience the ultimate airsoft gameplay. From intense skirmishes to special ops events, gear up and join the action.
             </p>
             <div className="hero-cta">
-              <button className="btn btn-primary" style={{ padding:"14px 40px", fontSize:14, letterSpacing:".2em" }} onClick={() => setPage("events")}>▶ BOOK A GAME DAY</button>
-              <button className="btn btn-ghost"   style={{ padding:"14px 32px", fontSize:14, letterSpacing:".2em" }} onClick={() => setPage("shop")}>VISIT ARMOURY</button>
+              <button className="btn btn-primary" style={{ padding:"13px 32px", fontSize:14 }} onClick={() => setPage("events")}>BOOK NOW</button>
+              <button className="btn btn-ghost"   style={{ padding:"13px 28px", fontSize:14 }} onClick={() => setPage("vip")}>BECOME VIP</button>
             </div>
           </div>
         </div>
@@ -1223,16 +1069,16 @@ function HomePage({ data, setPage }) {
 
       {/* FEATURE STRIP */}
       <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
-        <div className="feature-strip" style={{ maxWidth:1100, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, padding:"40px 24px", maxWidth:1200, margin:"0 auto" }}>
           {[
-            { icon:"🎯", title:"Tactical Skirmishes", desc:"CQB, woodland & mixed-environment game modes. Every op is different."        },
-            { icon:"🪖", title:"Full Kit Rental",     desc:"Rifle, mask, full-body protection & BBs included. Just show up."             },
-            { icon:"⭐", title:"VIP Membership",      desc:"Play 3 games, apply for VIP. 10% off all bookings & shop orders."           },
+            { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
+            { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
+            { icon:"⭐", title:"VIP BENEFITS", desc:"10% off all bookings and shop items. Exclusive VIP-only events and UKARA registration support." },
           ].map(feat => (
-            <div key={feat.title} className="feature-item">
-              <div className="feature-icon">{feat.icon}</div>
-              <div className="feature-title">{feat.title}</div>
-              <div className="feature-desc">{feat.desc}</div>
+            <div key={feat.title} className="feature-card">
+              <div style={{ fontSize:32, color:"var(--accent)", marginBottom:14 }}>{feat.icon}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:17, fontWeight:800, letterSpacing:".08em", color:"#fff", marginBottom:8, textTransform:"uppercase" }}>{feat.title}</div>
+              <div style={{ fontSize:13, color:"var(--muted)", lineHeight:1.7 }}>{feat.desc}</div>
             </div>
           ))}
         </div>
@@ -1246,7 +1092,7 @@ function HomePage({ data, setPage }) {
           return (
             <div style={{ marginBottom:28 }}>
               <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12, marginBottom:2 }}>
-                <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:10, letterSpacing:".4em", color:"#fff" }}>MISSION BRIEFING</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:".4em", color:"#fff" }}>MISSION BRIEFING</span>
                 <span style={{ marginLeft:"auto", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"rgba(255,255,255,.7)", letterSpacing:".1em" }}>
                   OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
                 </span>
@@ -1272,48 +1118,42 @@ function HomePage({ data, setPage }) {
           );
         })()}
 
-        {/* INTEL BOARD */}
+        {/* UPCOMING EVENTS */}
         {data.events.filter(e => e.published).length > 0 && (
-          <div style={{ marginBottom:32 }}>
-            <div style={{ display:"flex", alignItems:"center", marginBottom:16, overflow:"hidden" }}>
-              <div style={{ background:"var(--accent)", padding:"6px 14px", flexShrink:0 }}>
-                <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:9, letterSpacing:".35em", color:"#fff" }}>INTEL BOARD</span>
+          <div style={{ marginBottom:48 }}>
+            <div className="section-header">
+              <div>
+                <div className="section-title">UPCOMING <span>EVENTS</span></div>
+                <div className="section-sub">Book your next game day</div>
               </div>
-              <div style={{ flex:1, height:2, background:"linear-gradient(90deg,var(--accent),transparent)" }} />
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", padding:"0 12px", letterSpacing:".1em", flexShrink:0 }}>
-                {data.events.filter(e => e.published).length} OPS ACTIVE
-              </div>
+              <button className="section-link" onClick={() => setPage("events")}>VIEW ALL →</button>
             </div>
             <div className="grid-3">
               {data.events.filter(e => e.published).slice(0, 3).map(ev => {
                 const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
                 const total  = ev.walkOnSlots + ev.rentalSlots;
-                const pct    = total > 0 ? Math.min(100, booked / total * 100) : 0;
-                const full   = booked >= total;
+                const spotsLeft = total - booked;
                 return (
                   <div key={ev.id} className="event-card" onClick={() => setPage("events")}>
-                    <div className="event-banner-img">
-                      <img src={ev.banner || "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&q=70&auto=format&fit=crop"} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"grayscale(25%) contrast(1.1)" }} alt="" />
-                      <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg,rgba(0,0,0,.1) 0%,rgba(0,0,0,.75) 100%)" }} />
-                      <div style={{ position:"absolute", top:6, left:6, width:12, height:12, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)" }} />
-                      <div style={{ position:"absolute", top:6, right:6, width:12, height:12, borderTop:"2px solid var(--accent)", borderRight:"2px solid var(--accent)" }} />
-                      <div style={{ position:"absolute", bottom:6, left:6, width:12, height:12, borderBottom:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)" }} />
-                      <div style={{ position:"absolute", bottom:6, right:6, width:12, height:12, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)" }} />
-                      <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"8px 12px" }}>
-                        <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:17, letterSpacing:".06em", color:"#fff", textTransform:"uppercase" }}>{ev.title}</div>
+                    <div className="event-banner-img" style={{ position:"relative" }}>
+                      {ev.banner
+                        ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
+                        : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#333", fontSize:40 }}>📅</div>
+                      }
+                      <div style={{ position:"absolute", top:12, left:12 }}>
+                        <span style={{ background:"var(--accent)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>SKIRMISH</span>
                       </div>
                     </div>
                     <div className="event-card-body">
-                      <div className="gap-2 mb-1">
-                        <span className="tag tag-orange">📅 {ev.date}</span>
-                        <span className="tag tag-blue">⏱ {ev.time}</span>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".06em", textTransform:"uppercase", marginBottom:10, color:"#fff" }}>{ev.title}</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:3, marginBottom:12 }}>
+                        <div style={{ fontSize:12, color:"var(--muted)" }}>📅 {ev.date}</div>
+                        <div style={{ fontSize:12, color:"var(--muted)" }}>📍 {ev.location}</div>
+                        <div style={{ fontSize:12, color:"var(--muted)" }}>👥 {spotsLeft} spots left</div>
                       </div>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", marginBottom:10 }}>📍 {ev.location}</div>
-                      <div className="progress-bar mb-1" style={{ height:4 }}>
-                        <div className={`progress-fill ${pct > 80 ? "red" : ""}`} style={{ width:pct + "%" }} />
-                      </div>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:full ? "var(--red)" : pct > 80 ? "var(--gold)" : "var(--muted)", letterSpacing:".06em" }}>
-                        {full ? "⛔ FULL" : `${booked}/${total} SLOTS FILLED`}
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:17, color:"var(--accent)" }}>£{Math.min(ev.walkOnPrice, ev.rentalPrice)}</span>
+                        <button className="btn btn-primary" style={{ padding:"7px 16px", fontSize:11 }}>BOOK NOW</button>
                       </div>
                     </div>
                   </div>
@@ -1323,61 +1163,46 @@ function HomePage({ data, setPage }) {
           </div>
         )}
 
-        {/* IMAGE STRIP */}
-        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:3, marginBottom:32, height:220 }}>
-          {[
-            "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&q=70&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=500&q=70&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=500&q=70&auto=format&fit=crop",
-          ].map((src, idx) => (
-            <div key={idx} style={{ overflow:"hidden", position:"relative", background:"#111" }}>
-              <img src={src}
-                style={{ width:"100%", height:"100%", objectFit:"cover", filter:"grayscale(30%) contrast(1.1)", transition:"transform .4s, filter .4s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform="scale(1.05)"; e.currentTarget.style.filter="grayscale(0%) contrast(1)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform="scale(1)";    e.currentTarget.style.filter="grayscale(30%) contrast(1.1)"; }}
-                alt=""
-              />
-              <div style={{ position:"absolute", top:8, left:8, width:16, height:16, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", opacity:.7 }} />
-              <div style={{ position:"absolute", bottom:8, right:8, width:16, height:16, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", opacity:.7 }} />
+        {/* TACTICAL GEAR */}
+        {data.shop.filter(p => p.published !== false).length > 0 && (
+          <div style={{ marginBottom:48 }}>
+            <div className="section-header">
+              <div>
+                <div className="section-title">TACTICAL <span>GEAR</span></div>
+                <div className="section-sub">BBs, gas, pyro and more</div>
+              </div>
+              <button className="section-link" onClick={() => setPage("shop")}>SHOP ALL →</button>
             </div>
-          ))}
-        </div>
-
-        {/* RULES + LOADOUT */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
-          <div className="card">
-            <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".3em", color:"var(--accent)", marginBottom:14, textTransform:"uppercase" }}>// RULES OF ENGAGEMENT</div>
-            {[
-              "Eye protection mandatory at all times on site",
-              "Minimum engagement distance: 20m for DMR, 30m for snipers",
-              "Full-auto and semi-auto game modes available",
-              "Call your hits — honesty is non-negotiable",
-              "Marshals' decisions are final",
-            ].map((rule, ri) => (
-              <div key={ri} style={{ display:"flex", gap:10, padding:"7px 0", borderBottom:"1px solid #1a1a1a", fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--text)" }}>
-                <span style={{ color:"var(--accent)", fontFamily:"'Russo One',sans-serif", fontSize:11, flexShrink:0, minWidth:20 }}>{String(ri + 1).padStart(2,"0")}.</span>
-                {rule}
-              </div>
-            ))}
+            <div className="grid-4">
+              {data.shop.filter(p => p.published !== false).slice(0, 4).map(prod => (
+                <div key={prod.id} className="shop-card" onClick={() => setPage("shop")} style={{ cursor:"pointer" }}>
+                  <div className="shop-img">
+                    {prod.image ? <img src={prod.image} alt={prod.name} /> : <span style={{ fontSize:32, opacity:.3 }}>📦</span>}
+                  </div>
+                  <div className="shop-body">
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:".12em", color:"var(--muted)", textTransform:"uppercase", fontFamily:"'Barlow Condensed',sans-serif", marginBottom:4 }}>{prod.category || "GEAR"}</div>
+                    <div style={{ fontWeight:700, fontSize:14, marginBottom:6, color:"#fff" }}>{prod.name}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)" }}>£{prod.price}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="card">
-            <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".3em", color:"var(--accent)", marginBottom:14, textTransform:"uppercase" }}>// LOADOUT GUIDE</div>
-            {[
-              ["WALK-ON", `£${data.events[0]?.walkOnPrice || 25}`, "Your own gear — gun, eye-pro, BBs"],
-              ["RENTAL",  `£${data.events[0]?.rentalPrice || 35}`, "Full kit provided — just turn up"  ],
-              ["VIP",     "10% OFF",                               "Discount on all bookings & shop"   ],
-            ].map(([label, price, desc]) => (
-              <div key={label} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid #1a1a1a" }}>
-                <div style={{ background:"rgba(224,92,0,.1)", border:"1px solid var(--accent)", padding:"3px 8px", fontFamily:"'Russo One',sans-serif", fontSize:9, letterSpacing:".2em", color:"var(--accent)", flexShrink:0 }}>{label}</div>
-                <div style={{ flex:1, fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--text)" }}>{desc}</div>
-                <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:18, color:"#fff", flexShrink:0 }}>{price}</div>
-              </div>
-            ))}
-            <button className="btn btn-primary mt-2" style={{ width:"100%", padding:"10px", letterSpacing:".2em" }} onClick={() => setPage("events")}>BOOK NOW →</button>
-          </div>
-        </div>
+        )}
 
       </div>
+
+      {/* VIP BANNER */}
+      <div className="vip-banner">
+        <div style={{ maxWidth:700, margin:"0 auto" }}>
+          <div className="section-title" style={{ marginBottom:16 }}>BECOME A <span>VIP MEMBER</span></div>
+          <p style={{ fontSize:15, color:"#aaa", marginBottom:28, lineHeight:1.7 }}>
+            After 3 game days, unlock VIP membership for just £30/year. Get 10% off everything, access exclusive events, and UKARA registration support.
+          </p>
+          <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => setPage("vip")}>LEARN MORE</button>
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -1565,7 +1390,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
             {/* ── BOOKING CARD ── */}
             <div className="card" style={{ borderTop:"3px solid var(--accent)" }}>
-              <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:11, letterSpacing:".25em", color:"var(--accent)", marginBottom:16 }}>BOOK THIS EVENT</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:".25em", color:"var(--accent)", marginBottom:16 }}>BOOK THIS EVENT</div>
 
               {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
@@ -1578,7 +1403,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   {myBookings.map(b => (
                     <div key={b.id} style={{ background:"var(--bg4)", border:"1px solid #2a2a2a", borderLeft:"3px solid #7dc840", padding:"10px 14px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <div>
-                        <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:12, color:"#fff" }}>
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, color:"#fff" }}>
                           {b.type === "walkOn" ? "🎯 Walk-On" : "🪖 Rental"} ×{b.qty}
                         </div>
                         <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>£{b.total.toFixed(2)} · ID: {b.id.slice(0,8)}</div>
@@ -1601,14 +1426,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 {/* Walk-On row */}
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #1a1a1a" }}>
                   <div>
-                    <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
                     <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
                       £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft} slots left
                     </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #333", background:"#111" }}>
                     <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
-                    <span style={{ padding:"0 14px", fontFamily:"'Russo One',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
+                    <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
                     <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
                   </div>
                 </div>
@@ -1616,14 +1441,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 {/* Rental row */}
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none" }}>
                   <div>
-                    <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
                     <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
                       £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft} slots left
                     </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #333", background:"#111" }}>
                     <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
-                    <span style={{ padding:"0 14px", fontFamily:"'Russo One',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
+                    <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
                     <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
                   </div>
                 </div>
@@ -1653,12 +1478,12 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                                 <div key={v.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 0", opacity: outOfStock ? 0.4 : 1 }}>
                                   <div>
                                     <span style={{ fontSize:12, color:"var(--text)" }}>{v.name}</span>
-                                    <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Russo One',sans-serif", marginLeft:10 }}>£{Number(v.price).toFixed(2)}</span>
+                                    <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", marginLeft:10 }}>£{Number(v.price).toFixed(2)}</span>
                                     <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginLeft:8 }}>{outOfStock ? "Out of stock" : `${stock} left`}</span>
                                   </div>
                                   <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111", flexShrink:0 }}>
                                     <button onClick={() => setExtra(ex.id, qty - 1, v.id)} disabled={qty === 0 || outOfStock} style={{ background:"none", border:"none", color:"var(--text)", padding:"5px 11px", cursor:"pointer", opacity: qty===0?0.3:1 }}>−</button>
-                                    <span style={{ padding:"0 10px", fontFamily:"'Russo One',sans-serif", fontSize:15, color: qty > 0 ? "var(--accent)" : "var(--text)", minWidth:26, textAlign:"center" }}>{qty}</span>
+                                    <span style={{ padding:"0 10px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:15, color: qty > 0 ? "var(--accent)" : "var(--text)", minWidth:26, textAlign:"center" }}>{qty}</span>
                                     <button onClick={() => setExtra(ex.id, qty + 1, v.id)} disabled={outOfStock || qty >= stock} style={{ background:"none", border:"none", color:"var(--text)", padding:"5px 11px", cursor:"pointer", opacity: (outOfStock||qty>=stock)?0.3:1 }}>+</button>
                                   </div>
                                 </div>
@@ -1672,10 +1497,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                               const stock = lp ? lp.stock : 999;
                               return (
                                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                                  <span style={{ fontSize:12, color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{Number(livePrice).toFixed(2)}</span>
+                                  <span style={{ fontSize:12, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{Number(livePrice).toFixed(2)}</span>
                                   <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111" }}>
                                     <button onClick={() => setExtra(ex.id, qty - 1, null)} disabled={qty === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer", opacity: qty===0?0.3:1 }}>−</button>
-                                    <span style={{ padding:"0 12px", fontFamily:"'Russo One',sans-serif", fontSize:16, color: qty > 0 ? "var(--accent)" : "var(--text)", minWidth:30, textAlign:"center" }}>{qty}</span>
+                                    <span style={{ padding:"0 12px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:16, color: qty > 0 ? "var(--accent)" : "var(--text)", minWidth:30, textAlign:"center" }}>{qty}</span>
                                     <button onClick={() => setExtra(ex.id, qty + 1, null)} disabled={qty >= stock} style={{ background:"none", border:"none", color:"var(--text)", padding:"6px 12px", cursor:"pointer", opacity: qty>=stock?0.3:1 }}>+</button>
                                   </div>
                                 </div>
@@ -1735,7 +1560,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <span>VIP 10% discount applied</span>
                     </div>
                   )}
-                  <div style={{ borderTop:"1px solid #2a2a2a", marginTop:10, paddingTop:10, display:"flex", justifyContent:"space-between", fontFamily:"'Russo One',sans-serif", fontSize:22, color:"#fff" }}>
+                  <div style={{ borderTop:"1px solid #2a2a2a", marginTop:10, paddingTop:10, display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:22, color:"#fff" }}>
                     <span>TOTAL</span>
                     <span style={{ color:"var(--accent)" }}>£{grandTotal.toFixed(2)}</span>
                   </div>
@@ -1814,25 +1639,37 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           const total  = ev.walkOnSlots + ev.rentalSlots;
           return (
             <div key={ev.id} className="event-card" onClick={() => { setDetail(ev.id); setTab("info"); resetCart(); }}>
-              <div className="event-banner-img">{ev.banner ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : ev.title}</div>
+              <div className="event-banner-img" style={{ position:"relative" }}>
+                {ev.banner
+                  ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
+                  : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#333", fontSize:32 }}>📅</div>
+                }
+                <div style={{ position:"absolute", top:12, left:12 }}>
+                  <span style={{ background:"var(--accent)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>SKIRMISH</span>
+                </div>
+              </div>
               <div className="event-card-body">
-                <div className="gap-2 mb-1"><span className="tag tag-green">{ev.date}</span><span className="tag tag-blue">{ev.time} GMT</span></div>
-                <div style={{ fontWeight:700, fontSize:16, margin:"8px 0 4px" }}>{ev.title}</div>
-                <div className="text-muted" style={{ fontSize:12, marginBottom:8 }}>{ev.location}</div>
-                <p className="text-muted" style={{ fontSize:12, marginBottom:12, lineHeight:1.5 }}>{ev.description?.slice(0,90)}…</p>
-                <div className="form-row" style={{ gap:8 }}>
-                  <div style={{ background:"var(--bg4)", padding:"8px 0", borderRadius:6, textAlign:"center" }}>
-                    <div style={{ fontWeight:900, color:"var(--accent)" }}>£{ev.walkOnPrice}</div>
-                    <div style={{ fontSize:10, color:"var(--muted)" }}>Walk-On</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".06em", textTransform:"uppercase", marginBottom:10, color:"#fff" }}>{ev.title}</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
+                    <span>📅</span> {ev.date}
                   </div>
-                  <div style={{ background:"var(--bg4)", padding:"8px 0", borderRadius:6, textAlign:"center" }}>
-                    <div style={{ fontWeight:900, color:"var(--gold)" }}>£{ev.rentalPrice}</div>
-                    <div style={{ fontSize:10, color:"var(--muted)" }}>Rental</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
+                    <span>⏱</span> {ev.time} GMT
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
+                    <span>📍</span> {ev.location}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
+                    <span>👥</span> {booked} / {total} spots
                   </div>
                 </div>
-                <div className="progress-bar mt-2"><div className="progress-fill" style={{ width:Math.min(100, booked/total*100)+"%" }} /></div>
-                <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>{booked}/{total} booked</div>
-                <button className="btn btn-primary mt-2" style={{ width:"100%" }}>View Details & Book →</button>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)" }}>
+                    From £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
+                  </div>
+                  <button className="btn btn-primary" style={{ padding:"8px 18px", fontSize:12 }}>BOOK NOW</button>
+                </div>
               </div>
             </div>
           );
@@ -1959,12 +1796,12 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   {hasV && <span className="tag tag-blue">{item.variants.length} variants</span>}
                   {item.onSale && !hasV && <span className="tag tag-red">SALE</span>}
                 </div>
-                <div style={{ fontFamily:"'Russo One',sans-serif", fontSize:14, marginBottom:4, letterSpacing:".03em", color:"#fff" }}>{item.name}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, marginBottom:4, letterSpacing:".03em", color:"#fff" }}>{item.name}</div>
                 <p style={{ fontSize:11, color:"var(--muted)", marginBottom:10, lineHeight:1.5, fontFamily:"'Share Tech Mono',monospace" }}>{item.description}</p>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                   <div>
                     {hasV && <span style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>from </span>}
-                    <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:20, color:"var(--accent)" }}>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:20, color:"var(--accent)" }}>
                       £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
                     </span>
                     {cu?.vipStatus === "active" && <span className="text-gold" style={{ fontSize:10, marginLeft:4 }}>VIP</span>}
@@ -2005,10 +1842,10 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                     <div className="gap-2" style={{ alignItems:"center" }}>
                       <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111" }}>
                         <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"4px 10px", cursor:"pointer" }}>−</button>
-                        <span style={{ padding:"0 8px", fontFamily:"'Russo One',sans-serif", fontSize:14 }}>{item.qty}</span>
+                        <span style={{ padding:"0 8px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:14 }}>{item.qty}</span>
                         <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"4px 10px", cursor:"pointer" }}>+</button>
                       </div>
-                      <span className="text-green" style={{ fontFamily:"'Russo One',sans-serif", minWidth:60, textAlign:"right" }}>£{(item.price * item.qty).toFixed(2)}</span>
+                      <span className="text-green" style={{ fontFamily:"'Barlow Condensed',sans-serif", minWidth:60, textAlign:"right" }}>£{(item.price * item.qty).toFixed(2)}</span>
                       <button style={{ background:"none", border:"none", color:"var(--red)", cursor:"pointer", fontSize:16 }} onClick={() => removeFromCart(item.key)}>✕</button>
                     </div>
                   </div>
@@ -2025,7 +1862,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {hasNoPost && <div className="alert alert-gold mt-1">🔥 Collection-only items in cart — no posting</div>}
                 {cu?.vipStatus === "active" && <div className="alert alert-gold mt-1">⭐ VIP 10% discount applied</div>}
 
-                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Russo One',sans-serif", fontSize:22, marginTop:14, color:"#fff" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:22, marginTop:14, color:"#fff" }}>
                   <span>TOTAL</span>
                   <span style={{ color:"var(--accent)" }}>£{grandTotal.toFixed(2)}</span>
                 </div>
@@ -2111,7 +1948,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             }
             {!item.stock && (
               <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:28, letterSpacing:".2em", color:"var(--red)", border:"3px solid var(--red)", padding:"8px 24px", transform:"rotate(-5deg)" }}>OUT OF STOCK</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:28, letterSpacing:".2em", color:"var(--red)", border:"3px solid var(--red)", padding:"8px 24px", transform:"rotate(-5deg)" }}>OUT OF STOCK</span>
               </div>
             )}
           </div>
@@ -2142,7 +1979,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           </div>
 
           {/* Name */}
-          <h1 style={{ fontFamily:"'Russo One',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
+          <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
 
           {/* Description */}
           <p style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}>
@@ -2186,7 +2023,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           <div style={{ marginBottom:20 }}>
             {displayPrice ? (
               <div style={{ display:"flex", alignItems:"baseline", gap:12 }}>
-                <span style={{ fontFamily:"'Russo One',sans-serif", fontSize:48, color:"var(--accent)", lineHeight:1 }}>£{displayPrice}</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:48, color:"var(--accent)", lineHeight:1 }}>£{displayPrice}</span>
                 {vipPrice && <span className="tag tag-gold">VIP PRICE</span>}
                 {!hasVariants && item.onSale && item.salePrice && (
                   <span style={{ textDecoration:"line-through", color:"var(--muted)", fontSize:18 }}>£{item.price}</span>
@@ -2206,9 +2043,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           {canAdd ? (
             <div style={{ display:"flex", gap:12, alignItems:"stretch", marginBottom:12 }}>
               <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#0d0d0d" }}>
-                <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Russo One',sans-serif" }}>−</button>
-                <span style={{ padding:"0 16px", fontFamily:"'Russo One',sans-serif", fontSize:22, color:"#fff", minWidth:50, textAlign:"center" }}>{qty}</span>
-                <button onClick={() => setQty(q => Math.min(stockAvail, q + 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Russo One',sans-serif" }}>+</button>
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>−</button>
+                <span style={{ padding:"0 16px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:22, color:"#fff", minWidth:50, textAlign:"center" }}>{qty}</span>
+                <button onClick={() => setQty(q => Math.min(stockAvail, q + 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>+</button>
               </div>
               <button className="btn btn-primary" style={{ flex:1, padding:"12px 24px", fontSize:14, letterSpacing:".15em" }} onClick={handleAdd}>
                 ADD TO CART × {qty}
@@ -2911,7 +2748,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                   {/* Ticket */}
                   <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                     <span>{b.type === "walkOn" ? "🎯" : "🪖"} {ticketLabel} ×{b.qty}</span>
-                    <span style={{ color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{(Number(ticketPrice) * b.qty).toFixed(2)}</span>
+                    <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(Number(ticketPrice) * b.qty).toFixed(2)}</span>
                   </div>
                   {/* Extras */}
                   {extras.length > 0 && extras.map(([key, qty]) => {
@@ -2924,12 +2761,12 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                     return (
                       <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                         <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
-                        <span style={{ color:"var(--accent)", fontFamily:"'Russo One',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
+                        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
                       </div>
                     );
                   })}
                   {/* Total */}
-                  <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Russo One',sans-serif" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>
                     <span>TOTAL</span>
                     <span style={{ color:"var(--accent)" }}>£{b.total.toFixed(2)}</span>
                   </div>
@@ -3502,7 +3339,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [key]: Math.max(0, qty - 1) })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>−</button>
-                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Russo One',sans-serif" }}>{qty}</span>
+                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Barlow Condensed',sans-serif" }}>{qty}</span>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [key]: qty + 1 })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>+</button>
                                 </div>
@@ -3516,7 +3353,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [ex.id]: Math.max(0, qty - 1) })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>−</button>
-                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Russo One',sans-serif" }}>{qty}</span>
+                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Barlow Condensed',sans-serif" }}>{qty}</span>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [ex.id]: qty + 1 })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>+</button>
                                 </div>
@@ -3536,7 +3373,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                   {addBookingForm.type === "walkOn" ? "Walk-On" : "Rental"} ×{addBookingForm.qty}
                   {extrasPreviewTotal > 0 && ` + extras`}
                 </span>
-                <span style={{ fontFamily: "'Russo One',sans-serif", fontSize: 20, color: "var(--accent)" }}>£{previewTotal.toFixed(2)}</span>
+                <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, color: "var(--accent)" }}>£{previewTotal.toFixed(2)}</span>
               </div>
 
               <div className="gap-2">
@@ -5012,7 +4849,7 @@ export default function App() {
   if (loading) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Russo One',sans-serif" }}>SA</div>
+        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
         <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
       </div>
@@ -5042,7 +4879,7 @@ export default function App() {
           <style>{CSS}</style>
           <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
             <div style={{ fontSize: 48 }}>🔒</div>
-            <div style={{ fontFamily: "'Russo One',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
             <div style={{ color: "var(--muted)", fontSize: 14 }}>Admin access only.</div>
             <button className="btn btn-ghost" onClick={() => setPage("home")}>← Back to Site</button>
           </div>
@@ -5110,6 +4947,61 @@ export default function App() {
         {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
         {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
       </div>
+
+      {/* FOOTER */}
+      <footer className="pub-footer">
+        <div className="pub-footer-inner">
+          <div className="pub-footer-grid">
+            {/* Brand col */}
+            <div>
+              <div className="pub-footer-logo">
+                <div className="pub-footer-logo-box">SA</div>
+                <div className="pub-footer-logo-text">SWINDON AIRSOFT</div>
+              </div>
+              <p className="pub-footer-desc">Premier airsoft venue in Swindon. Experience tactical gameplay like never before.</p>
+              <div className="pub-footer-social" style={{ marginTop:16 }}>
+                {["📘","📸","▶️"].map((icon,i) => (
+                  <button key={i} className="pub-footer-social-btn">{icon}</button>
+                ))}
+              </div>
+            </div>
+            {/* Quick Links */}
+            <div>
+              <div className="pub-footer-col-title">QUICK LINKS</div>
+              {[
+                ["Upcoming Events", "events"],
+                ["Shop", "shop"],
+                ["VIP Membership", "vip"],
+                ["Gallery", "gallery"],
+              ].map(([label, pg]) => (
+                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
+              ))}
+            </div>
+            {/* Information */}
+            <div>
+              <div className="pub-footer-col-title">INFORMATION</div>
+              {[
+                ["Sign Waiver", "profile"],
+                ["Site Rules", "qa"],
+                ["FAQ", "qa"],
+              ].map(([label, pg]) => (
+                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
+              ))}
+            </div>
+            {/* Contact */}
+            <div>
+              <div className="pub-footer-col-title">CONTACT</div>
+              <div className="pub-footer-contact">📍 Swindon, Wiltshire, UK</div>
+              <div className="pub-footer-contact">📞 +44 1234 567890</div>
+              <div className="pub-footer-contact">✉️ info@swindonairsoft.co.uk</div>
+            </div>
+          </div>
+          <div className="pub-footer-bottom">
+            <div className="pub-footer-copy">© {new Date().getFullYear()} Swindon Airsoft. All rights reserved.</div>
+            <div className="pub-footer-legal">Players must be 18+ or accompanied by adult. Valid ID required.</div>
+          </div>
+        </div>
+      </footer>
 
       {authModal && (
         <SupabaseAuthModal
