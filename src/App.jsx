@@ -869,7 +869,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing })
             <input value={form.guardian} onChange={e => f("guardian", e.target.value)} placeholder="Type full name to sign" /></div>
         )}
         <div style={{ background: "var(--bg4)", padding: 14, borderRadius: 6, fontSize: 12, color: "var(--muted)", lineHeight: 1.7, marginBottom: 14 }}>
-          I understand airsoft activities carry inherent risk of injury. I agree to follow all safety rules on site, wear mandatory eye protection at all times, and acknowledge that Swindon Airsoft Ltd is not liable for injuries sustained during gameplay. I confirm all information is accurate and I am fit to participate.
+          I understand airsoft activities carry inherent risk of injury. I agree to follow all safety rules on site, wear mandatory eye protection at all times, and acknowledge that Zulu's Airsoft Ltd is not liable for injuries sustained during gameplay. I confirm all information is accurate and I am fit to participate.
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 18 }}>
           <input type="checkbox" id="wagree" checked={form.agreed} onChange={e => f("agreed", e.target.checked)} />
@@ -917,8 +917,8 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
         <div className="pub-nav-inner">
           {/* Logo */}
           <div className="pub-nav-logo" onClick={() => go("home")}>
-            <div className="pub-nav-logo-box">SA</div>
-            <span className="pub-nav-logo-text">SWINDON <span>AIRSOFT</span></span>
+            <div className="pub-nav-logo-box">ZA</div>
+            <span className="pub-nav-logo-text">ZULU'S <span>AIRSOFT</span></span>
           </div>
           {/* Desktop links */}
           <div className="pub-nav-links">
@@ -954,7 +954,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
       <div className={`pub-nav-drawer ${drawerOpen ? "open" : ""}`} onClick={() => setDrawerOpen(false)}>
         <div className="pub-nav-drawer-panel" onClick={e => e.stopPropagation()}>
           <div className="pub-nav-drawer-logo">
-            SWINDON <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
+            ZULU'S <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
           </div>
           {links.map(l => (
             <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
@@ -1035,7 +1035,7 @@ function HomePage({ data, setPage }) {
             <div className="hero-eyebrow">🎯 TACTICAL AIRSOFT EXPERIENCE</div>
             <h1 className="hero-h1">
               WELCOME TO<br />
-              <span>SWINDON<br />AIRSOFT</span>
+              <span>ZULU'S<br />AIRSOFT</span>
             </h1>
             <p className="hero-p">
               Experience the ultimate airsoft gameplay. From intense skirmishes to special ops events, gear up and join the action.
@@ -1876,7 +1876,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {cu && grandTotal > 0 && (
                   <PayPalCheckoutButton
                     amount={grandTotal}
-                    description={`Swindon Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
+                    description={`Zulu's Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
                     onSuccess={placeOrderAfterPayment}
                     disabled={placing}
                   />
@@ -2621,7 +2621,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
       {/* Sidebar */}
       <div className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sb-logo">
-          <div className="sb-logo-text">SWINDON <span>AIRSOFT</span></div>
+          <div className="sb-logo-text">ZULU'S <span>AIRSOFT</span></div>
           <div className="sb-time"><GmtClock /></div>
         </div>
         <div style={{ padding: "8px 8px 0" }}>
@@ -4053,7 +4053,7 @@ function AdminOrders({ showToast }) {
                     <div class="to">TO:</div>
                     <div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div>
                     <div class="addr">${addr}</div>
-                    <div class="from">FROM: Swindon Airsoft</div>
+                    <div class="from">FROM: Zulu's Airsoft</div>
                     <script>window.onload=()=>window.print();<\/script>
                   </body></html>`);
                 win.document.close();
@@ -5157,7 +5157,7 @@ export default function App() {
   if (loading) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
+        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>ZA</div>
         <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
       </div>
@@ -5264,10 +5264,10 @@ export default function App() {
             {/* Brand col */}
             <div>
               <div className="pub-footer-logo">
-                <div className="pub-footer-logo-box">SA</div>
-                <div className="pub-footer-logo-text">SWINDON AIRSOFT</div>
+                <div className="pub-footer-logo-box">ZA</div>
+                <div className="pub-footer-logo-text">ZULU'S AIRSOFT</div>
               </div>
-              <p className="pub-footer-desc">Premier airsoft venue in Swindon. Experience tactical gameplay like never before.</p>
+              <p className="pub-footer-desc">Premier airsoft venue. Experience tactical gameplay like never before.</p>
               <div className="pub-footer-social" style={{ marginTop:16 }}>
                 {["📘","📸","▶️"].map((icon,i) => (
                   <button key={i} className="pub-footer-social-btn">{icon}</button>
@@ -5302,11 +5302,11 @@ export default function App() {
               <div className="pub-footer-col-title">CONTACT</div>
               <div className="pub-footer-contact">📍 Swindon, Wiltshire, UK</div>
               <div className="pub-footer-contact">📞 +44 1234 567890</div>
-              <div className="pub-footer-contact">✉️ info@swindonairsoft.co.uk</div>
+              <div className="pub-footer-contact">✉️ info@zulusairsoft.co.uk</div>
             </div>
           </div>
           <div className="pub-footer-bottom">
-            <div className="pub-footer-copy">© {new Date().getFullYear()} Swindon Airsoft. All rights reserved.</div>
+            <div className="pub-footer-copy">© {new Date().getFullYear()} Zulu's Airsoft. All rights reserved.</div>
             <div className="pub-footer-legal">Players must be 18+ or accompanied by adult. Valid ID required.</div>
           </div>
         </div>
