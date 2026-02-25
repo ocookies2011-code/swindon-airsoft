@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
 import { normaliseProfile } from "./api";
+import { Analytics } from "@vercel/analytics/react";
 // jsQR is loaded via CDN in the QRScanner component — no import needed
 
 // ── Mock Payment Button ───────────────────────────────────────────────
@@ -5952,6 +5953,7 @@ export default function App() {
           onLogin={profile => { setCu(profile); refresh(); }}
         />
       )}
+      <Analytics />
     </>
   );
 }
