@@ -503,10 +503,10 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .qr-corner.br{bottom:8px;right:8px;border-width:0 3px 3px 0;}
 
 /* ── HERO ── */
-.hero-bg{position:relative;min-height:100vh;overflow:hidden;display:flex;align-items:center;background:#000;}
-.hero-bg::before{content:'';position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;}
-.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.92) 0%,rgba(0,0,0,.7) 55%,rgba(0,0,0,.2) 100%);}
-.hero-content{position:relative;z-index:1;padding:clamp(20px,4vw,48px) clamp(24px,4vw,80px) clamp(20px,4vw,48px);max-width:760px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;}
+.hero-bg{position:relative;overflow:hidden;display:flex;align-items:center;background:#000;}
+.hero-bg-img{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;}
+.hero-bg-grad{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.5) 0%,rgba(0,0,0,.3) 100%);}
+.hero-content{position:relative;z-index:1;padding:32px 24px 28px;max-width:760px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;}
 .hero-eyebrow{font-size:11px;letter-spacing:.3em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px;justify-content:center;}
 .hero-eyebrow::before{content:'';width:24px;height:2px;background:var(--accent);}
 .hero-h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(56px,9vw,110px);line-height:.9;color:#fff;letter-spacing:.02em;margin-bottom:24px;text-transform:uppercase;font-weight:900;}
@@ -594,7 +594,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .pub-nav-hamburger{display:flex;align-items:center;justify-content:center;}
   .bottom-nav{display:block;}
   .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + 16px);}
-  .hero-bg{min-height:100svh;}
+  
   .hero-cta{flex-direction:column;}
 }
 @media(min-width:769px){
@@ -1048,7 +1048,9 @@ function HomePage({ data, setPage }) {
       )}
 
       {/* HERO */}
-      <div className="hero-bg" style={{ backgroundImage:"url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&q=80&auto=format&fit=crop')" }}>
+      <div className="hero-bg">
+        <div className="hero-bg-img" style={{ backgroundImage:"url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&q=80&auto=format&fit=crop')" }} />
+        <div className="hero-bg-grad" />
         <div style={{ maxWidth:1280, margin:"0 auto", width:"100%", position:"relative", zIndex:1, padding:"0 24px" }}>
           <div className="hero-content">
             {/* ── MILITARY BANNER ── */}
