@@ -5025,11 +5025,25 @@ function AdminQA({ data, save, showToast }) {
     const file = e.target.files[0]; if (!file) return;
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `qa/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("gallery").upload(path, file, { upsert: true });
+      // Convert any image (including AVIF, HEIC, WEBP) to JPEG via canvas
+      const jpeg = await new Promise((resolve, reject) => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d").drawImage(img, 0, 0);
+          URL.revokeObjectURL(objectUrl);
+          canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Canvas conversion failed")), "image/jpeg", 0.85);
+        };
+        img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Could not read image file")); };
+        img.src = objectUrl;
+      });
+      const path = `qa/${Date.now()}.jpg`;
+      const { error: upErr } = await supabase.storage.from("images").upload(path, jpeg, { upsert: true, contentType: "image/jpeg" });
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("gallery").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
       const url = urlData.publicUrl;
       setForm(p => ({ ...p, a: p.a + (p.a && !p.a.endsWith("\n") ? "\n" : "") + `![image](${url})\n`, image: url }));
       showToast("Image uploaded!");
