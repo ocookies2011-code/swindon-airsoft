@@ -324,9 +324,9 @@ export const gallery = {
     const { error } = await supabase
       .from('gallery_images').delete().eq('album_id', albumId).eq('url', url)
     if (error) throw error
-  }
+  },
 
-  ,async deleteAlbum(albumId) {
+  async deleteAlbum(albumId) {
     const { error: imgErr } = await supabase
       .from('gallery_images').delete().eq('album_id', albumId)
     if (imgErr) throw imgErr
@@ -568,14 +568,14 @@ export const shopOrders = {
   async updateStatus(id, status) {
     const { error } = await supabase.from('shop_orders').update({ status }).eq('id', id)
     if (error) throw error
+  },
 
-  ,async getByUserId(userId) {
+  async getByUserId(userId) {
     const { data, error } = await supabase
       .from('shop_orders').select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
     if (error) throw error
     return data
-  }
   }
 }
