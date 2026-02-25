@@ -2663,6 +2663,56 @@ function QAPage({ data }) {
 }
 
 // ── Profile ───────────────────────────────────────────────
+
+// ── Player Orders Tab (used in ProfilePage) ──────────────
+function PlayerOrdersTab({ cu }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState(null);
+  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
+  useEffect(() => {
+    api.shopOrders.getByUserId(cu.id)
+      .then(setOrders)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [cu.id]);
+  if (loading) return <div className="card" style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>Loading ordersu2026</div>;
+  if (orders.length === 0) return <div className="card" style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>No orders yet.</div>;
+  return (
+    <div>
+      {orders.map(o => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        return (
+          <div key={o.id} className="card mb-1" style={{ cursor:"pointer" }} onClick={() => setDetail(detail?.id === o.id ? null : o)}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:15 }}>{items.map(i => `${i.name} �${i.qty}`).join(", ")}</div>
+                <div className="text-muted" style={{ fontSize:12 }}>Ordered: {new Date(o.created_at).toLocaleDateString("en-GB")} � {o.postage_name || "Collection"}</div>
+              </div>
+              <div style={{ textAlign:"right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+                <div style={{ fontWeight:900, fontSize:20, color:"var(--accent)" }}>£{Number(o.total).toFixed(2)}</div>
+                <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
+              </div>
+            </div>
+            {detail?.id === o.id && (
+              <div style={{ marginTop:14, borderTop:"1px solid var(--border)", paddingTop:14 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:8 }}>ORDER DETAILS</div>
+                {items.map((i, idx) => (
+                  <div key={idx} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}>
+                    <span>{i.name} �{i.qty}</span><span className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</span>
+                  </div>
+                ))}
+                {o.postage > 0 && <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}><span>Postage ({o.postage_name})</span><span>£{Number(o.postage).toFixed(2)}</span></div>}
+                <div style={{ display:"flex", justifyContent:"space-between", fontWeight:900, fontSize:15, padding:"8px 0" }}><span>TOTAL</span><span className="text-green">£{Number(o.total).toFixed(2)}</span></div>
+                <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>Order ref: {o.id?.slice(-8).toUpperCase()}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const [tab, setTab] = useState("profile");
 
@@ -2736,7 +2786,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
       </div>
 
       <div className="nav-tabs">
-        {["profile", "waiver", "bookings", "vip"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
+        {["profile", "waiver", "bookings", "orders", "vip"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
       </div>
 
       {tab === "profile" && (
@@ -2841,6 +2891,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
         </div>
       )}
 
+      {tab === "orders" && <PlayerOrdersTab cu={cu} />}
+
       {tab === "vip" && (
         <div className="card">
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
@@ -2889,7 +2941,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "events", label: "Events & Bookings", icon: "📅", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (pendingWaivers > 0 ? pendingWaivers : (deleteReqs > 0 ? deleteReqs : null)), badgeColor: pendingVip > 0 ? "gold" : (pendingWaivers > 0 ? "gold" : ""), group: null },
     { id: "shop", label: "Shop", icon: "🛒", group: null },
-    { id: "orders", label: "Shop Orders", icon: "📦", group: null },
+    
     { id: "leaderboard-admin", label: "Leaderboard", icon: "🏆", group: null },
     { id: "revenue", label: "Revenue", icon: "💰", group: "ANALYTICS" },
     { id: "gallery-admin", label: "Gallery", icon: "🖼", group: null },
@@ -2951,7 +3003,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
-          {section === "orders" && <AdminOrders showToast={showToast} />}
+          
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && <AdminRevenue data={data} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
@@ -4333,7 +4385,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
 }
 
 // ── Admin Shop ────────────────────────────────────────────
-function AdminOrders({ showToast }) {
+function AdminOrdersTab({ showToast }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -4373,9 +4425,9 @@ function AdminOrders({ showToast }) {
 
   return (
     <div>
-      <div className="page-header">
-        <div><div className="page-title">Shop Orders</div><div className="page-sub">{orders.length} orders · £{totalRevenue.toFixed(2)} total</div></div>
-        <button className="btn btn-ghost" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
+        <div style={{ fontSize:13, color:"var(--muted)" }}>{orders.length} orders · <span style={{ color:"var(--accent)" }}>£{totalRevenue.toFixed(2)}</span> total</div>
+        <button className="btn btn-ghost btn-sm" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
       </div>
       <div className="grid-4 mb-2">
         {[
@@ -4603,15 +4655,14 @@ function AdminShop({ data, save, showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Shop</div></div>
-        {tab === "products"
-          ? <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>
-          : <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>
-        }
+        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>}
+        {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
       </div>
 
       <div className="nav-tabs">
         <button className={`nav-tab ${tab === "products" ? "active" : ""}`} onClick={() => setTab("products")}>Products</button>
         <button className={`nav-tab ${tab === "postage" ? "active" : ""}`} onClick={() => setTab("postage")}>Postage Options</button>
+        <button className={`nav-tab ${tab === "orders" ? "active" : ""}`} onClick={() => setTab("orders")}>Orders</button>
       </div>
 
       {tab === "products" && (
@@ -4677,6 +4728,8 @@ function AdminShop({ data, save, showToast }) {
           </table></div>
         </div>
       )}
+
+      {tab === "orders" && <AdminOrdersTab showToast={showToast} />}
 
       {/* ── PRODUCT MODAL ── */}
       {modal && (
@@ -5077,6 +5130,14 @@ function AdminGallery({ data, save, showToast }) {
       save({ albums: await api.gallery.getAll() });
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
+  const deleteAlbum = async (albumId, title) => {
+    if (!window.confirm(`Delete album "${title}" and all its images?`)) return;
+    try {
+      await api.gallery.deleteAlbum(albumId);
+      save({ albums: await api.gallery.getAll() });
+      showToast("Album deleted!");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
   return (
     <div>
       <div className="page-header"><div><div className="page-title">Gallery</div></div><button className="btn btn-primary" onClick={addAlbum}>+ New Album</button></div>
@@ -5084,7 +5145,10 @@ function AdminGallery({ data, save, showToast }) {
         <div key={album.id} className="card mb-2">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <div style={{ fontWeight: 700 }}>{album.title} <span className="text-muted" style={{ fontSize: 12 }}>({album.images.length} photos)</span></div>
-            <label className="btn btn-sm btn-ghost" style={{ cursor: "pointer" }}>+ Upload<input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(album.id, e)} /></label>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <label className="btn btn-sm btn-ghost" style={{ cursor: "pointer" }}>+ Upload<input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(album.id, e)} /></label>
+              <button className="btn btn-sm btn-danger" onClick={() => deleteAlbum(album.id, album.title)}>Delete Album</button>
+            </div>
           </div>
           <div className="gap-2 mb-2">
             <input value={urlInput[album.id] || ""} onChange={e => setUrlInput(p => ({ ...p, [album.id]: e.target.value }))} placeholder="Or paste image URL" style={{ flex: 1 }} />
