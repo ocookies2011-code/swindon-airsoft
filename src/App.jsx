@@ -5647,7 +5647,28 @@ function AdminCash({ data, cu, showToast }) {
 // ── Root App ──────────────────────────────────────────────────
 export default function App() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
-  const [page, setPage] = useState("home");
+  // Hash-based routing — page persists on refresh
+  const [page, setPageState] = useState(() => {
+    const hash = window.location.hash.replace("#", "");
+    const valid = ["home","events","shop","leaderboard","gallery","qa","vip","profile","admin"];
+    return valid.includes(hash) ? hash : "home";
+  });
+
+  const setPage = (p) => {
+    setPageState(p);
+    window.location.hash = p === "home" ? "" : p;
+  };
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.replace("#", "");
+      const valid = ["home","events","shop","leaderboard","gallery","qa","vip","profile","admin"];
+      setPageState(valid.includes(hash) ? hash : "home");
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
   const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
   const [authModal, setAuthModal] = useState(null);
