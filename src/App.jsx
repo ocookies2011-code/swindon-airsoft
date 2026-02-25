@@ -113,7 +113,7 @@ function useData() {
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
-    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [] };
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", socialFacebook: "", socialInstagram: "", users: [] };
     const timeout = setTimeout(() => {
       setData(prev => prev || emptyData);
       setLoading(false);
@@ -122,13 +122,15 @@ function useData() {
       const errors = {};
       const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
 
-      const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
+      const [evList, shopList, postageList, albumList, qaList, homeMsg, socialFacebook, socialInstagram] = await Promise.all([
         safe("events",  api.events.getAll()),
         safe("shop",    api.shop.getAll()),
         safe("postage", api.postage.getAll()),
         safe("gallery", api.gallery.getAll()),
         safe("qa",      api.qa.getAll()),
         api.settings.get("home_message").catch(() => ""),
+        api.settings.get("social_facebook").catch(() => ""),
+        api.settings.get("social_instagram").catch(() => ""),
       ]);
 
       if (Object.keys(errors).length > 0) {
@@ -147,6 +149,8 @@ function useData() {
         albums: albumList,
         qa: qaList,
         homeMsg,
+        socialFacebook,
+        socialInstagram,
       }));
 
       // Load profiles after public data — only succeeds when authed, silently skipped for guests
@@ -2686,8 +2690,8 @@ function PlayerOrdersTab({ cu }) {
           <div key={o.id} className="card mb-1" style={{ cursor:"pointer" }} onClick={() => setDetail(detail?.id === o.id ? null : o)}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
               <div>
-                <div style={{ fontWeight:700, fontSize:15 }}>{items.map(i => `${i.name} �${i.qty}`).join(", ")}</div>
-                <div className="text-muted" style={{ fontSize:12 }}>Ordered: {new Date(o.created_at).toLocaleDateString("en-GB")} � {o.postage_name || "Collection"}</div>
+                <div style={{ fontWeight:700, fontSize:15 }}>{items.map(i => `${i.name} �${i.qty}`).join(", ")}</div>
+                <div className="text-muted" style={{ fontSize:12 }}>Ordered: {new Date(o.created_at).toLocaleDateString("en-GB")} � {o.postage_name || "Collection"}</div>
               </div>
               <div style={{ textAlign:"right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
                 <div style={{ fontWeight:900, fontSize:20, color:"var(--accent)" }}>£{Number(o.total).toFixed(2)}</div>
@@ -2699,7 +2703,7 @@ function PlayerOrdersTab({ cu }) {
                 <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:8 }}>ORDER DETAILS</div>
                 {items.map((i, idx) => (
                   <div key={idx} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}>
-                    <span>{i.name} �{i.qty}</span><span className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</span>
+                    <span>{i.name} �{i.qty}</span><span className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</span>
                   </div>
                 ))}
                 {o.postage > 0 && <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}><span>Postage ({o.postage_name})</span><span>£{Number(o.postage).toFixed(2)}</span></div>}
@@ -5382,473 +5386,68 @@ function AdminQA({ data, save, showToast }) {
 // ── Admin Messages ────────────────────────────────────────
 function AdminMessages({ data, save, showToast }) {
   const [msg, setMsg] = useState(data.homeMsg || "");
+  const [facebook, setFacebook] = useState(data.socialFacebook || "");
+  const [instagram, setInstagram] = useState(data.socialInstagram || "");
   const [saving, setSaving] = useState(false);
+  const [savingSocial, setSavingSocial] = useState(false);
 
   const saveMsg = async (val) => {
     setSaving(true);
     try {
       await api.settings.set("home_message", val);
-      // Update local React state WITHOUT triggering the global save() homeMsg branch
-      // (which would double-write to Supabase)
       setMsg(val);
-      // Directly patch the data atom so the ticker re-renders
       data.homeMsg = val;
-      showToast(val ? "✓ Message saved!" : "✓ Message cleared");
+      showToast(val ? "Message saved!" : "Message cleared");
     } catch (e) {
       console.error("saveMsg error:", e);
       showToast("Save failed — check console for details", "red");
     } finally { setSaving(false); }
   };
+
+  const saveSocial = async () => {
+    setSavingSocial(true);
+    try {
+      await api.settings.set("social_facebook", facebook);
+      await api.settings.set("social_instagram", instagram);
+      data.socialFacebook = facebook;
+      data.socialInstagram = instagram;
+      showToast("Social links saved!");
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    } finally { setSavingSocial(false); }
+  };
+
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Scrolling ticker shown at top of site</div></div></div>
-      <div className="card">
+      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Ticker message and social links</div></div></div>
+
+      <div className="card mb-2">
+        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Ticker Message</div>
         <div className="form-group">
-          <label>Ticker Message</label>
-          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. 🎯 Next event booking now open! — Saturday 14th June" />
-          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker. Save to apply.</div>
+          <label>Message</label>
+          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. Next event booking now open! — Saturday 14th June" />
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker.</div>
         </div>
         <div className="gap-2">
-          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
           <button className="btn btn-danger" onClick={() => { setMsg(""); saveMsg(""); }} disabled={saving}>Clear</button>
         </div>
-        {data.homeMsg && (
-          <div className="alert alert-green mt-2" style={{ fontSize:12 }}>
-            ✓ Active: <em>{data.homeMsg}</em>
-          </div>
-        )}
+        {data.homeMsg && <div className="alert alert-green mt-2" style={{ fontSize:12 }}>Active: {data.homeMsg}</div>}
+      </div>
+
+      <div className="card">
+        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Social Links</div>
+        <div className="form-group">
+          <label>Facebook URL</label>
+          <input value={facebook} onChange={e => setFacebook(e.target.value)} placeholder="https://facebook.com/your-page" />
+        </div>
+        <div className="form-group">
+          <label>Instagram URL</label>
+          <input value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="https://instagram.com/your-account" />
+        </div>
+        <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>Icons appear in the footer. Leave blank to hide.</div>
+        <button className="btn btn-primary" onClick={saveSocial} disabled={savingSocial}>{savingSocial ? "Saving..." : "Save Social Links"}</button>
       </div>
     </div>
-  );
-}
-
-// ── Admin Cash Sales ──────────────────────────────────────
-function AdminCash({ data, cu, showToast }) {
-  const [items, setItems] = useState([]);
-  const [playerId, setPlayerId] = useState("manual");
-  const [manual, setManual] = useState({ name: "", email: "" });
-  const [busy, setBusy] = useState(false);
-  const [lastError, setLastError] = useState(null);
-  const [diagResult, setDiagResult] = useState(null);
-  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
-
-  const add = (item) => setItems(c => {
-    const ex = c.find(x => x.id === item.id);
-    return ex ? c.map(x => x.id === item.id ? { ...x, qty: x.qty + 1 } : x) : [...c, { ...item, qty: 1 }];
-  });
-
-  // Diagnostic: test if cash_sales table is reachable at all
-  const runDiag = async () => {
-    setDiagResult("Testing…");
-    try {
-      const { data: rows, error } = await supabase.from('cash_sales').select('id').limit(1);
-      if (error) setDiagResult("SELECT error: " + (error.message || JSON.stringify(error)));
-      else setDiagResult("SELECT ok — " + (rows?.length ?? 0) + " rows visible. Table is accessible.");
-    } catch (e) {
-      setDiagResult("Exception: " + e.message);
-    }
-  };
-
-  const completeSale = async () => {
-    if (items.length === 0) { showToast("Add items first", "red"); return; }
-    setLastError(null);
-    setBusy(true);
-
-    try {
-      const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
-      const payload = {
-        customer_name:  player ? player.name : (manual.name || "Walk-in"),
-        customer_email: player ? (player.email || "") : (manual.email || ""),
-        user_id:        player?.id ?? null,
-        items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
-        total,
-      };
-
-      // Race the insert against a 6s timeout — whichever settles first wins
-      const insertPromise = supabase.from('cash_sales').insert(payload).select();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 6000)
-      );
-
-      const { data: result, error } = await Promise.race([insertPromise, timeoutPromise]);
-
-      if (error) {
-        const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
-        setLastError("DB Error: " + msg);
-        showToast("Failed: " + msg.slice(0, 80), "red");
-        return;
-      }
-
-      // Deduct stock
-      for (const item of items) {
-        await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
-      }
-      showToast(`✅ Sale £${total.toFixed(2)} saved!`);
-      setItems([]);
-      setManual({ name: "", email: "" });
-      setPlayerId("manual");
-      setLastError(null);
-      setDiagResult(null);
-
-    } catch (e) {
-      const isTimed = e.message === "TIMEOUT";
-      const msg = isTimed
-        ? "Insert timed out — RLS is blocking the write. Run master-rls-admin-only.sql in Supabase SQL Editor, then click 'Test Table Access' below to confirm."
-        : "Exception: " + e.message;
-      setLastError(msg);
-      showToast(isTimed ? "RLS blocking insert — see error below" : "Error: " + e.message, "red");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div>
-      <div className="page-header"><div><div className="page-title">Cash Sales</div><div className="page-sub">Walk-in or unregistered customer sales</div></div></div>
-      {lastError && (
-        <div className="alert alert-red mb-2" style={{ wordBreak: "break-all", fontSize: 12 }}>
-          <strong>Error:</strong> {lastError}
-          <div className="mt-1">
-            <button className="btn btn-sm btn-ghost" onClick={runDiag}>🔍 Test Table Access</button>
-          </div>
-        </div>
-      )}
-      {diagResult && (
-        <div className="alert alert-blue mb-2" style={{ fontSize: 12, wordBreak: "break-all" }}>
-          <strong>Diagnostic:</strong> {diagResult}
-        </div>
-      )}
-      <div className="grid-2">
-        <div className="card">
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>PRODUCTS</div>
-          {data.shop.length === 0 && <p className="text-muted" style={{ fontSize: 13 }}>No products in shop yet. Add products in the Shop section.</p>}
-          {data.shop.map(item => (
-            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-              <span style={{ fontSize: 13 }}>{item.name}</span>
-              <div className="gap-2"><span className="text-green">£{item.price}</span><button className="btn btn-sm btn-primary" onClick={() => add(item)}>+</button></div>
-            </div>
-          ))}
-        </div>
-        <div>
-          <div className="card mb-2">
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>CUSTOMER</div>
-            <div className="form-group">
-              <label>Player</label>
-              <select value={playerId} onChange={e => setPlayerId(e.target.value)}>
-                <option value="manual">Manual Entry (walk-in)</option>
-                {data.users.filter(u => u.role === "player").map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            </div>
-            {playerId === "manual" && (
-              <>
-                <div className="form-group"><label>Name</label><input value={manual.name} onChange={e => setManual(p => ({ ...p, name: e.target.value }))} /></div>
-                <div className="form-group"><label>Email (optional)</label><input value={manual.email} onChange={e => setManual(p => ({ ...p, email: e.target.value }))} /></div>
-              </>
-            )}
-          </div>
-          <div className="card">
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>SALE ITEMS</div>
-            {items.length === 0 ? <p className="text-muted" style={{ fontSize: 13 }}>No items added yet</p> : (
-              items.map(item => (
-                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
-                  <span>{item.name} ×{item.qty}</span>
-                  <div className="gap-2">
-                    <span className="text-green">£{(item.price * item.qty).toFixed(2)}</span>
-                    <button style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }} onClick={() => setItems(c => c.filter(x => x.id !== item.id))}>✕</button>
-                  </div>
-                </div>
-              ))
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: 22, marginTop: 12 }}>
-              <span>TOTAL</span><span className="text-green">£{total.toFixed(2)}</span>
-            </div>
-            <button className="btn btn-primary mt-2" style={{ width: "100%", padding: 10 }} disabled={busy} onClick={completeSale}>
-              {busy ? "Saving…" : "Complete Sale"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-// ═══════════════════════════════════════════════════════
-// ROOT APP
-
-// ── Root App ──────────────────────────────────────────────────
-export default function App() {
-  const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
-  const [page, setPage] = useState("home");
-  const [cu, setCu] = useState(null);          // current user profile
-  const [authLoading, setAuthLoading] = useState(true);
-  const [authModal, setAuthModal] = useState(null);
-  const [toast, showToast] = useToast();
-
-  // Shop state — lifted to App level so cart persists between shop & product page
-  const [shopCart, setShopCart] = useState([]);
-  const [shopCartOpen, setShopCartOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  // Reset product view when navigating away from shop
-  useEffect(() => { if (page !== "shop") setSelectedProduct(null); }, [page]);
-
-  // Auth — runs in background, never blocks site from rendering
-  useEffect(() => {
-    const timeout = setTimeout(() => setAuthLoading(false), 3000);
-
-    const loadSession = async () => {
-      try {
-        // Try getSession first
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          clearTimeout(timeout);
-          try {
-            const profile = await api.profiles.getById(session.user.id);
-            setCu(normaliseProfile(profile));
-            api.profiles.getAll().catch(() => []).then(list =>
-              save({ users: list.map(normaliseProfile) })
-            );
-          } catch { setCu(null); }
-          setAuthLoading(false);
-          return;
-        }
-
-        // Fallback: read raw session from localStorage directly
-        // (needed when noopLock causes getSession to return null on refresh)
-        const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-        if (storageKey) {
-          try {
-            const raw = JSON.parse(localStorage.getItem(storageKey));
-            const userId = raw?.user?.id;
-            if (userId) {
-              const profile = await api.profiles.getById(userId);
-              if (profile) {
-                setCu(normaliseProfile(profile));
-                // Restore session properly
-                if (raw.access_token) {
-                  await supabase.auth.setSession({ access_token: raw.access_token, refresh_token: raw.refresh_token });
-                }
-              }
-            }
-          } catch { /* localStorage entry malformed, ignore */ }
-        }
-      } catch { /* getSession failed, stay logged out */ }
-
-      clearTimeout(timeout);
-      setAuthLoading(false);
-    };
-
-    loadSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "INITIAL_SESSION") return;
-      if (session?.user) {
-        try {
-          const profile = await api.profiles.getById(session.user.id);
-          if (profile) setCu(normaliseProfile(profile));
-          else {
-            // Profile may not exist yet (new signup before confirmation) — try creating it
-            try {
-              const meta = session.user.user_metadata || {};
-              await supabase.from('profiles').insert({
-                id: session.user.id, name: meta.name || session.user.email?.split('@')[0] || 'Player',
-                phone: meta.phone || '', role: 'player', games_attended: 0,
-              }).select().single();
-              const profile2 = await api.profiles.getById(session.user.id);
-              if (profile2) setCu(normaliseProfile(profile2));
-            } catch { setCu(null); }
-          }
-        } catch { setCu(null); }
-        if (event === "SIGNED_IN") refresh();
-      } else {
-        setCu(null);
-        if (event === "SIGNED_OUT") refresh();
-      }
-    });
-
-    return () => { clearTimeout(timeout); subscription.unsubscribe(); };
-  }, []);
-
-  // Refresh current user profile after updates
-  const refreshCu = useCallback(async () => {
-    if (!cu) return;
-    try {
-      const profile = await api.profiles.getById(cu.id);
-      setCu(normaliseProfile(profile));
-    } catch {}
-  }, [cu]);
-
-  // Wrap updateUser to also refresh cu if editing self
-  const updateUserAndRefresh = useCallback(async (id, patch) => {
-    await updateUser(id, patch);
-    if (cu?.id === id) await refreshCu();
-  }, [updateUser, cu, refreshCu]);
-
-  // Only show loading screen while initial data fetch is in progress
-  // Auth loads in the background - never block the site on it
-  if (loading) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
-        <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
-        <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
-      </div>
-    );
-  }
-
-  const isAdmin = cu?.role === "admin";
-
-  // Error banner — shown at top but doesn't block the site
-  const errorBanner = loadError ? (
-    <div style={{ background: "#f85149", color: "#fff", padding: "10px 20px", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-      <span>⚠️ Database error: {loadError}</span>
-      <button onClick={refresh} style={{ background: "rgba(255,255,255,.2)", border: "none", color: "#fff", padding: "4px 12px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Retry</button>
-    </div>
-  ) : null;
-
-  if (page === "admin") {
-    // First gate: must be logged in at all
-    if (!cu) {
-      setPage("home");
-      return null;
-    }
-    // Second gate: client-side role pre-check (server verification happens inside AdminPanel)
-    if (!isAdmin) {
-      return (
-        <>
-          <style>{CSS}</style>
-          <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
-            <div style={{ fontSize: 48 }}>🔒</div>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
-            <div style={{ color: "var(--muted)", fontSize: 14 }}>Admin access only.</div>
-            <button className="btn btn-ghost" onClick={() => setPage("home")}>← Back to Site</button>
-          </div>
-        </>
-      );
-    }
-    return (
-      <>
-        <style>{CSS}</style>
-        <Toast {...toast} />
-        {errorBanner}
-        <AdminPanel
-          data={data} cu={cu} save={save}
-          updateUser={updateUserAndRefresh} updateEvent={updateEvent}
-          showToast={showToast} setPage={setPage} refresh={refresh}
-        />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <style>{CSS}</style>
-      <Toast {...toast} />
-      {errorBanner}
-      <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} />
-
-      <div className="pub-page-wrap">
-        {page === "home"        && <HomePage data={data} setPage={setPage} />}
-        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} />}
-        {page === "shop" && !selectedProduct && (
-          <ShopPage
-            data={data} cu={cu} showToast={showToast} save={save}
-            cart={shopCart} setCart={setShopCart}
-            cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
-            onProductClick={(item) => setSelectedProduct(item)}
-          />
-        )}
-        {page === "shop" && selectedProduct && (
-          <ProductPage
-            item={selectedProduct}
-            cu={cu}
-            onBack={() => setSelectedProduct(null)}
-            cartCount={shopCart.reduce((s, i) => s + i.qty, 0)}
-            onCartOpen={() => { setShopCartOpen(true); setSelectedProduct(null); }}
-            onAddToCart={(item, variant, qty) => {
-              const key = variant ? `${item.id}::${variant.id}` : item.id;
-              const price = variant ? Number(variant.price) : (item.onSale && item.salePrice ? item.salePrice : item.price);
-              const label = variant ? `${item.name} — ${variant.name}` : item.name;
-              const availStock = variant ? Number(variant.stock) : item.stock;
-              setShopCart(c => {
-                const ex = c.find(x => x.key === key);
-                const currentQty = ex ? ex.qty : 0;
-                if (currentQty + qty > availStock) { showToast("Not enough stock", "red"); return c; }
-                if (ex) return c.map(x => x.key === key ? { ...x, qty: x.qty + qty } : x);
-                return [...c, { key, id: item.id, variantId: variant?.id || null, name: label, price, qty, noPost: item.noPost, stock: availStock }];
-              });
-              showToast(`${label} × ${qty} added to cart`);
-            }}
-          />
-        )}
-        {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} />}
-        {page === "gallery"     && <GalleryPage data={data} />}
-        {page === "qa"          && <QAPage data={data} />}
-        {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
-        {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
-        {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
-      </div>
-
-      {/* FOOTER */}
-      <footer className="pub-footer">
-        <div className="pub-footer-inner">
-          <div className="pub-footer-grid">
-            {/* Brand col */}
-            <div>
-              <div className="pub-footer-logo">
-                <div className="pub-footer-logo-box">SA</div>
-                <div className="pub-footer-logo-text">SWINDON AIRSOFT</div>
-              </div>
-              <p className="pub-footer-desc">Swindon's premier airsoft venue. Experience tactical gameplay like never before.</p>
-              <div className="pub-footer-social" style={{ marginTop:16 }}>
-                {["📘","📸","▶️"].map((icon,i) => (
-                  <button key={i} className="pub-footer-social-btn">{icon}</button>
-                ))}
-              </div>
-            </div>
-            {/* Quick Links */}
-            <div>
-              <div className="pub-footer-col-title">QUICK LINKS</div>
-              {[
-                ["Upcoming Events", "events"],
-                ["Shop", "shop"],
-                ["VIP Membership", "vip"],
-                ["Gallery", "gallery"],
-              ].map(([label, pg]) => (
-                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
-              ))}
-            </div>
-            {/* Information */}
-            <div>
-              <div className="pub-footer-col-title">INFORMATION</div>
-              {[
-                ["Sign Waiver", "profile"],
-                ["Site Rules", "qa"],
-                ["FAQ", "qa"],
-              ].map(([label, pg]) => (
-                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
-              ))}
-            </div>
-            {/* Contact */}
-            <div>
-              <div className="pub-footer-col-title">CONTACT</div>
-              <div className="pub-footer-contact">📍 Swindon, Wiltshire, UK</div>
-              <div className="pub-footer-contact">📞 +44 1234 567890</div>
-              <div className="pub-footer-contact">✉️ info@swindon-airsoft.com</div>
-            </div>
-          </div>
-          <div className="pub-footer-bottom">
-            <div className="pub-footer-copy">© {new Date().getFullYear()} Swindon Airsoft. All rights reserved.</div>
-            <div className="pub-footer-legal">Players must be 18+ or accompanied by adult. Valid ID required.</div>
-          </div>
-        </div>
-      </footer>
-
-      {authModal && (
-        <SupabaseAuthModal
-          mode={authModal} setMode={setAuthModal}
-          onClose={() => setAuthModal(null)} showToast={showToast}
-          onLogin={profile => { setCu(profile); refresh(); }}
-        />
-      )}
-    </>
   );
 }
