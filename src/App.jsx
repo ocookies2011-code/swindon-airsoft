@@ -976,7 +976,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing })
             <input value={form.guardian} onChange={e => f("guardian", e.target.value)} placeholder="Type full name to sign" /></div>
         )}
         <div style={{ background: "var(--bg4)", padding: 14, borderRadius: 6, fontSize: 12, color: "var(--muted)", lineHeight: 1.7, marginBottom: 14 }}>
-          I understand airsoft activities carry inherent risk of injury. I agree to follow all safety rules on site, wear mandatory eye protection at all times, and acknowledge that Swindon Airsoft Ltd is not liable for injuries sustained during gameplay. I confirm all information is accurate and I am fit to participate.
+          I understand airsoft activities carry inherent risk of injury. I agree to follow all safety rules on site, wear mandatory eye protection at all times, and acknowledge that Zulus Airsoft Ltd is not liable for injuries sustained during gameplay. I confirm all information is accurate and I am fit to participate.
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 18 }}>
           <input type="checkbox" id="wagree" checked={form.agreed} onChange={e => f("agreed", e.target.checked)} />
@@ -1025,7 +1025,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
           {/* Logo */}
           <div className="pub-nav-logo" onClick={() => go("home")}>
             <div className="pub-nav-logo-box">SA</div>
-            <span className="pub-nav-logo-text">SWINDON <span>AIRSOFT</span></span>
+            <span className="pub-nav-logo-text">ZULUS <span>AIRSOFT</span></span>
           </div>
           {/* Desktop links */}
           <div className="pub-nav-links">
@@ -1061,7 +1061,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
       <div className={`pub-nav-drawer ${drawerOpen ? "open" : ""}`} onClick={() => setDrawerOpen(false)}>
         <div className="pub-nav-drawer-panel" onClick={e => e.stopPropagation()}>
           <div className="pub-nav-drawer-logo">
-            SWINDON <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
+            ZULUs <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
           </div>
           {links.map(l => (
             <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
@@ -1224,7 +1224,7 @@ function HomePage({ data, setPage }) {
                   <g transform="translate(566, 14)" opacity=".18">
                     <rect x="0" y="0" width="54" height="28" rx="4" fill="none" stroke="#c8ff00" strokeWidth="1.2"/>
                     <line x1="14" y1="0" x2="14" y2="28" stroke="#c8ff00" strokeWidth=".8" opacity=".5"/>
-                    <text x="6"  y="11" fontFamily="'Share Tech Mono',monospace" fontSize="5" fill="#c8ff00" letterSpacing=".08em">SWINDON</text>
+                    <text x="6"  y="11" fontFamily="'Share Tech Mono',monospace" fontSize="5" fill="#c8ff00" letterSpacing=".08em">ZULU</text>
                     <text x="6"  y="18" fontFamily="'Share Tech Mono',monospace" fontSize="4.5" fill="#c8ff00" letterSpacing=".06em">BLOOD: O-POS</text>
                     <text x="6"  y="25" fontFamily="'Share Tech Mono',monospace" fontSize="4.5" fill="#c8ff00" letterSpacing=".06em">UKARA: ACTIVE</text>
                   </g>
@@ -1249,10 +1249,10 @@ function HomePage({ data, setPage }) {
                   <line x1="80" y1="0" x2="80" y2="220" stroke="#c8ff00" strokeWidth=".4" opacity=".06"/>
                   <line x1="560" y1="0" x2="560" y2="220" stroke="#c8ff00" strokeWidth=".4" opacity=".06"/>
 
-                  {/* OP SWINDON-ECHO classification stamp — faint */}
+                  {/* OP ZULU-ECHO classification stamp — faint */}
                   <text x="320" y="195" textAnchor="middle" fontFamily="'Barlow Condensed',sans-serif" fontSize="9" fontWeight="900"
                     fill="none" stroke="#c8ff00" strokeWidth=".5" letterSpacing=".4em" opacity=".2">
-                    ✦ CLASSIFIED — OP SWINDON-ECHO — AUTHORISED PERSONNEL ONLY ✦
+                    ✦ CLASSIFIED — OP ZULU-ECHO — AUTHORISED PERSONNEL ONLY ✦
                   </text>
 
                   {/* TOP LABEL */}
@@ -1275,18 +1275,18 @@ function HomePage({ data, setPage }) {
                     WELCOME TO
                   </text>
 
-                  {/* SWINDON — large lime stencil */}
+                  {/* ZULU — large lime stencil */}
                   <text x="320" y="155" textAnchor="middle"
                     fontFamily="'Barlow Condensed',sans-serif" fontSize="72" fontWeight="900"
                     fill="none" stroke="#c8ff00" strokeWidth="2.5"
                     letterSpacing=".08em" opacity=".3">
-                    SWINDON
+                    ZULU
                   </text>
                   <text x="320" y="155" textAnchor="middle"
                     fontFamily="'Barlow Condensed',sans-serif" fontSize="72" fontWeight="900"
                     fill="#c8ff00" letterSpacing=".08em"
                     style={{ filter:"drop-shadow(0 0 12px rgba(200,255,0,.6))" }}>
-                    SWINDON
+                    ZULU
                   </text>
 
                   {/* AIRSOFT — medium white */}
@@ -2179,7 +2179,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {cu && grandTotal > 0 && (
                   <PayPalCheckoutButton
                     amount={grandTotal}
-                    description={`Swindon Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
+                    description={`ZULU Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
                     onSuccess={placeOrderAfterPayment}
                     disabled={placing}
                   />
@@ -2701,8 +2701,8 @@ function PlayerOrdersTab({ cu }) {
           <div key={o.id} className="card mb-1" style={{ cursor:"pointer" }} onClick={() => setDetail(detail?.id === o.id ? null : o)}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
               <div>
-                <div style={{ fontWeight:700, fontSize:15 }}>{items.map(i => `${i.name} �${i.qty}`).join(", ")}</div>
-                <div className="text-muted" style={{ fontSize:12 }}>Ordered: {new Date(o.created_at).toLocaleDateString("en-GB")} � {o.postage_name || "Collection"}</div>
+                <div style={{ fontWeight:700, fontSize:15 }}>{items.map(i => `${i.name}  ${i.qty}`).join(", ")}</div>
+                <div className="text-muted" style={{ fontSize:12 }}>Ordered: {new Date(o.created_at).toLocaleDateString("en-GB")}   {o.postage_name || "Collection"}</div>
               </div>
               <div style={{ textAlign:"right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
                 <div style={{ fontWeight:900, fontSize:20, color:"var(--accent)" }}>£{Number(o.total).toFixed(2)}</div>
@@ -2714,7 +2714,7 @@ function PlayerOrdersTab({ cu }) {
                 <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:8 }}>ORDER DETAILS</div>
                 {items.map((i, idx) => (
                   <div key={idx} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}>
-                    <span>{i.name} �{i.qty}</span><span className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</span>
+                    <span>{i.name}  {i.qty}</span><span className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</span>
                   </div>
                 ))}
                 {o.postage > 0 && <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}><span>Postage ({o.postage_name})</span><span>£{Number(o.postage).toFixed(2)}</span></div>}
@@ -2975,7 +2975,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
       {/* Sidebar */}
       <div className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sb-logo">
-          <div className="sb-logo-text">SWINDON <span>AIRSOFT</span></div>
+          <div className="sb-logo-text">ZULU <span>AIRSOFT</span></div>
           <div className="sb-time"><GmtClock /></div>
         </div>
         <div style={{ padding: "8px 8px 0" }}>
@@ -4524,7 +4524,7 @@ function AdminOrdersTab({ showToast }) {
                     <div class="to">TO:</div>
                     <div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div>
                     <div class="addr">${addr}</div>
-                    <div class="from">FROM: Swindon Airsoft</div>
+                    <div class="from">FROM: ZULU Airsoft</div>
                     <script>window.onload=()=>window.print();<\/script>
                   </body></html>`);
                 win.document.close();
