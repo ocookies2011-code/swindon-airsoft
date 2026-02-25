@@ -414,6 +414,7 @@ function normaliseEvent(ev) {
     banner:       ev.banner,
     mapEmbed:     ev.map_embed,
     published:    ev.published,
+    vipOnly:      ev.vip_only ?? false,
     extras: (ev.event_extras || [])
       .sort((a, b) => a.sort_order - b.sort_order)
       .map(ex => {
@@ -502,6 +503,7 @@ function toSnakeEvent(ev) {
     banner:         banner,
     map_embed:      ev.mapEmbed || null,
     published:      ev.published ?? true,
+    vip_only:       ev.vipOnly ?? false,
   }
 }
 

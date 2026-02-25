@@ -1322,8 +1322,9 @@ function HomePage({ data, setPage }) {
                         ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
                         : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#333", fontSize:40 }}>📅</div>
                       }
-                      <div style={{ position:"absolute", top:12, left:12 }}>
+                      <div style={{ position:"absolute", top:12, left:12, display:"flex", flexDirection:"column", gap:4 }}>
                         <span style={{ background:"var(--accent)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>SKIRMISH</span>
+                        {ev.vipOnly && <span style={{ background:"var(--gold)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>⭐ VIP ONLY</span>}
                       </div>
                     </div>
                     <div className="event-card-body">
@@ -1531,7 +1532,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       }
     };
 
-    const bookingBlocked = !cu || !waiverValid || cartEmpty;
+    const bookingBlocked = !cu || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active");
 
     return (
       <div className="page-content">
@@ -1576,6 +1577,18 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
               {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
+              {ev.vipOnly && cu?.vipStatus !== "active" && (
+                <div className="alert alert-gold mb-2" style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:18 }}>⭐</span>
+                  <div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"var(--gold)", letterSpacing:".06em" }}>VIP MEMBERS ONLY EVENT</div>
+                    <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
+                      {!cu ? "Log in and" : "You need to"} become a VIP member to book this event.{" "}
+                      <button className="btn btn-sm btn-ghost" style={{ padding:"2px 8px", fontSize:11 }} onClick={() => setPage("vip")}>Learn about VIP →</button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {cu?.vipStatus === "active" && <div className="alert alert-gold mb-2">⭐ VIP 10% discount applied</div>}
 
               {/* Existing bookings */}
@@ -1606,7 +1619,15 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
 
                 {/* Walk-On row */}
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #1a1a1a" }}>
+                {ev.vipOnly && cu?.vipStatus !== "active" && (
+                  <div style={{ padding:"24px 16px", textAlign:"center", color:"var(--muted)", fontSize:13 }}>
+                    <div style={{ fontSize:28, marginBottom:8 }}>⭐</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, color:"var(--gold)", fontSize:16, letterSpacing:".06em", marginBottom:4 }}>VIP MEMBERS ONLY</div>
+                    <div>Booking is restricted to VIP members for this event.</div>
+                    <button className="btn btn-primary" style={{ marginTop:14, padding:"9px 24px" }} onClick={() => setPage("vip")}>Become a VIP →</button>
+                  </div>
+                )}
+                {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #1a1a1a" }}>
                   <div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
                     <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
@@ -1618,10 +1639,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
                     <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
                   </div>
-                </div>
+                </div>}
 
                 {/* Rental row */}
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none" }}>
+                {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none" }}>
                   <div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
                     <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
@@ -1633,7 +1654,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
                     <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
                   </div>
-                </div>
+                </div>}
 
                 {/* Extras */}
                 {ev.extras.length > 0 && (
@@ -1826,8 +1847,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
                   : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#333", fontSize:32 }}>📅</div>
                 }
-                <div style={{ position:"absolute", top:12, left:12 }}>
+                <div style={{ position:"absolute", top:12, left:12, display:"flex", flexDirection:"column", gap:4 }}>
                   <span style={{ background:"var(--accent)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>SKIRMISH</span>
+                  {ev.vipOnly && <span style={{ background:"var(--gold)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>⭐ VIP ONLY</span>}
                 </div>
               </div>
               <div className="event-card-body">
@@ -3173,7 +3195,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   // ── Events state ──
   const [modal, setModal] = useState(null);
   const [viewId, setViewId] = useState(null);
-  const blank = { title: "", date: "", time: "09:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true };
+  const blank = { title: "", date: "", time: "09:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false };
   const [form, setForm] = useState(blank);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -3594,9 +3616,18 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
               </div>
             </div>
             <div className="form-group"><label>Map Embed HTML (optional)</label><textarea rows={2} value={form.mapEmbed} onChange={e => f("mapEmbed", e.target.value)} placeholder='<iframe src="..." ...></iframe>' /></div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16 }}>
-              <input type="checkbox" id="epub" checked={form.published} onChange={e => f("published", e.target.checked)} />
-              <label htmlFor="epub" style={{ cursor: "pointer", fontSize: 13 }}>Published (visible to players)</label>
+            <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
+              <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                <input type="checkbox" id="epub" checked={form.published} onChange={e => f("published", e.target.checked)} />
+                <label htmlFor="epub" style={{ cursor:"pointer", fontSize:13 }}>Published (visible to players)</label>
+              </div>
+              <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                <input type="checkbox" id="eviponly" checked={form.vipOnly || false} onChange={e => f("vipOnly", e.target.checked)} />
+                <label htmlFor="eviponly" style={{ cursor:"pointer", fontSize:13 }}>
+                  <span style={{ color:"var(--gold)", fontWeight:700 }}>⭐ VIP Members Only</span>
+                  <span style={{ color:"var(--muted)", fontSize:11, marginLeft:6 }}>— visible to all but only VIPs can book</span>
+                </label>
+              </div>
             </div>
 
             {/* ── Game Day Extras ── */}
