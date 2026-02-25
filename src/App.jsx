@@ -5406,7 +5406,7 @@ function AdminMessages({ data, save, showToast }) {
     try {
       await api.settings.set("home_message", val);
       setMsg(val);
-      data.homeMsg = val;
+      save({ homeMsg: val });
       showToast(val ? "Message saved!" : "Message cleared");
     } catch (e) {
       console.error("saveMsg error:", e);
@@ -5419,8 +5419,7 @@ function AdminMessages({ data, save, showToast }) {
     try {
       await api.settings.set("social_facebook", facebook);
       await api.settings.set("social_instagram", instagram);
-      data.socialFacebook = facebook;
-      data.socialInstagram = instagram;
+      save({ socialFacebook: facebook, socialInstagram: instagram });
       showToast("Social links saved!");
     } catch (e) {
       showToast("Save failed: " + e.message, "red");
@@ -5433,9 +5432,7 @@ function AdminMessages({ data, save, showToast }) {
       await api.settings.set("contact_address", contactAddress);
       await api.settings.set("contact_phone", contactPhone);
       await api.settings.set("contact_email", contactEmail);
-      data.contactAddress = contactAddress;
-      data.contactPhone = contactPhone;
-      data.contactEmail = contactEmail;
+      save({ contactAddress, contactPhone, contactEmail });
       showToast("Contact details saved!");
     } catch (e) {
       showToast("Save failed: " + e.message, "red");
