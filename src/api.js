@@ -330,22 +330,34 @@ export const gallery = {
 // ── Q&A ───────────────────────────────────────────────────────
 export const qa = {
   async getAll() {
-    const { data, error } = await supabase
-      .from('qa_items').select('*').order('sort_order')
-    if (error) throw error
-    return data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: i.image || '' }))
+    // Try ordered by sort_order; fall back to id order if column missing
+    let res = await supabase.from('qa_items').select('*').order('sort_order')
+    if (res.error) {
+      res = await supabase.from('qa_items').select('*').order('id')
+    }
+    if (res.error) throw res.error
+    return res.data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: i.image || '' }))
   },
 
   async create(item) {
-    const { data, error } = await supabase
+    // Try with image first; fall back without if column doesn't exist
+    let res = await supabase
       .from('qa_items').insert({ question: item.q, answer: item.a, image: item.image || null }).select().single()
-    if (error) throw error
-    return { id: data.id, q: data.question, a: data.answer, image: data.image || '' }
+    if (res.error && res.error.message?.includes('image')) {
+      res = await supabase
+        .from('qa_items').insert({ question: item.q, answer: item.a }).select().single()
+    }
+    if (res.error) throw res.error
+    return { id: res.data.id, q: res.data.question, a: res.data.answer, image: res.data.image || '' }
   },
 
   async update(id, item) {
-    const { error } = await supabase.from('qa_items').update({ question: item.q, answer: item.a, image: item.image || null }).eq('id', id)
-    if (error) throw error
+    // Try with image first; fall back without if column doesn't exist
+    let res = await supabase.from('qa_items').update({ question: item.q, answer: item.a, image: item.image || null }).eq('id', id)
+    if (res.error && res.error.message?.includes('image')) {
+      res = await supabase.from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
+    }
+    if (res.error) throw res.error
   },
 
   async delete(id) {

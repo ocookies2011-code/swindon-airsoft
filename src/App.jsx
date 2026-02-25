@@ -5037,10 +5037,12 @@ function AdminQA({ data, save, showToast }) {
     finally { setUploading(false); }
   };
 
+  const [qaSaving, setQASaving] = useState(false);
   const save_ = async () => {
     if (!form.q.trim() || !form.a.trim()) { showToast("Fill in both question and answer", "red"); return; }
     const wasEditing = !!editId;
     const currentEditId = editId;
+    setQASaving(true);
     try {
       if (currentEditId) {
         await api.qa.update(currentEditId, form);
@@ -5052,10 +5054,15 @@ function AdminQA({ data, save, showToast }) {
       setEditId(null);
       setForm(blank);
       setPreview(false);
-      showToast(wasEditing ? "Q&A updated!" : "Q&A added!");
+      showToast(wasEditing ? "✓ Q&A updated!" : "✓ Q&A added!");
     } catch (e) {
       console.error("QA save failed:", e);
-      showToast("Failed: " + (e.message || JSON.stringify(e)), "red");
+      const msg = e.message || JSON.stringify(e);
+      showToast("Save failed: " + msg, "red");
+      // Fallback alert in case toast system is broken
+      alert("Q&A save failed: " + msg);
+    } finally {
+      setQASaving(false);
     }
   };
 
@@ -5116,7 +5123,7 @@ function AdminQA({ data, save, showToast }) {
         )}
 
         <div className="gap-2 mt-2">
-          <button type="button" className="btn btn-primary" onClick={save_}>{editId ? "Save Changes" : "Add Q&A"}</button>
+          <button type="button" className="btn btn-primary" onClick={save_} disabled={qaSaving}>{qaSaving ? "Saving…" : editId ? "Save Changes" : "Add Q&A"}</button>
           {editId && <button type="button" className="btn btn-ghost" onClick={cancel}>Cancel</button>}
         </div>
       </div>
