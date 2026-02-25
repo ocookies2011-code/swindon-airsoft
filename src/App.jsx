@@ -475,6 +475,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .sb-badge.gold{background:var(--gold);color:#000;}
 .sb-badge.blue{background:var(--blue);}
 .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:49;}
+.admin-overlay.open{display:block;}
 
 /* ── BAR CHART ── */
 .bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;}
@@ -592,9 +593,92 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .pub-nav-hamburger{display:flex;align-items:center;justify-content:center;}
   .bottom-nav{display:block;}
   .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + 16px);}
-  
-  .hero-cta{flex-direction:column;}
+
+  /* Hero */
+  .hero-cta{flex-direction:column;align-items:stretch;}
+  .hero-cta .btn{width:100%;text-align:center;}
+  .hero-stats-inner{flex-wrap:wrap;}
+  .hero-stat{flex:1 1 50%;border-bottom:1px solid #1f1f1f;}
+  .hero-stat:nth-child(odd){border-right:1px solid #1f1f1f;}
+  .hero-stat:nth-last-child(-n+2){border-bottom:none;}
+
+  /* Page content padding */
+  .page-content{padding:20px 14px;}
+  .page-content-sm{padding:20px 14px;}
+
+  /* Cards */
+  .card{padding:16px;}
+  .card-sm{padding:12px 14px;}
+
+  /* Countdown panel */
+  .countdown-panel{flex-direction:column;align-items:flex-start;gap:16px;padding:18px 16px;}
+  .countdown-panel-timer{width:100%;}
+  .countdown-panel-unit{flex:1;}
+  .countdown-panel-num{font-size:30px;}
+
+  /* Section headers */
+  .section-header{flex-direction:column;align-items:flex-start;gap:8px;}
+
+  /* Stat cards — 2 columns on mobile */
+  .grid-3.stat-row,.grid-4.stat-row{grid-template-columns:1fr 1fr;}
+
+  /* VIP banner */
+  .vip-banner{padding:28px 18px;}
+
+  /* Modal */
+  .modal-box{padding:20px 16px;}
+
+  /* Tables — force horizontal scroll */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+  /* Admin sidebar — hidden by default, slides in */
+  .admin-sidebar{transform:translateX(-100%);}
+  .admin-sidebar.open{transform:translateX(0);}
+  .admin-main{margin-left:0;}
+  .admin-content{padding:14px 12px;}
+  .admin-topbar{padding:0 12px;}
+
+  /* Footer */
+  .pub-footer{padding:32px 16px 16px;}
+
+  /* Toast — full width on mobile */
+  .toast{left:12px;right:12px;bottom:calc(var(--bottom-nav-h) + 12px);max-width:none;}
+
+  /* Form rows already handled but reinforce */
+  .form-row{grid-template-columns:1fr;}
+
+  /* Event cards */
+  .event-card-body{padding:12px;}
+
+  /* Leaderboard table font */
+  .data-table td,.data-table th{padding:10px 10px;font-size:12px;}
 }
+
+@media(max-width:480px){
+  /* Hero title shrink */
+  .hero-h1{font-size:clamp(40px,13vw,72px);}
+
+  /* Countdown numbers */
+  .countdown-panel-num{font-size:26px;}
+
+  /* Stat values */
+  .stat-val{font-size:28px;}
+
+  /* Page content minimal padding */
+  .page-content{padding:16px 10px;}
+  .page-content-sm{padding:16px 10px;}
+
+  /* Hero stats — single column on very small screens */
+  .hero-stat{flex:1 1 100%;border-right:none !important;border-bottom:1px solid #1f1f1f;}
+  .hero-stat:last-child{border-bottom:none;}
+
+  /* Buttons full width in tight contexts */
+  .btn-block-xs{width:100%;display:block;}
+
+  /* Admin content */
+  .admin-content{padding:10px 8px;}
+}
+
 @media(min-width:769px){
   .pub-nav-hamburger{display:none;}
   .bottom-nav{display:none;}
@@ -1281,7 +1365,7 @@ function HomePage({ data, setPage }) {
 
       {/* FEATURE STRIP */}
       <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, padding:"40px 24px", maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:16, padding:"40px 24px", maxWidth:1200, margin:"0 auto" }}>
           {[
             { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
             { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
@@ -2532,7 +2616,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         {/* How it works */}
         <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px", marginBottom:32 }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"#fff", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>HOW IT WORKS</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
             {[
               { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
               { num:"02", title:"SUBMIT APPLICATION", desc:"Once eligible, apply for VIP membership through this page. Admin will review your application." },
