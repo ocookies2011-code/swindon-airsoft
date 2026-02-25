@@ -2887,8 +2887,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const NAV = [
     { id: "dashboard", label: "Dashboard", icon: "📊", group: "OPERATIONS" },
     { id: "events", label: "Events & Bookings", icon: "📅", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
-    { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
-    { id: "waivers", label: "Waivers", icon: "📋", badge: pendingWaivers || unsigned || null, group: null },
+    { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (pendingWaivers > 0 ? pendingWaivers : (deleteReqs > 0 ? deleteReqs : null)), badgeColor: pendingVip > 0 ? "gold" : (pendingWaivers > 0 ? "gold" : ""), group: null },
     { id: "shop", label: "Shop", icon: "🛒", group: null },
     { id: "orders", label: "Shop Orders", icon: "📦", group: null },
     { id: "leaderboard-admin", label: "Leaderboard", icon: "🏆", group: null },
@@ -2951,7 +2950,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
           {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
-          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
           {section === "orders" && <AdminOrders showToast={showToast} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
@@ -3933,6 +3931,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const [tab, setTab] = useState("all");
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
+  const [waiverView, setWaiverView] = useState(null);
 
   const loadUsers = () =>
     api.profiles.getAll()
@@ -4009,6 +4008,9 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         </button>
         <button className={`nav-tab ${tab === "del" ? "active" : ""}`} onClick={() => setTab("del")}>
           Deletion Requests {players.filter(u => u.deleteRequest).length > 0 && <span style={{ background: "var(--red)", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{players.filter(u => u.deleteRequest).length}</span>}
+        </button>
+        <button className={`nav-tab ${tab === "waivers" ? "active" : ""}`} onClick={() => setTab("waivers")}>
+          Waivers
         </button>
       </div>
 
@@ -4114,6 +4116,73 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
           )}
         </div>
       )}
+
+      {tab === "waivers" && (() => {
+        const withWaiver = allUsers.filter(u => u.role !== "admin" && (u.waiverData || u.waiverPending));
+        const vw = waiverView ? allUsers.find(u => u.id === waiverView) : null;
+        const approve = (u) => { updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() }); showToast("Waiver changes approved!"); setWaiverView(null); };
+        const reject_ = (u) => { updateUser(u.id, { waiverPending: null }); showToast("Changes rejected"); setWaiverView(null); };
+        return (
+          <>
+            <div className="card">
+              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>Valid for {new Date().getFullYear()} calendar year</div>
+              <div className="table-wrap"><table className="data-table">
+                <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Pending Changes</th><th></th></tr></thead>
+                <tbody>
+                  {withWaiver.map(u => (
+                    <tr key={u.id}>
+                      <td style={{ fontWeight: 600 }}>{u.name}</td>
+                      <td>{u.waiverSigned ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
+                      <td>{u.waiverYear || "—"}</td>
+                      <td>{u.waiverPending ? <span className="tag tag-gold">⚠ Pending</span> : "—"}</td>
+                      <td><button className="btn btn-sm btn-ghost" onClick={() => setWaiverView(u.id)}>View</button></td>
+                    </tr>
+                  ))}
+                  {withWaiver.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No waivers on file</td></tr>}
+                </tbody>
+              </table></div>
+            </div>
+            {vw && (
+              <div className="overlay" onClick={() => setWaiverView(null)}>
+                <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+                  <div className="modal-title">📋 Waiver — {vw.name}</div>
+                  {vw.waiverData && (
+                    <div className="mb-2">
+                      <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>CURRENT WAIVER</div>
+                      {[["Name", vw.waiverData.name], ["DOB", vw.waiverData.dob], ["Medical", vw.waiverData.medical || "None"], ["Minor", vw.waiverData.isChild ? "Yes" : "No"], ["Guardian", vw.waiverData.guardian || "N/A"], ["Signed", gmtShort(vw.waiverData.date)]].map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+                          <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span><span>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {vw.waiverPending && (
+                    <div>
+                      <div className="alert alert-gold mb-2">⚠️ Player has submitted waiver changes for approval</div>
+                      <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>PROPOSED CHANGES</div>
+                      {[["Name", vw.waiverPending.name, vw.waiverData?.name], ["DOB", vw.waiverPending.dob, vw.waiverData?.dob], ["Medical", vw.waiverPending.medical || "None", vw.waiverData?.medical || "None"], ["Minor", vw.waiverPending.isChild ? "Yes" : "No", vw.waiverData?.isChild ? "Yes" : "No"], ["Guardian", vw.waiverPending.guardian || "N/A", vw.waiverData?.guardian || "N/A"]].map(([k, v, old]) => {
+                        const changed = v !== old;
+                        return (
+                          <div key={k} style={{ display: "flex", gap: 12, padding: changed ? "7px 8px" : "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13, background: changed ? "#2d1e0a" : "transparent", borderRadius: changed ? 4 : 0 }}>
+                            <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span>
+                            <span style={{ color: changed ? "var(--gold)" : "var(--text)" }}>{v}</span>
+                            {changed && <span className="tag tag-gold" style={{ fontSize: 10, marginLeft: "auto" }}>CHANGED</span>}
+                          </div>
+                        );
+                      })}
+                      <div className="gap-2 mt-2">
+                        <button className="btn btn-primary" onClick={() => approve(vw)}>Approve Changes</button>
+                        <button className="btn btn-danger" onClick={() => reject_(vw)}>Reject</button>
+                      </div>
+                    </div>
+                  )}
+                  <button className="btn btn-ghost mt-2" style={{ width: "100%" }} onClick={() => setWaiverView(null)}>Close</button>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {edit && (
         <div className="overlay" onClick={() => setEdit(null)}>
