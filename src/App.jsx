@@ -506,12 +506,12 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .hero-bg{position:relative;min-height:100vh;overflow:hidden;display:flex;align-items:center;background:#000;}
 .hero-bg::before{content:'';position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;}
 .hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.92) 0%,rgba(0,0,0,.7) 55%,rgba(0,0,0,.2) 100%);}
-.hero-content{position:relative;z-index:1;padding:clamp(40px,6vw,80px) clamp(24px,4vw,80px);max-width:700px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;}
+.hero-content{position:relative;z-index:1;padding:clamp(20px,4vw,48px) clamp(24px,4vw,80px) clamp(20px,4vw,48px);max-width:760px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;}
 .hero-eyebrow{font-size:11px;letter-spacing:.3em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px;justify-content:center;}
 .hero-eyebrow::before{content:'';width:24px;height:2px;background:var(--accent);}
 .hero-h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(56px,9vw,110px);line-height:.9;color:#fff;letter-spacing:.02em;margin-bottom:24px;text-transform:uppercase;font-weight:900;}
 .hero-h1 span{color:var(--accent);}
-.hero-p{color:#888;font-size:15px;line-height:1.7;max-width:460px;margin-bottom:36px;margin-left:auto;margin-right:auto;}
+.hero-p{color:#888;font-size:15px;line-height:1.7;max-width:520px;margin-bottom:20px;margin-left:auto;margin-right:auto;}
 .hero-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
 .hero-stats{display:flex;gap:0;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f;background:rgba(0,0,0,.8);}
 .hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;}
@@ -1052,7 +1052,7 @@ function HomePage({ data, setPage }) {
         <div style={{ maxWidth:1280, margin:"0 auto", width:"100%", position:"relative", zIndex:1, padding:"0 24px" }}>
           <div className="hero-content">
             {/* ── MILITARY BANNER ── */}
-            <div style={{ marginBottom:32, maxWidth:640 }}>
+            <div style={{ width:"100%", marginBottom:16 }}>
               <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" style={{ width:"100%", height:"auto", display:"block", filter:"drop-shadow(0 8px 32px rgba(0,0,0,.8))" }}>
                 <defs>
                   {/* Camo pattern */}
@@ -3242,13 +3242,33 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     setSavingEvent(true);
-    // Safety: always reset button after 30s even if something hangs
-    const safetyTimer = setTimeout(() => setSavingEvent(false), 30000);
     try {
       if (modal === "new") {
-        await api.events.create(form);
+        const created = await api.events.create(form);
+        // If banner is a base64 blob, convert and upload it now we have the event ID
+        if (form.banner && form.banner.startsWith("data:") && created?.id) {
+          try {
+            const res = await fetch(form.banner);
+            const blob = await res.blob();
+            const file = new File([blob], "banner.jpg", { type: "image/jpeg" });
+            await api.events.uploadBanner(created.id, file);
+          } catch (bannerErr) {
+            console.warn("Banner upload failed (non-fatal):", bannerErr);
+          }
+        }
       } else {
         await api.events.update(form.id, form);
+        // Upload new base64 banner if provided
+        if (form.banner && form.banner.startsWith("data:") && form.id) {
+          try {
+            const res = await fetch(form.banner);
+            const blob = await res.blob();
+            const file = new File([blob], "banner.jpg", { type: "image/jpeg" });
+            await api.events.uploadBanner(form.id, file);
+          } catch (bannerErr) {
+            console.warn("Banner upload failed (non-fatal):", bannerErr);
+          }
+        }
       }
       const evList = await api.events.getAll();
       save({ events: evList });
@@ -3256,9 +3276,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       setModal(null);
     } catch (e) {
       console.error("saveEvent failed:", e);
-      showToast("Save failed: " + (e.message || String(e)), "red");
+      showToast("Save failed: " + (e.message || JSON.stringify(e)), "red");
     } finally {
-      clearTimeout(safetyTimer);
       setSavingEvent(false);
     }
   };
@@ -3311,12 +3330,16 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const clone = async (ev) => {
     try {
       const { id: _id, bookings: _b, ...evData } = ev;
-      await api.events.create({ ...evData, title: ev.title + " (Copy)", published: false });
+      // Strip base64 banner from clone - too large; the URL banner will carry through
+      const cloneData = { ...evData, title: ev.title + " (Copy)", published: false };
+      if (cloneData.banner && cloneData.banner.startsWith("data:")) cloneData.banner = "";
+      const created = await api.events.create(cloneData);
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("Event cloned! (saved as draft)");
     } catch (e) {
-      showToast("Clone failed: " + e.message, "red");
+      console.error("Clone failed:", e);
+      showToast("Clone failed: " + (e.message || JSON.stringify(e)), "red");
     }
   };
 
@@ -4959,13 +4982,24 @@ function AdminQA({ data, save, showToast }) {
 
   const save_ = async () => {
     if (!form.q.trim() || !form.a.trim()) { showToast("Fill in both question and answer", "red"); return; }
+    const wasEditing = !!editId;
+    const currentEditId = editId;
     try {
-      if (editId) { await api.qa.update(editId, form); setEditId(null); }
-      else         { await api.qa.create(form); }
-      save({ qa: await api.qa.getAll() });
-      setForm(blank); setPreview(false);
-      showToast(editId ? "Q&A updated!" : "Q&A added!");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
+      if (currentEditId) {
+        await api.qa.update(currentEditId, form);
+      } else {
+        await api.qa.create(form);
+      }
+      const freshQA = await api.qa.getAll();
+      save({ qa: freshQA });
+      setEditId(null);
+      setForm(blank);
+      setPreview(false);
+      showToast(wasEditing ? "Q&A updated!" : "Q&A added!");
+    } catch (e) {
+      console.error("QA save failed:", e);
+      showToast("Failed: " + (e.message || JSON.stringify(e)), "red");
+    }
   };
 
   const del = async (id) => {
@@ -5052,23 +5086,38 @@ function AdminQA({ data, save, showToast }) {
 // ── Admin Messages ────────────────────────────────────────
 function AdminMessages({ data, save, showToast }) {
   const [msg, setMsg] = useState(data.homeMsg || "");
+  const [saving, setSaving] = useState(false);
+  // Sync if data.homeMsg changes externally
+  useEffect(() => { setMsg(data.homeMsg || ""); }, [data.homeMsg]);
+
   const saveMsg = async (val) => {
+    setSaving(true);
     try {
       await api.settings.set("home_message", val);
       save({ homeMsg: val });
-      showToast(val ? "Message updated!" : "Cleared");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
+      showToast(val ? "Message updated!" : "Message cleared");
+    } catch (e) {
+      showToast("Failed to save: " + (e.message || String(e)), "red");
+    } finally { setSaving(false); }
   };
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Banner shown on homepage</div></div></div>
+      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Scrolling ticker shown at top of site</div></div></div>
       <div className="card">
-        <div className="form-group"><label>Home Page Banner Message</label><textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. 🎯 Next event booking now open!" /></div>
-        <div className="gap-2">
-          <button className="btn btn-primary" onClick={() => saveMsg(msg)}>Save</button>
-          <button className="btn btn-danger" onClick={() => { setMsg(""); saveMsg(""); }}>Clear</button>
+        <div className="form-group">
+          <label>Ticker Message</label>
+          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. 🎯 Next event booking now open! — Saturday 14th June" />
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker. Save to apply.</div>
         </div>
-        {data.homeMsg && <div className="alert alert-green mt-2">Preview: {data.homeMsg}</div>}
+        <div className="gap-2">
+          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+          <button className="btn btn-danger" onClick={() => { setMsg(""); saveMsg(""); }} disabled={saving}>Clear</button>
+        </div>
+        {data.homeMsg && (
+          <div className="alert alert-green mt-2" style={{ fontSize:12 }}>
+            ✓ Active: <em>{data.homeMsg}</em>
+          </div>
+        )}
       </div>
     </div>
   );

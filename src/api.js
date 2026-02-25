@@ -333,18 +333,18 @@ export const qa = {
     const { data, error } = await supabase
       .from('qa_items').select('*').order('sort_order')
     if (error) throw error
-    return data.map(i => ({ id: i.id, q: i.question, a: i.answer }))
+    return data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: i.image || '' }))
   },
 
   async create(item) {
     const { data, error } = await supabase
-      .from('qa_items').insert({ question: item.q, answer: item.a }).select().single()
+      .from('qa_items').insert({ question: item.q, answer: item.a, image: item.image || null }).select().single()
     if (error) throw error
-    return { id: data.id, q: data.question, a: data.answer }
+    return { id: data.id, q: data.question, a: data.answer, image: data.image || '' }
   },
 
   async update(id, item) {
-    const { error } = await supabase.from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
+    const { error } = await supabase.from('qa_items').update({ question: item.q, answer: item.a, image: item.image || null }).eq('id', id)
     if (error) throw error
   },
 
@@ -364,8 +364,15 @@ export const settings = {
   },
 
   async set(key, value) {
-    const { error } = await supabase
-      .from('site_settings').upsert({ key, value })
+    // Try update first, then insert if not found
+    const { data: existing } = await supabase
+      .from('site_settings').select('key').eq('key', key).single()
+    let error
+    if (existing) {
+      ;({ error } = await supabase.from('site_settings').update({ value }).eq('key', key))
+    } else {
+      ;({ error } = await supabase.from('site_settings').insert({ key, value }))
+    }
     if (error) throw error
   }
 }
@@ -480,20 +487,21 @@ function normaliseProfile(p) {
 export { normaliseProfile }
 
 function toSnakeEvent(ev) {
+  // Strip base64 banners — too large for DB text column; only store URLs
+  const banner = ev.banner && ev.banner.startsWith('data:') ? null : (ev.banner || null)
   return {
     title:          ev.title,
     date:           ev.date,
     time:           ev.time,
     location:       ev.location,
     description:    ev.description,
-    walk_on_slots:  ev.walkOnSlots,
-    rental_slots:   ev.rentalSlots,
-    walk_on_price:  ev.walkOnPrice,
-    rental_price:   ev.rentalPrice,
-    banner:         ev.banner,
-    map_embed:      ev.mapEmbed,
-    published:      ev.published,
-
+    walk_on_slots:  Number(ev.walkOnSlots) || 0,
+    rental_slots:   Number(ev.rentalSlots) || 0,
+    walk_on_price:  Number(ev.walkOnPrice) || 0,
+    rental_price:   Number(ev.rentalPrice) || 0,
+    banner:         banner,
+    map_embed:      ev.mapEmbed || null,
+    published:      ev.published ?? true,
   }
 }
 
