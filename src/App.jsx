@@ -2877,7 +2877,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
   const hasPerm = (p) => isMain || cu.permissions?.includes(p) || cu.permissions?.includes("all");
 
-  const pendingWaivers = data.users.filter(u => u.waiverPending).length;
+  const pendingWaivers = data.users.filter(u => u.role !== "admin" && u.waiverPending).length;
   const pendingVip = data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length;  const deleteReqs = data.users.filter(u => u.deleteRequest).length;
   const unsigned = data.users.filter(u => u.role === "player" && !u.waiverSigned).length;
   const upcomingEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
@@ -2974,7 +2974,7 @@ function AdminDash({ data, setSection }) {
   const players = data.users.filter(u => u.role === "player").length;
   const unsigned = data.users.filter(u => u.role === "player" && !u.waiverSigned).length;
   const activeEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
-  const pendingWaivers = data.users.filter(u => u.waiverPending).length;
+  const pendingWaivers = data.users.filter(u => u.role !== "admin" && u.waiverPending).length;
 
   // Weekly bookings bar chart
   const days = ["M", "T", "W", "T", "F", "S", "S"];
@@ -4188,7 +4188,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
   }, []);
 
   const allUsers = localUsers ?? data.users;
-  const withWaiver = allUsers.filter(u => u.waiverData || u.waiverPending);
+  const withWaiver = allUsers.filter(u => u.role !== "admin" && (u.waiverData || u.waiverPending));
 
   const approve = (u) => {
     updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
