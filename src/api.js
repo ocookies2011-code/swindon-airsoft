@@ -364,15 +364,10 @@ export const settings = {
   },
 
   async set(key, value) {
-    // Try update first, then insert if not found
-    const { data: existing } = await supabase
-      .from('site_settings').select('key').eq('key', key).single()
-    let error
-    if (existing) {
-      ;({ error } = await supabase.from('site_settings').update({ value }).eq('key', key))
-    } else {
-      ;({ error } = await supabase.from('site_settings').insert({ key, value }))
-    }
+    // upsert with explicit conflict target — works regardless of whether row exists
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert({ key, value }, { onConflict: 'key' })
     if (error) throw error
   }
 }

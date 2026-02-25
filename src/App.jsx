@@ -170,9 +170,7 @@ function useData() {
     // Optimistic local update
     setData(prev => ({ ...prev, ...patch }));
 
-    if (patch.homeMsg !== undefined) {
-      await api.settings.set("home_message", patch.homeMsg);
-    }
+    // homeMsg is written directly by AdminMessages — do NOT re-write here
     if (patch.postageOptions !== undefined) {
       // Diff is handled by admin components calling api.postage directly
       // This just keeps local state in sync
@@ -3353,17 +3351,32 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 
   const clone = async (ev) => {
     try {
-      const { id: _id, bookings: _b, ...evData } = ev;
-      // Strip base64 banner from clone - too large; the URL banner will carry through
-      const cloneData = { ...evData, title: ev.title + " (Copy)", published: false };
-      if (cloneData.banner && cloneData.banner.startsWith("data:")) cloneData.banner = "";
-      const created = await api.events.create(cloneData);
+      // Strip all DB-generated fields; only keep content fields
+      const cloneData = {
+        title:        ev.title + " (Copy)",
+        date:         ev.date,
+        time:         ev.time,
+        location:     ev.location,
+        description:  ev.description,
+        walkOnSlots:  ev.walkOnSlots,
+        rentalSlots:  ev.rentalSlots,
+        walkOnPrice:  ev.walkOnPrice,
+        rentalPrice:  ev.rentalPrice,
+        published:    false,
+        vipOnly:      ev.vipOnly || false,
+        mapEmbed:     ev.mapEmbed || "",
+        // Only carry URL banners — strip base64
+        banner:       (ev.banner && !ev.banner.startsWith("data:")) ? ev.banner : "",
+        // Strip old extra IDs so DB assigns new ones
+        extras:       (ev.extras || []).map(({ id: _id, ...ex }) => ex),
+      };
+      await api.events.create(cloneData);
       const evList = await api.events.getAll();
       save({ events: evList });
-      showToast("Event cloned! (saved as draft)");
+      showToast("✓ Event cloned as draft!");
     } catch (e) {
       console.error("Clone failed:", e);
-      showToast("Clone failed: " + (e.message || JSON.stringify(e)), "red");
+      showToast("Clone failed: " + (e.message || String(e)), "red");
     }
   };
 
@@ -4942,13 +4955,24 @@ function AdminGallery({ data, save, showToast }) {
 // ── Admin Q&A ─────────────────────────────────────────────
 // ── Simple rich-text helpers ──────────────────────────────
 function insertMarkdown(text, setText, before, after = "") {
-  const ta = document.activeElement;
-  if (!ta || ta.tagName !== "TEXTAREA") { setText(p => p + before + after); return; }
-  const s = ta.selectionStart, e = ta.selectionEnd;
+  // Find the active textarea - if focus was lost use the last known textarea
+  const ta = document.activeElement?.tagName === "TEXTAREA" ? document.activeElement : null;
+  if (!ta) {
+    // No active textarea - just append to end
+    setText(text + before + after);
+    return;
+  }
+  const s = ta.selectionStart ?? text.length;
+  const e = ta.selectionEnd ?? text.length;
   const sel = text.slice(s, e);
   const newVal = text.slice(0, s) + before + sel + after + text.slice(e);
+  const newCursor = s + before.length + sel.length + after.length;
   setText(newVal);
-  setTimeout(() => { ta.selectionStart = ta.selectionEnd = s + before.length + sel.length + after.length; ta.focus(); }, 0);
+  // Restore cursor after React re-render
+  requestAnimationFrame(() => {
+    ta.focus();
+    ta.setSelectionRange(newCursor, newCursor);
+  });
 }
 
 // Render answer markdown for public QA page
@@ -5064,7 +5088,8 @@ function AdminQA({ data, save, showToast }) {
         {/* Toolbar */}
         <div style={{ display:"flex", gap:4, marginBottom:6, flexWrap:"wrap", alignItems:"center" }}>
           {toolbar.map(t => (
-            <button key={t.label} title={t.title} onClick={t.action}
+            <button key={t.label} type="button" title={t.title}
+              onMouseDown={e => { e.preventDefault(); t.action(); }}
               style={{ background:"#1a1a1a", border:"1px solid #333", color:"#fff", padding:"4px 10px", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, cursor:"pointer", borderRadius:2 }}>
               {t.label}
             </button>
@@ -5073,7 +5098,7 @@ function AdminQA({ data, save, showToast }) {
             🖼 {uploading ? "Uploading…" : "Add Image"}
             <input type="file" accept="image/*" style={{ display:"none" }} onChange={handleImageUpload} disabled={uploading} />
           </label>
-          <button onClick={() => setPreview(p => !p)}
+          <button type="button" onClick={() => setPreview(p => !p)}
             style={{ background: preview ? "var(--accent)" : "#1a1a1a", border:"1px solid #333", color: preview ? "#000" : "#fff", padding:"4px 10px", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, cursor:"pointer", borderRadius:2, marginLeft:"auto" }}>
             👁 {preview ? "Edit" : "Preview"}
           </button>
@@ -5091,8 +5116,8 @@ function AdminQA({ data, save, showToast }) {
         )}
 
         <div className="gap-2 mt-2">
-          <button className="btn btn-primary" onClick={save_}>{editId ? "Save Changes" : "Add Q&A"}</button>
-          {editId && <button className="btn btn-ghost" onClick={cancel}>Cancel</button>}
+          <button type="button" className="btn btn-primary" onClick={save_}>{editId ? "Save Changes" : "Add Q&A"}</button>
+          {editId && <button type="button" className="btn btn-ghost" onClick={cancel}>Cancel</button>}
         </div>
       </div>
 
@@ -5120,17 +5145,20 @@ function AdminQA({ data, save, showToast }) {
 function AdminMessages({ data, save, showToast }) {
   const [msg, setMsg] = useState(data.homeMsg || "");
   const [saving, setSaving] = useState(false);
-  // Sync if data.homeMsg changes externally
-  useEffect(() => { setMsg(data.homeMsg || ""); }, [data.homeMsg]);
 
   const saveMsg = async (val) => {
     setSaving(true);
     try {
       await api.settings.set("home_message", val);
-      save({ homeMsg: val });
-      showToast(val ? "Message updated!" : "Message cleared");
+      // Update local React state WITHOUT triggering the global save() homeMsg branch
+      // (which would double-write to Supabase)
+      setMsg(val);
+      // Directly patch the data atom so the ticker re-renders
+      data.homeMsg = val;
+      showToast(val ? "✓ Message saved!" : "✓ Message cleared");
     } catch (e) {
-      showToast("Failed to save: " + (e.message || String(e)), "red");
+      console.error("saveMsg error:", e);
+      showToast("Save failed — check console for details", "red");
     } finally { setSaving(false); }
   };
   return (
