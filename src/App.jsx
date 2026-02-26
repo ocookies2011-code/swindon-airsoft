@@ -5157,8 +5157,17 @@ function AdminQA({ data, save, showToast }) {
   const [editId, setEditId] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [qaList, setQaList] = useState(data.qa || []);
   const fq = v => setForm(p => ({ ...p, q: v }));
   const fa = v => setForm(p => ({ ...p, a: v }));
+
+  const refreshQA = async () => {
+    const { data: freshData } = await supabase
+      .from('qa_items').select('id, question, answer').order('created_at', { ascending: true });
+    const mapped = (freshData || []).map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }));
+    setQaList(mapped);
+    save({ qa: mapped });
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -5197,15 +5206,10 @@ function AdminQA({ data, save, showToast }) {
       console.log("QA supabase result:", JSON.stringify(result));
       if (result.error) throw new Error(result.error.message || result.error.code || JSON.stringify(result.error));
 
-      const { data: freshData, error: fetchErr } = await supabase
-        .from('qa_items').select('id, question, answer').order('created_at', { ascending: true });
-      console.log("QA getAll result:", JSON.stringify({ freshData, fetchErr }));
-      if (fetchErr) throw new Error(fetchErr.message);
-      const freshQA = (freshData || []).map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }));
-      save({ qa: freshQA });
       setEditId(null);
       setForm(blank);
       setPreview(false);
+      await refreshQA();
       showToast(wasEditing ? "✓ Q&A updated!" : "✓ Q&A added!");
     } catch (e) {
       console.error("QA save failed:", e);
@@ -5219,8 +5223,7 @@ function AdminQA({ data, save, showToast }) {
     if (!window.confirm("Delete this Q&A?")) return;
     try {
       await api.qa.delete(id);
-      const freshQA = await api.qa.getAll();
-      save({ qa: freshQA });
+      await refreshQA();
       showToast("Deleted");
     } catch (e) {
       console.error("QA delete failed:", e);
@@ -5284,9 +5287,9 @@ function AdminQA({ data, save, showToast }) {
         </div>
       </div>
 
-      {data.qa.length === 0 && <div style={{ textAlign:"center", color:"var(--muted)", padding:32 }}>No Q&A items yet.</div>}
-      {data.qa.length > 0 && <div style={{ fontSize:11, color:"var(--muted)", marginBottom:8, textAlign:"right" }}>⠿ Drag to reorder</div>}
-      {data.qa.map((item, idx) => (
+      {qaList.length === 0 && <div style={{ textAlign:"center", color:"var(--muted)", padding:32 }}>No Q&A items yet.</div>}
+      {qaList.length > 0 && <div style={{ fontSize:11, color:"var(--muted)", marginBottom:8, textAlign:"right" }}>⠿ Drag to reorder</div>}
+      {qaList.map((item, idx) => (
         <div key={item.id}
           draggable
           onDragStart={e => { e.dataTransfer.effectAllowed = "move"; dragIdx.current = idx; }}
@@ -5303,9 +5306,9 @@ function AdminQA({ data, save, showToast }) {
             const reordered = [...data.qa];
             const [moved] = reordered.splice(from, 1);
             reordered.splice(to, 0, moved);
+            setQaList(reordered);
             save({ qa: reordered });
             dragIdx.current = null; dragOver.current = null;
-            // Persist order to Supabase
             reordered.forEach((q, i) => api.qa.update(q.id, { ...q, sort_order: i }).catch(() => {}));
           }}
           onDragEnd={e => { e.currentTarget.style.borderTop = "none"; e.currentTarget.style.borderBottom = "none"; dragIdx.current = null; dragOver.current = null; }}
