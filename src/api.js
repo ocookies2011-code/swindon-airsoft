@@ -8,12 +8,15 @@ export const auth = {
   async signUp({ email, password, name, phone }) {
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { name } }
+      options: { data: { name, phone } }
     })
     if (error) throw error
-    // Update profile with phone after creation
+    // Upsert profile — handles both new signups and cases where trigger already created it
     if (data.user) {
-      await supabase.from('profiles').update({ name, phone }).eq('id', data.user.id)
+      await supabase.from('profiles').upsert({
+        id: data.user.id, name, phone: phone || '',
+        role: 'player', games_attended: 0,
+      }, { onConflict: 'id', ignoreDuplicates: false }).select()
     }
     return data
   },
