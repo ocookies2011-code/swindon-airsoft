@@ -5162,10 +5162,10 @@ function AdminQA({ data, save, showToast }) {
   const fa = v => setForm(p => ({ ...p, a: v }));
 
   const refreshQA = async () => {
-    const { data: freshData, error } = await supabase
-      .from('qa_items').select('id, question, answer, sort_order').order('sort_order', { ascending: true, nullsFirst: false });
-    console.log("refreshQA result:", freshData?.length, error);
-    const mapped = (freshData || []).map(i => ({ id: i.id, q: i.question, a: i.answer, image: '', sort_order: i.sort_order }));
+    const { data: freshData } = await supabase
+      .from('qa_items').select('id, question, answer, sort_order').order('created_at', { ascending: true });
+    const sorted = (freshData || []).slice().sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
+    const mapped = sorted.map(i => ({ id: i.id, q: i.question, a: i.answer, image: '', sort_order: i.sort_order }));
     setQaList(mapped);
     save({ qa: mapped });
   };
