@@ -341,27 +341,35 @@ export const gallery = {
 // ── Q&A ───────────────────────────────────────────────────────
 export const qa = {
   async getAll() {
-    const { data, error } = await supabase.from('qa_items').select('id, question, answer, image').order('id')
+    const { data, error } = await supabase.from('qa_items').select('id, question, answer').order('id')
     if (error) throw error
-    return data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: i.image || '' }))
+    return data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }))
   },
 
   async create(item) {
     const { error } = await supabase
       .from('qa_items').insert({ question: item.q, answer: item.a })
-    if (error) throw error
+    if (error) {
+      console.error('qa.create error:', JSON.stringify(error))
+      throw new Error(error.message || error.code || JSON.stringify(error))
+    }
   },
 
   async update(id, item) {
-    const patch = { question: item.q, answer: item.a }
-    if (item.sort_order !== undefined) patch.sort_order = item.sort_order
-    const { error } = await supabase.from('qa_items').update(patch).eq('id', id)
-    if (error) throw error
+    const { error } = await supabase
+      .from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
+    if (error) {
+      console.error('qa.update error:', JSON.stringify(error))
+      throw new Error(error.message || error.code || JSON.stringify(error))
+    }
   },
 
   async delete(id) {
     const { error } = await supabase.from('qa_items').delete().eq('id', id)
-    if (error) throw error
+    if (error) {
+      console.error('qa.delete error:', JSON.stringify(error))
+      throw new Error(error.message || error.code || JSON.stringify(error))
+    }
   }
 }
 
