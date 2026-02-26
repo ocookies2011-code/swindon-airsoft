@@ -5197,9 +5197,11 @@ function AdminQA({ data, save, showToast }) {
       console.log("QA supabase result:", JSON.stringify(result));
       if (result.error) throw new Error(result.error.message || result.error.code || JSON.stringify(result.error));
 
-      const { data: freshData, error: fetchErr } = await supabase.from('qa_items').select('id, question, answer').order('id');
+      const { data: freshData, error: fetchErr } = await supabase
+        .from('qa_items').select('id, question, answer').order('created_at', { ascending: true });
+      console.log("QA getAll result:", JSON.stringify({ freshData, fetchErr }));
       if (fetchErr) throw new Error(fetchErr.message);
-      const freshQA = freshData.map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }));
+      const freshQA = (freshData || []).map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }));
       save({ qa: freshQA });
       setEditId(null);
       setForm(blank);
