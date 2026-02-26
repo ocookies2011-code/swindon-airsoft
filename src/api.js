@@ -341,33 +341,21 @@ export const gallery = {
 // ── Q&A ───────────────────────────────────────────────────────
 export const qa = {
   async getAll() {
-    // Try ordered by sort_order; fall back to id order if column missing
-    let res = await supabase.from('qa_items').select('*').order('sort_order')
-    if (res.error) {
-      res = await supabase.from('qa_items').select('*').order('id')
-    }
-    if (res.error) throw res.error
-    return res.data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: i.image || '' }))
+    const { data, error } = await supabase.from('qa_items').select('id, question, answer, image').order('id')
+    if (error) throw error
+    return data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: i.image || '' }))
   },
 
   async create(item) {
     const { error } = await supabase
-      .from('qa_items').insert({ question: item.q, answer: item.a, image: item.image || null })
-    if (error && error.message?.includes('image')) {
-      const { error: e2 } = await supabase
-        .from('qa_items').insert({ question: item.q, answer: item.a })
-      if (e2) throw e2
-    } else if (error) throw error
+      .from('qa_items').insert({ question: item.q, answer: item.a })
+    if (error) throw error
   },
 
   async update(id, item) {
     const { error } = await supabase
-      .from('qa_items').update({ question: item.q, answer: item.a, image: item.image || null }).eq('id', id)
-    if (error && error.message?.includes('image')) {
-      const { error: e2 } = await supabase
-        .from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
-      if (e2) throw e2
-    } else if (error) throw error
+      .from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
+    if (error) throw error
   },
 
   async delete(id) {
