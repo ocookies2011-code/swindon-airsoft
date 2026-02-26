@@ -341,9 +341,9 @@ export const gallery = {
 // ── Q&A ───────────────────────────────────────────────────────
 export const qa = {
   async getAll() {
-    const { data, error } = await supabase.from('qa_items').select('id, question, answer').order('created_at', { ascending: true })
+    const { data, error } = await supabase.from('qa_items').select('id, question, answer, sort_order').order('sort_order', { ascending: true, nullsFirst: false })
     if (error) throw error
-    return data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }))
+    return data.map(i => ({ id: i.id, q: i.question, a: i.answer, image: '', sort_order: i.sort_order }))
   },
 
   async create(item) {

@@ -5163,8 +5163,8 @@ function AdminQA({ data, save, showToast }) {
 
   const refreshQA = async () => {
     const { data: freshData } = await supabase
-      .from('qa_items').select('id, question, answer').order('created_at', { ascending: true });
-    const mapped = (freshData || []).map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }));
+      .from('qa_items').select('id, question, answer, sort_order').order('sort_order', { ascending: true, nullsFirst: false });
+    const mapped = (freshData || []).map(i => ({ id: i.id, q: i.question, a: i.answer, image: '', sort_order: i.sort_order }));
     setQaList(mapped);
     save({ qa: mapped });
   };
@@ -5201,7 +5201,10 @@ function AdminQA({ data, save, showToast }) {
       if (currentEditId) {
         result = await supabase.from('qa_items').update({ question: form.q, answer: form.a }).eq('id', currentEditId);
       } else {
-        result = await supabase.from('qa_items').insert({ question: form.q, answer: form.a });
+        // Get current max sort_order so new item goes to the end
+        const { data: maxData } = await supabase.from('qa_items').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+        const nextOrder = maxData?.[0]?.sort_order != null ? maxData[0].sort_order + 1 : 0;
+        result = await supabase.from('qa_items').insert({ question: form.q, answer: form.a, sort_order: nextOrder });
       }
       console.log("QA supabase result:", JSON.stringify(result));
       if (result.error) throw new Error(result.error.message || result.error.code || JSON.stringify(result.error));
@@ -5306,10 +5309,17 @@ function AdminQA({ data, save, showToast }) {
             const reordered = [...data.qa];
             const [moved] = reordered.splice(from, 1);
             reordered.splice(to, 0, moved);
-            setQaList(reordered);
-            save({ qa: reordered });
+            // Update sort_order on each item
+            const withOrder = reordered.map((q, i) => ({ ...q, sort_order: i }));
+            setQaList(withOrder);
+            save({ qa: withOrder });
             dragIdx.current = null; dragOver.current = null;
-            reordered.forEach((q, i) => api.qa.update(q.id, { ...q, sort_order: i }).catch(() => {}));
+            // Persist new order to Supabase
+            withOrder.forEach(q =>
+              supabase.from('qa_items').update({ sort_order: q.sort_order }).eq('id', q.id).then(r => {
+                if (r.error) console.error('sort_order save failed:', r.error);
+              })
+            );
           }}
           onDragEnd={e => { e.currentTarget.style.borderTop = "none"; e.currentTarget.style.borderBottom = "none"; dragIdx.current = null; dragOver.current = null; }}
           className="card mb-1" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, cursor:"grab" }}>
