@@ -5296,7 +5296,7 @@ function AdminQA({ data, save, showToast }) {
             save({ qa: reordered });
             dragIdx.current = null; dragOver.current = null;
             // Persist order to Supabase
-            reordered.forEach((q, i) => withTimeout(api.qa.update(q.id, { ...q, sort_order: i })).catch(() => {}));
+            reordered.forEach((q, i) => api.qa.update(q.id, { ...q, sort_order: i }).catch(() => {}));
           }}
           onDragEnd={e => { e.currentTarget.style.borderTop = "none"; e.currentTarget.style.borderBottom = "none"; dragIdx.current = null; dragOver.current = null; }}
           className="card mb-1" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, cursor:"grab" }}>
