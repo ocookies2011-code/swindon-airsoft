@@ -5185,13 +5185,21 @@ function AdminQA({ data, save, showToast }) {
     const wasEditing = !!editId;
     const currentEditId = editId;
     setQASaving(true);
+
+    // Direct supabase call so we can see the raw response
     try {
+      let result;
       if (currentEditId) {
-        await api.qa.update(currentEditId, form);
+        result = await supabase.from('qa_items').update({ question: form.q, answer: form.a }).eq('id', currentEditId);
       } else {
-        await api.qa.create(form);
+        result = await supabase.from('qa_items').insert({ question: form.q, answer: form.a });
       }
-      const freshQA = await api.qa.getAll();
+      console.log("QA supabase result:", JSON.stringify(result));
+      if (result.error) throw new Error(result.error.message || result.error.code || JSON.stringify(result.error));
+
+      const { data: freshData, error: fetchErr } = await supabase.from('qa_items').select('id, question, answer').order('id');
+      if (fetchErr) throw new Error(fetchErr.message);
+      const freshQA = freshData.map(i => ({ id: i.id, q: i.question, a: i.answer, image: '' }));
       save({ qa: freshQA });
       setEditId(null);
       setForm(blank);
@@ -5199,7 +5207,7 @@ function AdminQA({ data, save, showToast }) {
       showToast(wasEditing ? "✓ Q&A updated!" : "✓ Q&A added!");
     } catch (e) {
       console.error("QA save failed:", e);
-      showToast("Save failed: " + (e?.message || e?.code || JSON.stringify(e)), "red");
+      showToast("Save failed: " + (e?.message || JSON.stringify(e)), "red");
     } finally {
       setQASaving(false);
     }
