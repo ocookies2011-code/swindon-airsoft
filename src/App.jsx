@@ -113,7 +113,7 @@ function useData() {
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
-    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", socialFacebook: "", socialInstagram: "", contactAddress: "Swindon, Wiltshire, UK", contactPhone: "+44 1234 567890", contactEmail: "info@swindon-airsoft.com", users: [] };
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [] };
     const timeout = setTimeout(() => {
       setData(prev => prev || emptyData);
       setLoading(false);
@@ -122,18 +122,13 @@ function useData() {
       const errors = {};
       const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
 
-      const [evList, shopList, postageList, albumList, qaList, homeMsg, socialFacebook, socialInstagram, contactAddress, contactPhone, contactEmail] = await Promise.all([
+      const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
         safe("events",  api.events.getAll()),
         safe("shop",    api.shop.getAll()),
         safe("postage", api.postage.getAll()),
         safe("gallery", api.gallery.getAll()),
         safe("qa",      api.qa.getAll()),
         api.settings.get("home_message").catch(() => ""),
-        api.settings.get("social_facebook").catch(() => ""),
-        api.settings.get("social_instagram").catch(() => ""),
-        api.settings.get("contact_address").catch(() => ""),
-        api.settings.get("contact_phone").catch(() => ""),
-        api.settings.get("contact_email").catch(() => ""),
       ]);
 
       if (Object.keys(errors).length > 0) {
@@ -152,11 +147,6 @@ function useData() {
         albums: albumList,
         qa: qaList,
         homeMsg,
-        socialFacebook,
-        socialInstagram,
-        contactAddress: contactAddress || "Swindon, Wiltshire, UK",
-        contactPhone: contactPhone || "+44 1234 567890",
-        contactEmail: contactEmail || "info@swindon-airsoft.com",
       }));
 
       // Load profiles after public data — only succeeds when authed, silently skipped for guests
@@ -266,7 +256,7 @@ const CSS = `
 
 /* ── RESET ── */
 *{box-sizing:border-box;margin:0;padding:0;}
-html{overflow-x:hidden;}*,*::before,*::after{box-sizing:border-box;}body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden;max-width:100vw;}
+body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-height:100vh;}
 
 /* ── VARIABLES ── */
 :root{
@@ -290,8 +280,8 @@ html{overflow-x:hidden;}*,*::before,*::after{box-sizing:border-box;}body,#root{b
 .font-cond{font-family:'Barlow Condensed',sans-serif;}
 
 /* ── NAV ── */
-.pub-nav{overflow:hidden;background:#000;border-bottom:1px solid #1f1f1f;position:sticky;top:0;z-index:100;}
-.pub-nav-inner{max-width:1280px;margin:0 auto;padding:0 16px;height:var(--nav-h);display:flex;align-items:center;gap:0;position:relative;width:100%;box-sizing:border-box;}
+.pub-nav{background:#000;border-bottom:1px solid #1f1f1f;position:sticky;top:0;z-index:100;}
+.pub-nav-inner{max-width:1280px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:0;position:relative;}
 .pub-nav-logo{display:flex;align-items:center;gap:12px;cursor:pointer;margin-right:32px;flex-shrink:0;}
 .pub-nav-logo-box{background:var(--accent);width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:#000;letter-spacing:.05em;border-radius:2px;}
 .pub-nav-logo-text{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:.12em;color:#fff;text-transform:uppercase;}
@@ -319,9 +309,9 @@ html{overflow-x:hidden;}*,*::before,*::after{box-sizing:border-box;}body,#root{b
 .bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.1em;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;transition:color .1s;}
 .bottom-nav-btn.active{color:var(--accent);}
 .bottom-nav-icon{font-size:20px;line-height:1;}
-.pub-page-wrap{padding-bottom:80px;overflow-x:hidden;max-width:100vw;}
-.page-content{max-width:1100px;margin:0 auto;padding:32px 24px;box-sizing:border-box;width:100%;}
-.page-content-sm{max-width:820px;margin:0 auto;padding:32px 24px;box-sizing:border-box;width:100%;}
+.pub-page-wrap{padding-bottom:80px;}
+.page-content{max-width:1100px;margin:0 auto;padding:32px 24px;}
+.page-content-sm{max-width:820px;margin:0 auto;padding:32px 24px;}
 
 /* ── CARDS ── */
 .card{background:var(--bg2);border:1px solid var(--border);padding:24px;position:relative;}
@@ -485,7 +475,6 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .sb-badge.gold{background:var(--gold);color:#000;}
 .sb-badge.blue{background:var(--blue);}
 .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:49;}
-.admin-overlay.open{display:block;}
 
 /* ── BAR CHART ── */
 .bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;}
@@ -512,7 +501,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .qr-corner.br{bottom:8px;right:8px;border-width:0 3px 3px 0;}
 
 /* ── HERO ── */
-.hero-bg{position:relative;overflow:hidden;display:flex;align-items:center;background:#000;max-width:100%;}
+.hero-bg{position:relative;overflow:hidden;display:flex;align-items:center;background:#000;}
 .hero-bg-img{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;}
 .hero-bg-grad{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.5) 0%,rgba(0,0,0,.3) 100%);}
 .hero-content{position:relative;z-index:1;padding:32px 24px 28px;max-width:760px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;}
@@ -523,7 +512,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .hero-p{color:#888;font-size:15px;line-height:1.7;max-width:520px;margin-bottom:20px;margin-left:auto;margin-right:auto;}
 .hero-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
 .hero-stats{display:flex;gap:0;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f;background:rgba(0,0,0,.8);}
-.hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;flex-wrap:wrap;}
+.hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;}
 .hero-stat{flex:1;padding:20px;text-align:center;border-right:1px solid #1f1f1f;}
 .hero-stat:last-child{border-right:none;}
 .hero-stat-num{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--accent);}
@@ -545,7 +534,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 
 /* ── COUNTDOWN PANEL ── */
 .countdown-panel{background:#111;border:1px solid #2a2a2a;padding:24px 28px;margin-bottom:0;display:flex;align-items:center;gap:32px;flex-wrap:wrap;}
-.countdown-panel-info{flex:1;min-width:0;}
+.countdown-panel-info{flex:1;min-width:200px;}
 .countdown-panel-label{font-size:10px;letter-spacing:.25em;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;margin-bottom:6px;text-transform:uppercase;}
 .countdown-panel-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:.04em;color:#fff;text-transform:uppercase;}
 .countdown-panel-meta{font-size:12px;color:var(--muted);margin-top:4px;}
@@ -603,97 +592,9 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .pub-nav-hamburger{display:flex;align-items:center;justify-content:center;}
   .bottom-nav{display:block;}
   .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + 16px);}
-
-  /* Hero */
-  .hero-cta{flex-direction:column;align-items:stretch;}
-  .hero-cta .btn{width:100%;text-align:center;}
-  .hero-stats-inner{flex-wrap:wrap;}
-  .hero-stat{flex:1 1 50%;border-bottom:1px solid #1f1f1f;}
-  .hero-stat:nth-child(odd){border-right:1px solid #1f1f1f;}
-  .hero-stat:nth-last-child(-n+2){border-bottom:none;}
-
-  /* Page content padding */
-  .page-content{padding:20px 14px;}
-  .page-content-sm{padding:20px 14px;}
-
-  /* Cards */
-  .card{padding:16px;}
-  .card-sm{padding:12px 14px;}
-
-  /* Countdown panel */
-  .countdown-panel{flex-direction:column;align-items:flex-start;gap:16px;padding:18px 16px;}
-  .countdown-panel-timer{width:100%;}
-  .countdown-panel-unit{flex:1;}
-  .countdown-panel-num{font-size:30px;}
-
-  /* Section headers */
-  .section-header{flex-direction:column;align-items:flex-start;gap:8px;}
-
-  /* Stat cards — 2 columns on mobile */
-  .grid-3.stat-row,.grid-4.stat-row{grid-template-columns:1fr 1fr;}
-
-  /* VIP banner */
-  .vip-banner{padding:28px 18px;}
-
-  /* Modal */
-  .modal-box{padding:20px 16px;}
-
-  /* Tables — force horizontal scroll */
-  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-
-  /* Admin sidebar — hidden by default, slides in */
-  .admin-sidebar{transform:translateX(-100%);}
-  .admin-sidebar.open{transform:translateX(0);}
-  .admin-main{margin-left:0;}
-  .admin-content{padding:14px 12px;}
-  .admin-topbar{padding:0 12px;}
-
-  /* Footer */
-  .pub-footer{padding:32px 16px 16px;}
-
-  /* Toast — full width on mobile */
-  .toast{left:12px;right:12px;bottom:calc(var(--bottom-nav-h) + 12px);max-width:none;}
-
-  /* Form rows already handled but reinforce */
-  .form-row{grid-template-columns:1fr;}
-
-  /* Event cards */
-  .event-card-body{padding:12px;}
-
-  /* Leaderboard table font */
-  .data-table td,.data-table th{padding:10px 10px;font-size:12px;}
-
-  /* Prevent any child from blowing out the width */
-  .pub-nav,.pub-nav-inner,.pub-page-wrap,.hero-bg,.page-content,.page-content-sm,.card,.section-inner,.pub-footer,.pub-footer-inner,.pub-footer-grid{max-width:100%;overflow-x:hidden;}
-  img,svg{max-width:100%;}
-  .hero-bg svg{width:100% !important;height:auto !important;}
+  
+  .hero-cta{flex-direction:column;}
 }
-
-@media(max-width:480px){
-  /* Hero title shrink */
-  .hero-h1{font-size:clamp(40px,13vw,72px);}
-
-  /* Countdown numbers */
-  .countdown-panel-num{font-size:26px;}
-
-  /* Stat values */
-  .stat-val{font-size:28px;}
-
-  /* Page content minimal padding */
-  .page-content{padding:16px 10px;}
-  .page-content-sm{padding:16px 10px;}
-
-  /* Hero stats — single column on very small screens */
-  .hero-stat{flex:1 1 100%;border-right:none !important;border-bottom:1px solid #1f1f1f;}
-  .hero-stat:last-child{border-bottom:none;}
-
-  /* Buttons full width in tight contexts */
-  .btn-block-xs{width:100%;display:block;}
-
-  /* Admin content */
-  .admin-content{padding:10px 8px;}
-}
-
 @media(min-width:769px){
   .pub-nav-hamburger{display:none;}
   .bottom-nav{display:none;}
@@ -1380,7 +1281,7 @@ function HomePage({ data, setPage }) {
 
       {/* FEATURE STRIP */}
       <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:16, padding:"40px 24px", maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, padding:"40px 24px", maxWidth:1200, margin:"0 auto" }}>
           {[
             { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
             { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
@@ -2631,7 +2532,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         {/* How it works */}
         <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px", marginBottom:32 }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"#fff", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>HOW IT WORKS</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
             {[
               { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
               { num:"02", title:"SUBMIT APPLICATION", desc:"Once eligible, apply for VIP membership through this page. Admin will review your application." },
@@ -2678,56 +2579,6 @@ function QAPage({ data }) {
 }
 
 // ── Profile ───────────────────────────────────────────────
-
-// ── Player Orders Tab (used in ProfilePage) ──────────────
-function PlayerOrdersTab({ cu }) {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [detail, setDetail] = useState(null);
-  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
-  useEffect(() => {
-    api.shopOrders.getByUserId(cu.id)
-      .then(setOrders)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [cu.id]);
-  if (loading) return <div className="card" style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>Loading ordersu2026</div>;
-  if (orders.length === 0) return <div className="card" style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>No orders yet.</div>;
-  return (
-    <div>
-      {orders.map(o => {
-        const items = Array.isArray(o.items) ? o.items : [];
-        return (
-          <div key={o.id} className="card mb-1" style={{ cursor:"pointer" }} onClick={() => setDetail(detail?.id === o.id ? null : o)}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
-              <div>
-                <div style={{ fontWeight:700, fontSize:15 }}>{items.map(i => `${i.name} �${i.qty}`).join(", ")}</div>
-                <div className="text-muted" style={{ fontSize:12 }}>Ordered: {new Date(o.created_at).toLocaleDateString("en-GB")} � {o.postage_name || "Collection"}</div>
-              </div>
-              <div style={{ textAlign:"right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
-                <div style={{ fontWeight:900, fontSize:20, color:"var(--accent)" }}>£{Number(o.total).toFixed(2)}</div>
-                <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
-              </div>
-            </div>
-            {detail?.id === o.id && (
-              <div style={{ marginTop:14, borderTop:"1px solid var(--border)", paddingTop:14 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:8 }}>ORDER DETAILS</div>
-                {items.map((i, idx) => (
-                  <div key={idx} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}>
-                    <span>{i.name} �{i.qty}</span><span className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</span>
-                  </div>
-                ))}
-                {o.postage > 0 && <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0", borderBottom:"1px solid var(--border)" }}><span>Postage ({o.postage_name})</span><span>£{Number(o.postage).toFixed(2)}</span></div>}
-                <div style={{ display:"flex", justifyContent:"space-between", fontWeight:900, fontSize:15, padding:"8px 0" }}><span>TOTAL</span><span className="text-green">£{Number(o.total).toFixed(2)}</span></div>
-                <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>Order ref: {o.id?.slice(-8).toUpperCase()}</div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const [tab, setTab] = useState("profile");
 
@@ -2801,7 +2652,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
       </div>
 
       <div className="nav-tabs">
-        {["profile", "waiver", "bookings", "orders", "vip"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
+        {["profile", "waiver", "bookings", "vip"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
       </div>
 
       {tab === "profile" && (
@@ -2906,8 +2757,6 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
         </div>
       )}
 
-      {tab === "orders" && <PlayerOrdersTab cu={cu} />}
-
       {tab === "vip" && (
         <div className="card">
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
@@ -2944,7 +2793,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
   const hasPerm = (p) => isMain || cu.permissions?.includes(p) || cu.permissions?.includes("all");
 
-  const pendingWaivers = data.users.filter(u => u.role !== "admin" && u.waiverPending).length;
+  const pendingWaivers = data.users.filter(u => u.waiverPending).length;
   const pendingVip = data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length;  const deleteReqs = data.users.filter(u => u.deleteRequest).length;
   const unsigned = data.users.filter(u => u.role === "player" && !u.waiverSigned).length;
   const upcomingEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
@@ -2954,9 +2803,10 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const NAV = [
     { id: "dashboard", label: "Dashboard", icon: "📊", group: "OPERATIONS" },
     { id: "events", label: "Events & Bookings", icon: "📅", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
-    { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (pendingWaivers > 0 ? pendingWaivers : (deleteReqs > 0 ? deleteReqs : null)), badgeColor: pendingVip > 0 ? "gold" : (pendingWaivers > 0 ? "gold" : ""), group: null },
+    { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
+    { id: "waivers", label: "Waivers", icon: "📋", badge: pendingWaivers || unsigned || null, group: null },
     { id: "shop", label: "Shop", icon: "🛒", group: null },
-    
+    { id: "orders", label: "Shop Orders", icon: "📦", group: null },
     { id: "leaderboard-admin", label: "Leaderboard", icon: "🏆", group: null },
     { id: "revenue", label: "Revenue", icon: "💰", group: "ANALYTICS" },
     { id: "gallery-admin", label: "Gallery", icon: "🖼", group: null },
@@ -3017,8 +2867,9 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
           {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
+          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
-          
+          {section === "orders" && <AdminOrders showToast={showToast} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && <AdminRevenue data={data} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
@@ -3039,7 +2890,7 @@ function AdminDash({ data, setSection }) {
   const players = data.users.filter(u => u.role === "player").length;
   const unsigned = data.users.filter(u => u.role === "player" && !u.waiverSigned).length;
   const activeEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
-  const pendingWaivers = data.users.filter(u => u.role !== "admin" && u.waiverPending).length;
+  const pendingWaivers = data.users.filter(u => u.waiverPending).length;
 
   // Weekly bookings bar chart
   const days = ["M", "T", "W", "T", "F", "S", "S"];
@@ -3998,7 +3849,6 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const [tab, setTab] = useState("all");
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
-  const [waiverView, setWaiverView] = useState(null);
 
   const loadUsers = () =>
     api.profiles.getAll()
@@ -4075,9 +3925,6 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         </button>
         <button className={`nav-tab ${tab === "del" ? "active" : ""}`} onClick={() => setTab("del")}>
           Deletion Requests {players.filter(u => u.deleteRequest).length > 0 && <span style={{ background: "var(--red)", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{players.filter(u => u.deleteRequest).length}</span>}
-        </button>
-        <button className={`nav-tab ${tab === "waivers" ? "active" : ""}`} onClick={() => setTab("waivers")}>
-          Waivers
         </button>
       </div>
 
@@ -4184,73 +4031,6 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         </div>
       )}
 
-      {tab === "waivers" && (() => {
-        const withWaiver = allUsers.filter(u => u.role !== "admin" && (u.waiverData || u.waiverPending));
-        const vw = waiverView ? allUsers.find(u => u.id === waiverView) : null;
-        const approve = (u) => { updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() }); showToast("Waiver changes approved!"); setWaiverView(null); };
-        const reject_ = (u) => { updateUser(u.id, { waiverPending: null }); showToast("Changes rejected"); setWaiverView(null); };
-        return (
-          <>
-            <div className="card">
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>Valid for {new Date().getFullYear()} calendar year</div>
-              <div className="table-wrap"><table className="data-table">
-                <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Pending Changes</th><th></th></tr></thead>
-                <tbody>
-                  {withWaiver.map(u => (
-                    <tr key={u.id}>
-                      <td style={{ fontWeight: 600 }}>{u.name}</td>
-                      <td>{u.waiverSigned ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
-                      <td>{u.waiverYear || "—"}</td>
-                      <td>{u.waiverPending ? <span className="tag tag-gold">⚠ Pending</span> : "—"}</td>
-                      <td><button className="btn btn-sm btn-ghost" onClick={() => setWaiverView(u.id)}>View</button></td>
-                    </tr>
-                  ))}
-                  {withWaiver.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No waivers on file</td></tr>}
-                </tbody>
-              </table></div>
-            </div>
-            {vw && (
-              <div className="overlay" onClick={() => setWaiverView(null)}>
-                <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-                  <div className="modal-title">📋 Waiver — {vw.name}</div>
-                  {vw.waiverData && (
-                    <div className="mb-2">
-                      <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>CURRENT WAIVER</div>
-                      {[["Name", vw.waiverData.name], ["DOB", vw.waiverData.dob], ["Medical", vw.waiverData.medical || "None"], ["Minor", vw.waiverData.isChild ? "Yes" : "No"], ["Guardian", vw.waiverData.guardian || "N/A"], ["Signed", gmtShort(vw.waiverData.date)]].map(([k, v]) => (
-                        <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
-                          <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span><span>{v}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {vw.waiverPending && (
-                    <div>
-                      <div className="alert alert-gold mb-2">⚠️ Player has submitted waiver changes for approval</div>
-                      <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>PROPOSED CHANGES</div>
-                      {[["Name", vw.waiverPending.name, vw.waiverData?.name], ["DOB", vw.waiverPending.dob, vw.waiverData?.dob], ["Medical", vw.waiverPending.medical || "None", vw.waiverData?.medical || "None"], ["Minor", vw.waiverPending.isChild ? "Yes" : "No", vw.waiverData?.isChild ? "Yes" : "No"], ["Guardian", vw.waiverPending.guardian || "N/A", vw.waiverData?.guardian || "N/A"]].map(([k, v, old]) => {
-                        const changed = v !== old;
-                        return (
-                          <div key={k} style={{ display: "flex", gap: 12, padding: changed ? "7px 8px" : "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13, background: changed ? "#2d1e0a" : "transparent", borderRadius: changed ? 4 : 0 }}>
-                            <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span>
-                            <span style={{ color: changed ? "var(--gold)" : "var(--text)" }}>{v}</span>
-                            {changed && <span className="tag tag-gold" style={{ fontSize: 10, marginLeft: "auto" }}>CHANGED</span>}
-                          </div>
-                        );
-                      })}
-                      <div className="gap-2 mt-2">
-                        <button className="btn btn-primary" onClick={() => approve(vw)}>Approve Changes</button>
-                        <button className="btn btn-danger" onClick={() => reject_(vw)}>Reject</button>
-                      </div>
-                    </div>
-                  )}
-                  <button className="btn btn-ghost mt-2" style={{ width: "100%" }} onClick={() => setWaiverView(null)}>Close</button>
-                </div>
-              </div>
-            )}
-          </>
-        );
-      })()}
-
       {edit && (
         <div className="overlay" onClick={() => setEdit(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
@@ -4324,7 +4104,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
   }, []);
 
   const allUsers = localUsers ?? data.users;
-  const withWaiver = allUsers.filter(u => u.role !== "admin" && (u.waiverData || u.waiverPending));
+  const withWaiver = allUsers.filter(u => u.waiverData || u.waiverPending);
 
   const approve = (u) => {
     updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
@@ -4400,7 +4180,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
 }
 
 // ── Admin Shop ────────────────────────────────────────────
-function AdminOrdersTab({ showToast }) {
+function AdminOrders({ showToast }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -4440,9 +4220,9 @@ function AdminOrdersTab({ showToast }) {
 
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
-        <div style={{ fontSize:13, color:"var(--muted)" }}>{orders.length} orders · <span style={{ color:"var(--accent)" }}>£{totalRevenue.toFixed(2)}</span> total</div>
-        <button className="btn btn-ghost btn-sm" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
+      <div className="page-header">
+        <div><div className="page-title">Shop Orders</div><div className="page-sub">{orders.length} orders · £{totalRevenue.toFixed(2)} total</div></div>
+        <button className="btn btn-ghost" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
       </div>
       <div className="grid-4 mb-2">
         {[
@@ -4670,14 +4450,15 @@ function AdminShop({ data, save, showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Shop</div></div>
-        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>}
-        {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
+        {tab === "products"
+          ? <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>
+          : <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>
+        }
       </div>
 
       <div className="nav-tabs">
         <button className={`nav-tab ${tab === "products" ? "active" : ""}`} onClick={() => setTab("products")}>Products</button>
         <button className={`nav-tab ${tab === "postage" ? "active" : ""}`} onClick={() => setTab("postage")}>Postage Options</button>
-        <button className={`nav-tab ${tab === "orders" ? "active" : ""}`} onClick={() => setTab("orders")}>Orders</button>
       </div>
 
       {tab === "products" && (
@@ -4743,8 +4524,6 @@ function AdminShop({ data, save, showToast }) {
           </table></div>
         </div>
       )}
-
-      {tab === "orders" && <AdminOrdersTab showToast={showToast} />}
 
       {/* ── PRODUCT MODAL ── */}
       {modal && (
@@ -5145,14 +4924,6 @@ function AdminGallery({ data, save, showToast }) {
       save({ albums: await api.gallery.getAll() });
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
-  const deleteAlbum = async (albumId, title) => {
-    if (!window.confirm(`Delete album "${title}" and all its images?`)) return;
-    try {
-      await api.gallery.deleteAlbum(albumId);
-      save({ albums: await api.gallery.getAll() });
-      showToast("Album deleted!");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
-  };
   return (
     <div>
       <div className="page-header"><div><div className="page-title">Gallery</div></div><button className="btn btn-primary" onClick={addAlbum}>+ New Album</button></div>
@@ -5160,10 +4931,7 @@ function AdminGallery({ data, save, showToast }) {
         <div key={album.id} className="card mb-2">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <div style={{ fontWeight: 700 }}>{album.title} <span className="text-muted" style={{ fontSize: 12 }}>({album.images.length} photos)</span></div>
-            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-              <label className="btn btn-sm btn-ghost" style={{ cursor: "pointer" }}>+ Upload<input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(album.id, e)} /></label>
-              <button className="btn btn-sm btn-danger" onClick={() => deleteAlbum(album.id, album.title)}>Delete Album</button>
-            </div>
+            <label className="btn btn-sm btn-ghost" style={{ cursor: "pointer" }}>+ Upload<input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(album.id, e)} /></label>
           </div>
           <div className="gap-2 mb-2">
             <input value={urlInput[album.id] || ""} onChange={e => setUrlInput(p => ({ ...p, [album.id]: e.target.value }))} placeholder="Or paste image URL" style={{ flex: 1 }} />
@@ -5257,25 +5025,11 @@ function AdminQA({ data, save, showToast }) {
     const file = e.target.files[0]; if (!file) return;
     setUploading(true);
     try {
-      // Convert any image (including AVIF, HEIC, WEBP) to JPEG via canvas
-      const jpeg = await new Promise((resolve, reject) => {
-        const img = new Image();
-        const objectUrl = URL.createObjectURL(file);
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext("2d").drawImage(img, 0, 0);
-          URL.revokeObjectURL(objectUrl);
-          canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Canvas conversion failed")), "image/jpeg", 0.85);
-        };
-        img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Could not read image file")); };
-        img.src = objectUrl;
-      });
-      const path = `qa/${Date.now()}.jpg`;
-      const { error: upErr } = await supabase.storage.from("images").upload(path, jpeg, { upsert: true, contentType: "image/jpeg" });
+      const ext = file.name.split(".").pop();
+      const path = `qa/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("gallery").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("gallery").getPublicUrl(path);
       const url = urlData.publicUrl;
       setForm(p => ({ ...p, a: p.a + (p.a && !p.a.endsWith("\n") ? "\n" : "") + `![image](${url})\n`, image: url }));
       showToast("Image uploaded!");
@@ -5314,15 +5068,8 @@ function AdminQA({ data, save, showToast }) {
 
   const del = async (id) => {
     if (!window.confirm("Delete this Q&A?")) return;
-    try {
-      await api.qa.delete(id);
-      save({ qa: await api.qa.getAll() });
-      showToast("Deleted");
-    } catch (e) {
-      const msg = e?.message || e?.error_description || JSON.stringify(e);
-      console.error("QA delete failed:", e);
-      showToast("Delete failed: " + msg, "red");
-    }
+    try { await api.qa.delete(id); save({ qa: await api.qa.getAll() }); showToast("Deleted"); }
+    catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
   const startEdit = (item) => { setForm({ q: item.q, a: item.a, image: item.image || "" }); setEditId(item.id); setPreview(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -5404,101 +5151,41 @@ function AdminQA({ data, save, showToast }) {
 // ── Admin Messages ────────────────────────────────────────
 function AdminMessages({ data, save, showToast }) {
   const [msg, setMsg] = useState(data.homeMsg || "");
-  const [facebook, setFacebook] = useState(data.socialFacebook || "");
-  const [instagram, setInstagram] = useState(data.socialInstagram || "");
-  const [contactAddress, setContactAddress] = useState(data.contactAddress || "");
-  const [contactPhone, setContactPhone] = useState(data.contactPhone || "");
-  const [contactEmail, setContactEmail] = useState(data.contactEmail || "");
   const [saving, setSaving] = useState(false);
-  const [savingSocial, setSavingSocial] = useState(false);
-  const [savingContact, setSavingContact] = useState(false);
 
   const saveMsg = async (val) => {
     setSaving(true);
     try {
       await api.settings.set("home_message", val);
+      // Update local React state WITHOUT triggering the global save() homeMsg branch
+      // (which would double-write to Supabase)
       setMsg(val);
-      save({ homeMsg: val });
-      showToast(val ? "Message saved!" : "Message cleared");
+      // Directly patch the data atom so the ticker re-renders
+      data.homeMsg = val;
+      showToast(val ? "✓ Message saved!" : "✓ Message cleared");
     } catch (e) {
       console.error("saveMsg error:", e);
       showToast("Save failed — check console for details", "red");
     } finally { setSaving(false); }
   };
-
-  const saveSocial = async () => {
-    setSavingSocial(true);
-    try {
-      await api.settings.set("social_facebook", facebook);
-      await api.settings.set("social_instagram", instagram);
-      save({ socialFacebook: facebook, socialInstagram: instagram });
-      showToast("Social links saved!");
-    } catch (e) {
-      showToast("Save failed: " + e.message, "red");
-    } finally { setSavingSocial(false); }
-  };
-
-  const saveContact = async () => {
-    setSavingContact(true);
-    try {
-      await api.settings.set("contact_address", contactAddress);
-      await api.settings.set("contact_phone", contactPhone);
-      await api.settings.set("contact_email", contactEmail);
-      save({ contactAddress, contactPhone, contactEmail });
-      showToast("Contact details saved!");
-    } catch (e) {
-      showToast("Save failed: " + e.message, "red");
-    } finally { setSavingContact(false); }
-  };
-
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Ticker, social links and contact details</div></div></div>
-
-      <div className="card mb-2">
-        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Ticker Message</div>
+      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Scrolling ticker shown at top of site</div></div></div>
+      <div className="card">
         <div className="form-group">
-          <label>Message</label>
-          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. Next event booking now open! — Saturday 14th June" />
-          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker.</div>
+          <label>Ticker Message</label>
+          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. 🎯 Next event booking now open! — Saturday 14th June" />
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker. Save to apply.</div>
         </div>
         <div className="gap-2">
-          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
+          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
           <button className="btn btn-danger" onClick={() => { setMsg(""); saveMsg(""); }} disabled={saving}>Clear</button>
         </div>
-        {data.homeMsg && <div className="alert alert-green mt-2" style={{ fontSize:12 }}>Active: {data.homeMsg}</div>}
-      </div>
-
-      <div className="card mb-2">
-        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Contact Details</div>
-        <div className="form-group">
-          <label>Address / Location</label>
-          <input value={contactAddress} onChange={e => setContactAddress(e.target.value)} placeholder="Swindon, Wiltshire, UK" />
-        </div>
-        <div className="form-group">
-          <label>Phone Number</label>
-          <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+44 1234 567890" />
-        </div>
-        <div className="form-group">
-          <label>Email Address</label>
-          <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="info@swindon-airsoft.com" />
-        </div>
-        <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>Shown in the footer contact section. Leave blank to hide a field.</div>
-        <button className="btn btn-primary" onClick={saveContact} disabled={savingContact}>{savingContact ? "Saving..." : "Save Contact Details"}</button>
-      </div>
-
-      <div className="card">
-        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Social Links</div>
-        <div className="form-group">
-          <label>Facebook URL</label>
-          <input value={facebook} onChange={e => setFacebook(e.target.value)} placeholder="https://facebook.com/your-page" />
-        </div>
-        <div className="form-group">
-          <label>Instagram URL</label>
-          <input value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="https://instagram.com/your-account" />
-        </div>
-        <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>Icons appear in the footer. Leave blank to hide.</div>
-        <button className="btn btn-primary" onClick={saveSocial} disabled={savingSocial}>{savingSocial ? "Saving..." : "Save Social Links"}</button>
+        {data.homeMsg && (
+          <div className="alert alert-green mt-2" style={{ fontSize:12 }}>
+            ✓ Active: <em>{data.homeMsg}</em>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -5659,28 +5346,7 @@ function AdminCash({ data, cu, showToast }) {
 // ── Root App ──────────────────────────────────────────────────
 export default function App() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
-  // Hash-based routing — page persists on refresh
-  const [page, setPageState] = useState(() => {
-    const hash = window.location.hash.replace("#", "");
-    const valid = ["home","events","shop","leaderboard","gallery","qa","vip","profile","admin"];
-    return valid.includes(hash) ? hash : "home";
-  });
-
-  const setPage = (p) => {
-    setPageState(p);
-    window.location.hash = p === "home" ? "" : p;
-  };
-
-  // Handle browser back/forward buttons
-  useEffect(() => {
-    const onHashChange = () => {
-      const hash = window.location.hash.replace("#", "");
-      const valid = ["home","events","shop","leaderboard","gallery","qa","vip","profile","admin"];
-      setPageState(valid.includes(hash) ? hash : "home");
-    };
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  const [page, setPage] = useState("home");
   const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
   const [authModal, setAuthModal] = useState(null);
@@ -5900,18 +5566,11 @@ export default function App() {
                 <div className="pub-footer-logo-box">SA</div>
                 <div className="pub-footer-logo-text">SWINDON AIRSOFT</div>
               </div>
-              <p className="pub-footer-desc">Swindon's premier airsoft venue. Experience tactical gameplay like never before.</p>
+              <p className="pub-footer-desc">Premier airsoft venue. Experience tactical gameplay like never before.</p>
               <div className="pub-footer-social" style={{ marginTop:16 }}>
-                {data.socialFacebook && (
-                  <a href={data.socialFacebook} target="_blank" rel="noopener noreferrer" className="pub-footer-social-btn" style={{ textDecoration:"none" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                  </a>
-                )}
-                {data.socialInstagram && (
-                  <a href={data.socialInstagram} target="_blank" rel="noopener noreferrer" className="pub-footer-social-btn" style={{ textDecoration:"none" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-                  </a>
-                )}
+                {["📘","📸","▶️"].map((icon,i) => (
+                  <button key={i} className="pub-footer-social-btn">{icon}</button>
+                ))}
               </div>
             </div>
             {/* Quick Links */}
@@ -5940,9 +5599,9 @@ export default function App() {
             {/* Contact */}
             <div>
               <div className="pub-footer-col-title">CONTACT</div>
-              {data.contactAddress && <div className="pub-footer-contact">📍 {data.contactAddress}</div>}
-              {data.contactPhone && <div className="pub-footer-contact">📞 {data.contactPhone}</div>}
-              {data.contactEmail && <div className="pub-footer-contact">✉️ {data.contactEmail}</div>}
+              <div className="pub-footer-contact">📍 Swindon, Wiltshire, UK</div>
+              <div className="pub-footer-contact">📞 +44 1234 567890</div>
+              <div className="pub-footer-contact">✉️ info@zulusairsoft.co.uk</div>
             </div>
           </div>
           <div className="pub-footer-bottom">
