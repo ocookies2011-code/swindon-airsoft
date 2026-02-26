@@ -785,6 +785,8 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
       }
       showToast("Welcome back!");
       onClose();
+      // Force page reload so nav and all state reflects logged-in user
+      window.location.reload();
     } catch (e) {
       showToast(e.message || "Login failed", "red");
     } finally { setBusy(false); }
@@ -3257,13 +3259,15 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 
   // ── Events logic ──
   const [savingEvent, setSavingEvent] = useState(false);
+  const withTimeout = (promise, ms = 8000) =>
+    Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out — check Supabase RLS policies for events")), ms))]);
+
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     setSavingEvent(true);
     try {
       if (modal === "new") {
-        const created = await api.events.create(form);
-        // If banner is a base64 blob, convert and upload it now we have the event ID
+        const created = await withTimeout(api.events.create(form));
         if (form.banner && form.banner.startsWith("data:") && created?.id) {
           try {
             const res = await fetch(form.banner);
@@ -3275,8 +3279,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           }
         }
       } else {
-        await api.events.update(form.id, form);
-        // Upload new base64 banner if provided
+        await withTimeout(api.events.update(form.id, form));
         if (form.banner && form.banner.startsWith("data:") && form.id) {
           try {
             const res = await fetch(form.banner);
@@ -3288,7 +3291,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           }
         }
       }
-      const evList = await api.events.getAll();
+      const evList = await withTimeout(api.events.getAll());
       save({ events: evList });
       showToast("Event saved!");
       setModal(null);
