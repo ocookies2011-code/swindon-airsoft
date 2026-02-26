@@ -2804,9 +2804,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "dashboard", label: "Dashboard", icon: "📊", group: "OPERATIONS" },
     { id: "events", label: "Events & Bookings", icon: "📅", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
-    { id: "waivers", label: "Waivers", icon: "📋", badge: pendingWaivers || unsigned || null, group: null },
     { id: "shop", label: "Shop", icon: "🛒", group: null },
-    { id: "orders", label: "Shop Orders", icon: "📦", group: null },
     { id: "leaderboard-admin", label: "Leaderboard", icon: "🏆", group: null },
     { id: "revenue", label: "Revenue", icon: "💰", group: "ANALYTICS" },
     { id: "gallery-admin", label: "Gallery", icon: "🖼", group: null },
@@ -2867,9 +2865,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
           {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
-          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
-          {section === "orders" && <AdminOrders showToast={showToast} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && <AdminRevenue data={data} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
@@ -3926,6 +3922,9 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         <button className={`nav-tab ${tab === "del" ? "active" : ""}`} onClick={() => setTab("del")}>
           Deletion Requests {players.filter(u => u.deleteRequest).length > 0 && <span style={{ background: "var(--red)", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{players.filter(u => u.deleteRequest).length}</span>}
         </button>
+        <button className={`nav-tab ${tab === "waivers" ? "active" : ""}`} onClick={() => setTab("waivers")}>
+          Waivers {allUsers.filter(u => u.waiverPending).length > 0 && <span style={{ background: "var(--gold)", color: "#000", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{allUsers.filter(u => u.waiverPending).length}</span>}
+        </button>
       </div>
 
       {tab === "all" && (
@@ -4031,6 +4030,8 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         </div>
       )}
 
+      {tab === "waivers" && <AdminWaivers data={{ ...data, users: allUsers }} updateUser={updateUserAndRefresh} showToast={showToast} embedded />}
+
       {edit && (
         <div className="overlay" onClick={() => setEdit(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
@@ -4093,7 +4094,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 }
 
 // ── Admin Waivers ─────────────────────────────────────────
-function AdminWaivers({ data, updateUser, showToast }) {
+function AdminWaivers({ data, updateUser, showToast, embedded }) {
   const [view, setView] = useState(null);
   const [localUsers, setLocalUsers] = useState(null);
 
@@ -4118,7 +4119,7 @@ function AdminWaivers({ data, updateUser, showToast }) {
 
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Waivers</div><div className="page-sub">Valid for {new Date().getFullYear()} calendar year</div></div></div>
+      {!props.embedded && <div className="page-header"><div><div className="page-title">Waivers</div><div className="page-sub">Valid for {new Date().getFullYear()} calendar year</div></div></div>}
       <div className="card">
         <div className="table-wrap"><table className="data-table">
           <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Pending Changes</th><th></th></tr></thead>
@@ -4172,6 +4173,140 @@ function AdminWaivers({ data, updateUser, showToast }) {
               </div>
             )}
             <button className="btn btn-ghost mt-2" style={{ width: "100%" }} onClick={() => setView(null)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Admin Orders (inline, used as tab inside AdminShop) ──────────
+function AdminOrdersInline({ showToast }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
+
+  const fetchOrders = async () => {
+    setLoading(true); setError(null);
+    try { setOrders(await api.shopOrders.getAll()); }
+    catch (e) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { const t = setTimeout(fetchOrders, 400); return () => clearTimeout(t); }, []);
+
+  const setStatus = async (id, status) => {
+    try {
+      await api.shopOrders.updateStatus(id, status);
+      setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
+      if (detail?.id === id) setDetail(d => ({ ...d, status }));
+      showToast("Status updated!");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
+        <div style={{ fontSize:13, color:"var(--muted)" }}>{orders.length} orders · <span style={{ color:"var(--accent)" }}>£{totalRevenue.toFixed(2)}</span> total</div>
+        <button className="btn btn-ghost btn-sm" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
+      </div>
+      <div className="grid-4 mb-2">
+        {[
+          { label: "Total Orders", val: orders.length, color: "" },
+          { label: "Pending", val: orders.filter(o => o.status === "pending").length, color: "blue" },
+          { label: "Dispatched", val: orders.filter(o => o.status === "dispatched").length, color: "gold" },
+          { label: "Revenue", val: `£${totalRevenue.toFixed(2)}`, color: "teal" },
+        ].map(s => (
+          <div key={s.label} className={`stat-card ${s.color}`}>
+            <div className="stat-val">{s.val}</div>
+            <div className="stat-label">{s.label}</div>
+          </div>
+        ))}
+      </div>
+      {loading ? (
+        <div className="card" style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>Loading orders…</div>
+      ) : error ? (
+        <div className="card" style={{ textAlign:"center", padding:40 }}>
+          <div style={{ color:"var(--red)", marginBottom:12 }}>Failed: {error}</div>
+          <button className="btn btn-ghost" onClick={fetchOrders}>Retry</button>
+        </div>
+      ) : (
+        <div className="card">
+          <div className="table-wrap"><table className="data-table">
+            <thead><tr><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {orders.length === 0 && <tr><td colSpan={7} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No orders yet</td></tr>}
+              {orders.map(o => {
+                const items = Array.isArray(o.items) ? o.items : [];
+                return (
+                  <tr key={o.id}>
+                    <td className="mono" style={{ fontSize:11 }}>{gmtShort(o.created_at)}</td>
+                    <td style={{ fontWeight:600 }}>
+                      <button style={{ background:"none", border:"none", color:"var(--blue)", cursor:"pointer", fontWeight:700, fontFamily:"inherit", fontSize:13 }} onClick={() => setDetail(o)}>{o.customer_name}</button>
+                    </td>
+                    <td style={{ fontSize:12, color:"var(--muted)" }}>{items.map(i => `${i.name} ×${i.qty}`).join(", ")}</td>
+                    <td style={{ fontSize:12 }}>{o.postage_name || "—"}</td>
+                    <td className="text-green">£{Number(o.total).toFixed(2)}</td>
+                    <td><span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span></td>
+                    <td>
+                      <select value={o.status} onChange={e => setStatus(o.id, e.target.value)}
+                        style={{ fontSize:12, padding:"4px 8px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:4 }}>
+                        {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table></div>
+        </div>
+      )}
+      {detail && (
+        <div className="overlay" onClick={() => setDetail(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18, flexWrap:"wrap", gap:10 }}>
+              <div className="modal-title" style={{ margin:0 }}>📦 Order Details</div>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                const addr = detail.customer_address || "No address on file";
+                const items = (Array.isArray(detail.items) ? detail.items : []).map(i => `${i.name} x${i.qty}`).join(", ");
+                const win = window.open("", "_blank", "width=400,height=300");
+                win.document.write(`<html><head><title>Postage Label</title><style>body{font-family:Arial,sans-serif;padding:24px;border:3px solid #000;margin:20px;}.to{font-size:22px;font-weight:bold;margin:16px 0 8px;}.addr{font-size:16px;line-height:1.6;white-space:pre-line;}.from{font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px;}@media print{body{margin:0;border:none;}}</style></head><body><div style="font-size:11px;color:#888;">ORDER #${detail.id?.slice(-8).toUpperCase()} · ${gmtShort(detail.created_at)}</div><div class="to">TO:</div><div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div><div class="addr">${addr}</div><div class="from">FROM: Swindon Airsoft</div><script>window.onload=()=>window.print();<\/script></body></html>`);
+                win.document.close();
+              }}>🖨️ Print Label</button>
+            </div>
+            <div className="grid-2 mb-2">
+              <div><div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>CUSTOMER</div><div style={{ fontWeight:700 }}>{detail.customer_name}</div></div>
+              <div><div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>EMAIL</div><div style={{ fontSize:13 }}>{detail.customer_email || "—"}</div></div>
+              <div style={{ gridColumn:"1 / -1" }}>
+                <div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>SHIPPING ADDRESS</div>
+                <div style={{ fontSize:13, whiteSpace:"pre-line", background:"var(--bg4)", padding:"10px 12px", borderRadius:3, border:"1px solid var(--border)" }}>{detail.customer_address || <span style={{ color:"var(--muted)" }}>No address on file</span>}</div>
+              </div>
+              <div><div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>STATUS</div>
+                <select value={detail.status} onChange={e => setStatus(detail.id, e.target.value)}
+                  style={{ fontSize:12, padding:"6px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:3, width:"100%" }}>
+                  {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", marginBottom:8, letterSpacing:".1em" }}>ITEMS</div>
+            <div className="table-wrap"><table className="data-table">
+              <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+              <tbody>
+                {(Array.isArray(detail.items) ? detail.items : []).map((i, idx) => (
+                  <tr key={idx}><td>{i.name}</td><td>{i.qty}</td><td>£{Number(i.price).toFixed(2)}</td><td className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</td></tr>
+                ))}
+                <tr style={{ borderTop:"2px solid var(--border)" }}>
+                  <td colSpan={3} style={{ fontWeight:700 }}>Postage ({detail.postage_name})</td>
+                  <td>£{Number(detail.postage).toFixed(2)}</td>
+                </tr>
+                <tr><td colSpan={3} style={{ fontWeight:900, fontSize:15 }}>TOTAL</td><td className="text-green" style={{ fontWeight:900, fontSize:15 }}>£{Number(detail.total).toFixed(2)}</td></tr>
+              </tbody>
+            </table></div>
+            <button className="btn btn-ghost mt-2" onClick={() => setDetail(null)}>Close</button>
           </div>
         </div>
       )}
@@ -4450,15 +4585,14 @@ function AdminShop({ data, save, showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Shop</div></div>
-        {tab === "products"
-          ? <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>
-          : <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>
-        }
+        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>}
+        {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
       </div>
 
       <div className="nav-tabs">
         <button className={`nav-tab ${tab === "products" ? "active" : ""}`} onClick={() => setTab("products")}>Products</button>
         <button className={`nav-tab ${tab === "postage" ? "active" : ""}`} onClick={() => setTab("postage")}>Postage Options</button>
+        <button className={`nav-tab ${tab === "orders" ? "active" : ""}`} onClick={() => setTab("orders")}>Orders</button>
       </div>
 
       {tab === "products" && (
@@ -4524,6 +4658,8 @@ function AdminShop({ data, save, showToast }) {
           </table></div>
         </div>
       )}
+
+      {tab === "orders" && <AdminOrdersInline showToast={showToast} />}
 
       {/* ── PRODUCT MODAL ── */}
       {modal && (
@@ -5151,41 +5287,85 @@ function AdminQA({ data, save, showToast }) {
 // ── Admin Messages ────────────────────────────────────────
 function AdminMessages({ data, save, showToast }) {
   const [msg, setMsg] = useState(data.homeMsg || "");
+  const [facebook, setFacebook] = useState(data.socialFacebook || "");
+  const [instagram, setInstagram] = useState(data.socialInstagram || "");
+  const [contactAddress, setContactAddress] = useState(data.contactAddress || "");
+  const [contactPhone, setContactPhone] = useState(data.contactPhone || "");
+  const [contactEmail, setContactEmail] = useState(data.contactEmail || "");
   const [saving, setSaving] = useState(false);
+  const [savingSocial, setSavingSocial] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
 
   const saveMsg = async (val) => {
     setSaving(true);
     try {
       await api.settings.set("home_message", val);
-      // Update local React state WITHOUT triggering the global save() homeMsg branch
-      // (which would double-write to Supabase)
       setMsg(val);
-      // Directly patch the data atom so the ticker re-renders
-      data.homeMsg = val;
-      showToast(val ? "✓ Message saved!" : "✓ Message cleared");
+      save({ homeMsg: val });
+      showToast(val ? "Message saved!" : "Message cleared");
     } catch (e) {
-      console.error("saveMsg error:", e);
-      showToast("Save failed — check console for details", "red");
+      showToast("Save failed: " + e.message, "red");
     } finally { setSaving(false); }
   };
+
+  const saveSocial = async () => {
+    setSavingSocial(true);
+    try {
+      await api.settings.set("social_facebook", facebook);
+      await api.settings.set("social_instagram", instagram);
+      save({ socialFacebook: facebook, socialInstagram: instagram });
+      showToast("Social links saved!");
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    } finally { setSavingSocial(false); }
+  };
+
+  const saveContact = async () => {
+    setSavingContact(true);
+    try {
+      await api.settings.set("contact_address", contactAddress);
+      await api.settings.set("contact_phone", contactPhone);
+      await api.settings.set("contact_email", contactEmail);
+      save({ contactAddress, contactPhone, contactEmail });
+      showToast("Contact details saved!");
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    } finally { setSavingContact(false); }
+  };
+
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Scrolling ticker shown at top of site</div></div></div>
-      <div className="card">
+      <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Ticker, social links and contact details</div></div></div>
+
+      <div className="card mb-2">
+        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Ticker Message</div>
         <div className="form-group">
-          <label>Ticker Message</label>
-          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. 🎯 Next event booking now open! — Saturday 14th June" />
-          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker. Save to apply.</div>
+          <label>Message</label>
+          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. Next event booking now open! — Saturday 14th June" />
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker.</div>
         </div>
         <div className="gap-2">
-          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
           <button className="btn btn-danger" onClick={() => { setMsg(""); saveMsg(""); }} disabled={saving}>Clear</button>
         </div>
-        {data.homeMsg && (
-          <div className="alert alert-green mt-2" style={{ fontSize:12 }}>
-            ✓ Active: <em>{data.homeMsg}</em>
-          </div>
-        )}
+        {data.homeMsg && <div className="alert alert-green mt-2" style={{ fontSize:12 }}>Active: {data.homeMsg}</div>}
+      </div>
+
+      <div className="card mb-2">
+        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Contact Details</div>
+        <div className="form-group"><label>Address / Location</label><input value={contactAddress} onChange={e => setContactAddress(e.target.value)} placeholder="Swindon, Wiltshire, UK" /></div>
+        <div className="form-group"><label>Phone Number</label><input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+44 1234 567890" /></div>
+        <div className="form-group"><label>Email Address</label><input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="info@swindon-airsoft.com" /></div>
+        <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>Shown in the footer. Leave blank to hide a field.</div>
+        <button className="btn btn-primary" onClick={saveContact} disabled={savingContact}>{savingContact ? "Saving..." : "Save Contact Details"}</button>
+      </div>
+
+      <div className="card">
+        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Social Links</div>
+        <div className="form-group"><label>Facebook URL</label><input value={facebook} onChange={e => setFacebook(e.target.value)} placeholder="https://facebook.com/your-page" /></div>
+        <div className="form-group"><label>Instagram URL</label><input value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="https://instagram.com/your-account" /></div>
+        <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>Icons appear in the footer. Leave blank to hide.</div>
+        <button className="btn btn-primary" onClick={saveSocial} disabled={savingSocial}>{savingSocial ? "Saving..." : "Save Social Links"}</button>
       </div>
     </div>
   );
