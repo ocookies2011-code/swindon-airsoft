@@ -353,8 +353,9 @@ export const qa = {
   },
 
   async update(id, item) {
-    const { error } = await supabase
-      .from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
+    const patch = { question: item.q, answer: item.a }
+    if (item.sort_order !== undefined) patch.sort_order = item.sort_order
+    const { error } = await supabase.from('qa_items').update(patch).eq('id', id)
     if (error) throw error
   },
 

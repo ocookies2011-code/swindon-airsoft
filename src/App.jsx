@@ -5177,6 +5177,8 @@ function AdminQA({ data, save, showToast }) {
   };
 
   const [qaSaving, setQASaving] = useState(false);
+  const dragIdx = useRef(null);
+  const dragOver = useRef(null);
 
   // Wraps a promise with a timeout so the button never stays stuck forever
   const withTimeout = (promise, ms = 8000) =>
@@ -5274,8 +5276,32 @@ function AdminQA({ data, save, showToast }) {
       </div>
 
       {data.qa.length === 0 && <div style={{ textAlign:"center", color:"var(--muted)", padding:32 }}>No Q&A items yet.</div>}
+      {data.qa.length > 0 && <div style={{ fontSize:11, color:"var(--muted)", marginBottom:8, textAlign:"right" }}>⠿ Drag to reorder</div>}
       {data.qa.map((item, idx) => (
-        <div key={item.id} className="card mb-1" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+        <div key={item.id}
+          draggable
+          onDragStart={e => { e.dataTransfer.effectAllowed = "move"; dragIdx.current = idx; }}
+          onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move";
+            const el = e.currentTarget;
+            const over = dragOver.current;
+            if (over !== idx) { dragOver.current = idx; el.style.borderTop = idx < dragIdx.current ? "2px solid var(--accent)" : "none"; el.style.borderBottom = idx > dragIdx.current ? "2px solid var(--accent)" : "none"; }
+          }}
+          onDragLeave={e => { e.currentTarget.style.borderTop = "none"; e.currentTarget.style.borderBottom = "none"; }}
+          onDrop={e => {
+            e.currentTarget.style.borderTop = "none"; e.currentTarget.style.borderBottom = "none";
+            const from = dragIdx.current; const to = dragOver.current;
+            if (from === null || from === to) return;
+            const reordered = [...data.qa];
+            const [moved] = reordered.splice(from, 1);
+            reordered.splice(to, 0, moved);
+            save({ qa: reordered });
+            dragIdx.current = null; dragOver.current = null;
+            // Persist order to Supabase
+            reordered.forEach((q, i) => withTimeout(api.qa.update(q.id, { ...q, sort_order: i })).catch(() => {}));
+          }}
+          onDragEnd={e => { e.currentTarget.style.borderTop = "none"; e.currentTarget.style.borderBottom = "none"; dragIdx.current = null; dragOver.current = null; }}
+          className="card mb-1" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, cursor:"grab" }}>
+          <div style={{ color:"var(--muted)", fontSize:18, paddingTop:2, flexShrink:0, cursor:"grab" }}>⠿</div>
           <div style={{ flex:1 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
               <span style={{ background:"var(--accent)", color:"#000", fontSize:9, fontWeight:800, padding:"2px 6px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em" }}>Q{idx+1}</span>
