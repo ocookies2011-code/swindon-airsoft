@@ -4105,7 +4105,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded }) {
   }, []);
 
   const allUsers = localUsers ?? data.users;
-  const withWaiver = allUsers.filter(u => u.waiverData || u.waiverPending);
+  const withWaiver = allUsers.filter(u => u.role !== 'admin' && (u.waiverData || u.waiverPending));
 
   const approve = (u) => {
     updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
