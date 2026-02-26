@@ -5180,10 +5180,6 @@ function AdminQA({ data, save, showToast }) {
   const dragIdx = useRef(null);
   const dragOver = useRef(null);
 
-  // Wraps a promise with a timeout so the button never stays stuck forever
-  const withTimeout = (promise, ms = 8000) =>
-    Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out — check Supabase RLS policies for qa_items")), ms))]);
-
   const save_ = async () => {
     if (!form.q.trim() || !form.a.trim()) { showToast("Fill in both question and answer", "red"); return; }
     const wasEditing = !!editId;
@@ -5191,11 +5187,11 @@ function AdminQA({ data, save, showToast }) {
     setQASaving(true);
     try {
       if (currentEditId) {
-        await withTimeout(api.qa.update(currentEditId, form));
+        await api.qa.update(currentEditId, form);
       } else {
-        await withTimeout(api.qa.create(form));
+        await api.qa.create(form);
       }
-      const freshQA = await withTimeout(api.qa.getAll());
+      const freshQA = await api.qa.getAll();
       save({ qa: freshQA });
       setEditId(null);
       setForm(blank);
@@ -5203,8 +5199,7 @@ function AdminQA({ data, save, showToast }) {
       showToast(wasEditing ? "✓ Q&A updated!" : "✓ Q&A added!");
     } catch (e) {
       console.error("QA save failed:", e);
-      const msg = e.message || JSON.stringify(e);
-      showToast(msg, "red");
+      showToast("Save failed: " + (e?.message || e?.code || JSON.stringify(e)), "red");
     } finally {
       setQASaving(false);
     }
@@ -5213,10 +5208,14 @@ function AdminQA({ data, save, showToast }) {
   const del = async (id) => {
     if (!window.confirm("Delete this Q&A?")) return;
     try {
-      await withTimeout(api.qa.delete(id));
-      save({ qa: await withTimeout(api.qa.getAll()) });
+      await api.qa.delete(id);
+      const freshQA = await api.qa.getAll();
+      save({ qa: freshQA });
       showToast("Deleted");
-    } catch (e) { showToast(e.message || "Delete failed", "red"); }
+    } catch (e) {
+      console.error("QA delete failed:", e);
+      showToast("Delete failed: " + (e?.message || e?.code || JSON.stringify(e)), "red");
+    }
   };
 
   const startEdit = (item) => { setForm({ q: item.q, a: item.a, image: item.image || "" }); setEditId(item.id); setPreview(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
