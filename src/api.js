@@ -11,12 +11,11 @@ export const auth = {
       options: { data: { name, phone } }
     })
     if (error) throw error
-    // Upsert profile — handles both new signups and cases where trigger already created it
     if (data.user) {
       await supabase.from('profiles').upsert({
         id: data.user.id, name, phone: phone || '',
         role: 'player', games_attended: 0,
-      }, { onConflict: 'id', ignoreDuplicates: false }).select()
+      }, { onConflict: 'id' })
     }
     return data
   },
@@ -352,24 +351,23 @@ export const qa = {
   },
 
   async create(item) {
-    // Try with image first; fall back without if column doesn't exist
-    let res = await supabase
-      .from('qa_items').insert({ question: item.q, answer: item.a, image: item.image || null }).select().single()
-    if (res.error && res.error.message?.includes('image')) {
-      res = await supabase
-        .from('qa_items').insert({ question: item.q, answer: item.a }).select().single()
-    }
-    if (res.error) throw res.error
-    return { id: res.data.id, q: res.data.question, a: res.data.answer, image: res.data.image || '' }
+    const { error } = await supabase
+      .from('qa_items').insert({ question: item.q, answer: item.a, image: item.image || null })
+    if (error && error.message?.includes('image')) {
+      const { error: e2 } = await supabase
+        .from('qa_items').insert({ question: item.q, answer: item.a })
+      if (e2) throw e2
+    } else if (error) throw error
   },
 
   async update(id, item) {
-    // Try with image first; fall back without if column doesn't exist
-    let res = await supabase.from('qa_items').update({ question: item.q, answer: item.a, image: item.image || null }).eq('id', id)
-    if (res.error && res.error.message?.includes('image')) {
-      res = await supabase.from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
-    }
-    if (res.error) throw res.error
+    const { error } = await supabase
+      .from('qa_items').update({ question: item.q, answer: item.a, image: item.image || null }).eq('id', id)
+    if (error && error.message?.includes('image')) {
+      const { error: e2 } = await supabase
+        .from('qa_items').update({ question: item.q, answer: item.a }).eq('id', id)
+      if (e2) throw e2
+    } else if (error) throw error
   },
 
   async delete(id) {
