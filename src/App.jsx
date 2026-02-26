@@ -5187,6 +5187,8 @@ function AdminQA({ data, save, showToast }) {
   };
 
   const [qaSaving, setQASaving] = useState(false);
+  // Safety reset — if stuck, clicking the button area will unstick it
+  useEffect(() => { if (qaSaving) { const t = setTimeout(() => setQASaving(false), 10000); return () => clearTimeout(t); } }, [qaSaving]);
   const dragIdx = useRef(null);
   const dragOver = useRef(null);
 
