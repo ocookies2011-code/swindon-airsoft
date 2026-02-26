@@ -4119,7 +4119,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded }) {
 
   return (
     <div>
-      {!props.embedded && <div className="page-header"><div><div className="page-title">Waivers</div><div className="page-sub">Valid for {new Date().getFullYear()} calendar year</div></div></div>}
+      {!embedded && <div className="page-header"><div><div className="page-title">Waivers</div><div className="page-sub">Valid for {new Date().getFullYear()} calendar year</div></div></div>}
       <div className="card">
         <div className="table-wrap"><table className="data-table">
           <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Pending Changes</th><th></th></tr></thead>
