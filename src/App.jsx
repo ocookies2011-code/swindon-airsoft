@@ -1525,7 +1525,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
 // ── Send Welcome/Registration Email ──────────────────────────
 async function sendWelcomeEmail({ name, email }) {
   const EMAILJS_SERVICE_ID  = "service_np4zvqs";
-  const EMAILJS_TEMPLATE_ID = "template_welcome";
+  const EMAILJS_TEMPLATE_ID = "template_d84acm9";
   const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
 
   const htmlContent = `
@@ -1575,7 +1575,7 @@ async function sendWelcomeEmail({ name, email }) {
 // ── Send Order Confirmation Email ─────────────────────────────
 async function sendOrderEmail({ cu, order, items, postageName }) {
   const EMAILJS_SERVICE_ID  = "service_np4zvqs";
-  const EMAILJS_TEMPLATE_ID = "template_order";
+  const EMAILJS_TEMPLATE_ID = "template_d84acm9";
   const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
 
   const toEmail = cu.email || "";
