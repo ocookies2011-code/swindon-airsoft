@@ -388,7 +388,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
 .modal-box{background:#111;border:1px solid #2a2a2a;padding:28px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;border-radius:4px;box-shadow:0 24px 80px rgba(0,0,0,.9);}
 .modal-box.wide{max-width:780px;}
-@media(max-width:768px){.overlay{align-items:flex-end;padding:0;}.modal-box,.modal-box.wide{max-width:100%;border-radius:0;}}
+@media(max-width:768px){.overlay{align-items:flex-start;padding:0;padding-top:env(safe-area-inset-top,0);}.modal-box,.modal-box.wide{max-width:100%;border-radius:0;}}
 .modal-title{font-size:20px;font-weight:800;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.06em;color:#fff;text-transform:uppercase;}
 
 /* ── MISC ── */
@@ -748,8 +748,8 @@ function QRScanner({ onScan, onClose }) {
   }, [scanning, onScan]);
 
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e => e.stopPropagation()}>
+    <div className="overlay" onClick={onClose} style={{ alignItems: "flex-start" }}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ position: "sticky", top: 0 }}>
         <div className="modal-title">📷 Scan QR Code</div>
         {error ? (
           <div className="alert alert-red">{error}</div>
@@ -801,6 +801,8 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     try {
       await api.auth.signUp({ email: form.email, password: form.password, name: form.name, phone: form.phone });
       showToast("Account created! Check your email to confirm.");
+      // Send welcome email
+      sendWelcomeEmail({ name: form.name, email: form.email }).catch(() => {});
       onClose();
     } catch (e) {
       console.error("Registration error:", e);
@@ -1519,6 +1521,130 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
   }
 }
 
+
+// ── Send Welcome/Registration Email ──────────────────────────
+async function sendWelcomeEmail({ name, email }) {
+  const EMAILJS_SERVICE_ID  = "service_np4zvqs";
+  const EMAILJS_TEMPLATE_ID = "template_welcome";
+  const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
+
+  const htmlContent = `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Welcome to the Team</div>
+    </div>
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:12px;">Hey ${name}! 👋</div>
+      <p style="font-size:14px;color:#ccc;line-height:1.8;">Your account has been created. You're now part of the Zulu's Airsoft community.</p>
+      <p style="font-size:14px;color:#ccc;line-height:1.8;margin-top:8px;">Here's what to do next:</p>
+      <ul style="font-size:13px;color:#ccc;padding-left:18px;line-height:2.2;margin-top:8px;">
+        <li>Sign your liability waiver in your profile</li>
+        <li>Browse upcoming events and book your slot</li>
+        <li>Attend 3 games to qualify for VIP membership</li>
+      </ul>
+    </div>
+    <div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:14px;font-weight:700;color:#fff;">See you on the field, soldier. 🎯</div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
+  </div>`;
+
+  try {
+    if (!window.emailjs) {
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    }
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     email,
+      to_name:      name,
+      html_content: htmlContent,
+      subject:      "Welcome to Zulu's Airsoft!",
+    });
+    console.log("Welcome email sent to", email);
+  } catch (err) {
+    console.warn("Welcome email failed (non-fatal):", err);
+  }
+}
+
+// ── Send Order Confirmation Email ─────────────────────────────
+async function sendOrderEmail({ cu, order, items, postageName }) {
+  const EMAILJS_SERVICE_ID  = "service_np4zvqs";
+  const EMAILJS_TEMPLATE_ID = "template_order";
+  const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
+
+  const toEmail = cu.email || "";
+  if (!toEmail) return;
+
+  const itemRows = (items || []).map(i => `
+    <tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#ddd;">${i.name}${i.variant ? ` — ${i.variant}` : ""}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#aaa;text-align:center;">${i.qty}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#e05c00;text-align:right;">£${(Number(i.price)*i.qty).toFixed(2)}</td>
+    </tr>`).join("");
+
+  const htmlContent = `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Order Confirmation</div>
+    </div>
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">ORDER #${(order.id||"").slice(0,8).toUpperCase()}</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Item</th>
+          <th style="text-align:center;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Qty</th>
+          <th style="text-align:right;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Total</th>
+        </tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:13px;color:#aaa;border-bottom:1px solid #222;">
+        <span>Postage (${postageName || "Standard"})</span>
+        <span>£${Number(order.postage||0).toFixed(2)}</span>
+      </div>
+      <div style="padding:12px;display:flex;justify-content:space-between;font-size:16px;font-weight:900;color:#fff;">
+        <span>TOTAL PAID</span>
+        <span style="color:#e05c00;">£${Number(order.total||0).toFixed(2)}</span>
+      </div>
+    </div>
+    ${order.customerAddress ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">SHIPPING TO</div>
+      <div style="font-size:13px;color:#ccc;white-space:pre-line;">${order.customerAddress}</div>
+    </div>` : ""}
+    <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
+      We'll notify you when your order is dispatched. Allow 3–5 working days for delivery.
+    </div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
+  </div>`;
+
+  try {
+    if (!window.emailjs) {
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    }
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     toEmail,
+      to_name:      cu.name || "Customer",
+      html_content: htmlContent,
+      subject:      `Order Confirmed #${(order.id||"").slice(0,8).toUpperCase()}`,
+    });
+    console.log("Order email sent to", toEmail);
+  } catch (err) {
+    console.warn("Order email failed (non-fatal):", err);
+  }
+}
+
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save }) {
   const [detail, setDetail] = useState(null);
   const [waiverModal, setWaiverModal] = useState(false);
@@ -1608,15 +1734,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         resetCart();
         showToast("🎉 Booked! Payment confirmed.");
 
-        // Send styled ticket email
+        // Send ticket email with real booking IDs
         try {
-          const createdBookings = await api.bookings.getByUserId ? [] : [];
-          const bookingData = bookingPromises.length > 0 ? await Promise.all(bookingPromises.map(() => null)) : [];
-          // Build basic booking objects for the email
-          const emailBookings = [];
-          if (bCart.walkOn > 0) emailBookings.push({ id: paypalOrder.id + "-wo", type: "walkOn", qty: bCart.walkOn, total: walkOnTotal + extrasTotal });
-          if (bCart.rental > 0) emailBookings.push({ id: paypalOrder.id + "-ren", type: "rental", qty: bCart.rental, total: rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal) });
-          sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
+          const { data: freshBookings } = await supabase
+            .from('bookings').select('id, type, qty, total')
+            .eq('user_id', cu.id).eq('event_id', ev.id)
+            .order('created_at', { ascending: false }).limit(2);
+          const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: b.total }));
+          if (emailBookings.length > 0) {
+            sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
+          }
         } catch (emailErr) {
           console.warn("Ticket email failed (non-fatal):", emailErr);
         }
@@ -2059,6 +2186,16 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
       // Success — clear cart immediately
       showToast("✅ Order confirmed! Thank you.");
+      // Send order confirmation email
+      try {
+        const cartSnapshot = [...cart];
+        sendOrderEmail({
+          cu,
+          order: { id: paypalOrder.id, postage: postageTotal, total: grandTotal, customerAddress: cu.address || "" },
+          items: cartSnapshot.map(i => ({ name: i.name, variant: i.variantName || "", price: i.price, qty: i.qty })),
+          postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
+        }).catch(() => {});
+      } catch (emailErr) { console.warn("Order email failed:", emailErr); }
       setCart([]); setCartOpen(false);
 
       // Background: deduct stock + refresh (non-blocking)
@@ -3614,11 +3751,16 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       showToast(`Booking added for ${player.name}!`);
       setAddBookingModal(false);
       setAddBookingForm({ userId: "", type: "walkOn", qty: 1, extras: {} });
-      // Send ticket email to player
+      // Send ticket email — fetch real booking IDs first
       try {
-        const ref = "ADMIN-MANUAL-" + Date.now();
-        const emailBookings = [{ id: ref, type: addBookingForm.type, qty: addBookingForm.qty, total: 0 }];
-        sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
+        const { data: freshBookings } = await supabase
+          .from('bookings').select('id, type, qty')
+          .eq('user_id', player.id).eq('event_id', targetEv.id)
+          .order('created_at', { ascending: false }).limit(2);
+        const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: 0 }));
+        if (emailBookings.length > 0) {
+          sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
+        }
       } catch (emailErr) { console.warn("Ticket email failed:", emailErr); }
     } catch (e) {
       showToast("Failed: " + (e.message || String(e)), "red");
