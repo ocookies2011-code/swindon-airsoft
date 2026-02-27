@@ -798,6 +798,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
       showToast("Account created! Check your email to confirm.");
       onClose();
     } catch (e) {
+      console.error("Registration error:", e);
       showToast(e.message || "Registration failed", "red");
     } finally { setBusy(false); }
   };

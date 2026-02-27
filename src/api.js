@@ -12,10 +12,21 @@ export const auth = {
     })
     if (error) throw error
     if (data.user) {
-      await supabase.from('profiles').upsert({
-        id: data.user.id, name, phone: phone || '',
-        role: 'player', games_attended: 0,
-      }, { onConflict: 'id' })
+      // Retry upsert a few times — auth trigger may not have fired yet
+      let attempts = 0
+      while (attempts < 5) {
+        await new Promise(r => setTimeout(r, 500))
+        const { error: upsertErr } = await supabase.from('profiles').upsert({
+          id: data.user.id,
+          name,
+          phone: phone || '',
+          role: 'player',
+          games_attended: 0,
+        }, { onConflict: 'id' })
+        if (!upsertErr) break
+        attempts++
+        if (attempts === 5) console.warn('Profile upsert failed after retries:', upsertErr)
+      }
     }
     return data
   },
