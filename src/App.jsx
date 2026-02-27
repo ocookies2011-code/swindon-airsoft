@@ -122,13 +122,19 @@ function useData() {
       const errors = {};
       const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
 
-      const [evList, shopList, postageList, albumList, qaList, homeMsg] = await Promise.all([
+      const [evList, shopList, postageList, albumList, qaList, homeMsg,
+             socialFacebook, socialInstagram, contactAddress, contactPhone, contactEmail] = await Promise.all([
         safe("events",  api.events.getAll()),
         safe("shop",    api.shop.getAll()),
         safe("postage", api.postage.getAll()),
         safe("gallery", api.gallery.getAll()),
         safe("qa",      api.qa.getAll()),
         api.settings.get("home_message").catch(() => ""),
+        api.settings.get("social_facebook").catch(() => ""),
+        api.settings.get("social_instagram").catch(() => ""),
+        api.settings.get("contact_address").catch(() => ""),
+        api.settings.get("contact_phone").catch(() => ""),
+        api.settings.get("contact_email").catch(() => ""),
       ]);
 
       if (Object.keys(errors).length > 0) {
@@ -147,6 +153,11 @@ function useData() {
         albums: albumList,
         qa: qaList,
         homeMsg,
+        socialFacebook,
+        socialInstagram,
+        contactAddress,
+        contactPhone,
+        contactEmail,
       }));
 
       // Load profiles after public data — only succeeds when authed, silently skipped for guests
@@ -6067,9 +6078,12 @@ export default function App() {
               </div>
               <p className="pub-footer-desc">Premier airsoft venue. Experience tactical gameplay like never before.</p>
               <div className="pub-footer-social" style={{ marginTop:16 }}>
-                {["📘","📸","▶️"].map((icon,i) => (
-                  <button key={i} className="pub-footer-social-btn">{icon}</button>
-                ))}
+                {data.socialFacebook && (
+                  <a href={data.socialFacebook} target="_blank" rel="noopener noreferrer" className="pub-footer-social-btn">📘</a>
+                )}
+                {data.socialInstagram && (
+                  <a href={data.socialInstagram} target="_blank" rel="noopener noreferrer" className="pub-footer-social-btn">📸</a>
+                )}
               </div>
             </div>
             {/* Quick Links */}
@@ -6098,9 +6112,12 @@ export default function App() {
             {/* Contact */}
             <div>
               <div className="pub-footer-col-title">CONTACT</div>
-              <div className="pub-footer-contact">📍 Swindon, Wiltshire, UK</div>
-              <div className="pub-footer-contact">📞 +44 1234 567890</div>
-              <div className="pub-footer-contact">✉️ info@zulusairsoft.co.uk</div>
+              {data.contactAddress && <div className="pub-footer-contact">📍 {data.contactAddress}</div>}
+              {data.contactPhone && <div className="pub-footer-contact">📞 <a href={`tel:${data.contactPhone}`} style={{color:"inherit",textDecoration:"none"}}>{data.contactPhone}</a></div>}
+              {data.contactEmail && <div className="pub-footer-contact">✉️ <a href={`mailto:${data.contactEmail}`} style={{color:"inherit",textDecoration:"none"}}>{data.contactEmail}</a></div>}
+              {!data.contactAddress && !data.contactPhone && !data.contactEmail && (
+                <div className="pub-footer-contact" style={{color:"#444"}}>Contact details coming soon</div>
+              )}
             </div>
           </div>
           <div className="pub-footer-bottom">
