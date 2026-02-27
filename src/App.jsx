@@ -1422,9 +1422,6 @@ function CountdownPanel({ target }) {
 // ── Events Page ───────────────────────────────────────────
 // ── Send Ticket Email ────────────────────────────────────────
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
-  // Build QR SVG inline using a simple placeholder (real QR via QRCode library is canvas-based, can't embed in email easily)
-  // We'll create a styled HTML email and open it in a new window for the user to send/print
-  const bookingIds = bookings.map(b => b.id || "N/A").join(", ");
   const extrasText = Object.entries(extras || {}).filter(([,v])=>v>0).map(([k,v])=>`${k} ×${v}`).join(", ") || "None";
   const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
   const totalPaid = bookings.reduce((s, b) => s + (b.total || 0), 0);
@@ -1434,7 +1431,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
       <div>
         <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">TICKET</div>
         <div style="font-size:20px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.05em;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
-        <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty} · £${(b.total||0).toFixed(2)}</div>
+        <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty}${b.total > 0 ? ` · £${(b.total||0).toFixed(2)}` : ' · Complimentary'}</div>
         <div style="font-size:10px;color:#555;margin-top:8px;font-family:monospace;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
       </div>
       <div style="text-align:center;">
@@ -1445,65 +1442,81 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
       </div>
     </div>`).join("");
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Booking Confirmation</title></head>
-  <body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#fff;">
-    <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
-
-      <!-- Header -->
-      <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-        <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
-        <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Booking Confirmation</div>
-      </div>
-
-      <!-- Event info -->
-      <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
-        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">EVENT</div>
-        <div style="font-size:22px;font-weight:900;color:#fff;">${ev.title}</div>
-        <div style="font-size:14px;color:#aaa;margin-top:6px;">📅 ${dateStr}</div>
-        <div style="font-size:14px;color:#aaa;margin-top:2px;">🕐 ${ev.time || ""} GMT</div>
-        <div style="font-size:14px;color:#aaa;margin-top:2px;">📍 ${ev.location || ""}</div>
-      </div>
-
-      <!-- Tickets -->
-      <div style="margin-bottom:20px;">
-        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:10px;">YOUR TICKETS</div>
-        ${ticketRows}
-      </div>
-
-      <!-- Extras -->
-      ${extrasText !== "None" ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
-        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">GAME DAY EXTRAS</div>
-        <div style="font-size:14px;color:#ddd;">${extrasText}</div>
-      </div>` : ""}
-
-      <!-- Total -->
-      <div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.08em;">Total Paid</div>
-        <div style="font-size:24px;font-weight:900;color:#fff;">£${totalPaid.toFixed(2)}</div>
-      </div>
-
-      <!-- Important info -->
-      <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:16px 24px;margin-bottom:20px;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:8px;">IMPORTANT</div>
-        <ul style="font-size:13px;color:#ccc;padding-left:18px;line-height:2;">
-          <li>Show your QR code on arrival for check-in</li>
-          <li>Arrive 30 minutes before start time</li>
-          <li>Mandatory eye protection must be worn at all times</li>
-          <li>Under 18s must have signed parental consent</li>
-        </ul>
-      </div>
-
-      <!-- Footer -->
-      <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">
-        Zulu's Airsoft · Questions? Contact us at ${document.querySelector('a[href^="mailto"]')?.href?.replace("mailto:","") || "info@zulus-airsoft.com"}
-      </div>
+  const htmlContent = `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Booking Confirmation</div>
     </div>
-  </body></html>`;
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">EVENT</div>
+      <div style="font-size:22px;font-weight:900;color:#fff;">${ev.title}</div>
+      <div style="font-size:14px;color:#aaa;margin-top:6px;">📅 ${dateStr}</div>
+      <div style="font-size:14px;color:#aaa;margin-top:2px;">🕐 ${ev.time || ""} GMT</div>
+      <div style="font-size:14px;color:#aaa;margin-top:2px;">📍 ${ev.location || ""}</div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:10px;">YOUR TICKETS</div>
+      ${ticketRows}
+    </div>
+    ${extrasText !== "None" ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">GAME DAY EXTRAS</div>
+      <div style="font-size:14px;color:#ddd;">${extrasText}</div>
+    </div>` : ""}
+    ${totalPaid > 0 ? `<div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.08em;">Total Paid</div>
+      <div style="font-size:24px;font-weight:900;color:#fff;">£${totalPaid.toFixed(2)}</div>
+    </div>` : ""}
+    <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:16px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:8px;">IMPORTANT</div>
+      <ul style="font-size:13px;color:#ccc;padding-left:18px;line-height:2;">
+        <li>Show your QR code on arrival for check-in</li>
+        <li>Arrive 30 minutes before start time</li>
+        <li>Mandatory eye protection must be worn at all times</li>
+        <li>Under 18s must have signed parental consent</li>
+      </ul>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
+  </div>`;
 
-  // Open in new window so user can print/save as PDF or we could use mailto
-  const win = window.open("","_blank","width=650,height=800");
-  win.document.write(html);
-  win.document.close();
+  // Send via EmailJS
+  const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";
+  const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
+  const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";
+
+  const toEmail = cu.email || "";
+  if (!toEmail) { console.warn("No email for user — skipping ticket email"); return; }
+
+  if (EMAILJS_SERVICE_ID === "YOUR_SERVICE_ID") {
+    console.warn("EmailJS not configured — showing ticket popup instead");
+    const win = window.open("","_blank","width=650,height=800");
+    if (win) { win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Booking Confirmation</title></head><body style="margin:0;background:#0a0a0a;">${htmlContent}</body></html>`); win.document.close(); }
+    return;
+  }
+
+  try {
+    if (!window.emailjs) {
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    }
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:    toEmail,
+      to_name:     cu.name || "Player",
+      event_title: ev.title,
+      html_content: htmlContent,
+    });
+    console.log("Ticket email sent to", toEmail);
+  } catch (err) {
+    console.error("EmailJS send failed:", err);
+    // Fallback to popup
+    const win = window.open("","_blank","width=650,height=800");
+    if (win) { win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Booking Confirmation</title></head><body style="margin:0;background:#0a0a0a;">${htmlContent}</body></html>`); win.document.close(); }
+  }
 }
 
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save }) {
@@ -4145,8 +4158,28 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const players = allUsers.filter(u => u.role !== "admin");
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
 
-  const saveEdit = () => {
-    updateUser(edit.id, edit); showToast("Player updated!"); setEdit(null);
+  const saveEdit = async () => {
+    try {
+      const { error } = await supabase.from('profiles').update({
+        name:           edit.name,
+        email:          edit.email,
+        phone:          edit.phone || '',
+        games_attended: edit.gamesAttended,
+        vip_status:     edit.vipStatus,
+        ukara:          edit.ukara || '',
+        credits:        Number(edit.credits) || 0,
+        address:        edit.address || '',
+        delete_request: edit.deleteRequest || false,
+      }).eq('id', edit.id);
+      if (error) throw new Error(error.message);
+      // Update local state
+      updateUser(edit.id, edit);
+      showToast("Player updated!");
+      setEdit(null);
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+      console.error("saveEdit failed:", e);
+    }
   };
 
   // Recalculate every player's game count from actual checked-in bookings in the DB
