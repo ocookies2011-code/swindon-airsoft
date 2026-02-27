@@ -1429,7 +1429,6 @@ const EMAILJS_TEMPLATE_ID = "template_d84acm9";
 const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
 async function sendEmail({ toEmail, toName, subject, htmlContent }) {
   if (!toEmail) throw new Error("No email address");
-  // Load EmailJS fresh every time — avoids init state issues
   if (!window.emailjs) {
     await new Promise((res, rej) => {
       const s = document.createElement("script");
@@ -1439,13 +1438,12 @@ async function sendEmail({ toEmail, toName, subject, htmlContent }) {
     });
   }
   window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-  const result = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+  await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
     to_email:     toEmail,
     to_name:      toName || "",
     subject:      subject,
     html_content: htmlContent,
   });
-  return result;
 }
 
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
@@ -1688,21 +1686,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         resetCart();
         showToast("🎉 Booked! Payment confirmed.");
 
-        // Send ticket email with real booking IDs
+        // Send ticket confirmation email
         try {
-          const { data: freshBookings } = await supabase
-            .from('bookings').select('id, type, qty, total')
-            .eq('user_id', cu.id).eq('event_id', ev.id)
-            .order('created_at', { ascending: false }).limit(2);
-          const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: b.total }));
-          if (emailBookings.length > 0) {
-            await sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
-            showToast("📧 Confirmation email sent!");
-          } else {
-            console.warn("No bookings found for email");
-          }
+          const emailBookings = [];
+          if (bCart.walkOn > 0) emailBookings.push({ id: paypalOrder.id + "-wo", type: "walkOn", qty: bCart.walkOn, total: walkOnTotal + extrasTotal });
+          if (bCart.rental > 0) emailBookings.push({ id: paypalOrder.id + "-ren", type: "rental", qty: bCart.rental, total: rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal) });
+          await sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
+          showToast("📧 Confirmation email sent!");
         } catch (emailErr) {
-          console.error("Ticket email failed:", emailErr);
           showToast("Booking confirmed but email failed: " + (emailErr?.message || String(emailErr)), "gold");
         }
 
@@ -3709,20 +3700,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       showToast(`Booking added for ${player.name}!`);
       setAddBookingModal(false);
       setAddBookingForm({ userId: "", type: "walkOn", qty: 1, extras: {} });
-      // Send ticket email — fetch real booking IDs first
-      showToast("Sending confirmation email...", "blue");
+      // Send ticket confirmation email
       try {
-        const { data: freshBookings } = await supabase
-          .from('bookings').select('id, type, qty')
-          .eq('user_id', player.id).eq('event_id', targetEv.id)
-          .order('created_at', { ascending: false }).limit(2);
-        const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: 0 }));
-        if (emailBookings.length > 0) {
-          await sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
-          showToast("📧 Email sent to " + player.email);
-        } else {
-          showToast("Booking saved — no booking record found for email", "gold");
-        }
+        const emailBookings = [{ id: "MANUAL-" + Date.now(), type: addBookingForm.type, qty: addBookingForm.qty, total: 0 }];
+        await sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
+        showToast("📧 Confirmation email sent to " + player.email);
       } catch (emailErr) {
         showToast("Email failed: " + (emailErr?.message || String(emailErr)), "red");
       }
