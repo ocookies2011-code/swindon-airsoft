@@ -2580,6 +2580,77 @@ function QAPage({ data }) {
 }
 
 // ── Profile ───────────────────────────────────────────────
+// ── Player Order History ─────────────────────────────────────
+function PlayerOrders({ cu }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState(null);
+
+  useEffect(() => {
+    supabase.from('shop_orders').select('*')
+      .eq('user_id', cu.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error) setOrders(data || []);
+        setLoading(false);
+      });
+  }, [cu.id]);
+
+  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
+
+  if (loading) return <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading orders…</div>;
+  if (orders.length === 0) return <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No orders yet.</div>;
+
+  return (
+    <div>
+      {orders.map(o => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        return (
+          <div key={o.id} className="card mb-1" style={{ cursor: "pointer" }} onClick={() => setDetail(detail?.id === o.id ? null : o)}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{items.map(i => `${i.name} ×${i.qty}`).join(", ")}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{gmtShort(o.created_at)}</div>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
+                <span style={{ fontWeight: 800, color: "var(--accent)" }}>£{Number(o.total).toFixed(2)}</span>
+              </div>
+            </div>
+            {detail?.id === o.id && (
+              <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", letterSpacing: ".1em", marginBottom: 8 }}>ORDER DETAILS</div>
+                <div className="table-wrap"><table className="data-table">
+                  <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                  <tbody>
+                    {items.map((i, idx) => (
+                      <tr key={idx}><td>{i.name}</td><td>{i.qty}</td><td>£{Number(i.price).toFixed(2)}</td><td className="text-green">£{(Number(i.price) * i.qty).toFixed(2)}</td></tr>
+                    ))}
+                    <tr style={{ borderTop: "2px solid var(--border)" }}>
+                      <td colSpan={3}>Postage ({o.postage_name || "—"})</td>
+                      <td>£{Number(o.postage || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={3} style={{ fontWeight: 900 }}>TOTAL</td>
+                      <td className="text-green" style={{ fontWeight: 900 }}>£{Number(o.total).toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table></div>
+                {o.customer_address && (
+                  <div style={{ marginTop: 10, fontSize: 12 }}>
+                    <span style={{ color: "var(--muted)" }}>Shipping to: </span>
+                    <span style={{ whiteSpace: "pre-line" }}>{o.customer_address}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const [tab, setTab] = useState("profile");
 
@@ -2676,7 +2747,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
       </div>
 
       <div className="nav-tabs">
-        {["profile", "waiver", "bookings", "vip"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
+        {["profile", "waiver", "bookings", "orders", "vip"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
       </div>
 
       {tab === "profile" && (
@@ -2788,6 +2859,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
           )}
         </div>
       )}
+
+      {tab === "orders" && <PlayerOrders cu={cu} />}
 
       {tab === "vip" && (
         <div className="card">
