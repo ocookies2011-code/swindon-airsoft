@@ -64,7 +64,7 @@ export const profiles = {
 
   async getAll() {
     const { data, error } = await supabase
-      .from('profiles').select('*').order('join_date')
+      .from('profiles').select('*').order('name')
     if (error) throw error
     return data
   },
@@ -228,7 +228,7 @@ export const shop = {
       // Retry stripping any columns that don't exist yet
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
       const { data: d2, error: e2 } = await supabase
-        .from('shop_products').insert(snakeStripped).select().single()
+        .from('shop_products').insert(snakeStripped)
       if (e2) throw new Error('Product create failed: ' + e2.message)
       return normaliseProduct(d2)
     }
@@ -243,7 +243,7 @@ export const shop = {
       // Retry stripping any columns that don't exist yet (game_extra, variants if missing)
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
       const { data: d2, error: e2 } = await supabase
-        .from('shop_products').update(snakeStripped).eq('id', id).select().single()
+        .from('shop_products').update(snakeStripped).eq('id', id)
       if (e2) throw new Error('Product save failed: ' + e2.message)
       if (!d2) throw new Error('Product save failed — no data returned.')
       return normaliseProduct(d2)
@@ -279,14 +279,14 @@ export const postage = {
 
   async create(opt) {
     const { data, error } = await supabase
-      .from('postage_options').insert({ name: opt.name, price: opt.price }).select().single()
+      .from('postage_options').insert({ name: opt.name, price: opt.price })
     if (error) throw error
     return data
   },
 
   async update(id, patch) {
     const { data, error } = await supabase
-      .from('postage_options').update({ name: patch.name, price: patch.price }).eq('id', id).select().single()
+      .from('postage_options').update({ name: patch.name, price: patch.price }).eq('id', id)
     if (error) throw error
     return data
   },
@@ -313,7 +313,7 @@ export const gallery = {
 
   async createAlbum(title) {
     const { data, error } = await supabase
-      .from('gallery_albums').insert({ title }).select().single()
+      .from('gallery_albums').insert({ title })
     if (error) throw error
     return { ...data, images: [] }
   },
@@ -476,6 +476,7 @@ function normaliseProduct(p) {
     name:        p.name,
     description: p.description,
     price:       Number(p.price),
+    costPrice:   Number(p.cost_price || 0),
     salePrice:   p.sale_price ? Number(p.sale_price) : null,
     onSale:      p.on_sale,
     image:       p.image,
@@ -539,6 +540,7 @@ function toSnakeProduct(p) {
     name:        p.name,
     description: p.description,
     price:       p.price,
+    cost_price:  p.costPrice || 0,
     sale_price:  p.salePrice,
     on_sale:     p.onSale,
     image:       p.image,

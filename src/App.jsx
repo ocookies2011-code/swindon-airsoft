@@ -1409,6 +1409,92 @@ function CountdownPanel({ target }) {
 }
 
 // ── Events Page ───────────────────────────────────────────
+// ── Send Ticket Email ────────────────────────────────────────
+async function sendTicketEmail({ cu, ev, bookings, extras }) {
+  // Build QR SVG inline using a simple placeholder (real QR via QRCode library is canvas-based, can't embed in email easily)
+  // We'll create a styled HTML email and open it in a new window for the user to send/print
+  const bookingIds = bookings.map(b => b.id || "N/A").join(", ");
+  const extrasText = Object.entries(extras || {}).filter(([,v])=>v>0).map(([k,v])=>`${k} ×${v}`).join(", ") || "None";
+  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  const totalPaid = bookings.reduce((s, b) => s + (b.total || 0), 0);
+
+  const ticketRows = bookings.map(b => `
+    <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:20px 24px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">TICKET</div>
+        <div style="font-size:20px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.05em;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
+        <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty} · £${(b.total||0).toFixed(2)}</div>
+        <div style="font-size:10px;color:#555;margin-top:8px;font-family:monospace;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="background:#fff;padding:8px;border-radius:4px;display:inline-block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(b.id||'ticket')}" width="80" height="80" alt="QR Code" />
+        </div>
+        <div style="font-size:10px;color:#888;margin-top:4px;">Show on arrival</div>
+      </div>
+    </div>`).join("");
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Booking Confirmation</title></head>
+  <body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#fff;">
+    <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
+
+      <!-- Header -->
+      <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
+        <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Booking Confirmation</div>
+      </div>
+
+      <!-- Event info -->
+      <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">EVENT</div>
+        <div style="font-size:22px;font-weight:900;color:#fff;">${ev.title}</div>
+        <div style="font-size:14px;color:#aaa;margin-top:6px;">📅 ${dateStr}</div>
+        <div style="font-size:14px;color:#aaa;margin-top:2px;">🕐 ${ev.time || ""} GMT</div>
+        <div style="font-size:14px;color:#aaa;margin-top:2px;">📍 ${ev.location || ""}</div>
+      </div>
+
+      <!-- Tickets -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:10px;">YOUR TICKETS</div>
+        ${ticketRows}
+      </div>
+
+      <!-- Extras -->
+      ${extrasText !== "None" ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">GAME DAY EXTRAS</div>
+        <div style="font-size:14px;color:#ddd;">${extrasText}</div>
+      </div>` : ""}
+
+      <!-- Total -->
+      <div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.08em;">Total Paid</div>
+        <div style="font-size:24px;font-weight:900;color:#fff;">£${totalPaid.toFixed(2)}</div>
+      </div>
+
+      <!-- Important info -->
+      <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:16px 24px;margin-bottom:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:8px;">IMPORTANT</div>
+        <ul style="font-size:13px;color:#ccc;padding-left:18px;line-height:2;">
+          <li>Show your QR code on arrival for check-in</li>
+          <li>Arrive 30 minutes before start time</li>
+          <li>Mandatory eye protection must be worn at all times</li>
+          <li>Under 18s must have signed parental consent</li>
+        </ul>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">
+        Zulu's Airsoft · Questions? Contact us at ${document.querySelector('a[href^="mailto"]')?.href?.replace("mailto:","") || "info@zulus-airsoft.com"}
+      </div>
+    </div>
+  </body></html>`;
+
+  // Open in new window so user can print/save as PDF or we could use mailto
+  const win = window.open("","_blank","width=650,height=800");
+  win.document.write(html);
+  win.document.close();
+}
+
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save }) {
   const [detail, setDetail] = useState(null);
   const [waiverModal, setWaiverModal] = useState(false);
@@ -1497,6 +1583,19 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         // Show success immediately — stock deduction and refresh happen in background
         resetCart();
         showToast("🎉 Booked! Payment confirmed.");
+
+        // Send styled ticket email
+        try {
+          const createdBookings = await api.bookings.getByUserId ? [] : [];
+          const bookingData = bookingPromises.length > 0 ? await Promise.all(bookingPromises.map(() => null)) : [];
+          // Build basic booking objects for the email
+          const emailBookings = [];
+          if (bCart.walkOn > 0) emailBookings.push({ id: paypalOrder.id + "-wo", type: "walkOn", qty: bCart.walkOn, total: walkOnTotal + extrasTotal });
+          if (bCart.rental > 0) emailBookings.push({ id: paypalOrder.id + "-ren", type: "rental", qty: bCart.rental, total: rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal) });
+          sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
+        } catch (emailErr) {
+          console.warn("Ticket email failed (non-fatal):", emailErr);
+        }
 
         // Background: deduct stock (non-blocking)
         const deductPromises = Object.entries(extrasSnapshot)
@@ -3356,6 +3455,59 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 
   // ── Events logic ──
   const [savingEvent, setSavingEvent] = useState(false);
+
+  const printPlayerList = (ev) => {
+    const bookings = ev.bookings || [];
+    const ticketTypes = {};
+    const extraCounts = {};
+    bookings.forEach(b => {
+      ticketTypes[b.type] = (ticketTypes[b.type] || 0) + (b.qty || 1);
+      if (b.extras) Object.entries(b.extras).forEach(([k, v]) => {
+        if (v) extraCounts[k] = (extraCounts[k] || 0) + (typeof v === 'number' ? v : 1);
+      });
+    });
+    const rows = bookings.map(b => `
+      <tr>
+        <td>${b.userName || 'Unknown'}</td>
+        <td>${b.type}</td>
+        <td>${b.qty || 1}</td>
+        <td>${b.checkedIn ? '✓' : ''}</td>
+        <td style="font-size:11px">${b.extras ? Object.entries(b.extras).filter(([,v])=>v).map(([k,v])=>`${k}${typeof v==='number'?` x${v}`:''}`).join(', ') : '—'}</td>
+      </tr>`).join('');
+    const ticketSummary = Object.entries(ticketTypes).map(([t,c])=>`<span style="margin-right:16px"><strong>${c}</strong> × ${t}</span>`).join('');
+    const extraSummary = Object.entries(extraCounts).length ? Object.entries(extraCounts).map(([k,v])=>`<span style="margin-right:16px"><strong>${v}</strong> × ${k}</span>`).join('') : 'None';
+    const win = window.open('','_blank','width=900,height=700');
+    win.document.write(`<!DOCTYPE html><html><head><title>Player List — ${ev.title}</title><style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:Arial,sans-serif;padding:32px;color:#111;}
+      h1{font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+      .meta{font-size:13px;color:#555;margin-bottom:20px;}
+      .summary{background:#f5f5f5;border:1px solid #ddd;padding:14px 16px;border-radius:4px;margin-bottom:20px;}
+      .summary h3{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px;}
+      .summary p{font-size:14px;}
+      table{width:100%;border-collapse:collapse;font-size:13px;}
+      th{background:#111;color:#fff;padding:8px 12px;text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;}
+      td{padding:8px 12px;border-bottom:1px solid #eee;}
+      tr:nth-child(even) td{background:#fafafa;}
+      .footer{margin-top:20px;font-size:11px;color:#aaa;text-align:right;}
+      @media print{body{padding:16px;}}
+    </style></head><body>
+      <h1>Player List — ${ev.title}</h1>
+      <div class="meta">${new Date(ev.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${bookings.length} player(s) booked</div>
+      <div class="summary">
+        <h3>Ticket Types</h3><p>${ticketSummary || 'None'}</p>
+        <h3 style="margin-top:10px">Game Day Extras</h3><p>${extraSummary}</p>
+      </div>
+      <table>
+        <thead><tr><th>Player</th><th>Ticket Type</th><th>Qty</th><th>Checked In</th><th>Extras</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="footer">Printed ${new Date().toLocaleString('en-GB')} · Zulu's Airsoft</div>
+      <script>window.onload=()=>window.print();<\/script>
+    </body></html>`);
+    win.document.close();
+  };
+
   const withTimeout = (promise, ms = 8000) =>
     Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out — check Supabase RLS policies for events")), ms))]);
 
@@ -3646,18 +3798,25 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       {viewEv && (
         <div className="overlay" onClick={() => setViewId(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">📅 {viewEv.title}</div>
-            <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{viewEv.date} @ {viewEv.time} GMT | {viewEv.location}</p>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:4 }}>
+              <div className="modal-title" style={{ margin:0 }}>📅 {viewEv.title}</div>
+              <button className="btn btn-ghost btn-sm" onClick={() => printPlayerList(viewEv)}>🖨️ Print Player List</button>
+            </div>
+            <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{viewEv.date} @ {viewEv.time} GMT | {viewEv.location} · {viewEv.bookings.length} booked</p>
             <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th></tr></thead>
+              <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Status</th></tr></thead>
               <tbody>
                 {viewEv.bookings.map(b => (
-                  <tr key={b.id}><td>{b.userName}</td><td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td><td>{b.qty}</td>
+                  <tr key={b.id}>
+                    <td>{b.userName}</td>
+                    <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+                    <td>{b.qty}</td>
+                    <td style={{fontSize:11,color:"var(--muted)"}}>{b.extras ? Object.entries(b.extras).filter(([,v])=>v).map(([k,v])=>`${k}${typeof v==='number'?` x${v}`:''}`).join(', ') : '—'}</td>
                     <td className="text-green">£{b.total.toFixed(2)}</td>
                     <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
                   </tr>
                 ))}
-                {viewEv.bookings.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No bookings</td></tr>}
+                {viewEv.bookings.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No bookings</td></tr>}
               </tbody>
             </table></div>
             <button className="btn btn-ghost mt-2" onClick={() => setViewId(null)}>Close</button>
@@ -5463,11 +5622,16 @@ function AdminMessages({ data, save, showToast }) {
     } finally { setSaving(false); }
   };
 
+  const upsertSetting = async (key, value) => {
+    const { error } = await supabase.from('site_settings').upsert({ key, value }, { onConflict: 'key' });
+    if (error) throw new Error(error.message);
+  };
+
   const saveSocial = async () => {
     setSavingSocial(true);
     try {
-      await api.settings.set("social_facebook", facebook);
-      await api.settings.set("social_instagram", instagram);
+      await upsertSetting("social_facebook", facebook);
+      await upsertSetting("social_instagram", instagram);
       save({ socialFacebook: facebook, socialInstagram: instagram });
       showToast("Social links saved!");
     } catch (e) {
@@ -5478,9 +5642,9 @@ function AdminMessages({ data, save, showToast }) {
   const saveContact = async () => {
     setSavingContact(true);
     try {
-      await api.settings.set("contact_address", contactAddress);
-      await api.settings.set("contact_phone", contactPhone);
-      await api.settings.set("contact_email", contactEmail);
+      await upsertSetting("contact_address", contactAddress);
+      await upsertSetting("contact_phone", contactPhone);
+      await upsertSetting("contact_email", contactEmail);
       save({ contactAddress, contactPhone, contactEmail });
       showToast("Contact details saved!");
     } catch (e) {
