@@ -69,10 +69,9 @@ export const profiles = {
   },
 
   async update(id, patch) {
-    const { data, error } = await supabase
-      .from('profiles').update(patch).eq('id', id).select().single()
+    const { error } = await supabase
+      .from('profiles').update(patch).eq('id', id)
     if (error) throw error
-    return data
   },
 
   async delete(id) {
