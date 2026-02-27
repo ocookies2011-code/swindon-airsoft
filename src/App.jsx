@@ -3601,6 +3601,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       showToast(`Booking added for ${player.name}!`);
       setAddBookingModal(false);
       setAddBookingForm({ userId: "", type: "walkOn", qty: 1, extras: {} });
+      // Send ticket email to player
+      try {
+        const ref = "ADMIN-MANUAL-" + Date.now();
+        const emailBookings = [{ id: ref, type: addBookingForm.type, qty: addBookingForm.qty, total: 0 }];
+        sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
+      } catch (emailErr) { console.warn("Ticket email failed:", emailErr); }
     } catch (e) {
       showToast("Failed: " + (e.message || String(e)), "red");
     } finally {
