@@ -1423,6 +1423,43 @@ function CountdownPanel({ target }) {
 
 // ── Events Page ───────────────────────────────────────────
 // ── Send Ticket Email ────────────────────────────────────────
+// ── EmailJS shared helper ────────────────────────────────────
+const EMAILJS_SERVICE_ID  = "service_np4zvqs";
+const EMAILJS_TEMPLATE_ID = "template_d84acm9";
+const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
+let _emailjsReady = false;
+
+async function ensureEmailJS() {
+  if (_emailjsReady) return;
+  if (!window.emailjs) {
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  _emailjsReady = true;
+}
+
+async function sendEmail({ toEmail, toName, subject, htmlContent }) {
+  if (!toEmail) { console.warn("sendEmail: no email address"); return; }
+  try {
+    await ensureEmailJS();
+    const result = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     toEmail,
+      to_name:      toName || "",
+      subject:      subject,
+      html_content: htmlContent,
+    });
+    console.log("Email sent:", result.status, result.text, "→", toEmail);
+  } catch (err) {
+    console.error("Email send failed:", err);
+    throw err;
+  }
+}
+
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
   const extrasText = Object.entries(extras || {}).filter(([,v])=>v>0).map(([k,v])=>`${k} ×${v}`).join(", ") || "None";
   const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
@@ -1481,53 +1518,17 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
     <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
   </div>`;
 
-  // Send via EmailJS
-  const EMAILJS_SERVICE_ID  = "service_np4zvqs";
-  const EMAILJS_TEMPLATE_ID = "template_d84acm9";
-  const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
-
-  const toEmail = cu.email || "";
-  if (!toEmail) { console.warn("No email for user — skipping ticket email"); return; }
-
-  if (EMAILJS_SERVICE_ID === "YOUR_SERVICE_ID") {
-    console.warn("EmailJS not configured — showing ticket popup instead");
-    const win = window.open("","_blank","width=650,height=800");
-    if (win) { win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Booking Confirmation</title></head><body style="margin:0;background:#0a0a0a;">${htmlContent}</body></html>`); win.document.close(); }
-    return;
-  }
-
-  try {
-    if (!window.emailjs) {
-      await new Promise((res, rej) => {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-      window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-    }
-    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:    toEmail,
-      to_name:     cu.name || "Player",
-      event_title: ev.title,
-      html_content: htmlContent,
-    });
-    console.log("Ticket email sent to", toEmail);
-  } catch (err) {
-    console.error("EmailJS send failed:", err);
-    // Fallback to popup
-    const win = window.open("","_blank","width=650,height=800");
-    if (win) { win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Booking Confirmation</title></head><body style="margin:0;background:#0a0a0a;">${htmlContent}</body></html>`); win.document.close(); }
-  }
+  await sendEmail({
+    toEmail:     cu.email || "",
+    toName:      cu.name || "Player",
+    subject:     `🎯 Booking Confirmed — ${ev.title}`,
+    htmlContent,
+  });
 }
 
 
 // ── Send Welcome/Registration Email ──────────────────────────
 async function sendWelcomeEmail({ name, email }) {
-  const EMAILJS_SERVICE_ID  = "service_np4zvqs";
-  const EMAILJS_TEMPLATE_ID = "template_d84acm9";
-  const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
-
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
@@ -1550,37 +1551,16 @@ async function sendWelcomeEmail({ name, email }) {
     <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
   </div>`;
 
-  try {
-    if (!window.emailjs) {
-      await new Promise((res, rej) => {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-      window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-    }
-    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     email,
-      to_name:      name,
-      html_content: htmlContent,
-      subject:      "Welcome to Zulu's Airsoft!",
-    });
-    console.log("Welcome email sent to", email);
-  } catch (err) {
-    console.warn("Welcome email failed (non-fatal):", err);
-  }
+  await sendEmail({
+    toEmail:     email,
+    toName:      name,
+    subject:     "Welcome to Zulu's Airsoft! 🎯",
+    htmlContent,
+  });
 }
 
 // ── Send Order Confirmation Email ─────────────────────────────
 async function sendOrderEmail({ cu, order, items, postageName }) {
-  const EMAILJS_SERVICE_ID  = "service_np4zvqs";
-  const EMAILJS_TEMPLATE_ID = "template_d84acm9";
-  const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
-
-  const toEmail = cu.email || "";
-  if (!toEmail) return;
-
   const itemRows = (items || []).map(i => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#ddd;">${i.name}${i.variant ? ` — ${i.variant}` : ""}</td>
@@ -1623,26 +1603,12 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
     <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
   </div>`;
 
-  try {
-    if (!window.emailjs) {
-      await new Promise((res, rej) => {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-      window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-    }
-    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     toEmail,
-      to_name:      cu.name || "Customer",
-      html_content: htmlContent,
-      subject:      `Order Confirmed #${(order.id||"").slice(0,8).toUpperCase()}`,
-    });
-    console.log("Order email sent to", toEmail);
-  } catch (err) {
-    console.warn("Order email failed (non-fatal):", err);
-  }
+  await sendEmail({
+    toEmail,
+    toName:      cu.name || "Customer",
+    subject:     `✅ Order Confirmed #${(order.id||"").slice(0,8).toUpperCase()}`,
+    htmlContent,
+  });
 }
 
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save }) {
