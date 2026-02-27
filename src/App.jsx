@@ -1444,7 +1444,7 @@ async function ensureEmailJS() {
 }
 
 async function sendEmail({ toEmail, toName, subject, htmlContent }) {
-  if (!toEmail) { console.warn("sendEmail: no email address provided"); throw new Error("No email address"); }
+  if (!toEmail) { throw new Error("Player has no email address on their profile. Run the email backfill SQL in Supabase."); }
   console.log("sendEmail: attempting to send to", toEmail);
   await ensureEmailJS();
   const result = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
@@ -1457,6 +1457,13 @@ async function sendEmail({ toEmail, toName, subject, htmlContent }) {
 }
 
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
+  // If profile email is missing, try to get it from supabase auth
+  if (!cu.email) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) cu = { ...cu, email: user.email };
+    } catch(e) {}
+  }
   const extrasText = Object.entries(extras || {}).filter(([,v])=>v>0).map(([k,v])=>`${k} ×${v}`).join(", ") || "None";
   const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
   const totalPaid = bookings.reduce((s, b) => s + (b.total || 0), 0);
@@ -6114,7 +6121,7 @@ export default function App() {
 
   // Only show loading screen while initial data fetch is in progress
   // Auth loads in the background - never block the site on it
-  if (loading && !data) {
+  if (loading) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
         <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>ZA</div>
