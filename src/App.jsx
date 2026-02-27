@@ -783,8 +783,6 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
           if (profile && onLogin) onLogin(normaliseProfile(profile));
         } catch {}
       }
-      showToast("Welcome back!");
-      onClose();
       // Force page reload so nav and all state reflects logged-in user
       window.location.reload();
     } catch (e) {
