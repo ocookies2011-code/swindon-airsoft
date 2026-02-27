@@ -1427,10 +1427,9 @@ function CountdownPanel({ target }) {
 const EMAILJS_SERVICE_ID  = "service_np4zvqs";
 const EMAILJS_TEMPLATE_ID = "template_d84acm9";
 const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
-let _emailjsReady = false;
-
-async function ensureEmailJS() {
-  if (_emailjsReady) return;
+async function sendEmail({ toEmail, toName, subject, htmlContent }) {
+  if (!toEmail) throw new Error("No email address");
+  // Load EmailJS fresh every time — avoids init state issues
   if (!window.emailjs) {
     await new Promise((res, rej) => {
       const s = document.createElement("script");
@@ -1440,30 +1439,16 @@ async function ensureEmailJS() {
     });
   }
   window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-  _emailjsReady = true;
-}
-
-async function sendEmail({ toEmail, toName, subject, htmlContent }) {
-  if (!toEmail) { throw new Error("Player has no email address on their profile. Run the email backfill SQL in Supabase."); }
-  console.log("sendEmail: attempting to send to", toEmail);
-  await ensureEmailJS();
   const result = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
     to_email:     toEmail,
     to_name:      toName || "",
     subject:      subject,
     html_content: htmlContent,
   });
-  console.log("sendEmail: success", result.status, result.text, "→", toEmail);
+  return result;
 }
 
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
-  // If profile email is missing, try to get it from supabase auth
-  if (!cu.email) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) cu = { ...cu, email: user.email };
-    } catch(e) {}
-  }
   const extrasText = Object.entries(extras || {}).filter(([,v])=>v>0).map(([k,v])=>`${k} ×${v}`).join(", ") || "None";
   const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
   const totalPaid = bookings.reduce((s, b) => s + (b.total || 0), 0);
@@ -3725,6 +3710,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       setAddBookingModal(false);
       setAddBookingForm({ userId: "", type: "walkOn", qty: 1, extras: {} });
       // Send ticket email — fetch real booking IDs first
+      showToast("Sending confirmation email...", "blue");
       try {
         const { data: freshBookings } = await supabase
           .from('bookings').select('id, type, qty')
@@ -3733,11 +3719,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: 0 }));
         if (emailBookings.length > 0) {
           await sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
-          showToast("📧 Confirmation email sent to " + (player.email || player.name));
+          showToast("📧 Email sent to " + player.email);
+        } else {
+          showToast("Booking saved — no booking record found for email", "gold");
         }
       } catch (emailErr) {
-        console.error("Ticket email failed:", emailErr);
-        showToast("Booking added but email failed: " + (emailErr?.message || String(emailErr)), "gold");
+        showToast("Email failed: " + (emailErr?.message || String(emailErr)), "red");
       }
     } catch (e) {
       showToast("Failed: " + (e.message || String(e)), "red");
