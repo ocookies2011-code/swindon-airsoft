@@ -3689,7 +3689,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const submitAddBooking = async () => {
     const targetEv = data.events.find(e => e.id === evId);
     const player = data.users.find(u => u.id === addBookingForm.userId);
-    console.log("MANUAL BOOKING: player=", player?.name, "email=", player?.email, "event=", targetEv?.title);
     if (!player) { showToast("Select a player", "red"); return; }
     if (!targetEv) { showToast("Select an event", "red"); return; }
     setAddBookingBusy(true);
@@ -6115,7 +6114,7 @@ export default function App() {
 
   // Only show loading screen while initial data fetch is in progress
   // Auth loads in the background - never block the site on it
-  if (loading) {
+  if (loading && !data) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
         <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>ZA</div>
