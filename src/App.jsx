@@ -5192,24 +5192,20 @@ function AdminQA({ data, save, showToast }) {
 
   const save_ = async () => {
     if (!form.q.trim() || !form.a.trim()) { showToast("Fill in both question and answer", "red"); return; }
-    const wasEditing = !!editId;
-    const currentEditId = editId;
+    // Snapshot editId at call time — never trust stale state
+    const currentEditId = editId || null;
+    const wasEditing = !!currentEditId;
     setQASaving(true);
-
-    // Direct supabase call so we can see the raw response
     try {
       let result;
-      if (currentEditId) {
+      if (wasEditing) {
         result = await supabase.from('qa_items').update({ question: form.q, answer: form.a }).eq('id', currentEditId);
       } else {
-        // Get current max sort_order so new item goes to the end
         const { data: maxData } = await supabase.from('qa_items').select('sort_order').order('sort_order', { ascending: false }).limit(1);
         const nextOrder = maxData?.[0]?.sort_order != null ? maxData[0].sort_order + 1 : 0;
         result = await supabase.from('qa_items').insert({ question: form.q, answer: form.a, sort_order: nextOrder });
       }
-      console.log("QA supabase result:", JSON.stringify(result));
       if (result.error) throw new Error(result.error.message || result.error.code || JSON.stringify(result.error));
-
       setEditId(null);
       setForm(blank);
       setPreview(false);
@@ -5237,6 +5233,8 @@ function AdminQA({ data, save, showToast }) {
 
   const startEdit = (item) => { setForm({ q: item.q, a: item.a, image: item.image || "" }); setEditId(item.id); setPreview(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const cancel = () => { setForm(blank); setEditId(null); setPreview(false); };
+  // Reset form when component unmounts (e.g. navigating away mid-edit)
+  useEffect(() => () => { setForm(blank); setEditId(null); }, []);
 
   const toolbar = [
     { label: "B",  title: "Bold",        action: () => insertMarkdown(form.a, fa, "**", "**") },
