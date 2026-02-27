@@ -198,7 +198,7 @@ function useData() {
     // Convert camelCase patch to snake_case for Supabase
     const snakePatch = {};
     const map = {
-      name: "name", phone: "phone", address: "address", role: "role",
+      name: "name", email: "email", phone: "phone", address: "address", role: "role",
       gamesAttended: "games_attended", waiverSigned: "waiver_signed",
       waiverYear: "waiver_year", waiverData: "waiver_data",
       waiverPending: "waiver_pending", vipStatus: "vip_status",

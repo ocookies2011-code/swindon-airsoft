@@ -19,6 +19,7 @@ export const auth = {
         const { error: upsertErr } = await supabase.from('profiles').upsert({
           id: data.user.id,
           name,
+          email,
           phone: phone || '',
           role: 'player',
           games_attended: 0,
@@ -490,6 +491,7 @@ function normaliseProfile(p) {
   return {
     id:                 p.id,
     name:               p.name,
+    email:              p.email,
     phone:              p.phone,
     address:            p.address,
     role:               p.role,
