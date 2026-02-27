@@ -774,20 +774,14 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     if (!form.email || !form.password) { showToast("Email and password required", "red"); return; }
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+      const { error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
       if (error) throw error;
-      // Immediately load profile and update cu — don't wait for onAuthStateChange
-      if (data.user) {
-        try {
-          const profile = await api.profiles.getById(data.user.id);
-          if (profile && onLogin) onLogin(normaliseProfile(profile));
-        } catch {}
-      }
-      // Force page reload so nav and all state reflects logged-in user
+      // Reload immediately — onAuthStateChange will pick up the session
       window.location.reload();
     } catch (e) {
       showToast(e.message || "Login failed", "red");
-    } finally { setBusy(false); }
+      setBusy(false);
+    }
   };
 
   const register = async () => {
