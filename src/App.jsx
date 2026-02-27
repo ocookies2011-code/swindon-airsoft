@@ -3079,7 +3079,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 // ── Admin Dashboard ───────────────────────────────────────
 function AdminDash({ data, setSection }) {
   const allBookings = data.events.flatMap(e => e.bookings);
-  const revenue = allBookings.reduce((s, b) => s + b.total, 0);
+  const revenue = allBookings.filter(b => !b.paypalOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
   const checkins = allBookings.filter(b => b.checkedIn).length;
   const players = data.users.filter(u => u.role === "player").length;
   const unsigned = data.users.filter(u => u.role === "player" && !u.waiverSigned).length;
@@ -3192,7 +3192,8 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
   const confirmDelete = async () => {
     setBusy(true);
     try {
-      await api.bookings.delete(delConfirm.id);
+      const { error } = await supabase.from('bookings').delete().eq('id', delConfirm.id);
+      if (error) throw new Error(error.message);
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("Booking deleted!");
@@ -3574,7 +3575,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         const price = v ? Number(v.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
         return s + price * qty;
       }, 0);
-      const total = ticketPrice * addBookingForm.qty + extrasTotal;
       await api.bookings.create({
         eventId: targetEv.id,
         userId: player.id,
@@ -3582,8 +3582,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         type: addBookingForm.type,
         qty: addBookingForm.qty,
         extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)),
-        total,
-        paypalOrderId: "ADMIN-" + Date.now(),
+        total: 0, // Manual bookings don't count toward revenue
+        paypalOrderId: "ADMIN-MANUAL-" + Date.now(),
       });
       const evList = await api.events.getAll();
       save({ events: evList });
