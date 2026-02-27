@@ -2599,9 +2599,24 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 
   const [edit, setEdit] = useState({
     name: cu.name,
+    email: cu.email || "",
     phone: cu.phone || "",
     ...parseAddress(cu.address),
   });
+  const [emailSaving, setEmailSaving] = useState(false);
+
+  const changeEmail = async () => {
+    if (!edit.email || !edit.email.includes("@")) { showToast("Valid email required", "red"); return; }
+    setEmailSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: edit.email });
+      if (error) throw error;
+      await updateUser(cu.id, { email: edit.email });
+      showToast("Check your new email for a confirmation link!");
+    } catch (e) {
+      showToast("Email update failed: " + e.message, "red");
+    } finally { setEmailSaving(false); }
+  };
   const setAddr = (field, val) => setEdit(p => ({ ...p, [field]: val }));
 
   const [waiverModal, setWaiverModal] = useState(false);
@@ -2661,6 +2676,14 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
           <div className="form-row">
             <div className="form-group"><label>Full Name</label><input value={edit.name} onChange={e => setEdit(p => ({ ...p, name: e.target.value }))} /></div>
             <div className="form-group"><label>Phone</label><input value={edit.phone} onChange={e => setEdit(p => ({ ...p, phone: e.target.value }))} placeholder="07700 000000" /></div>
+          </div>
+          <div className="form-group">
+            <label>Email Address</label>
+            <div className="gap-2">
+              <input value={edit.email} onChange={e => setEdit(p => ({ ...p, email: e.target.value }))} placeholder="your@email.com" type="email" style={{ flex: 1 }} />
+              <button className="btn btn-ghost btn-sm" onClick={changeEmail} disabled={emailSaving} style={{ flexShrink: 0 }}>{emailSaving ? "Saving..." : "Update Email"}</button>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Changing your email requires confirmation via a link sent to your new address.</div>
           </div>
 
           <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>Delivery Address</div>
