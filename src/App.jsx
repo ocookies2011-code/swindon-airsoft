@@ -1444,20 +1444,16 @@ async function ensureEmailJS() {
 }
 
 async function sendEmail({ toEmail, toName, subject, htmlContent }) {
-  if (!toEmail) { console.warn("sendEmail: no email address"); return; }
-  try {
-    await ensureEmailJS();
-    const result = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     toEmail,
-      to_name:      toName || "",
-      subject:      subject,
-      html_content: htmlContent,
-    });
-    console.log("Email sent:", result.status, result.text, "→", toEmail);
-  } catch (err) {
-    console.error("Email send failed:", err);
-    throw err;
-  }
+  if (!toEmail) { console.warn("sendEmail: no email address provided"); throw new Error("No email address"); }
+  console.log("sendEmail: attempting to send to", toEmail);
+  await ensureEmailJS();
+  const result = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    to_email:     toEmail,
+    to_name:      toName || "",
+    subject:      subject,
+    html_content: htmlContent,
+  });
+  console.log("sendEmail: success", result.status, result.text, "→", toEmail);
 }
 
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
@@ -1708,10 +1704,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             .order('created_at', { ascending: false }).limit(2);
           const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: b.total }));
           if (emailBookings.length > 0) {
-            sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
+            await sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
+            showToast("📧 Confirmation email sent!");
+          } else {
+            console.warn("No bookings found for email");
           }
         } catch (emailErr) {
-          console.warn("Ticket email failed (non-fatal):", emailErr);
+          console.error("Ticket email failed:", emailErr);
+          showToast("Booking confirmed but email failed: " + (emailErr?.message || String(emailErr)), "gold");
         }
 
         // Background: deduct stock (non-blocking)
@@ -3725,9 +3725,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           .order('created_at', { ascending: false }).limit(2);
         const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: 0 }));
         if (emailBookings.length > 0) {
-          sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
+          await sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
+          showToast("📧 Confirmation email sent to " + (player.email || player.name));
         }
-      } catch (emailErr) { console.warn("Ticket email failed:", emailErr); }
+      } catch (emailErr) {
+        console.error("Ticket email failed:", emailErr);
+        showToast("Booking added but email failed: " + (emailErr?.message || String(emailErr)), "gold");
+      }
     } catch (e) {
       showToast("Failed: " + (e.message || String(e)), "red");
     } finally {
