@@ -1698,19 +1698,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
         // Send ticket email with real booking IDs
         try {
-          console.log("EMAIL DEBUG: cu.email=", cu.email, "cu.id=", cu.id, "ev.id=", ev.id);
-          const { data: freshBookings, error: fbErr } = await supabase
+          const { data: freshBookings } = await supabase
             .from('bookings').select('id, type, qty, total')
             .eq('user_id', cu.id).eq('event_id', ev.id)
             .order('created_at', { ascending: false }).limit(2);
-          console.log("EMAIL DEBUG: freshBookings=", freshBookings, "error=", fbErr);
           const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: b.total }));
           if (emailBookings.length > 0) {
             await sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
             showToast("📧 Confirmation email sent!");
           } else {
-            console.warn("EMAIL DEBUG: No bookings found for email");
-            showToast("Booking confirmed but no bookings found for email", "gold");
+            console.warn("No bookings found for email");
           }
         } catch (emailErr) {
           console.error("Ticket email failed:", emailErr);
@@ -3692,6 +3689,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const submitAddBooking = async () => {
     const targetEv = data.events.find(e => e.id === evId);
     const player = data.users.find(u => u.id === addBookingForm.userId);
+    console.log("MANUAL BOOKING: player=", player?.name, "email=", player?.email, "event=", targetEv?.title);
     if (!player) { showToast("Select a player", "red"); return; }
     if (!targetEv) { showToast("Select an event", "red"); return; }
     setAddBookingBusy(true);
