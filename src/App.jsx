@@ -2630,9 +2630,17 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   const gamesAttended = Math.max(cu.gamesAttended || 0, actualGamesAttended);
   const canApplyVip = gamesAttended >= 3 && cu.vipStatus === "none" && !cu.vipApplied;
 
-  const handlePic = (e) => {
+  const [picUploading, setPicUploading] = useState(false);
+  const handlePic = async (e) => {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = (ev) => updateUser(cu.id, { profilePic: ev.target.result }); r.readAsDataURL(file);
+    setPicUploading(true);
+    try {
+      const url = await api.profiles.uploadProfilePic(cu.id, file);
+      updateUser(cu.id, { profilePic: url });
+      showToast("Profile picture updated!");
+    } catch (err) {
+      showToast("Upload failed: " + err.message, "red");
+    } finally { setPicUploading(false); }
   };
 
   const saveProfile = () => {
@@ -2652,8 +2660,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
             <div style={{ width: 64, height: 64, borderRadius: "50%", border: "2px solid var(--accent)", overflow: "hidden", background: "var(--bg4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700 }}>
               {cu.profilePic ? <img src={cu.profilePic} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : cu.name[0]}
             </div>
-            <label style={{ position: "absolute", bottom: 0, right: 0, background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 12 }}>
-              📷<input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePic} />
+            <label style={{ position: "absolute", bottom: 0, right: 0, background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: picUploading ? "wait" : "pointer", fontSize: 12, opacity: picUploading ? 0.6 : 1 }}>
+              {picUploading ? "⏳" : "📷"}<input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePic} disabled={picUploading} />
             </label>
           </div>
           <div>
