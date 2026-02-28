@@ -2395,9 +2395,8 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
 
           {/* Description */}
-          <p style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}>
-            {item.description || "No description available."}
-          </p>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}
+            dangerouslySetInnerHTML={{ __html: renderMd(item.description) || "No description available." }} />
 
           {/* Variant selector */}
           {hasVariants && (
@@ -4902,93 +4901,6 @@ function AdminOrders({ showToast }) {
 }
 
 // ── Admin Shop ─────────────────────────────────────────────
-// ── Rich Text Description Editor ─────────────────────────────
-function RichDescEditor({ value, onChange }) {
-  const taRef = useRef(null);
-  const [showPreview, setShowPreview] = useState(false);
-
-  const wrap = (before, after, placeholder) => {
-    const ta = taRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = value.slice(start, end) || placeholder;
-    const newVal = value.slice(0, start) + before + selected + after + value.slice(end);
-    onChange(newVal);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
-    }, 0);
-  };
-
-  const insertLine = (prefix) => {
-    const ta = taRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const nlChar = "\n";
-    const lineStart = value.lastIndexOf(nlChar, start - 1) + 1;
-    const lineEndIdx = value.indexOf(nlChar, start);
-    const end = lineEndIdx === -1 ? value.length : lineEndIdx;
-    const line = value.slice(lineStart, end);
-    const already = line.startsWith(prefix);
-    const newLine = already ? line.slice(prefix.length) : prefix + line;
-    const newVal = value.slice(0, lineStart) + newLine + value.slice(end);
-    onChange(newVal);
-    setTimeout(() => { ta.focus(); ta.setSelectionRange(lineStart + newLine.length, lineStart + newLine.length); }, 0);
-  };
-
-  const renderPreview = (md) => {
-    return md
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/^## (.+)$/gm, "<strong style='font-size:15px;color:#fff;display:block;margin:8px 0 4px'>$1</strong>")
-      .replace(/^### (.+)$/gm, "<strong style='font-size:13px;color:#ddd;display:block;margin:6px 0 2px'>$1</strong>")
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      .replace(/^- (.+)$/gm, "<div style='display:flex;gap:6px;margin:2px 0'><span style='color:var(--accent)'>&#8226;</span><span>$1</span></div>")
-      .replace(/^\d+\. (.+)$/gm, "<div style='margin:2px 0'>$1</div>")
-      .replace(/^---$/gm, "<hr style='border:none;border-top:1px solid #333;margin:8px 0'>")
-      .replace(/\n/g, "<br>");
-  };
-
-  const tools = [
-    { label: "B",  title: "Bold",         style: { fontWeight: 900 },        action: () => wrap("**", "**", "bold text") },
-    { label: "I",  title: "Italic",        style: { fontStyle: "italic" },    action: () => wrap("*", "*", "italic text") },
-    { label: "H2", title: "Heading",       style: { fontWeight: 700 },        action: () => insertLine("## ") },
-    { label: "•",  title: "Bullet list",   style: { fontSize: 16 },           action: () => insertLine("- ") },
-    { label: "1.", title: "Numbered list", style: { fontFamily: "monospace" },action: () => insertLine("1. ") },
-    { label: "—",  title: "Divider",       style: {},                         action: () => onChange(value + "\n\n---\n\n") },
-  ];
-
-  return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
-      <div style={{ background: "#0d0d0d", borderBottom: "1px solid var(--border)", padding: "6px 8px", display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-        {tools.map(t => (
-          <button key={t.label} type="button" title={t.title} onClick={t.action}
-            style={{ ...t.style, background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#ccc", padding: "3px 8px", fontSize: 12, borderRadius: 3, cursor: "pointer", minWidth: 28, lineHeight: "1.4" }}>
-            {t.label}
-          </button>
-        ))}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-          {["EDIT","PREVIEW"].map(mode => (
-            <button key={mode} type="button" onClick={() => setShowPreview(mode === "PREVIEW")}
-              style={{ background: (showPreview ? mode==="PREVIEW" : mode==="EDIT") ? "var(--accent)" : "#1a1a1a", border: "1px solid #2a2a2a", color: (showPreview ? mode==="PREVIEW" : mode==="EDIT") ? "#000" : "#aaa", padding: "3px 10px", fontSize: 11, borderRadius: 3, cursor: "pointer", fontWeight: 700 }}>
-              {mode}
-            </button>
-          ))}
-        </div>
-      </div>
-      {showPreview ? (
-        <div style={{ minHeight: 160, padding: "12px 14px", fontSize: 13, color: "#ccc", lineHeight: 1.7, background: "#111" }}
-          dangerouslySetInnerHTML={{ __html: renderPreview(value) || '<span style="color:#444">Nothing to preview</span>' }} />
-      ) : (
-        <textarea ref={taRef} rows={8} value={value} onChange={e => onChange(e.target.value)}
-          placeholder={"Describe the product...\n\nUse the toolbar above to add bold, italic, headings, bullet lists etc."}
-          style={{ width: "100%", background: "#111", border: "none", color: "var(--text)", padding: "12px 14px", fontSize: 13, fontFamily: "inherit", lineHeight: 1.7, resize: "vertical", outline: "none", display: "block", minHeight: 160 }} />
-      )}
-    </div>
-  );
-}
-
 function AdminShop({ data, save, showToast }) {
   const [tab, setTab] = useState("products");
   const [modal, setModal] = useState(null);
@@ -5163,10 +5075,7 @@ function AdminShop({ data, save, showToast }) {
 
             <div className="form-row">
               <div className="form-group"><label>Name</label><input value={form.name} onChange={e => f("name", e.target.value)} /></div>
-              <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                <label>Description <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 11 }}>supports **bold**, *italic*, ## headings, - lists</span></label>
-                <RichDescEditor value={form.description || ""} onChange={v => f("description", v)} />
-              </div>
+              <div className="form-group"><label>Description</label><input value={form.description} onChange={e => f("description", e.target.value)} /></div>
             </div>
 
             {/* Base price + stock — only relevant if no variants */}
