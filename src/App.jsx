@@ -471,38 +471,21 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .admin-shell{display:flex;min-height:100vh;}
 .admin-sidebar{width:var(--sidebar-w);background:#0a0a0a;border-right:1px solid #1a1a1a;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50;transition:transform .25s;}
 .admin-main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
-.admin-topbar{background:#0d0d0d;border-bottom:1px solid #1a1a1a;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
+.admin-topbar{background:#0d0d0d;border-bottom:1px solid #1a1a1a;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
 .admin-content{padding:20px;flex:1;}
 .sb-logo{padding:16px 14px 14px;border-bottom:1px solid #1a1a1a;margin-bottom:6px;}
 .sb-logo-text{font-size:16px;font-weight:900;letter-spacing:.1em;font-family:'Barlow Condensed',sans-serif;color:#fff;text-transform:uppercase;}
 .sb-logo-text span{color:var(--accent);}
 .sb-time{font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-top:3px;}
 .sb-label{font-size:9px;font-weight:700;letter-spacing:.2em;color:#333;padding:10px 12px 4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
-.sb-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);transition:all .1s;border-left:2px solid transparent;margin-bottom:1px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);transition:all .1s;border-left:2px solid transparent;margin-bottom:1px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;}
 .sb-item:hover{background:#1a1a1a;color:#fff;}
 .sb-item.active{background:rgba(200,255,0,.05);color:var(--accent);border-left-color:var(--accent);}
-.sb-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.sb-icon{font-size:14px;flex-shrink:0;width:18px;text-align:center;}
 .sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;border-radius:2px;}
 .sb-badge.gold{background:var(--gold);color:#000;}
 .sb-badge.blue{background:var(--blue);}
 .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:49;}
-/* Mobile admin */
-@media(max-width:768px){
-  .admin-sidebar{transform:translateX(-100%);}
-  .admin-sidebar.open{transform:translateX(0);}
-  .admin-main{margin-left:0;}
-  .admin-content{padding:12px;}
-  .admin-overlay.open{display:block;}
-  .card{padding:14px;}
-  .data-table th,.data-table td{padding:8px 6px;font-size:11px;}
-  .page-header{flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:12px;}
-  .page-title{font-size:20px;}
-  .form-row{grid-template-columns:1fr;}
-  .modal-box{padding:16px;}
-  .btn{padding:9px 14px;font-size:12px;}
-  .gap-2{flex-wrap:wrap;}
-  .table-wrap{-webkit-overflow-scrolling:touch;overflow-x:auto;}
-}
 
 /* ── BAR CHART ── */
 .bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;}
@@ -519,16 +502,12 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 
 /* ── QR SCANNER ── */
-.qr-scanner-wrap{position:relative;width:100%;max-width:400px;margin:0 auto;}
-.qr-scanner-wrap video{width:100%;display:block;border-radius:4px;}
-.qr-overlay{position:absolute;inset:0;pointer-events:none;}
-.qr-corner{position:absolute;width:28px;height:28px;border-color:var(--accent);border-style:solid;}
-.qr-corner.tl{top:10px;left:10px;border-width:3px 0 0 3px;}
-.qr-corner.tr{top:10px;right:10px;border-width:3px 3px 0 0;}
-@media(max-width:768px){
-  .qr-scanner-wrap{max-width:100%;}
-  .qr-scanner-wrap video{border-radius:0;}
-}
+.qr-scanner-wrap{position:relative;width:100%;max-width:340px;margin:0 auto;}
+.qr-scanner-wrap video{width:100%;display:block;}
+.qr-overlay{position:absolute;inset:0;border:2px solid var(--accent);pointer-events:none;}
+.qr-corner{position:absolute;width:20px;height:20px;border-color:var(--accent);border-style:solid;}
+.qr-corner.tl{top:8px;left:8px;border-width:3px 0 0 3px;}
+.qr-corner.tr{top:8px;right:8px;border-width:3px 3px 0 0;}
 .qr-corner.bl{bottom:8px;left:8px;border-width:0 0 3px 3px;}
 .qr-corner.br{bottom:8px;right:8px;border-width:0 3px 3px 0;}
 
@@ -769,39 +748,25 @@ function QRScanner({ onScan, onClose }) {
   }, [scanning, onScan]);
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#000", zIndex:200, display:"flex", flexDirection:"column" }} onClick={onClose}>
-      <div style={{ background:"#0d0d0d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid #1a1a1a", flexShrink:0 }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".1em", color:"#fff" }}>📷 SCAN QR CODE</div>
-        <button className="btn btn-ghost btn-sm" onClick={onClose}>✕ Cancel</button>
-      </div>
-      <div style={{ flex:1, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }} onClick={e => e.stopPropagation()}>
+    <div className="overlay" onClick={onClose} style={{ alignItems: "flex-start" }}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ position: "sticky", top: 0 }}>
+        <div className="modal-title">📷 Scan QR Code</div>
         {error ? (
-          <div style={{ padding:24, textAlign:"center" }}>
-            <div style={{ fontSize:40, marginBottom:16 }}>📵</div>
-            <div className="alert alert-red">{error}</div>
-            <button className="btn btn-ghost mt-2" onClick={onClose}>Close</button>
-          </div>
+          <div className="alert alert-red">{error}</div>
         ) : (
-          <>
-            <video ref={videoRef} muted playsInline style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-            <canvas ref={canvasRef} style={{ display:"none" }} />
-            {/* Targeting overlay */}
-            <div style={{ position:"absolute", inset:0, pointerEvents:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <div style={{ width:220, height:220, position:"relative" }}>
-                {/* Corner markers */}
-                {[["0","0","3px 0 0 3px"],["0","auto","3px 3px 0 0"],["auto","0","0 0 3px 3px"],["auto","auto","0 3px 3px 0"]].map(([t,r,b],i) => (
-                  <div key={i} style={{ position:"absolute", width:32, height:32, top:["0","0","auto","auto"][i], right:["auto","0","auto","0"][i], bottom:["auto","auto","0","0"][i], left:["0","auto","0","auto"][i], borderColor:"var(--accent)", borderStyle:"solid", borderWidth:["3px 0 0 3px","3px 3px 0 0","0 0 3px 3px","0 3px 3px 0"][i] }} />
-                ))}
-                {/* Scan line animation */}
-                <div style={{ position:"absolute", left:0, right:0, height:2, background:"var(--accent)", opacity:.8, animation:"scanline 2s linear infinite" }} />
-              </div>
+          <div className="qr-scanner-wrap">
+            <video ref={videoRef} muted playsInline style={{ width: "100%", borderRadius: 8 }} />
+            <div className="qr-overlay">
+              <div className="qr-corner tl" /><div className="qr-corner tr" />
+              <div className="qr-corner bl" /><div className="qr-corner br" />
             </div>
-            <style>{`@keyframes scanline{0%{top:0;}100%{top:100%;}}`}</style>
-          </>
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+          </div>
         )}
-      </div>
-      <div style={{ background:"#0d0d0d", padding:"12px 16px", textAlign:"center", borderTop:"1px solid #1a1a1a", flexShrink:0 }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize:12, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>Point camera at player's booking QR code</div>
+        <p className="text-muted" style={{ fontSize: 12, marginTop: 12, textAlign: "center" }}>
+          Point camera at player's booking QR code
+        </p>
+        <button className="btn btn-ghost mt-2" style={{ width: "100%" }} onClick={onClose}>Cancel</button>
       </div>
     </div>
   );
@@ -3212,15 +3177,13 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
       {/* Main */}
       <div className="admin-main">
         <div className="admin-topbar">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 12px", borderRadius: 4, fontSize: 18, lineHeight:1, flexShrink:0 }}>☰</button>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".1em" }}>
-              {NAV.find(n => n.id === section)?.icon} {NAV.find(n => n.id === section)?.label || "ADMIN"}
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text)", padding: "5px 10px", borderRadius: 6, fontSize: 16 }}>☰</button>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>⚙ ADMIN</div>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div className="gap-2" style={{ alignItems: "center" }}>
             <GmtClock />
-            <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")} style={{ whiteSpace:"nowrap" }}>← Site</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")}>← Site</button>
           </div>
         </div>
         <div className="admin-content">
@@ -4299,7 +4262,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   // Wrapper that updates DB then refreshes localUsers
   const updateUserAndRefresh = async (id, patch) => {
     await updateUser(id, patch);
-    await loadUsers(); // pull fresh data so VIP tab updates immediately
+    loadUsers().catch(() => {}); // refresh in background — non-blocking
   };
 
   // Use local (fresh) users if available, fall back to global data.users
@@ -4321,13 +4284,16 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         delete_request: edit.deleteRequest || false,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
-      // Update local state
-      updateUser(edit.id, edit);
+      // Update local state directly — no reload needed
+      setData(prev => {
+        if (!prev) return prev;
+        const users = (prev.users || []).map(u => u.id === edit.id ? { ...u, ...edit } : u);
+        return { ...prev, users };
+      });
       showToast("Player updated!");
       setEdit(null);
     } catch (e) {
       showToast("Save failed: " + e.message, "red");
-      console.error("saveEdit failed:", e);
     }
   };
 
