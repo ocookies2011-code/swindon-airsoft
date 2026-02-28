@@ -2371,7 +2371,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             {[
               { label:"STOCK", val: hasVariants ? `${item.stock} total` : `${item.stock} units` },
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
-              { label:"STATUS", val: item.stock > 0 ? "IN STOCK" : "OUT OF STOCK" },
+              { label:"STATUS", val: stockLabel(item.stock).text },
             ].map(s => (
               <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
                 <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
@@ -2388,15 +2388,16 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             {item.noPost && <span className="tag tag-gold">⚠️ Collect Only</span>}
             {item.onSale && !hasVariants && <span className="tag tag-red">ON SALE</span>}
             {hasVariants && <span className="tag tag-blue">{item.variants.length} variants</span>}
-            {item.stock > 0 ? <span className="tag tag-green">IN STOCK</span> : <span className="tag tag-red">OUT OF STOCK</span>}
+            {(() => { const sl = stockLabel(item.stock); return <span style={{ background:"#000", color:sl.color, fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".15em", border:`1px solid ${sl.color}` }}>{sl.text}</span>; })()}
           </div>
 
           {/* Name */}
           <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
 
           {/* Description */}
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}
-            dangerouslySetInnerHTML={{ __html: renderMd(item.description) || "No description available." }} />
+          <p style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}>
+            {item.description || "No description available."}
+          </p>
 
           {/* Variant selector */}
           {hasVariants && (
