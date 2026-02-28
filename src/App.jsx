@@ -2395,10 +2395,11 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           </div>
 
           {/* Spec strip */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, marginTop:2 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:1, marginTop:2 }}>
             {[
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
               { label:"AVAILABILITY", val: stockLabel(item.stock).text, color: stockLabel(item.stock).color },
+              { label:"STATUS", val: item.stock > 0 ? "IN STOCK" : "OUT OF STOCK", color: item.stock > 0 ? "var(--accent)" : "var(--red)" },
             ].map(s => (
               <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
                 <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
