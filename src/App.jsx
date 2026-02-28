@@ -2580,8 +2580,8 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:1, marginTop:2 }}>
             {[
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
-              { label:"AVAILABILITY", val: stockLabel(stockAvail).text, color: stockLabel(stockAvail).color },
-              { label:"STATUS", val: stockAvail > 0 ? "IN STOCK" : "OUT OF STOCK", color: stockAvail > 0 ? "var(--accent)" : "var(--red)" },
+              { label:"AVAILABILITY", val: stockLabel(item.stock).text, color: stockLabel(item.stock).color },
+              { label:"STATUS", val: item.stock > 0 ? "IN STOCK" : "OUT OF STOCK", color: item.stock > 0 ? "var(--accent)" : "var(--red)" },
             ].map(s => (
               <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
                 <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
@@ -3235,22 +3235,31 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
               {waiverValid ? <span className="tag tag-green">✓ Signed {cu.waiverYear}</span> : <span className="tag tag-red">✗ Not Signed</span>}
             </div>
             {waiverValid
-              ? <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
-                  <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>+ Add Player Waiver</button>
-                </div>
+              ? <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
               : <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>}
           </div>
           {cu.waiverPending && <div className="alert alert-gold">⏳ Changes submitted — awaiting admin approval</div>}
-          {cu.waiverData && (
-            <div style={{ marginTop: 12 }}>
-              {[["Name", cu.waiverData.name], ["DOB", cu.waiverData.dob], ["Medical", cu.waiverData.medical || "None"], ["Signed", gmtShort(cu.waiverData.date)]].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
-                  <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span><span>{v}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {cu.waiverData && (() => {
+            const allWaivers = [cu.waiverData, ...(cu.extraWaivers || [])];
+            return (
+              <div style={{ marginTop: 12 }}>
+                {allWaivers.map((w, i) => (
+                  <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 16 : 0 }}>
+                    {allWaivers.length > 1 && (
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:4 }}>
+                        PLAYER {i + 1}{i === 0 ? " (PRIMARY)" : ""}
+                      </div>
+                    )}
+                    {[["Name", w.name], ["DOB", w.dob], ["Medical", w.medical || "None"], ["Signed", gmtShort(w.date)]].map(([k, v]) => (
+                      <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+                        <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span><span>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           {waiverModal && <WaiverModal cu={cu} updateUser={updateUser} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} />}
         </div>
       )}
