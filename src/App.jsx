@@ -785,11 +785,10 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     if (!form.email || !form.password) { showToast("Email and password required", "red"); return; }
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+      const { error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
       if (error) throw error;
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-      if (profile) onLogin(profile);
-      onClose();
+      // Reload immediately — onAuthStateChange will pick up the session
+      window.location.reload();
     } catch (e) {
       showToast(e.message || "Login failed", "red");
       setBusy(false);
@@ -4269,11 +4268,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
       // Update local state directly — no reload needed
-      setData(prev => {
-        if (!prev) return prev;
-        const users = (prev.users || []).map(u => u.id === edit.id ? { ...u, ...edit } : u);
-        return { ...prev, users };
-      });
+      save({ users: (data.users || []).map(u => u.id === edit.id ? { ...u, ...edit } : u) });
       showToast("Player updated!");
       setEdit(null);
     } catch (e) {
