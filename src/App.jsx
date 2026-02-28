@@ -23,14 +23,6 @@ function renderMd(md) {
 }
 
 
-function stockLabel(qty) {
-  const n = Number(qty);
-  if (n < 1)  return { text: "OUT OF STOCK", color: "var(--red)" };
-  if (n < 10) return { text: "LOW STOCK",    color: "var(--gold)" };
-  if (n < 20) return { text: "MED STOCK",    color: "#4fc3f7" };
-  return        { text: "IN STOCK",      color: "var(--accent)" };
-}
-
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
 const PAYMENT_LIVE = PAYPAL_CLIENT_ID && !PAYPAL_CLIENT_ID.includes("YOUR_LIVE");
 
@@ -864,322 +856,65 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     </div>
   );
 }
-function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, onExtraWaiversSigned }) {
-  const TERMS = [
-    "I understand that airsoft is a physical activity that carries inherent risks of injury.",
-    "I will wear appropriate eye protection at all times during gameplay.",
-    "I agree to follow all safety rules and marshal instructions.",
-    "I confirm that I am at least 18 years of age or have parental/guardian consent.",
-    "I will not consume alcohol or drugs before or during gameplay.",
-    "I release Swindon Airsoft and its staff from liability for any injuries sustained during play.",
-    "I understand that my participation is voluntary and at my own risk.",
-    "I agree to treat all participants with respect and follow the site's code of conduct.",
-    "I confirm that any replica firearms I bring to the site are legal to own in the UK.",
-    "I understand that failure to comply with safety rules may result in removal from the site.",
-  ];
-
-  const blankForm = () => ({
-    name: "", dob: "", addr1: "", addr2: "", city: "", county: "", postcode: "", country: "United Kingdom",
-    emergencyName: "", emergencyPhone: "", medical: "", isChild: false, guardian: "", sigData: "", agreed: false,
-  });
-
+function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing }) {
   const e = editMode && existing ? existing : {};
-  const [waivers, setWaivers] = useState([{
-    name: e.name || cu?.name || "", dob: e.dob || "",
-    addr1: e.addr1 || cu?.address?.split("\n")[0] || "",
-    addr2: e.addr2 || cu?.address?.split("\n")[1] || "",
-    city: e.city || "", county: e.county || "", postcode: e.postcode || "", country: e.country || "United Kingdom",
-    emergencyName: e.emergencyName || "", emergencyPhone: e.emergencyPhone || "",
-    medical: e.medical || "", isChild: e.isChild || false, guardian: e.guardian || "",
-    sigData: e.sigData || "", agreed: false,
-  }]);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const canvasRef = useRef(null);
-  const [drawing, setDrawing] = useState(false);
-
-  const fw = (k, v) => setWaivers(ws => ws.map((w, i) => i === activeIdx ? { ...w, [k]: v } : w));
-  const active = waivers[activeIdx];
-
-  const addWaiver = () => {
-    setWaivers(ws => [...ws, blankForm()]);
-    setActiveIdx(waivers.length);
-  };
-  const removeWaiver = (idx) => {
-    if (waivers.length === 1) return;
-    setWaivers(ws => ws.filter((_, i) => i !== idx));
-    setActiveIdx(Math.max(0, activeIdx - 1));
-  };
-
-  // Signature canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (active.sigData) {
-      const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0);
-      img.src = active.sigData;
-    }
-  }, [activeIdx, active.sigData]);
-
-  const getPos = (e, canvas) => {
-    const r = canvas.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - r.left, y: src.clientY - r.top };
-  };
-
-  const startDraw = (e) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    const pos = getPos(e, canvas);
-    ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
-    setDrawing(true);
-  };
-  const draw = (e) => {
-    if (!drawing) return;
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#c8ff00";
-    const pos = getPos(e, canvas);
-    ctx.lineTo(pos.x, pos.y); ctx.stroke();
-  };
-  const endDraw = () => {
-    if (!drawing) return;
-    setDrawing(false);
-    const canvas = canvasRef.current;
-    fw("sigData", canvas.toDataURL());
-  };
-  const clearSig = () => {
-    const canvas = canvasRef.current;
-    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-    fw("sigData", "");
-  };
+  const [form, setForm] = useState({
+    name: e.name || cu?.name || "", dob: e.dob || "", fps: e.fps || false,
+    medical: e.medical || "", isChild: e.isChild || false, guardian: e.guardian || "", agreed: false
+  });
+  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const submit = () => {
-    for (let i = 0; i < waivers.length; i++) {
-      const w = waivers[i];
-      if (!w.name) { showToast(`Waiver ${i+1}: Full name required`, "red"); setActiveIdx(i); return; }
-      if (!w.dob)  { showToast(`Waiver ${i+1}: Date of birth required`, "red"); setActiveIdx(i); return; }
-      if (!w.addr1 || !w.city || !w.postcode) { showToast(`Waiver ${i+1}: Address required`, "red"); setActiveIdx(i); return; }
-      if (!w.emergencyName || !w.emergencyPhone) { showToast(`Waiver ${i+1}: Emergency contact required`, "red"); setActiveIdx(i); return; }
-      if (!w.sigData) { showToast(`Waiver ${i+1}: Signature required`, "red"); setActiveIdx(i); return; }
-      if (!w.agreed) { showToast(`Waiver ${i+1}: Please agree to the terms`, "red"); setActiveIdx(i); return; }
-      if (w.isChild && !w.guardian) { showToast(`Waiver ${i+1}: Guardian name required`, "red"); setActiveIdx(i); return; }
-    }
-    const primary = { ...waivers[0], signed: true, date: new Date().toISOString() };
-    const extras = waivers.slice(1).map(w => ({ ...w, signed: true, date: new Date().toISOString() }));
+    if (!form.dob) { showToast("Date of birth required", "red"); return; }
+    if (!form.agreed) { showToast("Please agree to the waiver terms", "red"); return; }
+    if (form.isChild && !form.guardian) { showToast("Guardian signature required for minors", "red"); return; }
+    const d = { ...form, signed: true, date: new Date().toISOString() };
     if (editMode) {
-      updateUser(cu.id, { waiverPending: { ...primary, pendingDate: new Date().toISOString() } });
+      updateUser(cu.id, { waiverPending: { ...d, pendingDate: new Date().toISOString() } });
       showToast("Changes submitted for admin approval");
     } else {
-      updateUser(cu.id, { waiverSigned: true, waiverYear: new Date().getFullYear(), waiverData: primary, waiverPending: null, extraWaivers: extras });
-      showToast(extras.length > 0 ? `${waivers.length} waivers signed!` : "Waiver signed successfully!");
+      updateUser(cu.id, { waiverSigned: true, waiverYear: new Date().getFullYear(), waiverData: d, waiverPending: null });
+      showToast("Waiver signed successfully!");
     }
     onClose();
   };
 
-  const downloadWaiver = (w, idx) => {
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Waiver - ${w.name}</title>
-<style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#222;}
-h1{font-size:28px;margin-bottom:4px;}h2{font-size:14px;color:#666;font-weight:normal;margin-bottom:24px;}
-.section{margin-bottom:20px;} .label{font-size:11px;font-weight:700;letter-spacing:.1em;color:#888;text-transform:uppercase;margin-bottom:2px;}
-.value{font-size:14px;padding:6px 0;border-bottom:1px solid #eee;}
-.terms{background:#f8f8f8;padding:16px;border-radius:4px;font-size:12px;line-height:1.8;}
-.sig{border:1px solid #ccc;border-radius:4px;padding:4px;}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-</style></head><body>
-<h1>🎯 PLAYER WAIVER</h1>
-<h2>Swindon Airsoft — ${new Date().getFullYear()}</h2>
-<div class="section grid">
-  <div><div class="label">Full Legal Name</div><div class="value">${w.name}</div></div>
-  <div><div class="label">Date of Birth</div><div class="value">${w.dob}</div></div>
-</div>
-<div class="section">
-  <div class="label">Address</div>
-  <div class="value">${[w.addr1,w.addr2,w.city,w.county,w.postcode,w.country].filter(Boolean).join(", ")}</div>
-</div>
-<div class="section grid">
-  <div><div class="label">Emergency Contact</div><div class="value">${w.emergencyName}</div></div>
-  <div><div class="label">Emergency Phone</div><div class="value">${w.emergencyPhone}</div></div>
-</div>
-${w.medical ? `<div class="section"><div class="label">Medical Conditions</div><div class="value">${w.medical}</div></div>` : ""}
-${w.isChild ? `<div class="section"><div class="label">Parent/Guardian</div><div class="value">${w.guardian}</div></div>` : ""}
-<div class="section">
-<div class="label">Terms &amp; Conditions Agreed</div>
-<div class="terms">${TERMS.map((t,i)=>`${i+1}. ${t}`).join("<br>")}</div>
-</div>
-<div class="section">
-  <div class="label">Signature</div>
-  ${w.sigData ? `<img class="sig" src="${w.sigData}" width="300" height="120" />` : "<div class='value'>No signature captured</div>"}
-</div>
-<div class="section">
-  <div class="label">Signed</div>
-  <div class="value">${w.date ? new Date(w.date).toLocaleString("en-GB") : new Date().toLocaleString("en-GB")}</div>
-</div>
-<p style="font-size:11px;color:#aaa;margin-top:32px;border-top:1px solid #eee;padding-top:12px;">This waiver is legally binding and valid until 31 December ${new Date().getFullYear()}.</p>
-</body></html>`;
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `waiver-${w.name.replace(/\s+/g,"-").toLowerCase()}.html`;
-    a.click(); URL.revokeObjectURL(url);
-  };
-
   return (
-    <div className="overlay" onClick={onClose} style={{ alignItems: "flex-start", paddingTop: 0 }}>
-      <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{ maxWidth: 820, margin: "0 auto", borderRadius: 0, minHeight: "100vh" }}>
-
-        {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, paddingBottom:16, borderBottom:"1px solid #1a1a1a" }}>
-          <span style={{ fontSize:28 }}>📋</span>
-          <div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".05em", textTransform:"uppercase" }}>
-              PLAYER <span style={{ color:"var(--accent)" }}>WAIVER</span>
-            </div>
-            <div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em" }}>{new Date().getFullYear()} · VALID UNTIL 31 DECEMBER {new Date().getFullYear()}</div>
-          </div>
-          <button onClick={onClose} style={{ marginLeft:"auto", background:"none", border:"none", color:"var(--muted)", fontSize:22, cursor:"pointer" }}>✕</button>
+    <div className="overlay" onClick={onClose}>
+      <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+        <div className="modal-title">📋 Liability Waiver {new Date().getFullYear()}</div>
+        <div className="alert alert-gold" style={{ marginBottom: 16 }}>
+          Valid for {new Date().getFullYear()} calendar year only. Re-signing required each January.
         </div>
-
-        {/* Important notice */}
-        <div className="alert alert-gold" style={{ marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
-          <span style={{ fontSize:18, flexShrink:0 }}>⚠️</span>
-          <div>
-            <div style={{ fontWeight:700, marginBottom:4 }}>Important Notice</div>
-            <div style={{ fontSize:13 }}>You must sign this waiver before participating in any game day. Waivers are valid for the current calendar year and expire on December 31st.</div>
-          </div>
+        <div className="form-row">
+          <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e => f("name", e.target.value)} /></div>
+          <div className="form-group"><label>Date of Birth</label><input type="date" value={form.dob} onChange={e => f("dob", e.target.value)} /></div>
         </div>
-
-        {/* Waiver tabs */}
-        {waivers.length > 1 && (
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:16 }}>
-            {waivers.map((w, i) => (
-              <button key={i} onClick={() => setActiveIdx(i)}
-                style={{ padding:"6px 14px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
-                  background: activeIdx === i ? "var(--accent)" : "#1a1a1a", color: activeIdx === i ? "#000" : "var(--muted)",
-                  border: "1px solid " + (activeIdx === i ? "var(--accent)" : "#333"), borderRadius:2, cursor:"pointer" }}>
-                {w.name || `Player ${i+1}`} {i > 0 && <span onClick={e => { e.stopPropagation(); removeWaiver(i); }} style={{ marginLeft:6, opacity:.6 }}>✕</span>}
-              </button>
-            ))}
-            <button onClick={addWaiver}
-              style={{ padding:"6px 14px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
-                background:"none", color:"var(--accent)", border:"1px dashed var(--accent)", borderRadius:2, cursor:"pointer" }}>
-              + Add Player
-            </button>
-          </div>
+        <div className="form-group"><label>Medical Conditions</label>
+          <textarea rows={2} value={form.medical} onChange={e => f("medical", e.target.value)} placeholder="List any relevant conditions, or type 'None'" /></div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+          <input type="checkbox" id="wchild" checked={form.isChild} onChange={e => f("isChild", e.target.checked)} />
+          <label htmlFor="wchild" style={{ cursor: "pointer", fontSize: 13 }}>This waiver is for a minor (under 18)</label>
+        </div>
+        {form.isChild && (
+          <div className="form-group"><label>Parent/Guardian Full Name (acts as signature)</label>
+            <input value={form.guardian} onChange={e => f("guardian", e.target.value)} placeholder="Type full name to sign" /></div>
         )}
-        {waivers.length === 1 && (
-          <div style={{ marginBottom:16, display:"flex", gap:8, alignItems:"center" }}>
-            <span style={{ fontSize:12, color:"var(--muted)" }}>Booking for additional players?</span>
-            <button onClick={addWaiver} style={{ padding:"4px 12px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".08em",
-              background:"none", color:"var(--accent)", border:"1px dashed var(--accent)", borderRadius:2, cursor:"pointer" }}>+ Add Player Waiver</button>
-          </div>
-        )}
-
-        {/* T&C box */}
-        <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:20, marginBottom:20 }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase", marginBottom:12 }}>
-            TERMS &amp; CONDITIONS
-          </div>
-          <div style={{ maxHeight:180, overflowY:"auto", paddingRight:8 }}>
-            <p style={{ fontSize:13, color:"#ccc", marginBottom:12 }}>By signing this waiver, I acknowledge and agree to the following:</p>
-            {TERMS.map((t, i) => (
-              <div key={i} style={{ display:"flex", gap:10, marginBottom:8, fontSize:13, color:"#aaa", lineHeight:1.5 }}>
-                <span style={{ color:"var(--accent)", fontWeight:700, flexShrink:0, minWidth:20 }}>{i+1}.</span>
-                <span>{t}</span>
-              </div>
-            ))}
-          </div>
+        <div style={{ background: "var(--bg4)", padding: 14, borderRadius: 6, fontSize: 12, color: "var(--muted)", lineHeight: 1.7, marginBottom: 14 }}>
+          I understand airsoft activities carry inherent risk of injury. I agree to follow all safety rules on site, wear mandatory eye protection at all times, and acknowledge that Zulu's Airsoft Ltd is not liable for injuries sustained during gameplay. I confirm all information is accurate and I am fit to participate.
         </div>
-
-        {/* Minor checkbox */}
-        <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:16, marginBottom:20, display:"flex", gap:12, alignItems:"flex-start" }}>
-          <input type="checkbox" id="wchild" checked={active.isChild} onChange={e => fw("isChild", e.target.checked)}
-            style={{ width:18, height:18, marginTop:2, accentColor:"var(--accent)", flexShrink:0 }} />
-          <div>
-            <label htmlFor="wchild" style={{ cursor:"pointer", fontWeight:700, fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
-              <span>⏱</span> I am under 18 years old
-            </label>
-            <div style={{ fontSize:12, color:"var(--muted)", marginTop:4 }}>If you are under 18, a parent or legal guardian must also sign this waiver.</div>
-          </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 18 }}>
+          <input type="checkbox" id="wagree" checked={form.agreed} onChange={e => f("agreed", e.target.checked)} />
+          <label htmlFor="wagree" style={{ cursor: "pointer", fontWeight: 700, fontSize: 13 }}>I agree to the above terms and conditions</label>
         </div>
-
-        {active.isChild && (
-          <div className="form-group" style={{ marginBottom:20 }}>
-            <label>Parent/Guardian Full Name *</label>
-            <input value={active.guardian} onChange={e => fw("guardian", e.target.value)} placeholder="Type full name to act as guardian signature" />
-          </div>
-        )}
-
-        {/* Personal details */}
-        <div className="form-row" style={{ marginBottom:16 }}>
-          <div className="form-group"><label>FULL LEGAL NAME *</label><input value={active.name} onChange={e => fw("name", e.target.value)} /></div>
-          <div className="form-group"><label>DATE OF BIRTH *</label><input type="date" value={active.dob} onChange={e => fw("dob", e.target.value)} /></div>
-        </div>
-
-        {/* Address */}
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:10 }}>ADDRESS</div>
-        <div className="form-group" style={{ marginBottom:12 }}><label>ADDRESS LINE 1 *</label><input value={active.addr1} onChange={e => fw("addr1", e.target.value)} /></div>
-        <div className="form-group" style={{ marginBottom:12 }}><label>ADDRESS LINE 2</label><input value={active.addr2} onChange={e => fw("addr2", e.target.value)} /></div>
-        <div className="form-row" style={{ marginBottom:12 }}>
-          <div className="form-group"><label>CITY *</label><input value={active.city} onChange={e => fw("city", e.target.value)} /></div>
-          <div className="form-group"><label>COUNTY</label><input value={active.county} onChange={e => fw("county", e.target.value)} /></div>
-        </div>
-        <div className="form-row" style={{ marginBottom:20 }}>
-          <div className="form-group"><label>POSTCODE *</label><input value={active.postcode} onChange={e => fw("postcode", e.target.value)} /></div>
-          <div className="form-group"><label>COUNTRY</label><input value={active.country} onChange={e => fw("country", e.target.value)} /></div>
-        </div>
-
-        {/* Emergency contact */}
-        <div className="form-row" style={{ marginBottom:20 }}>
-          <div className="form-group"><label>EMERGENCY CONTACT NAME *</label><input value={active.emergencyName} onChange={e => fw("emergencyName", e.target.value)} /></div>
-          <div className="form-group"><label>EMERGENCY CONTACT PHONE *</label><input value={active.emergencyPhone} onChange={e => fw("emergencyPhone", e.target.value)} /></div>
-        </div>
-
-        {/* Signature */}
-        <div style={{ marginBottom:20 }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-            <label style={{ display:"flex", alignItems:"center", gap:6, fontWeight:700, fontSize:11, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>
-              ✏️ SIGNATURE *
-            </label>
-            <button onClick={clearSig} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:18, padding:4 }} title="Clear signature">↺</button>
-          </div>
-          <canvas ref={canvasRef} width={600} height={150}
-            style={{ width:"100%", background:"#0d0d0d", border:"1px solid #333", borderRadius:4, cursor:"crosshair", touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw} />
-          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Draw your signature above using mouse or touch</div>
-        </div>
-
-        {/* Agree checkbox */}
-        <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:24, padding:16, background:"#111", border:"1px solid #2a2a2a", borderRadius:4 }}>
-          <input type="checkbox" id="wagree" checked={active.agreed} onChange={e => fw("agreed", e.target.checked)}
-            style={{ width:18, height:18, marginTop:2, accentColor:"var(--accent)", flexShrink:0 }} />
-          <label htmlFor="wagree" style={{ cursor:"pointer", fontSize:13, lineHeight:1.6 }}>
-            I have read and agree to the terms and conditions above. I understand that this waiver is legally binding and will be valid until December 31st of this year.
-          </label>
-        </div>
-
-        {/* Actions */}
-        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-          <button className="btn btn-primary" style={{ flex:1, padding:"12px", fontSize:14, letterSpacing:".1em" }} onClick={submit}>
-            {editMode ? "SUBMIT CHANGES" : `SIGN WAIVER${waivers.length > 1 ? ` (${waivers.length} PLAYERS)` : ""}`}
-          </button>
-          {active.sigData && (
-            <button className="btn btn-ghost" onClick={() => downloadWaiver({...active, date: new Date().toISOString()}, activeIdx)}
-              style={{ padding:"12px 18px" }} title="Download this waiver">
-              ⬇ Download
-            </button>
-          )}
+        <div className="gap-2">
+          <button className="btn btn-primary" onClick={submit}>{editMode ? "Submit Changes" : "Sign Waiver"}</button>
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
         </div>
       </div>
     </div>
   );
 }
-
 
 // ── Public Nav ────────────────────────────────────────────
 function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
@@ -2075,66 +1810,20 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               {myBookings.length > 0 && (
                 <div style={{ marginBottom:16 }}>
                   <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:8 }}>YOUR EXISTING BOOKINGS</div>
-                  {myBookings.map(b => {
-                    const ev = data.events.find(e => e.id === b.eventId) || {};
-                    const downloadTicket = () => {
-                      const dateStr = ev.date ? new Date(ev.date).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "";
-                      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(b.id)}`;
-                      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ticket - ${ev.title||"Event"}</title>
-<style>body{font-family:Arial,sans-serif;max-width:500px;margin:40px auto;padding:24px;background:#0a0a0a;color:#fff;}
-.header{text-align:center;margin-bottom:24px;border-bottom:2px solid #c8ff00;padding-bottom:16px;}
-.title{font-size:28px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;}
-.accent{color:#c8ff00;}.muted{color:#888;font-size:12px;}
-.ticket{background:#111;border:1px solid #333;border-radius:8px;padding:20px;margin:16px 0;display:flex;justify-content:space-between;align-items:center;}
-.label{font-size:10px;letter-spacing:.15em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:4px;}
-.val{font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;}
-.ref{font-size:10px;color:#555;margin-top:8px;font-family:monospace;}
-.qr{background:#fff;padding:6px;border-radius:4px;}
-footer{margin-top:24px;font-size:10px;color:#555;text-align:center;border-top:1px solid #222;padding-top:12px;}
-</style></head><body>
-<div class="header">
-  <div style="font-size:13px;letter-spacing:.2em;color:#c8ff00;margin-bottom:8px;">🎯 SWINDON AIRSOFT</div>
-  <div class="title">BOOKING <span class="accent">CONFIRMED</span></div>
-  <div class="muted" style="margin-top:8px;">${dateStr}</div>
-</div>
-<div style="margin-bottom:12px;"><div class="label">Event</div><div style="font-size:20px;font-weight:700;">${ev.title||"Event"}</div></div>
-${ev.location?`<div style="margin-bottom:12px;"><div class="label">Location</div><div style="font-size:14px;color:#ccc;">${ev.location}</div></div>`:""}
-<div class="ticket">
-  <div>
-    <div class="label">Ticket Type</div>
-    <div class="val">${b.type==="walkOn"?"Walk-On":"Rental"}</div>
-    <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty}${b.total>0?` &middot; &pound;${Number(b.total).toFixed(2)}`:" &middot; Complimentary"}</div>
-    <div class="ref">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
-  </div>
-  <div style="text-align:center;">
-    <img class="qr" src="${qrUrl}" width="120" height="120" alt="QR" />
-    <div class="muted" style="margin-top:4px;">Show on arrival</div>
-  </div>
-</div>
-<footer>This ticket is valid for the date shown above only. Booking ID: ${b.id}</footer>
-</body></html>`;
-                      const blob = new Blob([html], { type:"text/html" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url; a.download = `ticket-${(b.id||"ticket").slice(0,8)}.html`;
-                      a.click(); URL.revokeObjectURL(url);
-                    };
-                    return (
+                  {myBookings.map(b => (
                     <div key={b.id} style={{ background:"var(--bg4)", border:"1px solid #2a2a2a", borderLeft:"3px solid #7dc840", padding:"10px 14px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <div style={{ flex:1 }}>
+                      <div>
                         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, color:"#fff" }}>
                           {b.type === "walkOn" ? "🎯 Walk-On" : "🪖 Rental"} ×{b.qty}
                         </div>
                         <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>£{b.total.toFixed(2)} · ID: {b.id.slice(0,8)}</div>
-                        <button onClick={downloadTicket} style={{ marginTop:6, background:"none", border:"1px solid #333", color:"var(--accent)", fontSize:10, padding:"2px 8px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em" }}>⬇ DOWNLOAD TICKET</button>
                       </div>
                       <div style={{ textAlign:"right" }}>
                         <div style={{ fontSize:10, color:"var(--muted)", marginBottom:4 }}>Check-in QR</div>
                         <QRCode value={b.id} size={56} />
                       </div>
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               )}
 
@@ -2208,7 +1897,7 @@ ${ev.location?`<div style="margin-bottom:12px;"><div class="label">Location</div
                                   <div>
                                     <span style={{ fontSize:12, color:"var(--text)" }}>{v.name}</span>
                                     <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", marginLeft:10 }}>£{Number(v.price).toFixed(2)}</span>
-                                    <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginLeft:8 }}>{stockLabel(stock).text}</span>
+                                    <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginLeft:8 }}>{outOfStock ? "Out of stock" : `${stock} left`}</span>
                                   </div>
                                   <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111", flexShrink:0 }}>
                                     <button onClick={() => setExtra(ex.id, qty - 1, v.id)} disabled={qty === 0 || outOfStock} style={{ background:"none", border:"none", color:"var(--text)", padding:"5px 11px", cursor:"pointer", opacity: qty===0?0.3:1 }}>−</button>
@@ -2524,7 +2213,11 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             <div key={item.id} className="shop-card" style={{ cursor:"pointer" }} onClick={() => onProductClick(item)}>
               <div className="shop-img">
                 {item.image ? <img src={item.image} alt="" /> : <span style={{ fontSize:40 }}>🎯</span>}
-                {(() => { const sl = stockLabel(item.stock); return (<div style={{ position:"absolute", bottom:8, left:8 }}><span style={{ background:"rgba(0,0,0,.85)", color:sl.color, fontSize:10, fontWeight:800, padding:"3px 8px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em", border:"1px solid "+sl.color }}>{sl.text}</span></div>); })()}
+                {!inStock && (
+                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.65)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <span className="tag tag-red" style={{ fontSize:11 }}>OUT OF STOCK</span>
+                  </div>
+                )}
               </div>
               <div className="shop-body">
                 <div className="gap-2 mb-1">
@@ -2543,7 +2236,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                     {cu?.vipStatus === "active" && <span className="text-gold" style={{ fontSize:10, marginLeft:4 }}>VIP</span>}
                   </div>
                   <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                    {hasV ? `${item.variants.length} options` : stockLabel(item.stock).text}
+                    {hasV ? `${item.variants.length} options` : `Stock: ${item.stock}`}
                   </span>
                 </div>
                 <button className="btn btn-primary" style={{ width:"100%", padding:"8px", fontSize:12 }} disabled={!inStock}>
@@ -2692,13 +2385,13 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           {/* Spec strip */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:1, marginTop:2 }}>
             {[
+              { label:"STOCK", val: hasVariants ? `${item.stock} total` : `${item.stock} units` },
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
               { label:"AVAILABILITY", val: stockLabel(item.stock).text, color: stockLabel(item.stock).color },
-              { label:"STATUS", val: item.stock > 0 ? "IN STOCK" : "OUT OF STOCK" },
             ].map(s => (
               <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
                 <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
-                <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color: s.color || (s.label === "STATUS" ? (item.stock > 0 ? "#7dc840" : "var(--red)") : "var(--text)") }}>{s.val}</div>
+                <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color: s.color || "var(--text)" }}>{s.val}</div>
               </div>
             ))}
           </div>
@@ -2711,7 +2404,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             {item.noPost && <span className="tag tag-gold">⚠️ Collect Only</span>}
             {item.onSale && !hasVariants && <span className="tag tag-red">ON SALE</span>}
             {hasVariants && <span className="tag tag-blue">{item.variants.length} variants</span>}
-            {(() => { const sl = stockLabel(item.stock); return <span style={{ background:"rgba(0,0,0,.85)", color:sl.color, fontSize:10, fontWeight:800, padding:"4px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em", border:"1px solid "+sl.color }}>{sl.text}</span>; })()}
+            {item.stock > 0 ? <span className="tag tag-green">IN STOCK</span> : <span className="tag tag-red">OUT OF STOCK</span>}
           </div>
 
           {/* Name */}
