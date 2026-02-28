@@ -64,7 +64,7 @@ export const profiles = {
 
   async getAll() {
     const { data, error } = await supabase
-      .from('profiles').select('*').order('name')
+      .from('profiles').select('*').order('join_date')
     if (error) throw error
     return data
   },
@@ -222,34 +222,22 @@ export const shop = {
 
   async create(product) {
     const snake = toSnakeProduct(product)
-    const { data, error } = await supabase
-      .from('shop_products').insert(snake).select().single()
+    const { error } = await supabase.from('shop_products').insert(snake)
     if (error) {
-      // Retry stripping any columns that don't exist yet
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
-      const { data: d2, error: e2 } = await supabase
-        .from('shop_products').insert(snakeStripped)
+      const { error: e2 } = await supabase.from('shop_products').insert(snakeStripped)
       if (e2) throw new Error('Product create failed: ' + e2.message)
-      return normaliseProduct(d2)
     }
-    return normaliseProduct(data)
   },
 
   async update(id, patch) {
     const snake = toSnakeProduct(patch)
-    const { data, error } = await supabase
-      .from('shop_products').update(snake).eq('id', id).select().single()
+    const { error } = await supabase.from('shop_products').update(snake).eq('id', id)
     if (error) {
-      // Retry stripping any columns that don't exist yet (game_extra, variants if missing)
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
-      const { data: d2, error: e2 } = await supabase
-        .from('shop_products').update(snakeStripped).eq('id', id)
+      const { error: e2 } = await supabase.from('shop_products').update(snakeStripped).eq('id', id)
       if (e2) throw new Error('Product save failed: ' + e2.message)
-      if (!d2) throw new Error('Product save failed — no data returned.')
-      return normaliseProduct(d2)
     }
-    if (!data) throw new Error('Product save failed — no data returned.')
-    return normaliseProduct(data)
   },
 
   async delete(id) {
@@ -279,14 +267,14 @@ export const postage = {
 
   async create(opt) {
     const { data, error } = await supabase
-      .from('postage_options').insert({ name: opt.name, price: opt.price })
+      .from('postage_options').insert({ name: opt.name, price: opt.price }).select().single()
     if (error) throw error
     return data
   },
 
   async update(id, patch) {
     const { data, error } = await supabase
-      .from('postage_options').update({ name: patch.name, price: patch.price }).eq('id', id)
+      .from('postage_options').update({ name: patch.name, price: patch.price }).eq('id', id).select().single()
     if (error) throw error
     return data
   },
@@ -313,7 +301,7 @@ export const gallery = {
 
   async createAlbum(title) {
     const { data, error } = await supabase
-      .from('gallery_albums').insert({ title })
+      .from('gallery_albums').insert({ title }).select().single()
     if (error) throw error
     return { ...data, images: [] }
   },
@@ -476,7 +464,6 @@ function normaliseProduct(p) {
     name:        p.name,
     description: p.description,
     price:       Number(p.price),
-    costPrice:   Number(p.cost_price || 0),
     salePrice:   p.sale_price ? Number(p.sale_price) : null,
     onSale:      p.on_sale,
     image:       p.image,
@@ -540,7 +527,6 @@ function toSnakeProduct(p) {
     name:        p.name,
     description: p.description,
     price:       p.price,
-    cost_price:  p.costPrice || 0,
     sale_price:  p.salePrice,
     on_sale:     p.onSale,
     image:       p.image,
