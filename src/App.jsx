@@ -2395,7 +2395,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           </div>
 
           {/* Spec strip */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr"gap:1, marginTop:2 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, marginTop:2 }}>
             {[
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
               { label:"AVAILABILITY", val: stockLabel(item.stock).text, color: stockLabel(item.stock).color },
