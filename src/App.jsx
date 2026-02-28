@@ -1467,21 +1467,66 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
   const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
   const totalPaid = bookings.reduce((s, b) => s + (b.total || 0), 0);
 
-  const ticketRows = bookings.map(b => `
-    <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:20px 24px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
-      <div>
-        <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">TICKET</div>
-        <div style="font-size:20px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.05em;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
-        <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty}${b.total > 0 ? ` · £${(b.total||0).toFixed(2)}` : ' · Complimentary'}</div>
-        <div style="font-size:10px;color:#555;margin-top:8px;font-family:monospace;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="background:#fff;padding:8px;border-radius:4px;display:inline-block;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(b.id||'ticket')}" width="80" height="80" alt="QR Code" />
+  const ticketRows = bookings.map(b => {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(b.id||'ticket')}`;
+    const ticketHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ticket - ${ev.title}</title>
+<style>@media print{.noprint{display:none}}body{font-family:Arial,sans-serif;max-width:480px;margin:32px auto;padding:24px;background:#0a0a0a;color:#fff;}
+.logo{font-size:22px;font-weight:900;letter-spacing:.08em;margin-bottom:4px;}
+.accent{color:#e05c00;}.muted{color:#888;font-size:11px;letter-spacing:.1em;}
+.card{background:#111;border:1px solid #333;border-radius:8px;padding:20px 24px;margin:16px 0;}
+.label{font-size:10px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:4px;}
+.val{font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;}
+.ref{font-size:10px;color:#555;margin-top:8px;font-family:monospace;}
+.qr{background:#fff;padding:8px;border-radius:4px;display:inline-block;}
+.btn{display:block;width:100%;padding:14px;background:#e05c00;color:#fff;font-weight:900;font-size:14px;letter-spacing:.12em;text-transform:uppercase;border:none;border-radius:6px;cursor:pointer;margin-top:16px;text-align:center;}
+footer{margin-top:24px;font-size:10px;color:#444;text-align:center;border-top:1px solid #1a1a1a;padding-top:12px;}
+</style></head><body>
+<div class="logo">ZULU'S <span class="accent">AIRSOFT</span></div>
+<div class="muted">BOOKING CONFIRMATION</div>
+<div class="card">
+  <div class="label">Event</div>
+  <div style="font-size:18px;font-weight:700;color:#fff;">${ev.title}</div>
+  <div style="color:#aaa;font-size:13px;margin-top:6px;">📅 ${dateStr}</div>
+  ${ev.time ? `<div style="color:#aaa;font-size:13px;">🕐 ${ev.time} GMT</div>` : ""}
+  ${ev.location ? `<div style="color:#aaa;font-size:13px;">📍 ${ev.location}</div>` : ""}
+</div>
+<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+  <div>
+    <div class="label">Ticket Type</div>
+    <div class="val">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
+    <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty}${b.total > 0 ? " · £" + (b.total||0).toFixed(2) : " · Complimentary"}</div>
+    <div class="ref">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
+  </div>
+  <div style="text-align:center;">
+    <div class="qr"><img src="${qrUrl}" width="120" height="120" alt="QR" /></div>
+    <div style="font-size:10px;color:#888;margin-top:4px;">Show on arrival</div>
+  </div>
+</div>
+<button class="btn noprint" onclick="window.print()">🖨 SAVE / PRINT TICKET</button>
+<footer>Booking ID: ${b.id}<br>Valid for the date shown only.</footer>
+</body></html>`;
+    const encoded = `data:text/html;charset=utf-8,${encodeURIComponent(ticketHtml)}`;
+    return `
+    <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:20px 24px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">TICKET</div>
+          <div style="font-size:20px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.05em;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
+          <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty}${b.total > 0 ? ` · £${(b.total||0).toFixed(2)}` : ' · Complimentary'}</div>
+          <div style="font-size:10px;color:#555;margin-top:8px;font-family:monospace;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
         </div>
-        <div style="font-size:10px;color:#888;margin-top:4px;">Show on arrival</div>
+        <div style="text-align:center;">
+          <div style="background:#fff;padding:8px;border-radius:4px;display:inline-block;">
+            <img src="${qrUrl}" width="80" height="80" alt="QR Code" />
+          </div>
+          <div style="font-size:10px;color:#888;margin-top:4px;">Show on arrival</div>
+        </div>
       </div>
-    </div>`).join("");
+      <div style="margin-top:14px;">
+        <a href="${encoded}" target="_blank" style="display:inline-block;background:#e05c00;color:#fff;font-weight:900;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:10px 20px;border-radius:4px;text-decoration:none;">⬇ SAVE / PRINT TICKET</a>
+      </div>
+    </div>`;
+  }).join("");
 
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
@@ -2387,11 +2432,11 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             {[
               { label:"STOCK", val: hasVariants ? `${item.stock} total` : `${item.stock} units` },
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
-              { label:"AVAILABILITY", val: stockLabel(item.stock).text, color: stockLabel(item.stock).color },
+              { label:"STATUS", val: item.stock > 0 ? "IN STOCK" : "OUT OF STOCK" },
             ].map(s => (
               <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
                 <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
-                <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color: s.color || "var(--text)" }}>{s.val}</div>
+                <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:s.label === "STATUS" ? (item.stock > 0 ? "#7dc840" : "var(--red)") : "var(--text)" }}>{s.val}</div>
               </div>
             ))}
           </div>
