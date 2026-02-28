@@ -865,64 +865,246 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   );
 }
 function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing }) {
-  const e = editMode && existing ? existing : {};
-  const [form, setForm] = useState({
-    name: e.name || cu?.name || "", dob: e.dob || "", fps: e.fps || false,
-    medical: e.medical || "", isChild: e.isChild || false, guardian: e.guardian || "", agreed: false
+  const TERMS = [
+    "I understand that airsoft is a physical activity that carries inherent risks of injury.",
+    "I will wear appropriate eye protection at all times during gameplay.",
+    "I agree to follow all safety rules and marshal instructions.",
+    "I confirm that I am at least 18 years of age or have parental/guardian consent.",
+    "I will not consume alcohol or drugs before or during gameplay.",
+    "I release Swindon Airsoft and its staff from liability for any injuries sustained during play.",
+    "I understand that my participation is voluntary and at my own risk.",
+    "I agree to treat all participants with respect and follow the site's code of conduct.",
+    "I confirm that any replica firearms I bring to the site are legal to own in the UK.",
+    "I understand that failure to comply with safety rules may result in removal from the site.",
+  ];
+
+  const blankForm = (prefill) => ({
+    name: prefill?.name || "", dob: prefill?.dob || "",
+    addr1: prefill?.addr1 || "", addr2: prefill?.addr2 || "",
+    city: prefill?.city || "", county: prefill?.county || "",
+    postcode: prefill?.postcode || "", country: prefill?.country || "United Kingdom",
+    emergencyName: prefill?.emergencyName || "", emergencyPhone: prefill?.emergencyPhone || "",
+    medical: prefill?.medical || "", isChild: prefill?.isChild || false,
+    guardian: prefill?.guardian || "", sigData: prefill?.sigData || "", agreed: false,
   });
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const e = editMode && existing ? existing : {};
+  const [waivers, setWaivers] = useState([blankForm({
+    name: e.name || cu?.name || "", dob: e.dob || "",
+    addr1: e.addr1 || "", addr2: e.addr2 || "",
+    city: e.city || "", county: e.county || "",
+    postcode: e.postcode || "", country: e.country || "United Kingdom",
+    emergencyName: e.emergencyName || "", emergencyPhone: e.emergencyPhone || "",
+    medical: e.medical || "", isChild: e.isChild || false, guardian: e.guardian || "",
+  })]);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const canvasRef = useRef(null);
+  const [drawing, setDrawing] = useState(false);
+
+  const fw = (k, v) => setWaivers(ws => ws.map((w, i) => i === activeIdx ? { ...w, [k]: v } : w));
+  const active = waivers[activeIdx];
+
+  const addWaiver = () => { setWaivers(ws => [...ws, blankForm()]); setActiveIdx(waivers.length); };
+  const removeWaiver = (idx) => {
+    if (waivers.length === 1) return;
+    setWaivers(ws => ws.filter((_, i) => i !== idx));
+    setActiveIdx(prev => Math.max(0, prev >= idx ? prev - 1 : prev));
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (active.sigData) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.src = active.sigData;
+    }
+  }, [activeIdx]);
+
+  const getPos = (ev, canvas) => {
+    const r = canvas.getBoundingClientRect();
+    const src = ev.touches ? ev.touches[0] : ev;
+    const scaleX = canvas.width / r.width;
+    const scaleY = canvas.height / r.height;
+    return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+  };
+  const startDraw = (ev) => { ev.preventDefault(); const c = canvasRef.current; const ctx = c.getContext("2d"); const p = getPos(ev, c); ctx.beginPath(); ctx.moveTo(p.x, p.y); setDrawing(true); };
+  const draw = (ev) => { if (!drawing) return; ev.preventDefault(); const c = canvasRef.current; const ctx = c.getContext("2d"); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#c8ff00"; const p = getPos(ev, c); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+  const endDraw = () => { if (!drawing) return; setDrawing(false); fw("sigData", canvasRef.current.toDataURL()); };
+  const clearSig = () => { canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); fw("sigData", ""); };
 
   const submit = () => {
-    if (!form.dob) { showToast("Date of birth required", "red"); return; }
-    if (!form.agreed) { showToast("Please agree to the waiver terms", "red"); return; }
-    if (form.isChild && !form.guardian) { showToast("Guardian signature required for minors", "red"); return; }
-    const d = { ...form, signed: true, date: new Date().toISOString() };
+    for (let i = 0; i < waivers.length; i++) {
+      const w = waivers[i];
+      if (!w.name)  { showToast(`Waiver ${i+1}: Full name required`, "red"); setActiveIdx(i); return; }
+      if (!w.dob)   { showToast(`Waiver ${i+1}: Date of birth required`, "red"); setActiveIdx(i); return; }
+      if (!w.addr1 || !w.city || !w.postcode) { showToast(`Waiver ${i+1}: Address required`, "red"); setActiveIdx(i); return; }
+      if (!w.emergencyName || !w.emergencyPhone) { showToast(`Waiver ${i+1}: Emergency contact required`, "red"); setActiveIdx(i); return; }
+      if (!w.sigData) { showToast(`Waiver ${i+1}: Signature required`, "red"); setActiveIdx(i); return; }
+      if (!w.agreed) { showToast(`Waiver ${i+1}: Please agree to the terms`, "red"); setActiveIdx(i); return; }
+      if (w.isChild && !w.guardian) { showToast(`Waiver ${i+1}: Guardian name required`, "red"); setActiveIdx(i); return; }
+    }
+    const primary = { ...waivers[0], signed: true, date: new Date().toISOString() };
+    const extras = waivers.slice(1).map(w => ({ ...w, signed: true, date: new Date().toISOString() }));
     if (editMode) {
-      updateUser(cu.id, { waiverPending: { ...d, pendingDate: new Date().toISOString() } });
+      updateUser(cu.id, { waiverPending: { ...primary, pendingDate: new Date().toISOString() } });
       showToast("Changes submitted for admin approval");
     } else {
-      updateUser(cu.id, { waiverSigned: true, waiverYear: new Date().getFullYear(), waiverData: d, waiverPending: null });
-      showToast("Waiver signed successfully!");
+      updateUser(cu.id, { waiverSigned: true, waiverYear: new Date().getFullYear(), waiverData: primary, waiverPending: null, extraWaivers: extras });
+      showToast(extras.length > 0 ? `${waivers.length} waivers signed!` : "Waiver signed successfully!");
     }
     onClose();
   };
 
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-        <div className="modal-title">📋 Liability Waiver {new Date().getFullYear()}</div>
-        <div className="alert alert-gold" style={{ marginBottom: 16 }}>
-          Valid for {new Date().getFullYear()} calendar year only. Re-signing required each January.
+    <div className="overlay" onClick={onClose} style={{ alignItems: "flex-start", paddingTop: 0 }}>
+      <div className="modal-box wide" onClick={ev => ev.stopPropagation()} style={{ maxWidth: 780, margin: "0 auto", borderRadius: 0, minHeight: "100vh" }}>
+
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, paddingBottom:16, borderBottom:"1px solid #1a1a1a" }}>
+          <span style={{ fontSize:26 }}>📋</span>
+          <div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, letterSpacing:".05em", textTransform:"uppercase" }}>
+              PLAYER <span style={{ color:"var(--accent)" }}>WAIVER</span>
+            </div>
+            <div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em" }}>VALID UNTIL 31 DECEMBER {new Date().getFullYear()}</div>
+          </div>
+          <button onClick={onClose} style={{ marginLeft:"auto", background:"none", border:"none", color:"var(--muted)", fontSize:22, cursor:"pointer" }}>✕</button>
         </div>
-        <div className="form-row">
-          <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e => f("name", e.target.value)} /></div>
-          <div className="form-group"><label>Date of Birth</label><input type="date" value={form.dob} onChange={e => f("dob", e.target.value)} /></div>
+
+        {/* Important notice */}
+        <div className="alert alert-gold" style={{ marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+          <span style={{ fontSize:18, flexShrink:0 }}>⚠️</span>
+          <div>
+            <div style={{ fontWeight:700, marginBottom:2 }}>Important Notice</div>
+            <div style={{ fontSize:13 }}>You must sign this waiver before participating in any game day. Waivers are valid for the current calendar year and expire on December 31st.</div>
+          </div>
         </div>
-        <div className="form-group"><label>Medical Conditions</label>
-          <textarea rows={2} value={form.medical} onChange={e => f("medical", e.target.value)} placeholder="List any relevant conditions, or type 'None'" /></div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
-          <input type="checkbox" id="wchild" checked={form.isChild} onChange={e => f("isChild", e.target.checked)} />
-          <label htmlFor="wchild" style={{ cursor: "pointer", fontSize: 13 }}>This waiver is for a minor (under 18)</label>
+
+        {/* Player tabs */}
+        <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:16, alignItems:"center" }}>
+          {waivers.map((w, i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:0 }}>
+              <button onClick={() => setActiveIdx(i)}
+                style={{ padding:"6px 14px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
+                  background: activeIdx === i ? "var(--accent)" : "#1a1a1a", color: activeIdx === i ? "#000" : "var(--muted)",
+                  border:"1px solid " + (activeIdx === i ? "var(--accent)" : "#333"), borderRadius:"2px 0 0 2px", cursor:"pointer" }}>
+                {w.name || `Player ${i+1}`}
+              </button>
+              {i > 0 && (
+                <button onClick={() => removeWaiver(i)}
+                  style={{ padding:"6px 8px", background: activeIdx === i ? "var(--accent)" : "#1a1a1a", color: activeIdx === i ? "#000" : "#666",
+                    border:"1px solid " + (activeIdx === i ? "var(--accent)" : "#333"), borderLeft:"none", borderRadius:"0 2px 2px 0", cursor:"pointer", fontSize:11 }}>✕</button>
+              )}
+              {i === 0 && <div style={{ borderRadius:"0 2px 2px 0" }} />}
+            </div>
+          ))}
+          <button onClick={addWaiver}
+            style={{ padding:"6px 14px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
+              background:"none", color:"var(--accent)", border:"1px dashed var(--accent)", borderRadius:2, cursor:"pointer", marginLeft:4 }}>
+            + Add Player
+          </button>
         </div>
-        {form.isChild && (
-          <div className="form-group"><label>Parent/Guardian Full Name (acts as signature)</label>
-            <input value={form.guardian} onChange={e => f("guardian", e.target.value)} placeholder="Type full name to sign" /></div>
+
+        {/* T&C box */}
+        <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:20, marginBottom:20 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase", marginBottom:12 }}>
+            TERMS &amp; CONDITIONS
+          </div>
+          <div style={{ maxHeight:170, overflowY:"auto", paddingRight:4 }}>
+            <p style={{ fontSize:13, color:"#ccc", marginBottom:10 }}>By signing this waiver, I acknowledge and agree to the following:</p>
+            {TERMS.map((t, i) => (
+              <div key={i} style={{ display:"flex", gap:8, marginBottom:7, fontSize:13, color:"#aaa", lineHeight:1.5 }}>
+                <span style={{ color:"var(--accent)", fontWeight:700, flexShrink:0, minWidth:18 }}>{i+1}.</span>
+                <span>{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Under 18 */}
+        <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:14, marginBottom:16, display:"flex", gap:12, alignItems:"flex-start" }}>
+          <input type="checkbox" id={`wchild-${activeIdx}`} checked={active.isChild} onChange={ev => fw("isChild", ev.target.checked)}
+            style={{ width:18, height:18, marginTop:2, accentColor:"var(--accent)", flexShrink:0 }} />
+          <div>
+            <label htmlFor={`wchild-${activeIdx}`} style={{ cursor:"pointer", fontWeight:700, fontSize:14 }}>⏱ I am under 18 years old</label>
+            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>If under 18, a parent or legal guardian must also sign.</div>
+          </div>
+        </div>
+        {active.isChild && (
+          <div className="form-group" style={{ marginBottom:16 }}>
+            <label>Parent/Guardian Full Name *</label>
+            <input value={active.guardian} onChange={ev => fw("guardian", ev.target.value)} placeholder="Type full name as guardian signature" />
+          </div>
         )}
-        <div style={{ background: "var(--bg4)", padding: 14, borderRadius: 6, fontSize: 12, color: "var(--muted)", lineHeight: 1.7, marginBottom: 14 }}>
-          I understand airsoft activities carry inherent risk of injury. I agree to follow all safety rules on site, wear mandatory eye protection at all times, and acknowledge that Zulu's Airsoft Ltd is not liable for injuries sustained during gameplay. I confirm all information is accurate and I am fit to participate.
+
+        {/* Personal details */}
+        <div className="form-row" style={{ marginBottom:12 }}>
+          <div className="form-group"><label>FULL LEGAL NAME *</label><input value={active.name} onChange={ev => fw("name", ev.target.value)} /></div>
+          <div className="form-group"><label>DATE OF BIRTH *</label><input type="date" value={active.dob} onChange={ev => fw("dob", ev.target.value)} /></div>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 18 }}>
-          <input type="checkbox" id="wagree" checked={form.agreed} onChange={e => f("agreed", e.target.checked)} />
-          <label htmlFor="wagree" style={{ cursor: "pointer", fontWeight: 700, fontSize: 13 }}>I agree to the above terms and conditions</label>
+
+        {/* Address */}
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:8 }}>ADDRESS</div>
+        <div className="form-group" style={{ marginBottom:10 }}><label>ADDRESS LINE 1 *</label><input value={active.addr1} onChange={ev => fw("addr1", ev.target.value)} /></div>
+        <div className="form-group" style={{ marginBottom:10 }}><label>ADDRESS LINE 2</label><input value={active.addr2} onChange={ev => fw("addr2", ev.target.value)} /></div>
+        <div className="form-row" style={{ marginBottom:10 }}>
+          <div className="form-group"><label>CITY *</label><input value={active.city} onChange={ev => fw("city", ev.target.value)} /></div>
+          <div className="form-group"><label>COUNTY</label><input value={active.county} onChange={ev => fw("county", ev.target.value)} /></div>
         </div>
-        <div className="gap-2">
-          <button className="btn btn-primary" onClick={submit}>{editMode ? "Submit Changes" : "Sign Waiver"}</button>
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        <div className="form-row" style={{ marginBottom:16 }}>
+          <div className="form-group"><label>POSTCODE *</label><input value={active.postcode} onChange={ev => fw("postcode", ev.target.value)} /></div>
+          <div className="form-group"><label>COUNTRY</label><input value={active.country} onChange={ev => fw("country", ev.target.value)} /></div>
+        </div>
+
+        {/* Emergency contact */}
+        <div className="form-row" style={{ marginBottom:16 }}>
+          <div className="form-group"><label>EMERGENCY CONTACT NAME *</label><input value={active.emergencyName} onChange={ev => fw("emergencyName", ev.target.value)} /></div>
+          <div className="form-group"><label>EMERGENCY CONTACT PHONE *</label><input value={active.emergencyPhone} onChange={ev => fw("emergencyPhone", ev.target.value)} /></div>
+        </div>
+
+        {/* Medical */}
+        <div className="form-group" style={{ marginBottom:16 }}>
+          <label>MEDICAL CONDITIONS</label>
+          <textarea rows={2} value={active.medical} onChange={ev => fw("medical", ev.target.value)} placeholder="List any relevant conditions, or leave blank if none" />
+        </div>
+
+        {/* Signature */}
+        <div style={{ marginBottom:16 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+            <label style={{ fontWeight:700, fontSize:11, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>✏️ SIGNATURE *</label>
+            <button onClick={clearSig} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:18, padding:4 }} title="Clear">↺</button>
+          </div>
+          <canvas ref={canvasRef} width={700} height={150}
+            style={{ width:"100%", background:"#0d0d0d", border:"1px solid #333", borderRadius:4, cursor:"crosshair", touchAction:"none", display:"block" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw} />
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Draw your signature above using mouse or touch</div>
+        </div>
+
+        {/* Agree */}
+        <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:20, padding:14, background:"#111", border:"1px solid #2a2a2a", borderRadius:4 }}>
+          <input type="checkbox" id={`wagree-${activeIdx}`} checked={active.agreed} onChange={ev => fw("agreed", ev.target.checked)}
+            style={{ width:18, height:18, marginTop:2, accentColor:"var(--accent)", flexShrink:0 }} />
+          <label htmlFor={`wagree-${activeIdx}`} style={{ cursor:"pointer", fontSize:13, lineHeight:1.6 }}>
+            I have read and agree to the terms and conditions above. I understand that this waiver is legally binding and will be valid until December 31st of this year.
+          </label>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display:"flex", gap:8 }}>
+          <button className="btn btn-primary" style={{ flex:1, padding:"12px", fontSize:14, letterSpacing:".1em" }} onClick={submit}>
+            {editMode ? "SUBMIT CHANGES" : `SIGN WAIVER${waivers.length > 1 ? ` (${waivers.length} PLAYERS)` : ""}`}
+          </button>
+          <button className="btn btn-ghost" style={{ padding:"12px 18px" }} onClick={onClose}>Cancel</button>
         </div>
       </div>
     </div>
   );
 }
+
 
 // ── Public Nav ────────────────────────────────────────────
 function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
