@@ -7,13 +7,19 @@ import { normaliseProfile } from "./api";
 // ── Mock Payment Button ───────────────────────────────────────────────
 // Replace PayPalCheckoutButton with real payment provider when ready.
 // Set VITE_PAYMENT_MODE=live in .env to hide the mock button.
-// ── Stock level label ─────────────────────────────────────────
-function stockLabel(qty) {
-  const n = Number(qty);
-  if (n < 1)  return { text: "OUT OF STOCK", color: "var(--red)" };
-  if (n < 10) return { text: "LOW STOCK",    color: "var(--gold)" };
-  if (n < 20) return { text: "MED STOCK",    color: "#4fc3f7" };
-  return        { text: "IN STOCK",      color: "var(--accent)" };
+// ── Markdown renderer ─────────────────────────────────────────
+function renderMd(md) {
+  if (!md) return "";
+  return md
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/^## (.+)$/gm, "<strong style='font-size:15px;color:#fff;display:block;margin:10px 0 4px'>$1</strong>")
+    .replace(/^### (.+)$/gm, "<strong style='font-size:13px;color:#ddd;display:block;margin:6px 0 2px'>$1</strong>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong style='color:#fff'>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/^- (.+)$/gm, "<div style='display:flex;gap:8px;margin:3px 0'><span style='color:var(--accent);flex-shrink:0'>&#8226;</span><span>$1</span></div>")
+    .replace(/^\d+\. (.+)$/gm, "<div style='margin:3px 0'>$1</div>")
+    .replace(/^---$/gm, "<hr style='border:none;border-top:1px solid #333;margin:10px 0'>")
+    .replace(/\n/g, "<br>");
 }
 
 
@@ -1891,7 +1897,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                                   <div>
                                     <span style={{ fontSize:12, color:"var(--text)" }}>{v.name}</span>
                                     <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", marginLeft:10 }}>£{Number(v.price).toFixed(2)}</span>
-                                    <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginLeft:8 }}>{stockLabel(stock).text}</span>
+                                    <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginLeft:8 }}>{outOfStock ? "Out of stock" : `${stock} left`}</span>
                                   </div>
                                   <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111", flexShrink:0 }}>
                                     <button onClick={() => setExtra(ex.id, qty - 1, v.id)} disabled={qty === 0 || outOfStock} style={{ background:"none", border:"none", color:"var(--text)", padding:"5px 11px", cursor:"pointer", opacity: qty===0?0.3:1 }}>−</button>
@@ -2207,11 +2213,11 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             <div key={item.id} className="shop-card" style={{ cursor:"pointer" }} onClick={() => onProductClick(item)}>
               <div className="shop-img">
                 {item.image ? <img src={item.image} alt="" /> : <span style={{ fontSize:40 }}>🎯</span>}
-                {(() => { const sl = stockLabel(item.stock); return (
-                  <div style={{ position:"absolute", bottom:8, left:8 }}>
-                    <span style={{ background:"rgba(0,0,0,.85)", color:sl.color, fontSize:10, fontWeight:800, padding:"3px 8px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em", border:"1px solid "+sl.color }}>{sl.text}</span>
+                {!inStock && (
+                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.65)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <span className="tag tag-red" style={{ fontSize:11 }}>OUT OF STOCK</span>
                   </div>
-                ); })()}
+                )}
               </div>
               <div className="shop-body">
                 <div className="gap-2 mb-1">
@@ -2220,7 +2226,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   {item.onSale && !hasV && <span className="tag tag-red">SALE</span>}
                 </div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, marginBottom:4, letterSpacing:".03em", color:"#fff" }}>{item.name}</div>
-                <p style={{ fontSize:11, color:"var(--muted)", marginBottom:10, lineHeight:1.5, fontFamily:"'Share Tech Mono',monospace" }}>{item.description}</p>
+                <p style={{ fontSize:11, color:"var(--muted)", marginBottom:10, lineHeight:1.5, fontFamily:"'Share Tech Mono',monospace" }}>{(item.description||"").replace(/[*#_~`]/g,"").slice(0,80)}{(item.description||"").length>80?"…":""}</p>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                   <div>
                     {hasV && <span style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>from </span>}
@@ -2230,7 +2236,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                     {cu?.vipStatus === "active" && <span className="text-gold" style={{ fontSize:10, marginLeft:4 }}>VIP</span>}
                   </div>
                   <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                    {hasV ? `${item.variants.length} options` : stockLabel(item.stock).text}
+                    {hasV ? `${item.variants.length} options` : `Stock: ${item.stock}`}
                   </span>
                 </div>
                 <button className="btn btn-primary" style={{ width:"100%", padding:"8px", fontSize:12 }} disabled={!inStock}>
@@ -2379,12 +2385,13 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           {/* Spec strip */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:1, marginTop:2 }}>
             {[
+              { label:"STOCK", val: hasVariants ? `${item.stock} total` : `${item.stock} units` },
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
-              { label:"STATUS", val: stockLabel(item.stock).text },
+              { label:"STATUS", val: item.stock > 0 ? "IN STOCK" : "OUT OF STOCK" },
             ].map(s => (
               <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
                 <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
-                <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:s.label === "STATUS" ? stockLabel(item.stock).color : "var(--text)" }}>{s.val}</div>
+                <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:s.label === "STATUS" ? (item.stock > 0 ? "#7dc840" : "var(--red)") : "var(--text)" }}>{s.val}</div>
               </div>
             ))}
           </div>
@@ -2397,7 +2404,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             {item.noPost && <span className="tag tag-gold">⚠️ Collect Only</span>}
             {item.onSale && !hasVariants && <span className="tag tag-red">ON SALE</span>}
             {hasVariants && <span className="tag tag-blue">{item.variants.length} variants</span>}
-            {(() => { const sl = stockLabel(item.stock); return <span style={{ background:"rgba(0,0,0,.85)", color:sl.color, fontSize:10, fontWeight:800, padding:"4px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em", border:"1px solid "+sl.color }}>{sl.text}</span>; })()}
+            {item.stock > 0 ? <span className="tag tag-green">IN STOCK</span> : <span className="tag tag-red">OUT OF STOCK</span>}
           </div>
 
           {/* Name */}
@@ -2405,7 +2412,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
 
           {/* Description */}
           <p style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}>
-            {item.description || "No description available."}
+            <span dangerouslySetInnerHTML={{ __html: renderMd(item.description) || "No description available." }} />
           </p>
 
           {/* Variant selector */}
@@ -2481,7 +2488,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
 
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", display:"flex", gap:16 }}>
             <span>{item.noPost ? "⚠️ Collection at game day only" : "✓ Standard postage available"}</span>
-            {stockAvail > 0 && <span style={{ color:"#7dc840" }}>✓ {stockAvail} in stock</span>}
+            {stockAvail > 0 && <span style={{ color:stockLabel(stockAvail).color }}>✓ {stockLabel(stockAvail).text}</span>}
           </div>
         </div>
       </div>
