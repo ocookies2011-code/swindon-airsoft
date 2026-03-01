@@ -2032,15 +2032,54 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         {tab === "info" && (
           <div>
             {/* Description */}
-            <div className="card mb-2" style={{ background:"#0d0d0d" }}>
-              <div style={{ color:"var(--muted)", lineHeight:1.8, fontSize:14 }}
-                dangerouslySetInnerHTML={{ __html: renderMd(ev.description) || "<span style='color:#444'>No description available.</span>" }}
+            <div style={{ marginBottom:16, position:"relative", overflow:"hidden",
+              background:"radial-gradient(ellipse at 10% 20%,rgba(45,70,15,.45) 0%,transparent 45%),radial-gradient(ellipse at 85% 80%,rgba(30,55,8,.35) 0%,transparent 40%),#0b1007",
+              border:"1px solid #2a3a10" }}>
+              {/* Scanlines */}
+              <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px)" }} />
+              {/* Corner brackets */}
+              {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                <div key={v+h} style={{ position:"absolute", width:14, height:14, zIndex:2,
+                  top:v==="top"?7:"auto", bottom:v==="bottom"?7:"auto",
+                  left:h==="left"?7:"auto", right:h==="right"?7:"auto",
+                  borderTop:v==="top"?"2px solid #c8ff00":"none", borderBottom:v==="bottom"?"2px solid #c8ff00":"none",
+                  borderLeft:h==="left"?"2px solid #c8ff00":"none", borderRight:h==="right"?"2px solid #c8ff00":"none",
+                }} />
+              ))}
+              {/* Header strip */}
+              <div style={{ background:"linear-gradient(135deg,rgba(8,18,2,.97) 0%,rgba(14,26,4,.92) 100%)", borderBottom:"1px solid #2a3a10", padding:"10px 18px", display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:10, letterSpacing:".22em", color:"#c8ff00", textTransform:"uppercase" }}>⬡ OPERATION BRIEFING</span>
+                <div style={{ flex:1, borderTop:"1px dashed #2a3a10" }} />
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, letterSpacing:".15em", color:"#4a6820" }}>INTEL DOCUMENT</span>
+              </div>
+              {/* Content */}
+              <div style={{ position:"relative", zIndex:1, padding:"16px 18px", color:"#8aaa50", lineHeight:1.8, fontSize:14 }}
+                dangerouslySetInnerHTML={{ __html: renderMd(ev.description) || "<span style='color:#3a5010'>No briefing available.</span>" }}
               />
             </div>
 
             {/* ── BOOKING CARD ── */}
-            <div className="card" style={{ borderTop:"3px solid var(--accent)" }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:".25em", color:"var(--accent)", marginBottom:16 }}>BOOK THIS EVENT</div>
+            <div style={{ position:"relative", overflow:"hidden",
+              background:"radial-gradient(ellipse at 15% 25%,rgba(45,70,15,.5) 0%,transparent 42%),radial-gradient(ellipse at 80% 75%,rgba(30,55,8,.4) 0%,transparent 38%),#0b1007",
+              border:"1px solid #2a3a10" }}>
+              {/* Scanlines */}
+              <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px)" }} />
+              {/* Corner brackets */}
+              {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                <div key={v+h} style={{ position:"absolute", width:14, height:14, zIndex:3,
+                  top:v==="top"?7:"auto", bottom:v==="bottom"?7:"auto",
+                  left:h==="left"?7:"auto", right:h==="right"?7:"auto",
+                  borderTop:v==="top"?"2px solid #c8ff00":"none", borderBottom:v==="bottom"?"2px solid #c8ff00":"none",
+                  borderLeft:h==="left"?"2px solid #c8ff00":"none", borderRight:h==="right"?"2px solid #c8ff00":"none",
+                }} />
+              ))}
+              {/* Header strip */}
+              <div style={{ background:"linear-gradient(135deg,rgba(8,18,2,.97) 0%,rgba(14,26,4,.92) 100%)", borderBottom:"1px solid #2a3a10", padding:"10px 18px", display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:10, letterSpacing:".22em", color:"#c8ff00", textTransform:"uppercase" }}>⬡ BOOK THIS EVENT</span>
+                <div style={{ flex:1, borderTop:"1px dashed #2a3a10" }} />
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, letterSpacing:".15em", color:"#4a6820" }}>ZULU'S AIRSOFT</span>
+              </div>
+              <div style={{ position:"relative", zIndex:1, padding:"16px 18px" }}>
 
               {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
@@ -2119,9 +2158,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               )}
 
               {/* ── TICKET BUILDER ── */}
-              <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
-                <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #1e1e1e" }}>
-                  ADD TICKETS TO ORDER
+              <div style={{ border:"1px solid #2a3a10", marginBottom:16, background:"rgba(4,8,1,.5)" }}>
+                <div style={{ background:"linear-gradient(90deg,rgba(8,18,2,.98) 0%,rgba(12,22,3,.95) 100%)", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, borderBottom:"1px solid #2a3a10", display:"flex", alignItems:"center", gap:8 }}>
+                  <span>◈ ADD TICKETS TO ORDER</span>
+                  <div style={{ flex:1, borderTop:"1px dashed #2a3a10" }} />
                 </div>
 
                 {/* Walk-On row */}
@@ -2133,14 +2173,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <button className="btn btn-primary" style={{ marginTop:14, padding:"9px 24px" }} onClick={() => setPage("vip")}>Become a VIP →</button>
                   </div>
                 )}
-                {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #1a1a1a" }}>
+                {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #2a3a10", background:"rgba(200,255,0,.02)" }}>
                   <div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
                     <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
                       £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft} slots left
                     </div>
                   </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #333", background:"#111" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                     <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
                     <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
                     <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
@@ -2155,7 +2195,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft} slots left
                     </div>
                   </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #333", background:"#111" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                     <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                     <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
                     <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
@@ -2278,7 +2318,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
               {cartEmpty && cu && waiverValid && (
                 <div style={{ textAlign:"center", padding:"20px 0", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", fontSize:12 }}>
-                  Add tickets above to continue
+                  ▸ Select tickets above to proceed
                 </div>
               )}
 
@@ -2303,6 +2343,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   disabled={bookingBusy}
                 />
               )}
+              </div>
             </div>
           </div>
         )}
