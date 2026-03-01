@@ -222,22 +222,34 @@ export const shop = {
 
   async create(product) {
     const snake = toSnakeProduct(product)
-    const { error } = await supabase.from('shop_products').insert(snake)
+    const { data, error } = await supabase
+      .from('shop_products').insert(snake).select().single()
     if (error) {
+      // Retry stripping any columns that don't exist yet
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
-      const { error: e2 } = await supabase.from('shop_products').insert(snakeStripped)
+      const { data: d2, error: e2 } = await supabase
+        .from('shop_products').insert(snakeStripped).select().single()
       if (e2) throw new Error('Product create failed: ' + e2.message)
+      return normaliseProduct(d2)
     }
+    return normaliseProduct(data)
   },
 
   async update(id, patch) {
     const snake = toSnakeProduct(patch)
-    const { error } = await supabase.from('shop_products').update(snake).eq('id', id)
+    const { data, error } = await supabase
+      .from('shop_products').update(snake).eq('id', id).select().single()
     if (error) {
+      // Retry stripping any columns that don't exist yet (game_extra, variants if missing)
       const { variants: _v, game_extra: _g, ...snakeStripped } = snake
-      const { error: e2 } = await supabase.from('shop_products').update(snakeStripped).eq('id', id)
+      const { data: d2, error: e2 } = await supabase
+        .from('shop_products').update(snakeStripped).eq('id', id).select().single()
       if (e2) throw new Error('Product save failed: ' + e2.message)
+      if (!d2) throw new Error('Product save failed — no data returned.')
+      return normaliseProduct(d2)
     }
+    if (!data) throw new Error('Product save failed — no data returned.')
+    return normaliseProduct(data)
   },
 
   async delete(id) {
@@ -487,6 +499,7 @@ function normaliseProfile(p) {
     waiverSigned:       p.waiver_signed,
     waiverYear:         p.waiver_year,
     waiverData:         p.waiver_data,
+    extraWaivers:       p.extra_waivers || [],
     waiverPending:      p.waiver_pending,
     vipStatus:          p.vip_status,
     vipApplied:         p.vip_applied,
