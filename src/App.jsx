@@ -3166,7 +3166,6 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
     } catch(e) {
       showToast("Failed to save: " + (e.message || "unknown error"), "red");
     }
-  };rofile updated!");
   };
 
   return (
