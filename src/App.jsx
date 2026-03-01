@@ -898,6 +898,10 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
       const existingWaivers = [cu.waiverData, ...(cu.extraWaivers || [])].map(w => blankForm(w));
       return [...existingWaivers, blankForm()];
     }
+    if (editMode) {
+      // Load ALL waivers (primary + extras) for editing
+      return [cu.waiverData, ...(cu.extraWaivers || [])].map(w => blankForm(w));
+    }
     return [blankForm({
       name: e.name || cu?.name || "", dob: e.dob || "",
       addr1: e.addr1 || "", addr2: e.addr2 || "",
@@ -960,8 +964,12 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     const primary = { ...waivers[0], signed: true, date: new Date().toISOString() };
     const extras = waivers.slice(1).map(w => ({ ...w, signed: true, date: new Date().toISOString() }));
     if (editMode) {
-      updateUser(cu.id, { waiverPending: { ...primary, pendingDate: new Date().toISOString() } });
-      showToast("Changes submitted for admin approval");
+      updateUser(cu.id, {
+        waiverData: primary,
+        extraWaivers: extras,
+        waiverPending: null,
+      });
+      showToast(extras.length > 0 ? `${waivers.length} waivers updated!` : "Waiver updated!");
     } else {
       updateUser(cu.id, { waiverSigned: true, waiverYear: new Date().getFullYear(), waiverData: primary, waiverPending: null, extraWaivers: extras });
       showToast(extras.length > 0 ? `${waivers.length} waivers signed!` : "Waiver signed successfully!");
@@ -3273,11 +3281,22 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
                 )}
                 {allWaivers.map((w, i) => (
                   <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 20 : 0, paddingBottom: i < allWaivers.length - 1 ? 20 : 0, borderBottom: i < allWaivers.length - 1 ? "1px solid #2a2a2a" : "none" }}>
-                    {allWaivers.length > 1 && (
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:6 }}>
-                        PLAYER {i + 1}{i === 0 ? " (PRIMARY)" : " (ADDITIONAL)"}
-                      </div>
-                    )}
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                      {allWaivers.length > 1 && (
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase" }}>
+                          PLAYER {i + 1}{i === 0 ? " (PRIMARY)" : " (ADDITIONAL)"}
+                        </div>
+                      )}
+                      {i > 0 && (
+                        <button onClick={() => {
+                          const updated = (cu.extraWaivers || []).filter((_, ei) => ei !== i - 1);
+                          updateUser(cu.id, { extraWaivers: updated });
+                          showToast("Waiver removed");
+                        }} style={{ background:"none", border:"1px solid var(--red)", color:"var(--red)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
+                          🗑 REMOVE
+                        </button>
+                      )}
+                    </div>
                     {[["Name", w.name], ["DOB", w.dob], ["Address", [w.addr1, w.addr2, w.city, w.county, w.postcode].filter(Boolean).join(", ") || "—"], ["Emergency", w.emergencyName ? `${w.emergencyName} · ${w.emergencyPhone}` : "—"], ["Medical", w.medical || "None"], ["Minor", w.isChild ? `Yes — Guardian: ${w.guardian}` : "No"], ["Signed", gmtShort(w.date)]].map(([k, v]) => (
                       <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
                         <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span><span>{v}</span>
