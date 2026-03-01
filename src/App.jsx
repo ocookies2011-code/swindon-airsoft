@@ -235,7 +235,7 @@ function useData() {
     const map = {
       name: "name", email: "email", phone: "phone", address: "address", role: "role",
       gamesAttended: "games_attended", waiverSigned: "waiver_signed",
-      waiverYear: "waiver_year", waiverData: "waiver_data",
+      waiverYear: "waiver_year", waiverData: "waiver_data", extraWaivers: "extra_waivers",
       waiverPending: "waiver_pending", vipStatus: "vip_status",
       vipApplied: "vip_applied", ukara: "ukara", credits: "credits",
       leaderboardOptOut: "leaderboard_opt_out", profilePic: "profile_pic",
