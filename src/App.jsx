@@ -1975,19 +1975,52 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           <div style={{ height:160, background:"linear-gradient(135deg,#150e08,#111827)", display:"flex", alignItems:"center", justifyContent:"center" }}>
             {ev.banner ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : <span style={{ fontSize:28, fontWeight:900, color:"var(--accent)" }}>{ev.title}</span>}
           </div>
-          <div style={{ padding:20 }}>
-            <div className="gap-2 mb-1">
-              <h2 style={{ fontSize:24, fontWeight:800 }}>{ev.title}</h2>
-              {myBookings.length > 0 && <span className="tag tag-green">✓ BOOKED</span>}
+          {/* Military-style header */}
+          <div style={{
+            background:"linear-gradient(135deg,#0d1400 0%,#111 60%,#0a1000 100%)",
+            padding:"18px 22px 16px",
+            position:"relative",
+            overflow:"hidden",
+          }}>
+            {/* Hex watermark */}
+            <div style={{ position:"absolute", right:16, top:8, fontSize:36, opacity:.05, letterSpacing:4, color:"#c8ff00", pointerEvents:"none" }}>⬡⬡⬡⬡⬡</div>
+            {/* Corner brackets */}
+            {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+              <div key={v+h} style={{ position:"absolute", width:14, height:14, zIndex:2,
+                top:v==="top"?6:"auto", bottom:v==="bottom"?6:"auto",
+                left:h==="left"?6:"auto", right:h==="right"?6:"auto",
+                borderTop:v==="top"?"2px solid #c8ff00":"none",
+                borderBottom:v==="bottom"?"2px solid #c8ff00":"none",
+                borderLeft:h==="left"?"2px solid #c8ff00":"none",
+                borderRight:h==="right"?"2px solid #c8ff00":"none",
+              }} />
+            ))}
+            <div style={{ fontSize:9, letterSpacing:".22em", color:"#c8ff00", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
+              <span>⬡ ZULU'S AIRSOFT</span>
+              <span style={{ color:"#3a5010" }}>◆</span>
+              <span style={{ color:"#4a6820" }}>OPERATION BRIEFING</span>
+              {myBookings.length > 0 && <span style={{ marginLeft:"auto", background:"rgba(0,100,0,.3)", border:"1px solid #c8ff00", color:"#c8ff00", fontSize:9, padding:"2px 10px", letterSpacing:".15em" }}>✓ DEPLOYED</span>}
             </div>
-            <div className="gap-2 mb-2">
-              <span className="tag tag-green">{ev.date}</span>
-              <span className="tag tag-blue">{ev.time} GMT</span>
-              <span className="tag tag-purple">{ev.location}</span>
-              <span style={{ fontSize:12, color: totalBooked/totalSlots > 0.8 ? "var(--red)" : "var(--muted)" }}>{totalBooked}/{totalSlots} slots</span>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:28, textTransform:"uppercase", letterSpacing:".05em", color:"#e8ffb0", lineHeight:1, marginBottom:10, textShadow:"0 0 30px rgba(200,255,0,.1)" }}>
+              {ev.title}
             </div>
-            <div className="progress-bar" style={{ marginBottom:16 }}>
-              <div className={`progress-fill ${totalBooked/totalSlots > 0.8 ? "red" : ""}`} style={{ width:Math.min(100, totalBooked/totalSlots*100)+"%" }} />
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
+              {[
+                { icon:"📅", val:ev.date, color:"#c8ff00" },
+                { icon:"⏱", val:`${ev.time} GMT`, color:"#4fc3f7" },
+                { icon:"📍", val:ev.location, color:"#ce93d8" },
+              ].map(({icon,val,color}) => (
+                <span key={val} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".12em", color, background:"rgba(0,0,0,.4)", border:`1px solid ${color}33`, padding:"3px 10px" }}>
+                  {icon} {val}
+                </span>
+              ))}
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:".1em", color: totalBooked/totalSlots > 0.8 ? "#ff6b6b" : "#6a8a40", padding:"3px 0", marginLeft:4 }}>
+                {totalBooked}/{totalSlots} SLOTS
+              </span>
+            </div>
+            {/* Styled progress bar */}
+            <div style={{ height:4, background:"#1a2a08", borderRadius:2, overflow:"hidden" }}>
+              <div style={{ height:"100%", width:Math.min(100, totalBooked/totalSlots*100)+"%", background: totalBooked/totalSlots > 0.8 ? "#ff6b6b" : "#c8ff00", boxShadow: totalBooked/totalSlots > 0.8 ? "0 0 8px #ff6b6b" : "0 0 8px rgba(200,255,0,.5)", borderRadius:2, transition:"width .4s" }} />
             </div>
           </div>
         </div>
@@ -2028,16 +2061,55 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 <div style={{ marginBottom:16 }}>
                   <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginBottom:8 }}>YOUR EXISTING BOOKINGS</div>
                   {myBookings.map(b => (
-                    <div key={b.id} style={{ background:"var(--bg4)", border:"1px solid #2a2a2a", borderLeft:"3px solid #7dc840", padding:"10px 14px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <div>
-                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, color:"#fff" }}>
-                          {b.type === "walkOn" ? "🎯 Walk-On" : "🪖 Rental"} ×{b.qty}
-                        </div>
-                        <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>£{b.total.toFixed(2)} · ID: {b.id.slice(0,8)}</div>
+                    <div key={b.id} style={{
+                      marginBottom:10, position:"relative", overflow:"hidden",
+                      background:"radial-gradient(ellipse at 15% 30%,rgba(45,70,15,.5) 0%,transparent 45%),radial-gradient(ellipse at 80% 70%,rgba(30,55,8,.4) 0%,transparent 40%),#0b1007",
+                      border:"1px solid #2a3a10",
+                    }}>
+                      {/* Scanlines */}
+                      <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px)" }} />
+                      {/* Corner brackets */}
+                      {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                        <div key={v+h} style={{ position:"absolute", width:10, height:10, zIndex:2,
+                          top:v==="top"?5:"auto", bottom:v==="bottom"?5:"auto",
+                          left:h==="left"?5:"auto", right:h==="right"?5:"auto",
+                          borderTop:v==="top"?"1px solid #c8ff00":"none", borderBottom:v==="bottom"?"1px solid #c8ff00":"none",
+                          borderLeft:h==="left"?"1px solid #c8ff00":"none", borderRight:h==="right"?"1px solid #c8ff00":"none",
+                        }} />
+                      ))}
+                      {/* Header strip */}
+                      <div style={{ background:"linear-gradient(135deg,rgba(8,18,2,.95) 0%,rgba(14,26,4,.9) 100%)", borderBottom:"1px dashed #2a3a10", padding:"7px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:9, letterSpacing:".2em", color:"#c8ff00", textTransform:"uppercase" }}>⬡ ZULU'S AIRSOFT · FIELD PASS</span>
+                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, letterSpacing:".15em", color:"#c8ff00", background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", padding:"1px 8px" }}>✓ DEPLOYED</span>
                       </div>
-                      <div style={{ textAlign:"right" }}>
-                        <div style={{ fontSize:10, color:"var(--muted)", marginBottom:4 }}>Check-in QR</div>
-                        <QRCode value={b.id} size={56} />
+                      {/* Body */}
+                      <div style={{ position:"relative", zIndex:1, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                        <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px 12px" }}>
+                          {[
+                            ["KIT", b.type === "walkOn" ? "Walk-On" : "Rental"],
+                            ["UNITS", `×${b.qty}`],
+                            ["LEVY", b.total > 0 ? `£${b.total.toFixed(2)}` : "N/A"],
+                            ["REF", b.id.slice(0,8).toUpperCase()],
+                          ].map(([lbl,val]) => (
+                            <div key={lbl}>
+                              <div style={{ fontSize:7, letterSpacing:".2em", color:"#4a6820", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:2 }}>{lbl}</div>
+                              <div style={{ fontSize:13, fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", color:"#c8e878" }}>{val}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ borderLeft:"1px dashed #2a3a10", paddingLeft:12, textAlign:"center", flexShrink:0 }}>
+                          <div style={{ background:"#0a0f05", border:"1px solid #2a3a10", padding:5, display:"inline-block" }}>
+                            <QRCode value={b.id} size={56} />
+                          </div>
+                          <div style={{ fontSize:7, color:"#4a6820", marginTop:3, letterSpacing:".15em", fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase" }}>Scan in</div>
+                        </div>
+                      </div>
+                      {/* Footer barcode */}
+                      <div style={{ background:"rgba(4,8,1,.8)", borderTop:"1px solid #1a2808", padding:"4px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div style={{ fontSize:7, color:"#283810", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>MISSION ID: {b.id.toUpperCase()}</div>
+                        <div style={{ display:"flex", gap:"1px", alignItems:"center" }}>
+                          {Array.from({length:20},(_,i) => <div key={i} style={{ background:"#2a3a10", width:i%3===0?2:1, height:3+Math.abs(Math.sin(i*1.4)*7), borderRadius:1 }} />)}
+                        </div>
                       </div>
                     </div>
                   ))}
