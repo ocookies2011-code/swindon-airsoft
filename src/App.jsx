@@ -2430,7 +2430,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             <div key={item.id} className="shop-card" style={{ cursor:"pointer" }} onClick={() => onProductClick(item)}>
               <div className="shop-img">
                 {item.image ? <img src={item.image} alt="" /> : <span style={{ fontSize:40 }}>🎯</span>}
-                {(() => { const sl = stockLabel(item.stock); return (<div style={{ position:"absolute", bottom:8, left:8 }}><span style={{ background:"rgba(0,0,0,.85)", color:sl.color, fontSize:10, fontWeight:800, padding:"3px 8px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em", border:"1px solid "+sl.color }}>{sl.text}</span></div>); })()}
+                
               </div>
               <div className="shop-body">
                 <div className="gap-2 mb-1">
@@ -2449,7 +2449,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                     {cu?.vipStatus === "active" && <span className="text-gold" style={{ fontSize:10, marginLeft:4 }}>VIP</span>}
                   </div>
                   <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                    {hasV ? `${item.variants.length} options` : stockLabel(item.stock).text}
+                    {hasV ? `${item.variants.length} options` : ""}
                   </span>
                 </div>
                 <button className="btn btn-primary" style={{ width:"100%", padding:"8px", fontSize:12 }} disabled={!inStock}>
@@ -2617,7 +2617,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             {item.noPost && <span className="tag tag-gold">⚠️ Collect Only</span>}
             {item.onSale && !hasVariants && <span className="tag tag-red">ON SALE</span>}
             {hasVariants && <span className="tag tag-blue">{item.variants.length} variants</span>}
-            {(() => { const sl = stockLabel(item.stock); return <span style={{ background:"rgba(0,0,0,.85)", color:sl.color, fontSize:10, fontWeight:800, padding:"4px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em", border:"1px solid "+sl.color }}>{sl.text}</span>; })()}
+            
           </div>
 
           {/* Name */}
