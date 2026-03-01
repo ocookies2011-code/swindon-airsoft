@@ -3314,27 +3314,124 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
       {tab === "bookings" && (
         <div>
           {myBookings.length === 0 ? <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No bookings yet.</div> : (
-            myBookings.map(b => (
-              <div key={b.id} className="card mb-1">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{b.eventTitle}</div>
-                    <div className="text-muted" style={{ fontSize: 12 }}>{b.eventDate} — {b.type === "walkOn" ? "Walk-On" : "Rental"} ×{b.qty}</div>
+            myBookings.map(b => {
+              const printTicket = () => {
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(b.id)}`;
+                const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ticket</title>
+<style>
+  @media print { .noprint { display:none } body { margin:0 } }
+  body { font-family:'Arial',sans-serif; background:#0a0a0a; color:#fff; margin:0; padding:20px; }
+  .ticket { max-width:480px; margin:0 auto; background:#111; border:1px solid #333; border-radius:8px; overflow:hidden; }
+  .ticket-top { background:#111; padding:20px 24px 16px; border-bottom:2px dashed #2a2a2a; }
+  .ticket-bottom { padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .logo { font-size:11px; letter-spacing:.2em; color:#c8ff00; font-weight:700; text-transform:uppercase; margin-bottom:8px; }
+  .event { font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  .date { font-size:13px; color:#aaa; }
+  .label { font-size:9px; letter-spacing:.2em; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:3px; }
+  .val { font-size:15px; font-weight:700; }
+  .ref { font-size:10px; color:#555; margin-top:6px; font-family:monospace; }
+  .status { display:inline-block; padding:3px 10px; font-size:10px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; border-radius:2px; margin-top:6px; background:${b.checkedIn ? '#1a3a1a' : '#001a3a'}; color:${b.checkedIn ? '#7dc840' : '#4fc3f7'}; border:1px solid ${b.checkedIn ? '#7dc840' : '#4fc3f7'}; }
+  .qr-wrap { background:#fff; padding:8px; border-radius:4px; display:inline-block; }
+  .print-btn { display:block; width:100%; padding:12px; margin:16px auto 0; max-width:480px; background:#c8ff00; color:#000; font-weight:900; font-size:14px; letter-spacing:.12em; text-transform:uppercase; border:none; border-radius:4px; cursor:pointer; }
+  .notch-left { width:20px; height:40px; background:#0a0a0a; border-radius:0 20px 20px 0; margin-left:-1px; }
+  .notch-right { width:20px; height:40px; background:#0a0a0a; border-radius:20px 0 0 20px; margin-right:-1px; }
+  .notch-row { display:flex; align-items:center; justify-content:space-between; margin:-1px 0; }
+  .notch-line { flex:1; border-top:2px dashed #2a2a2a; }
+</style></head><body>
+<div class="ticket">
+  <div class="ticket-top">
+    <div class="logo">🎯 Swindon Airsoft</div>
+    <div class="event">${b.eventTitle || 'Event'}</div>
+    <div class="date">📅 ${b.eventDate || ''}</div>
+  </div>
+  <div class="notch-row"><div class="notch-left"></div><div class="notch-line"></div><div class="notch-right"></div></div>
+  <div class="ticket-bottom">
+    <div>
+      <div class="label">Ticket Type</div>
+      <div class="val">${b.type === 'walkOn' ? 'Walk-On' : 'Rental'}</div>
+      <div class="label" style="margin-top:10px">Quantity</div>
+      <div class="val">${b.qty}</div>
+      <div class="label" style="margin-top:10px">Total Paid</div>
+      <div class="val">${b.total > 0 ? '£' + b.total.toFixed(2) : 'Complimentary'}</div>
+      <div class="ref">REF: ${b.id.slice(0,8).toUpperCase()}</div>
+      <div class="status">${b.checkedIn ? '✓ Checked In' : '⏳ Booked'}</div>
+    </div>
+    <div style="text-align:center">
+      <div class="qr-wrap"><img src="${qrUrl}" width="160" height="160" alt="QR" /></div>
+      <div style="font-size:10px;color:#888;margin-top:6px;">Show on arrival</div>
+    </div>
+  </div>
+</div>
+<button class="print-btn noprint" onclick="window.print()">🖨 PRINT / SAVE TICKET</button>
+</body></html>`;
+                const w = window.open('', '_blank');
+                w.document.write(html);
+                w.document.close();
+              };
+
+              return (
+                <div key={b.id} style={{
+                  marginBottom: 16,
+                  background: "#111",
+                  border: "1px solid #333",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  position: "relative",
+                }}>
+                  {/* Ticket top strip */}
+                  <div style={{ background: b.checkedIn ? "#0d1f0d" : "#0a0a1a", borderBottom: "2px dashed #2a2a2a", padding: "16px 20px 14px" }}>
+                    <div style={{ fontSize: 10, letterSpacing: ".2em", color: "var(--accent)", fontWeight: 700, fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 6 }}>
+                      🎯 SWINDON AIRSOFT
+                    </div>
+                    <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, textTransform: "uppercase", letterSpacing: ".04em", color: "#fff", marginBottom: 2 }}>
+                      {b.eventTitle}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#aaa" }}>📅 {b.eventDate}</div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 900, fontSize: 20, color: "var(--accent)" }}>£{b.total.toFixed(2)}</div>
-                    <div className="mt-1">{b.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div>
+
+                  {/* Notch row */}
+                  <div style={{ display: "flex", alignItems: "center", margin: "-1px 0" }}>
+                    <div style={{ width: 16, height: 32, background: "var(--bg)", borderRadius: "0 16px 16px 0", marginLeft: -1, flexShrink: 0 }} />
+                    <div style={{ flex: 1, borderTop: "2px dashed #2a2a2a" }} />
+                    <div style={{ width: 16, height: 32, background: "var(--bg)", borderRadius: "16px 0 0 16px", marginRight: -1, flexShrink: 0 }} />
+                  </div>
+
+                  {/* Ticket bottom */}
+                  <div style={{ padding: "14px 20px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 20px", marginBottom: 10 }}>
+                        {[
+                          ["TYPE", b.type === "walkOn" ? "Walk-On" : "Rental"],
+                          ["QTY", b.qty],
+                          ["PAID", b.total > 0 ? `£${b.total.toFixed(2)}` : "Complimentary"],
+                          ["REF", b.id.slice(0, 8).toUpperCase()],
+                        ].map(([label, val]) => (
+                          <div key={label}>
+                            <div style={{ fontSize: 9, letterSpacing: ".2em", color: "var(--muted)", fontWeight: 700, fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".04em" }}>{val}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        {b.checkedIn
+                          ? <span style={{ background: "#1a3a1a", color: "#7dc840", border: "1px solid #7dc840", fontSize: 10, fontWeight: 800, padding: "3px 10px", letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif" }}>✓ CHECKED IN</span>
+                          : <span style={{ background: "#001a3a", color: "#4fc3f7", border: "1px solid #4fc3f7", fontSize: 10, fontWeight: 800, padding: "3px 10px", letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif" }}>⏳ BOOKED</span>
+                        }
+                        <button onClick={printTicket} style={{ background: "none", border: "1px solid #333", color: "var(--accent)", fontSize: 10, fontWeight: 800, padding: "3px 12px", cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".1em" }}>
+                          🖨 PRINT TICKET
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center", flexShrink: 0 }}>
+                      <div style={{ background: "#fff", padding: 8, borderRadius: 4, display: "inline-block" }}>
+                        <QRCode value={b.id} size={100} />
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>Show on arrival</div>
+                    </div>
                   </div>
                 </div>
-                {!b.checkedIn && (
-                  <div style={{ marginTop: 14 }}>
-                    <div className="text-muted" style={{ fontSize: 11, marginBottom: 6 }}>Your check-in QR code:</div>
-                    <QRCode value={b.id} size={120} />
-                    <div className="text-muted" style={{ fontSize: 10, marginTop: 4 }}>ID: {b.id}</div>
-                  </div>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
