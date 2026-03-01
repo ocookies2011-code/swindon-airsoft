@@ -3238,7 +3238,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
               {waiverValid ? <span className="tag tag-green">✓ Signed {cu.waiverYear}</span> : <span className="tag tag-red">✗ Not Signed</span>}
             </div>
             {waiverValid
-              ? <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
+              ? <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>+ Add Player Waiver</button>
+                </div>
               : <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>}
           </div>
           {cu.waiverPending && <div className="alert alert-gold">⏳ Changes submitted — awaiting admin approval</div>}
