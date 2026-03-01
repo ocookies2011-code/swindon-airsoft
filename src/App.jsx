@@ -809,10 +809,13 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     if (!form.email || !form.password) { showToast("Email and password required", "red"); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
       if (error) throw error;
-      // Reload immediately — onAuthStateChange will pick up the session
-      window.location.reload();
+      // Fetch profile directly and update state — no reload needed
+      const profile = await api.profiles.getById(data.user.id);
+      if (profile) onLogin(normaliseProfile(profile));
+      onClose();
+      return;
     } catch (e) {
       showToast(e.message || "Login failed", "red");
       setBusy(false);
