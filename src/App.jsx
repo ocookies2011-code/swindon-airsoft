@@ -256,6 +256,8 @@ function useData() {
       const users = prev.users.map(u => u.id === id ? { ...u, ...patch } : u);
       return { ...prev, users };
     });
+    // Also update cu if this is the logged-in user
+    setCu(prev => prev?.id === id ? { ...prev, ...patch } : prev);
   }, []);
 
   const updateEvent = useCallback(async (id, patch) => {
@@ -3153,13 +3155,18 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
     } finally { setPicUploading(false); }
   };
 
-  const saveProfile = () => {
-    updateUser(cu.id, {
-      name:    edit.name,
-      phone:   edit.phone,
-      address: composeAddress(edit),
-    });
-    showToast("Profile updated!");
+  const saveProfile = async () => {
+    try {
+      await updateUser(cu.id, {
+        name:    edit.name,
+        phone:   edit.phone,
+        address: composeAddress(edit),
+      });
+      showToast("Profile updated!");
+    } catch(e) {
+      showToast("Failed to save: " + (e.message || "unknown error"), "red");
+    }
+  };rofile updated!");
   };
 
   return (
