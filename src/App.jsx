@@ -1139,7 +1139,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
   const go = (id) => {
     // Guard: admin page requires admin role — never navigate there otherwise
     if (id === "admin" && cu?.role !== "admin") return;
-    navigateTo(id);
+    setPage(id);
     setDrawerOpen(false);
   };
 
@@ -1446,8 +1446,8 @@ function HomePage({ data, setPage }) {
               Experience the ultimate airsoft gameplay. From intense skirmishes to special ops events, gear up and join the action.
             </p>
             <div className="hero-cta">
-              <button className="btn btn-primary" style={{ padding:"13px 32px", fontSize:14 }} onClick={() => navigateTo("events")}>BOOK NOW</button>
-              <button className="btn btn-ghost"   style={{ padding:"13px 28px", fontSize:14 }} onClick={() => navigateTo("vip")}>BECOME VIP</button>
+              <button className="btn btn-primary" style={{ padding:"13px 32px", fontSize:14 }} onClick={() => setPage("events")}>BOOK NOW</button>
+              <button className="btn btn-ghost"   style={{ padding:"13px 28px", fontSize:14 }} onClick={() => setPage("vip")}>BECOME VIP</button>
             </div>
           </div>
         </div>
@@ -1481,7 +1481,7 @@ function HomePage({ data, setPage }) {
                     📍 {nextEvent.location}<br />
                     🗓 {nextEvent.date} · {nextEvent.time} HRS GMT
                   </div>
-                  <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => navigateTo("events")}>DEPLOY →</button>
+                  <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => setPage("events")}>DEPLOY →</button>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end" }}>
                   <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
@@ -1539,7 +1539,7 @@ function HomePage({ data, setPage }) {
                 <div className="section-title">UPCOMING <span>EVENTS</span></div>
                 <div className="section-sub">Book your next game day</div>
               </div>
-              <button className="section-link" onClick={() => navigateTo("events")}>VIEW ALL →</button>
+              <button className="section-link" onClick={() => setPage("events")}>VIEW ALL →</button>
             </div>
             <div className="grid-3">
               {data.events.filter(e => e.published).slice(0, 3).map(ev => {
@@ -1547,7 +1547,7 @@ function HomePage({ data, setPage }) {
                 const total  = ev.walkOnSlots + ev.rentalSlots;
                 const spotsLeft = total - booked;
                 return (
-                  <div key={ev.id} className="event-card" onClick={() => navigateTo("events")}>
+                  <div key={ev.id} className="event-card" onClick={() => setPage("events")}>
                     <div className="event-banner-img" style={{ position:"relative" }}>
                       {ev.banner
                         ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
@@ -1585,11 +1585,11 @@ function HomePage({ data, setPage }) {
                 <div className="section-title">TACTICAL <span>GEAR</span></div>
                 <div className="section-sub">BBs, gas, pyro and more</div>
               </div>
-              <button className="section-link" onClick={() => navigateTo("shop")}>SHOP ALL →</button>
+              <button className="section-link" onClick={() => setPage("shop")}>SHOP ALL →</button>
             </div>
             <div className="grid-4">
               {data.shop.filter(p => p.published !== false).slice(0, 4).map(prod => (
-                <div key={prod.id} className="shop-card" onClick={() => navigateTo("shop")} style={{ cursor:"pointer" }}>
+                <div key={prod.id} className="shop-card" onClick={() => setPage("shop")} style={{ cursor:"pointer" }}>
                   <div className="shop-img">
                     {prod.image ? <img src={prod.image} alt={prod.name} /> : <span style={{ fontSize:32, opacity:.3 }}>📦</span>}
                   </div>
@@ -1613,7 +1613,7 @@ function HomePage({ data, setPage }) {
           <p style={{ fontSize:15, color:"#aaa", marginBottom:28, lineHeight:1.7 }}>
             After 3 game days, unlock VIP membership for just £30/year. Get 10% off everything, access exclusive events, and UKARA registration support.
           </p>
-          <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => navigateTo("vip")}>LEARN MORE</button>
+          <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => setPage("vip")}>LEARN MORE</button>
         </div>
       </div>
 
@@ -2016,7 +2016,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"var(--gold)", letterSpacing:".06em" }}>VIP MEMBERS ONLY EVENT</div>
                     <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
                       {!cu ? "Log in and" : "You need to"} become a VIP member to book this event.{" "}
-                      <button className="btn btn-sm btn-ghost" style={{ padding:"2px 8px", fontSize:11 }} onClick={() => navigateTo("vip")}>Learn about VIP →</button>
+                      <button className="btn btn-sm btn-ghost" style={{ padding:"2px 8px", fontSize:11 }} onClick={() => setPage("vip")}>Learn about VIP →</button>
                     </div>
                   </div>
                 </div>
@@ -2056,7 +2056,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ fontSize:28, marginBottom:8 }}>⭐</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, color:"var(--gold)", fontSize:16, letterSpacing:".06em", marginBottom:4 }}>VIP MEMBERS ONLY</div>
                     <div>Booking is restricted to VIP members for this event.</div>
-                    <button className="btn btn-primary" style={{ marginTop:14, padding:"9px 24px" }} onClick={() => navigateTo("vip")}>Become a VIP →</button>
+                    <button className="btn btn-primary" style={{ marginTop:14, padding:"9px 24px" }} onClick={() => setPage("vip")}>Become a VIP →</button>
                   </div>
                 )}
                 {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #1a1a1a" }}>
@@ -2988,7 +2988,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         </div>
 
         <div style={{ textAlign:"center" }}>
-          <button className="btn btn-ghost" onClick={() => navigateTo("events")}>← Browse Events</button>
+          <button className="btn btn-ghost" onClick={() => setPage("events")}>← Browse Events</button>
         </div>
       </div>
     </div>
@@ -3775,7 +3775,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           })}
           <div style={{ marginTop: 16, padding: "0 0 16px" }}>
             <div className="sb-label">SYSTEM</div>
-            <div className="sb-item" onClick={() => navigateTo("home")}>
+            <div className="sb-item" onClick={() => setPage("home")}>
               <span className="sb-icon">🌐</span><span>Exit Admin</span>
             </div>
           </div>
@@ -3791,7 +3791,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           </div>
           <div className="gap-2" style={{ alignItems: "center" }}>
             <GmtClock />
-            <button className="btn btn-sm btn-ghost" onClick={() => navigateTo("home")}>← Site</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")}>← Site</button>
           </div>
         </div>
         <div className="admin-content">
@@ -6674,7 +6674,8 @@ export default function App() {
     return valid.includes(hash) ? hash : "home";
   };
   const [page, setPage] = useState(getInitialPage);
-  const navigateTo = (p) => { setPage(p); window.location.hash = p; };
+  // Sync URL hash with page state
+  useEffect(() => { window.location.hash = page; }, [page]);
   useEffect(() => {
     const onHash = () => {
       const hash = window.location.hash.replace("#","");
@@ -6813,7 +6814,7 @@ export default function App() {
   if (page === "admin") {
     // First gate: must be logged in at all
     if (!cu) {
-      navigateTo("home");
+      setPage("home");
       return null;
     }
     // Second gate: client-side role pre-check (server verification happens inside AdminPanel)
@@ -6825,7 +6826,7 @@ export default function App() {
             <div style={{ fontSize: 48 }}>🔒</div>
             <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
             <div style={{ color: "var(--muted)", fontSize: 14 }}>Admin access only.</div>
-            <button className="btn btn-ghost" onClick={() => navigateTo("home")}>← Back to Site</button>
+            <button className="btn btn-ghost" onClick={() => setPage("home")}>← Back to Site</button>
           </div>
         </>
       );
@@ -6928,7 +6929,7 @@ export default function App() {
                 ["VIP Membership", "vip"],
                 ["Gallery", "gallery"],
               ].map(([label, pg]) => (
-                <button key={label} className="pub-footer-link" onClick={() => navigateTo(pg)}>{label}</button>
+                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
               ))}
             </div>
             {/* Information */}
@@ -6939,7 +6940,7 @@ export default function App() {
                 ["Site Rules", "qa"],
                 ["FAQ", "qa"],
               ].map(([label, pg]) => (
-                <button key={label} className="pub-footer-link" onClick={() => navigateTo(pg)}>{label}</button>
+                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
               ))}
             </div>
             {/* Contact */}
