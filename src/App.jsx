@@ -874,7 +874,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     "I agree to follow all safety rules and marshal instructions.",
     "I confirm that I am at least 18 years of age or have parental/guardian consent.",
     "I will not consume alcohol or drugs before or during gameplay.",
-    "I release Swindon Airsoft and its staff from liability for any injuries sustained during play.",
+    "I release Zulu's Airsoft and its staff from liability for any injuries sustained during play.",
     "I understand that my participation is voluntary and at my own risk.",
     "I agree to treat all participants with respect and follow the site's code of conduct.",
     "I confirm that any replica firearms I bring to the site are legal to own in the UK.",
@@ -3529,7 +3529,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 
   <div class="header">
     <div class="header-top">
-      <div class="org">⬡ Swindon Airsoft</div>
+      <div class="org">⬡ Zulu's Airsoft</div>
       <div class="classification">FIELD PASS // ${new Date().getFullYear()}</div>
     </div>
     <div class="event-name">${b.eventTitle || 'Operation'}</div>
@@ -3613,7 +3613,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
                     padding:"14px 20px 12px",
                   }}>
                     <div style={{ fontSize:9, letterSpacing:".22em", color:"#c8ff00", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:6 }}>
-                      ⬡ SWINDON AIRSOFT &nbsp;·&nbsp; FIELD PASS // {new Date().getFullYear()}
+                      ⬡ ZULU'S AIRSOFT &nbsp;·&nbsp; FIELD PASS // {new Date().getFullYear()}
                     </div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, textTransform:"uppercase", letterSpacing:".06em", color:"#fff", lineHeight:1, marginBottom:4 }}>
                       {b.eventTitle}
