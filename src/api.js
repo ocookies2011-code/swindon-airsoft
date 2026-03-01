@@ -431,6 +431,7 @@ function normaliseEvent(ev) {
     title:        ev.title,
     date:         ev.date,
     time:         ev.time?.slice(0, 5) ?? '09:00',
+    endTime:      ev.end_time?.slice(0, 5) ?? '',
     location:     ev.location,
     description:  ev.description,
     walkOnSlots:  ev.walk_on_slots,
