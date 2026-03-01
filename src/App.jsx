@@ -3592,53 +3592,62 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
               };
 
               return (
-                <div key={b.id} style={{ marginBottom:20, position:"relative" }}>
+                <div key={b.id} style={{
+                  marginBottom: 20,
+                  position: "relative",
+                  background: `radial-gradient(ellipse at 12% 20%, rgba(50,80,15,.6) 0%, transparent 42%),radial-gradient(ellipse at 82% 75%, rgba(35,60,8,.5) 0%, transparent 38%),radial-gradient(ellipse at 55% 48%, rgba(25,45,5,.35) 0%, transparent 32%),radial-gradient(ellipse at 88% 12%, rgba(55,85,12,.45) 0%, transparent 28%),radial-gradient(ellipse at 28% 82%, rgba(40,65,10,.4) 0%, transparent 38%),radial-gradient(ellipse at 65% 30%, rgba(20,38,4,.3) 0%, transparent 25%),#0b1007`,
+                  border: "1px solid #2a3a10",
+                  overflow: "hidden",
+                }}>
+                  {/* Scanlines */}
+                  <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 3px)" }} />
+                  {/* Noise texture dots */}
+                  <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1, opacity:.04,
+                    backgroundImage:"radial-gradient(circle, #c8ff00 1px, transparent 1px)",
+                    backgroundSize:"18px 18px"
+                  }} />
+
                   {/* Corner brackets */}
-                  {["tl","tr","bl","br"].map(c => (
-                    <div key={c} style={{
-                      position:"absolute", width:14, height:14, zIndex:2,
-                      top: c.startsWith("t") ? 6 : "auto", bottom: c.startsWith("b") ? 6 : "auto",
-                      left: c.endsWith("l") ? 6 : "auto", right: c.endsWith("r") ? 6 : "auto",
-                      borderTop: c.startsWith("t") ? "2px solid #c8ff00" : "none",
-                      borderBottom: c.startsWith("b") ? "2px solid #c8ff00" : "none",
-                      borderLeft: c.endsWith("l") ? "2px solid #c8ff00" : "none",
-                      borderRight: c.endsWith("r") ? "2px solid #c8ff00" : "none",
+                  {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                    <div key={v+h} style={{
+                      position:"absolute", width:18, height:18, zIndex:3,
+                      top: v==="top" ? 7 : "auto", bottom: v==="bottom" ? 7 : "auto",
+                      left: h==="left" ? 7 : "auto", right: h==="right" ? 7 : "auto",
+                      borderTop: v==="top" ? "2px solid #c8ff00" : "none",
+                      borderBottom: v==="bottom" ? "2px solid #c8ff00" : "none",
+                      borderLeft: h==="left" ? "2px solid #c8ff00" : "none",
+                      borderRight: h==="right" ? "2px solid #c8ff00" : "none",
                     }} />
                   ))}
 
-                  {/* Header strip */}
-                  <div style={{
-                    background:"linear-gradient(135deg,#0d1400 0%,#111 60%,#0a1000 100%)",
-                    borderTop:"1px solid #2a2a2a", borderLeft:"1px solid #2a2a2a", borderRight:"1px solid #2a2a2a",
-                    padding:"14px 20px 12px",
-                  }}>
-                    <div style={{ fontSize:9, letterSpacing:".22em", color:"#c8ff00", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:6 }}>
-                      ⬡ ZULU'S AIRSOFT &nbsp;·&nbsp; FIELD PASS // {new Date().getFullYear()}
+                  {/* Header */}
+                  <div style={{ position:"relative", zIndex:2, background:"linear-gradient(135deg,rgba(8,18,2,.97) 0%,rgba(14,26,4,.92) 40%,rgba(6,14,1,.97) 100%)", borderBottom:"1px solid #283810", padding:"14px 22px 12px" }}>
+                    <div style={{ position:"absolute", right:20, top:10, display:"flex", gap:3, opacity:.07 }}>
+                      {["⬡","⬡","⬡","⬡","⬡","⬡"].map((h,i) => <span key={i} style={{ fontSize:22, color:"#c8ff00" }}>{h}</span>)}
                     </div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, textTransform:"uppercase", letterSpacing:".06em", color:"#fff", lineHeight:1, marginBottom:4 }}>
+                    <div style={{ fontSize:9, letterSpacing:".2em", color:"#7aaa30", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:7, display:"flex", gap:10, alignItems:"center" }}>
+                      <span style={{ color:"#c8ff00" }}>⬡ ZULU'S AIRSOFT</span>
+                      <span style={{ color:"#3a5010" }}>◆</span>
+                      <span>FIELD PASS // {new Date().getFullYear()}</span>
+                    </div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:28, textTransform:"uppercase", letterSpacing:".06em", color:"#e8ffb0", lineHeight:1, marginBottom:5, textShadow:"0 0 30px rgba(200,255,0,.12)" }}>
                       {b.eventTitle}
                     </div>
-                    <div style={{ fontSize:12, color:"#666", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".06em" }}>
-                      {b.eventDate}
+                    <div style={{ fontSize:11, color:"#4a6820", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>
+                      📅 {b.eventDate}
                     </div>
                   </div>
 
                   {/* Tear line */}
-                  <div style={{ display:"flex", alignItems:"center", background:"#0a0a0a", borderLeft:"1px solid #2a2a2a", borderRight:"1px solid #2a2a2a" }}>
-                    <div style={{ width:14, height:28, background:"var(--bg,#0a0a0a)", borderRadius:"0 14px 14px 0", marginLeft:-1, flexShrink:0 }} />
-                    <div style={{ flex:1, borderTop:"2px dashed #1e1e1e" }} />
-                    <div style={{ width:14, height:28, background:"var(--bg,#0a0a0a)", borderRadius:"14px 0 0 14px", marginRight:-1, flexShrink:0 }} />
+                  <div style={{ position:"relative", zIndex:2, display:"flex", alignItems:"center", height:24 }}>
+                    <div style={{ width:14, height:28, background:"var(--bg,#0a0a0a)", borderRadius:"0 14px 14px 0", marginLeft:-1, flexShrink:0, zIndex:3 }} />
+                    <div style={{ flex:1, borderTop:"1px dashed #283810" }} />
+                    <div style={{ width:14, height:28, background:"var(--bg,#0a0a0a)", borderRadius:"14px 0 0 14px", marginRight:-1, flexShrink:0, zIndex:3 }} />
                   </div>
 
                   {/* Body */}
-                  <div style={{
-                    background:"#111",
-                    border:"1px solid #2a2a2a", borderTop:"none",
-                    padding:"14px 20px 16px",
-                    display:"flex", gap:16, alignItems:"center",
-                  }}>
-                    {/* Fields grid */}
-                    <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px 16px" }}>
+                  <div style={{ position:"relative", zIndex:2, padding:"14px 22px 18px", display:"flex", gap:16, alignItems:"center" }}>
+                    <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"14px 16px" }}>
                       {[
                         ["KIT TYPE", b.type === "walkOn" ? "Walk-On" : "Rental"],
                         ["UNITS", b.qty],
@@ -3647,37 +3656,38 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
                         ["STATUS", b.checkedIn ? "CLEARED" : "PENDING"],
                       ].map(([lbl, val]) => (
                         <div key={lbl}>
-                          <div style={{ fontSize:8, letterSpacing:".22em", color:"#555", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:2 }}>{lbl}</div>
-                          <div style={{ fontSize:15, fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".04em", color: lbl==="STATUS" ? (b.checkedIn ? "#c8ff00" : "#4fc3f7") : "#e0e0e0" }}>{val}</div>
+                          <div style={{ fontSize:8, letterSpacing:".22em", color:"#4a6820", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:3 }}>{lbl}</div>
+                          <div style={{ fontSize:17, fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".04em",
+                            color: lbl==="STATUS" ? (b.checkedIn ? "#c8ff00" : "#4fc3f7") : "#c8e878",
+                            textShadow: lbl==="STATUS" ? `0 0 14px ${b.checkedIn ? "rgba(200,255,0,.25)" : "rgba(79,195,247,.25)"}` : "none",
+                          }}>{val}</div>
                         </div>
                       ))}
-                      <div>
-                        <button onClick={printTicket} style={{ background:"none", border:"1px solid #333", color:"#c8ff00", fontSize:10, fontWeight:800, padding:"4px 12px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>
+                      <div style={{ display:"flex", alignItems:"flex-end" }}>
+                        <button onClick={printTicket} style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontSize:10, fontWeight:800, padding:"5px 14px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em", textTransform:"uppercase" }}>
                           🖨 PRINT
                         </button>
                       </div>
                     </div>
 
-                    {/* Divider */}
-                    <div style={{ width:1, alignSelf:"stretch", borderLeft:"1px dashed #222", flexShrink:0 }} />
+                    <div style={{ width:1, alignSelf:"stretch", borderLeft:"1px dashed #283810", flexShrink:0 }} />
 
-                    {/* QR */}
                     <div style={{ textAlign:"center", flexShrink:0 }}>
-                      <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", padding:8, display:"inline-block" }}>
-                        <QRCode value={b.id} size={90} />
+                      <div style={{ background:"#07100304", border:"2px solid #2a3a10", padding:8, display:"inline-block", boxShadow:"0 0 20px rgba(200,255,0,.06), inset 0 0 10px rgba(0,0,0,.5)" }}>
+                        <QRCode value={b.id} size={92} />
                       </div>
-                      <div style={{ fontSize:9, color:"#555", marginTop:4, letterSpacing:".12em", fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase" }}>Scan on arrival</div>
+                      <div style={{ fontSize:8, color:"#3a5818", marginTop:5, letterSpacing:".18em", fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase" }}>Scan on arrival</div>
                     </div>
                   </div>
 
-                  {/* Footer barcode strip */}
-                  <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", borderTop:"1px solid #1a1a1a", padding:"6px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <div style={{ fontSize:8, letterSpacing:".15em", color:"#333", fontFamily:"'Share Tech Mono',monospace", textTransform:"uppercase" }}>
+                  {/* Footer */}
+                  <div style={{ position:"relative", zIndex:2, background:"rgba(4,8,1,.85)", borderTop:"1px solid #1a2808", padding:"6px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div style={{ fontSize:8, letterSpacing:".15em", color:"#283810", fontFamily:"'Share Tech Mono',monospace" }}>
                       MISSION ID: {b.id.toUpperCase()}
                     </div>
-                    <div style={{ display:"flex", gap:2, alignItems:"center" }}>
-                      {Array.from({length:24}, (_, i) => (
-                        <div key={i} style={{ background:"#333", width:2, height: 6 + Math.abs(Math.sin(i * 1.4) * 8), borderRadius:1 }} />
+                    <div style={{ display:"flex", gap:"2px", alignItems:"center" }}>
+                      {Array.from({length:32}, (_,i) => (
+                        <div key={i} style={{ background: i % 7 === 0 ? "#3a5010" : "#1e2c08", width: i % 3 === 0 ? 3 : 2, height: 4 + Math.abs(Math.sin(i*1.37)*11), borderRadius:1 }} />
                       ))}
                     </div>
                   </div>
