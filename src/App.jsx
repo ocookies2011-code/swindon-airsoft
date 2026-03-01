@@ -3156,12 +3156,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   };
 
   const saveProfile = async () => {
+    const patch = { name: edit.name, phone: edit.phone, address: composeAddress(edit) };
     try {
-      await updateUser(cu.id, {
-        name:    edit.name,
-        phone:   edit.phone,
-        address: composeAddress(edit),
-      });
+      await updateUser(cu.id, patch);
+      setCu(prev => ({ ...prev, ...patch }));
       showToast("Profile updated!");
     } catch(e) {
       showToast("Failed to save: " + (e.message || "unknown error"), "red");
