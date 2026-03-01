@@ -3316,53 +3316,275 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
           {myBookings.length === 0 ? <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No bookings yet.</div> : (
             myBookings.map(b => {
               const printTicket = () => {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(b.id)}`;
-                const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ticket</title>
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(b.id)}&bgcolor=0d0d0d&color=c8ff00&qzone=1`;
+                const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>FIELD PASS — ${b.eventTitle || 'EVENT'}</title>
 <style>
-  @media print { .noprint { display:none } body { margin:0 } }
-  body { font-family:'Arial',sans-serif; background:#0a0a0a; color:#fff; margin:0; padding:20px; }
-  .ticket { max-width:480px; margin:0 auto; background:#111; border:1px solid #333; border-radius:8px; overflow:hidden; }
-  .ticket-top { background:#111; padding:20px 24px 16px; border-bottom:2px dashed #2a2a2a; }
-  .ticket-bottom { padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
-  .logo { font-size:11px; letter-spacing:.2em; color:#c8ff00; font-weight:700; text-transform:uppercase; margin-bottom:8px; }
-  .event { font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
-  .date { font-size:13px; color:#aaa; }
-  .label { font-size:9px; letter-spacing:.2em; color:#888; font-weight:700; text-transform:uppercase; margin-bottom:3px; }
-  .val { font-size:15px; font-weight:700; }
-  .ref { font-size:10px; color:#555; margin-top:6px; font-family:monospace; }
-  .status { display:inline-block; padding:3px 10px; font-size:10px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; border-radius:2px; margin-top:6px; background:${b.checkedIn ? '#1a3a1a' : '#001a3a'}; color:${b.checkedIn ? '#7dc840' : '#4fc3f7'}; border:1px solid ${b.checkedIn ? '#7dc840' : '#4fc3f7'}; }
-  .qr-wrap { background:#fff; padding:8px; border-radius:4px; display:inline-block; }
-  .print-btn { display:block; width:100%; padding:12px; margin:16px auto 0; max-width:480px; background:#c8ff00; color:#000; font-weight:900; font-size:14px; letter-spacing:.12em; text-transform:uppercase; border:none; border-radius:4px; cursor:pointer; }
-  .notch-left { width:20px; height:40px; background:#0a0a0a; border-radius:0 20px 20px 0; margin-left:-1px; }
-  .notch-right { width:20px; height:40px; background:#0a0a0a; border-radius:20px 0 0 20px; margin-right:-1px; }
-  .notch-row { display:flex; align-items:center; justify-content:space-between; margin:-1px 0; }
-  .notch-line { flex:1; border-top:2px dashed #2a2a2a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  @media print {
+    .noprint { display:none !important; }
+    body { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800;900&family=Share+Tech+Mono&display=swap');
+  body {
+    font-family:'Barlow Condensed',Arial,sans-serif;
+    background: #0a0a0a;
+    color:#fff;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .ticket {
+    width:520px;
+    background:#111;
+    border:1px solid #2a2a2a;
+    position:relative;
+    overflow:hidden;
+  }
+  /* Camo texture overlay */
+  .ticket::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    background-image:
+      radial-gradient(ellipse at 20% 30%, rgba(30,50,10,.25) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 70%, rgba(20,40,5,.2) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, rgba(10,20,0,.15) 0%, transparent 60%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .ticket > * { position:relative; z-index:1; }
+
+  /* Corner brackets */
+  .corner { position:absolute; width:20px; height:20px; z-index:2; }
+  .corner.tl { top:8px; left:8px; border-top:2px solid #c8ff00; border-left:2px solid #c8ff00; }
+  .corner.tr { top:8px; right:8px; border-top:2px solid #c8ff00; border-right:2px solid #c8ff00; }
+  .corner.bl { bottom:8px; left:8px; border-bottom:2px solid #c8ff00; border-left:2px solid #c8ff00; }
+  .corner.br { bottom:8px; right:8px; border-bottom:2px solid #c8ff00; border-right:2px solid #c8ff00; }
+
+  .header {
+    background: linear-gradient(135deg, #0d1400 0%, #111 60%, #0a1000 100%);
+    padding:18px 24px 14px;
+    border-bottom:1px solid #1e1e1e;
+  }
+  .header-top {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .org {
+    font-size:10px;
+    letter-spacing:.25em;
+    color:#c8ff00;
+    font-weight:800;
+    text-transform:uppercase;
+  }
+  .classification {
+    font-size:9px;
+    letter-spacing:.2em;
+    color:#555;
+    text-transform:uppercase;
+    border:1px solid #333;
+    padding:2px 8px;
+  }
+  .event-name {
+    font-size:28px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    line-height:1;
+    color:#fff;
+    margin-bottom:4px;
+  }
+  .event-date {
+    font-size:13px;
+    color:#888;
+    letter-spacing:.08em;
+    font-family:'Share Tech Mono',monospace;
+  }
+
+  /* Tear line */
+  .tear {
+    display:flex;
+    align-items:center;
+    background:#0d0d0d;
+  }
+  .notch { width:18px; height:36px; background:#0a0a0a; flex-shrink:0; }
+  .notch.l { border-radius:0 18px 18px 0; margin-left:-1px; }
+  .notch.r { border-radius:18px 0 0 18px; margin-right:-1px; }
+  .tear-line { flex:1; border-top:2px dashed #222; }
+
+  .body {
+    padding:16px 24px 20px;
+    display:flex;
+    gap:20px;
+    align-items:stretch;
+  }
+  .fields {
+    flex:1;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px 20px;
+    align-content:start;
+  }
+  .field .lbl {
+    font-size:8px;
+    letter-spacing:.22em;
+    color:#555;
+    font-weight:800;
+    text-transform:uppercase;
+    margin-bottom:3px;
+  }
+  .field .val {
+    font-size:17px;
+    font-weight:800;
+    letter-spacing:.04em;
+    color:#e0e0e0;
+    line-height:1;
+  }
+  .field.wide { grid-column:1/-1; }
+  .ref {
+    grid-column:1/-1;
+    font-family:'Share Tech Mono',monospace;
+    font-size:10px;
+    color:#444;
+    letter-spacing:.1em;
+    padding-top:10px;
+    border-top:1px solid #1a1a1a;
+    margin-top:4px;
+  }
+  .status-badge {
+    display:inline-block;
+    padding:4px 12px;
+    font-size:10px;
+    font-weight:900;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+
+  /* QR side */
+  .qr-side {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding-left:16px;
+    border-left:1px dashed #222;
+    flex-shrink:0;
+  }
+  .qr-wrap {
+    background:#0d0d0d;
+    border:1px solid #2a2a2a;
+    padding:8px;
+  }
+  .qr-label {
+    font-size:8px;
+    letter-spacing:.18em;
+    color:#555;
+    text-transform:uppercase;
+    text-align:center;
+    font-weight:700;
+  }
+
+  /* Barcode-style bottom strip */
+  .footer {
+    background:#0d0d0d;
+    border-top:1px solid #1a1a1a;
+    padding:8px 24px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .footer-text {
+    font-size:9px;
+    letter-spacing:.15em;
+    color:#444;
+    text-transform:uppercase;
+  }
+  .bars { display:flex; gap:2px; align-items:center; }
+  .bar { background:#333; width:2px; border-radius:1px; }
+
+  .print-btn {
+    margin-top:20px;
+    padding:13px 32px;
+    background:#c8ff00;
+    color:#000;
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:900;
+    font-size:14px;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    border:none;
+    cursor:pointer;
+    width:520px;
+  }
 </style></head><body>
 <div class="ticket">
-  <div class="ticket-top">
-    <div class="logo">🎯 Swindon Airsoft</div>
-    <div class="event">${b.eventTitle || 'Event'}</div>
-    <div class="date">📅 ${b.eventDate || ''}</div>
-  </div>
-  <div class="notch-row"><div class="notch-left"></div><div class="notch-line"></div><div class="notch-right"></div></div>
-  <div class="ticket-bottom">
-    <div>
-      <div class="label">Ticket Type</div>
-      <div class="val">${b.type === 'walkOn' ? 'Walk-On' : 'Rental'}</div>
-      <div class="label" style="margin-top:10px">Quantity</div>
-      <div class="val">${b.qty}</div>
-      <div class="label" style="margin-top:10px">Total Paid</div>
-      <div class="val">${b.total > 0 ? '£' + b.total.toFixed(2) : 'Complimentary'}</div>
-      <div class="ref">REF: ${b.id.slice(0,8).toUpperCase()}</div>
-      <div class="status">${b.checkedIn ? '✓ Checked In' : '⏳ Booked'}</div>
+  <div class="corner tl"></div><div class="corner tr"></div>
+  <div class="corner bl"></div><div class="corner br"></div>
+
+  <div class="header">
+    <div class="header-top">
+      <div class="org">⬡ Swindon Airsoft</div>
+      <div class="classification">FIELD PASS // ${new Date().getFullYear()}</div>
     </div>
-    <div style="text-align:center">
-      <div class="qr-wrap"><img src="${qrUrl}" width="160" height="160" alt="QR" /></div>
-      <div style="font-size:10px;color:#888;margin-top:6px;">Show on arrival</div>
+    <div class="event-name">${b.eventTitle || 'Operation'}</div>
+    <div class="event-date">${b.eventDate || '—'}</div>
+  </div>
+
+  <div class="tear">
+    <div class="notch l"></div>
+    <div class="tear-line"></div>
+    <div class="notch r"></div>
+  </div>
+
+  <div class="body">
+    <div class="fields">
+      <div class="field">
+        <div class="lbl">Operator</div>
+        <div class="val">${(b.eventTitle || '').slice(0,12) || '—'}</div>
+      </div>
+      <div class="field">
+        <div class="lbl">Clearance</div>
+        <div class="val" style="color:${b.checkedIn ? '#c8ff00' : '#4fc3f7'}">${b.checkedIn ? 'CLEARED' : 'PENDING'}</div>
+      </div>
+      <div class="field">
+        <div class="lbl">Kit Type</div>
+        <div class="val">${b.type === 'walkOn' ? 'Walk-On' : 'Rental'}</div>
+      </div>
+      <div class="field">
+        <div class="lbl">Units</div>
+        <div class="val">${b.qty}</div>
+      </div>
+      <div class="field">
+        <div class="lbl">Levy</div>
+        <div class="val">${b.total > 0 ? '£' + b.total.toFixed(2) : 'N/A'}</div>
+      </div>
+      <div class="field">
+        <div class="lbl">Status</div>
+        <div class="val" style="font-size:13px;color:${b.checkedIn ? '#c8ff00' : '#4fc3f7'};border:1px solid ${b.checkedIn ? '#c8ff00' : '#4fc3f7'};padding:2px 8px;display:inline-block">${b.checkedIn ? '✓ CHECKED IN' : '⏳ BOOKED'}</div>
+      </div>
+      <div class="ref">MISSION ID: ${b.id.toUpperCase()}</div>
+    </div>
+
+    <div class="qr-side">
+      <img class="qr-wrap" src="${qrUrl}" width="140" height="140" alt="QR" />
+      <div class="qr-label">Scan on arrival</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">Valid for date shown only &bull; Non-transferable</div>
+    <div class="bars">
+      ${Array.from({length:28}, (_,i) => `<div class="bar" style="height:${8+Math.sin(i*1.3)*6}px"></div>`).join('')}
     </div>
   </div>
 </div>
-<button class="print-btn noprint" onclick="window.print()">🖨 PRINT / SAVE TICKET</button>
+<button class="print-btn noprint" onclick="window.print()">🖨 PRINT / SAVE FIELD PASS</button>
 </body></html>`;
                 const w = window.open('', '_blank');
                 w.document.write(html);
