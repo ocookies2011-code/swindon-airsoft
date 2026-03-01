@@ -1139,7 +1139,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
   const go = (id) => {
     // Guard: admin page requires admin role — never navigate there otherwise
     if (id === "admin" && cu?.role !== "admin") return;
-    setPage(id);
+    navigateTo(id);
     setDrawerOpen(false);
   };
 
@@ -1446,8 +1446,8 @@ function HomePage({ data, setPage }) {
               Experience the ultimate airsoft gameplay. From intense skirmishes to special ops events, gear up and join the action.
             </p>
             <div className="hero-cta">
-              <button className="btn btn-primary" style={{ padding:"13px 32px", fontSize:14 }} onClick={() => setPage("events")}>BOOK NOW</button>
-              <button className="btn btn-ghost"   style={{ padding:"13px 28px", fontSize:14 }} onClick={() => setPage("vip")}>BECOME VIP</button>
+              <button className="btn btn-primary" style={{ padding:"13px 32px", fontSize:14 }} onClick={() => navigateTo("events")}>BOOK NOW</button>
+              <button className="btn btn-ghost"   style={{ padding:"13px 28px", fontSize:14 }} onClick={() => navigateTo("vip")}>BECOME VIP</button>
             </div>
           </div>
         </div>
@@ -1481,7 +1481,7 @@ function HomePage({ data, setPage }) {
                     📍 {nextEvent.location}<br />
                     🗓 {nextEvent.date} · {nextEvent.time} HRS GMT
                   </div>
-                  <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => setPage("events")}>DEPLOY →</button>
+                  <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => navigateTo("events")}>DEPLOY →</button>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end" }}>
                   <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
@@ -1539,7 +1539,7 @@ function HomePage({ data, setPage }) {
                 <div className="section-title">UPCOMING <span>EVENTS</span></div>
                 <div className="section-sub">Book your next game day</div>
               </div>
-              <button className="section-link" onClick={() => setPage("events")}>VIEW ALL →</button>
+              <button className="section-link" onClick={() => navigateTo("events")}>VIEW ALL →</button>
             </div>
             <div className="grid-3">
               {data.events.filter(e => e.published).slice(0, 3).map(ev => {
@@ -1547,7 +1547,7 @@ function HomePage({ data, setPage }) {
                 const total  = ev.walkOnSlots + ev.rentalSlots;
                 const spotsLeft = total - booked;
                 return (
-                  <div key={ev.id} className="event-card" onClick={() => setPage("events")}>
+                  <div key={ev.id} className="event-card" onClick={() => navigateTo("events")}>
                     <div className="event-banner-img" style={{ position:"relative" }}>
                       {ev.banner
                         ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
@@ -1585,11 +1585,11 @@ function HomePage({ data, setPage }) {
                 <div className="section-title">TACTICAL <span>GEAR</span></div>
                 <div className="section-sub">BBs, gas, pyro and more</div>
               </div>
-              <button className="section-link" onClick={() => setPage("shop")}>SHOP ALL →</button>
+              <button className="section-link" onClick={() => navigateTo("shop")}>SHOP ALL →</button>
             </div>
             <div className="grid-4">
               {data.shop.filter(p => p.published !== false).slice(0, 4).map(prod => (
-                <div key={prod.id} className="shop-card" onClick={() => setPage("shop")} style={{ cursor:"pointer" }}>
+                <div key={prod.id} className="shop-card" onClick={() => navigateTo("shop")} style={{ cursor:"pointer" }}>
                   <div className="shop-img">
                     {prod.image ? <img src={prod.image} alt={prod.name} /> : <span style={{ fontSize:32, opacity:.3 }}>📦</span>}
                   </div>
@@ -1613,7 +1613,7 @@ function HomePage({ data, setPage }) {
           <p style={{ fontSize:15, color:"#aaa", marginBottom:28, lineHeight:1.7 }}>
             After 3 game days, unlock VIP membership for just £30/year. Get 10% off everything, access exclusive events, and UKARA registration support.
           </p>
-          <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => setPage("vip")}>LEARN MORE</button>
+          <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => navigateTo("vip")}>LEARN MORE</button>
         </div>
       </div>
 
@@ -2016,7 +2016,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"var(--gold)", letterSpacing:".06em" }}>VIP MEMBERS ONLY EVENT</div>
                     <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
                       {!cu ? "Log in and" : "You need to"} become a VIP member to book this event.{" "}
-                      <button className="btn btn-sm btn-ghost" style={{ padding:"2px 8px", fontSize:11 }} onClick={() => setPage("vip")}>Learn about VIP →</button>
+                      <button className="btn btn-sm btn-ghost" style={{ padding:"2px 8px", fontSize:11 }} onClick={() => navigateTo("vip")}>Learn about VIP →</button>
                     </div>
                   </div>
                 </div>
@@ -2056,7 +2056,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ fontSize:28, marginBottom:8 }}>⭐</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, color:"var(--gold)", fontSize:16, letterSpacing:".06em", marginBottom:4 }}>VIP MEMBERS ONLY</div>
                     <div>Booking is restricted to VIP members for this event.</div>
-                    <button className="btn btn-primary" style={{ marginTop:14, padding:"9px 24px" }} onClick={() => setPage("vip")}>Become a VIP →</button>
+                    <button className="btn btn-primary" style={{ marginTop:14, padding:"9px 24px" }} onClick={() => navigateTo("vip")}>Become a VIP →</button>
                   </div>
                 )}
                 {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #1a1a1a" }}>
@@ -2988,7 +2988,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         </div>
 
         <div style={{ textAlign:"center" }}>
-          <button className="btn btn-ghost" onClick={() => setPage("events")}>← Browse Events</button>
+          <button className="btn btn-ghost" onClick={() => navigateTo("events")}>← Browse Events</button>
         </div>
       </div>
     </div>
@@ -3592,63 +3592,93 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
               };
 
               return (
-                <div key={b.id} style={{
-                  marginBottom: 16,
-                  background: "#111",
-                  border: "1px solid #333",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  position: "relative",
-                }}>
-                  {/* Ticket top strip */}
-                  <div style={{ background: b.checkedIn ? "#0d1f0d" : "#0a0a1a", borderBottom: "2px dashed #2a2a2a", padding: "16px 20px 14px" }}>
-                    <div style={{ fontSize: 10, letterSpacing: ".2em", color: "var(--accent)", fontWeight: 700, fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 6 }}>
-                      🎯 SWINDON AIRSOFT
+                <div key={b.id} style={{ marginBottom:20, position:"relative" }}>
+                  {/* Corner brackets */}
+                  {["tl","tr","bl","br"].map(c => (
+                    <div key={c} style={{
+                      position:"absolute", width:14, height:14, zIndex:2,
+                      top: c.startsWith("t") ? 6 : "auto", bottom: c.startsWith("b") ? 6 : "auto",
+                      left: c.endsWith("l") ? 6 : "auto", right: c.endsWith("r") ? 6 : "auto",
+                      borderTop: c.startsWith("t") ? "2px solid #c8ff00" : "none",
+                      borderBottom: c.startsWith("b") ? "2px solid #c8ff00" : "none",
+                      borderLeft: c.endsWith("l") ? "2px solid #c8ff00" : "none",
+                      borderRight: c.endsWith("r") ? "2px solid #c8ff00" : "none",
+                    }} />
+                  ))}
+
+                  {/* Header strip */}
+                  <div style={{
+                    background:"linear-gradient(135deg,#0d1400 0%,#111 60%,#0a1000 100%)",
+                    borderTop:"1px solid #2a2a2a", borderLeft:"1px solid #2a2a2a", borderRight:"1px solid #2a2a2a",
+                    padding:"14px 20px 12px",
+                  }}>
+                    <div style={{ fontSize:9, letterSpacing:".22em", color:"#c8ff00", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:6 }}>
+                      ⬡ SWINDON AIRSOFT &nbsp;·&nbsp; FIELD PASS // {new Date().getFullYear()}
                     </div>
-                    <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, textTransform: "uppercase", letterSpacing: ".04em", color: "#fff", marginBottom: 2 }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, textTransform:"uppercase", letterSpacing:".06em", color:"#fff", lineHeight:1, marginBottom:4 }}>
                       {b.eventTitle}
                     </div>
-                    <div style={{ fontSize: 13, color: "#aaa" }}>📅 {b.eventDate}</div>
+                    <div style={{ fontSize:12, color:"#666", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".06em" }}>
+                      {b.eventDate}
+                    </div>
                   </div>
 
-                  {/* Notch row */}
-                  <div style={{ display: "flex", alignItems: "center", margin: "-1px 0" }}>
-                    <div style={{ width: 16, height: 32, background: "var(--bg)", borderRadius: "0 16px 16px 0", marginLeft: -1, flexShrink: 0 }} />
-                    <div style={{ flex: 1, borderTop: "2px dashed #2a2a2a" }} />
-                    <div style={{ width: 16, height: 32, background: "var(--bg)", borderRadius: "16px 0 0 16px", marginRight: -1, flexShrink: 0 }} />
+                  {/* Tear line */}
+                  <div style={{ display:"flex", alignItems:"center", background:"#0a0a0a", borderLeft:"1px solid #2a2a2a", borderRight:"1px solid #2a2a2a" }}>
+                    <div style={{ width:14, height:28, background:"var(--bg,#0a0a0a)", borderRadius:"0 14px 14px 0", marginLeft:-1, flexShrink:0 }} />
+                    <div style={{ flex:1, borderTop:"2px dashed #1e1e1e" }} />
+                    <div style={{ width:14, height:28, background:"var(--bg,#0a0a0a)", borderRadius:"14px 0 0 14px", marginRight:-1, flexShrink:0 }} />
                   </div>
 
-                  {/* Ticket bottom */}
-                  <div style={{ padding: "14px 20px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 20px", marginBottom: 10 }}>
-                        {[
-                          ["TYPE", b.type === "walkOn" ? "Walk-On" : "Rental"],
-                          ["QTY", b.qty],
-                          ["PAID", b.total > 0 ? `£${b.total.toFixed(2)}` : "Complimentary"],
-                          ["REF", b.id.slice(0, 8).toUpperCase()],
-                        ].map(([label, val]) => (
-                          <div key={label}>
-                            <div style={{ fontSize: 9, letterSpacing: ".2em", color: "var(--muted)", fontWeight: 700, fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
-                            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".04em" }}>{val}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                        {b.checkedIn
-                          ? <span style={{ background: "#1a3a1a", color: "#7dc840", border: "1px solid #7dc840", fontSize: 10, fontWeight: 800, padding: "3px 10px", letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif" }}>✓ CHECKED IN</span>
-                          : <span style={{ background: "#001a3a", color: "#4fc3f7", border: "1px solid #4fc3f7", fontSize: 10, fontWeight: 800, padding: "3px 10px", letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif" }}>⏳ BOOKED</span>
-                        }
-                        <button onClick={printTicket} style={{ background: "none", border: "1px solid #333", color: "var(--accent)", fontSize: 10, fontWeight: 800, padding: "3px 12px", cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".1em" }}>
-                          🖨 PRINT TICKET
+                  {/* Body */}
+                  <div style={{
+                    background:"#111",
+                    border:"1px solid #2a2a2a", borderTop:"none",
+                    padding:"14px 20px 16px",
+                    display:"flex", gap:16, alignItems:"center",
+                  }}>
+                    {/* Fields grid */}
+                    <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px 16px" }}>
+                      {[
+                        ["KIT TYPE", b.type === "walkOn" ? "Walk-On" : "Rental"],
+                        ["UNITS", b.qty],
+                        ["LEVY", b.total > 0 ? `£${b.total.toFixed(2)}` : "N/A"],
+                        ["REF", b.id.slice(0,8).toUpperCase()],
+                        ["STATUS", b.checkedIn ? "CLEARED" : "PENDING"],
+                      ].map(([lbl, val]) => (
+                        <div key={lbl}>
+                          <div style={{ fontSize:8, letterSpacing:".22em", color:"#555", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:2 }}>{lbl}</div>
+                          <div style={{ fontSize:15, fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".04em", color: lbl==="STATUS" ? (b.checkedIn ? "#c8ff00" : "#4fc3f7") : "#e0e0e0" }}>{val}</div>
+                        </div>
+                      ))}
+                      <div>
+                        <button onClick={printTicket} style={{ background:"none", border:"1px solid #333", color:"#c8ff00", fontSize:10, fontWeight:800, padding:"4px 12px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>
+                          🖨 PRINT
                         </button>
                       </div>
                     </div>
-                    <div style={{ textAlign: "center", flexShrink: 0 }}>
-                      <div style={{ background: "#fff", padding: 8, borderRadius: 4, display: "inline-block" }}>
-                        <QRCode value={b.id} size={100} />
+
+                    {/* Divider */}
+                    <div style={{ width:1, alignSelf:"stretch", borderLeft:"1px dashed #222", flexShrink:0 }} />
+
+                    {/* QR */}
+                    <div style={{ textAlign:"center", flexShrink:0 }}>
+                      <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", padding:8, display:"inline-block" }}>
+                        <QRCode value={b.id} size={90} />
                       </div>
-                      <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>Show on arrival</div>
+                      <div style={{ fontSize:9, color:"#555", marginTop:4, letterSpacing:".12em", fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase" }}>Scan on arrival</div>
+                    </div>
+                  </div>
+
+                  {/* Footer barcode strip */}
+                  <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", borderTop:"1px solid #1a1a1a", padding:"6px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div style={{ fontSize:8, letterSpacing:".15em", color:"#333", fontFamily:"'Share Tech Mono',monospace", textTransform:"uppercase" }}>
+                      MISSION ID: {b.id.toUpperCase()}
+                    </div>
+                    <div style={{ display:"flex", gap:2, alignItems:"center" }}>
+                      {Array.from({length:24}, (_, i) => (
+                        <div key={i} style={{ background:"#333", width:2, height: 6 + Math.abs(Math.sin(i * 1.4) * 8), borderRadius:1 }} />
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -3745,7 +3775,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           })}
           <div style={{ marginTop: 16, padding: "0 0 16px" }}>
             <div className="sb-label">SYSTEM</div>
-            <div className="sb-item" onClick={() => setPage("home")}>
+            <div className="sb-item" onClick={() => navigateTo("home")}>
               <span className="sb-icon">🌐</span><span>Exit Admin</span>
             </div>
           </div>
@@ -3761,7 +3791,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           </div>
           <div className="gap-2" style={{ alignItems: "center" }}>
             <GmtClock />
-            <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")}>← Site</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => navigateTo("home")}>← Site</button>
           </div>
         </div>
         <div className="admin-content">
@@ -6638,7 +6668,22 @@ function AdminCash({ data, cu, showToast }) {
 // ── Root App ──────────────────────────────────────────────────
 export default function App() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
-  const [page, setPage] = useState("home");
+  const getInitialPage = () => {
+    const hash = window.location.hash.replace("#","");
+    const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile"];
+    return valid.includes(hash) ? hash : "home";
+  };
+  const [page, setPage] = useState(getInitialPage);
+  const navigateTo = (p) => { setPage(p); window.location.hash = p; };
+  useEffect(() => {
+    const onHash = () => {
+      const hash = window.location.hash.replace("#","");
+      const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile"];
+      if (valid.includes(hash)) setPage(hash);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
   const [authModal, setAuthModal] = useState(null);
@@ -6768,7 +6813,7 @@ export default function App() {
   if (page === "admin") {
     // First gate: must be logged in at all
     if (!cu) {
-      setPage("home");
+      navigateTo("home");
       return null;
     }
     // Second gate: client-side role pre-check (server verification happens inside AdminPanel)
@@ -6780,7 +6825,7 @@ export default function App() {
             <div style={{ fontSize: 48 }}>🔒</div>
             <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
             <div style={{ color: "var(--muted)", fontSize: 14 }}>Admin access only.</div>
-            <button className="btn btn-ghost" onClick={() => setPage("home")}>← Back to Site</button>
+            <button className="btn btn-ghost" onClick={() => navigateTo("home")}>← Back to Site</button>
           </div>
         </>
       );
@@ -6883,7 +6928,7 @@ export default function App() {
                 ["VIP Membership", "vip"],
                 ["Gallery", "gallery"],
               ].map(([label, pg]) => (
-                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
+                <button key={label} className="pub-footer-link" onClick={() => navigateTo(pg)}>{label}</button>
               ))}
             </div>
             {/* Information */}
@@ -6894,7 +6939,7 @@ export default function App() {
                 ["Site Rules", "qa"],
                 ["FAQ", "qa"],
               ].map(([label, pg]) => (
-                <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
+                <button key={label} className="pub-footer-link" onClick={() => navigateTo(pg)}>{label}</button>
               ))}
             </div>
             {/* Contact */}
