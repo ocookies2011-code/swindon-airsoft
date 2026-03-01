@@ -12,13 +12,13 @@ function renderMd(md) {
   if (!md) return "";
   return md
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/^## (.+)$/gm, "<strong style='font-size:15px;color:#fff;display:block;margin:10px 0 4px'>$1</strong>")
-    .replace(/^### (.+)$/gm, "<strong style='font-size:13px;color:#ddd;display:block;margin:6px 0 2px'>$1</strong>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong style='color:#fff'>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/^- (.+)$/gm, "<div style='display:flex;gap:8px;margin:3px 0'><span style='color:var(--accent);flex-shrink:0'>&#8226;</span><span>$1</span></div>")
-    .replace(/^\d+\. (.+)$/gm, "<div style='margin:3px 0'>$1</div>")
-    .replace(/^---$/gm, "<hr style='border:none;border-top:1px solid #333;margin:10px 0'>")
+    .replace(/^## (.+)$/gm, "<div style='font-family:\'Barlow Condensed\',sans-serif;font-size:17px;font-weight:900;color:#c8ff00;letter-spacing:.08em;text-transform:uppercase;display:block;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid #2a3a10'>$1</div>")
+    .replace(/^### (.+)$/gm, "<div style='font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:800;color:#a0cc60;letter-spacing:.06em;text-transform:uppercase;display:block;margin:12px 0 4px'>$1</div>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong style='color:#e8ffb0;font-weight:800'>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em style='color:#aaa'>$1</em>")
+    .replace(/^- (.+)$/gm, "<div style='display:flex;gap:8px;margin:4px 0;padding-left:4px'><span style='color:#c8ff00;flex-shrink:0;margin-top:1px'>▸</span><span>$1</span></div>")
+    .replace(/^\d+\. (.+)$/gm, "<div style='margin:4px 0;padding-left:4px'>$1</div>")
+    .replace(/^---$/gm, "<div style='border:none;border-top:1px solid #2a3a10;margin:14px 0;opacity:.6'></div>")
     .replace(/\n/g, "<br>");
 }
 function stockLabel(qty) {
@@ -2007,7 +2007,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
               {[
                 { icon:"📅", val:ev.date, color:"#c8ff00" },
-                { icon:"⏱", val:`${ev.time} GMT`, color:"#4fc3f7" },
+                { icon:"⏱", val: ev.endTime ? `${ev.time}–${ev.endTime} GMT` : `${ev.time} GMT`, color:"#4fc3f7" },
                 { icon:"📍", val:ev.location, color:"#ce93d8" },
               ].map(({icon,val,color}) => (
                 <span key={val} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".12em", color, background:"rgba(0,0,0,.4)", border:`1px solid ${color}33`, padding:"3px 10px" }}>
@@ -2032,8 +2032,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         {tab === "info" && (
           <div>
             {/* Description */}
-            <div className="card mb-2">
-              <p style={{ color:"var(--muted)", lineHeight:1.7, marginBottom:0 }}>{ev.description}</p>
+            <div className="card mb-2" style={{ background:"#0d0d0d" }}>
+              <div style={{ color:"var(--muted)", lineHeight:1.8, fontSize:14 }}
+                dangerouslySetInnerHTML={{ __html: renderMd(ev.description) || "<span style='color:#444'>No description available.</span>" }}
+              />
             </div>
 
             {/* ── BOOKING CARD ── */}
@@ -2320,7 +2322,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             <div style={{ background:"var(--bg2)", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
               <div>
                 <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>📍 {ev.location}</div>
-                <div style={{ fontSize:12, color:"var(--muted)" }}>{ev.date} · {ev.time} GMT</div>
+                <div style={{ fontSize:12, color:"var(--muted)" }}>{ev.date} · {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT</div>
               </div>
               <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
                 <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
@@ -2363,7 +2365,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <span>📅</span> {ev.date}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
-                    <span>⏱</span> {ev.time} GMT
+                    <span>⏱</span> {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
                     <span>📍</span> {ev.location}
@@ -4209,7 +4211,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   // ── Events state ──
   const [modal, setModal] = useState(null);
   const [viewId, setViewId] = useState(null);
-  const blank = { title: "", date: "", time: "09:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false };
+  const blank = { title: "", date: "", time: "09:00", endTime: "17:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false };
   const [form, setForm] = useState(blank);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -4663,10 +4665,70 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
               <div className="form-group"><label>Date</label><input type="date" value={form.date} onChange={e => f("date", e.target.value)} /></div>
             </div>
             <div className="form-row">
-              <div className="form-group"><label>Time (GMT)</label><input type="time" value={form.time} onChange={e => f("time", e.target.value)} /></div>
+              <div className="form-group"><label>Start Time (GMT)</label><input type="time" value={form.time} onChange={e => f("time", e.target.value)} /></div>
+              <div className="form-group"><label>End Time (GMT)</label><input type="time" value={form.endTime||""} onChange={e => f("endTime", e.target.value)} /></div>
               <div className="form-group"><label>Location</label><input value={form.location} onChange={e => f("location", e.target.value)} /></div>
             </div>
-            <div className="form-group"><label>Description</label><textarea rows={3} value={form.description} onChange={e => f("description", e.target.value)} /></div>
+            <div className="form-group">
+              <label>Description</label>
+              <div style={{ border:"1px solid var(--border)", borderRadius:4, overflow:"hidden" }}>
+                {/* Toolbar */}
+                <div style={{ display:"flex", gap:2, flexWrap:"wrap", padding:"6px 8px", background:"#1a1a1a", borderBottom:"1px solid var(--border)" }}>
+                  {[
+                    { label:"B", title:"Bold", wrap:["**","**"] },
+                    { label:"I", title:"Italic", wrap:["*","*"] },
+                    { label:"H2", title:"Heading 2", line:"## " },
+                    { label:"H3", title:"Heading 3", line:"### " },
+                    { label:"•", title:"Bullet list", line:"- " },
+                    { label:"—", title:"Divider", insert:"\n---\n" },
+                  ].map(btn => (
+                    <button key={btn.label} title={btn.title} type="button"
+                      style={{ background:"#2a2a2a", border:"1px solid #333", color:"#ccc", width:30, height:26, fontSize:11, fontWeight:700, cursor:"pointer", borderRadius:2 }}
+                      onClick={() => {
+                        const ta = document.getElementById("evt-desc-ta");
+                        const start = ta.selectionStart, end = ta.selectionEnd;
+                        const val = form.description;
+                        let newVal, cursor;
+                        if (btn.wrap) {
+                          newVal = val.slice(0,start) + btn.wrap[0] + val.slice(start,end) + btn.wrap[1] + val.slice(end);
+                          cursor = end + btn.wrap[0].length + btn.wrap[1].length;
+                        } else if (btn.line) {
+                          const lineStart = val.lastIndexOf("\n", start-1)+1;
+                          newVal = val.slice(0,lineStart) + btn.line + val.slice(lineStart);
+                          cursor = start + btn.line.length;
+                        } else {
+                          newVal = val.slice(0,start) + btn.insert + val.slice(end);
+                          cursor = start + btn.insert.length;
+                        }
+                        f("description", newVal);
+                        setTimeout(() => { ta.focus(); ta.setSelectionRange(cursor, cursor); }, 0);
+                      }}
+                    >{btn.label}</button>
+                  ))}
+                  <span style={{ fontSize:10, color:"#555", marginLeft:4, alignSelf:"center" }}>Markdown supported · **bold** *italic* ## heading - list ---</span>
+                </div>
+                {/* Editor / Preview toggle */}
+                {(() => {
+                  const [descTab, setDescTab] = [form._descTab||"edit", v => f("_descTab", v)];
+                  return (
+                    <>
+                      <div style={{ display:"flex", borderBottom:"1px solid var(--border)", background:"#111" }}>
+                        {["edit","preview"].map(t => (
+                          <button key={t} type="button" onClick={() => setDescTab(t)}
+                            style={{ padding:"5px 16px", fontSize:11, fontWeight:700, letterSpacing:".1em", textTransform:"uppercase", background:"none", border:"none", borderBottom: descTab===t ? "2px solid var(--accent)" : "2px solid transparent", color: descTab===t ? "var(--accent)" : "#555", cursor:"pointer" }}>
+                            {t==="edit"?"✏ EDIT":"👁 PREVIEW"}
+                          </button>
+                        ))}
+                      </div>
+                      {descTab !== "preview"
+                        ? <textarea id="evt-desc-ta" rows={8} value={form.description} onChange={e => f("description", e.target.value)} style={{ width:"100%", background:"#111", border:"none", padding:"10px", resize:"vertical", color:"var(--text)", fontFamily:"'Share Tech Mono',monospace", fontSize:13, outline:"none" }} />
+                        : <div style={{ minHeight:160, padding:"10px 14px", background:"#0d0d0d", color:"var(--muted)", fontSize:14, lineHeight:1.8 }} dangerouslySetInnerHTML={{ __html: renderMd(form.description) || "<span style='color:#444'>Nothing to preview yet...</span>" }} />
+                      }
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
             <div className="form-row">
               <div className="form-group"><label>Walk-On Slots</label><input type="number" value={form.walkOnSlots} onChange={e => f("walkOnSlots", +e.target.value)} /></div>
               <div className="form-group"><label>Rental Slots</label><input type="number" value={form.rentalSlots} onChange={e => f("rentalSlots", +e.target.value)} /></div>

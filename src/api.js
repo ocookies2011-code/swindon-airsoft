@@ -522,6 +522,7 @@ function toSnakeEvent(ev) {
     title:          ev.title,
     date:           ev.date,
     time:           ev.time,
+    end_time:       ev.endTime || null,
     location:       ev.location,
     description:    ev.description,
     walk_on_slots:  Number(ev.walkOnSlots) || 0,
