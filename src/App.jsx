@@ -867,7 +867,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     </div>
   );
 }
-function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing }) {
+function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, addPlayerMode }) {
   const TERMS = [
     "I understand that airsoft is a physical activity that carries inherent risks of injury.",
     "I will wear appropriate eye protection at all times during gameplay.",
@@ -892,15 +892,23 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing })
   });
 
   const e = editMode && existing ? existing : {};
-  const [waivers, setWaivers] = useState([blankForm({
-    name: e.name || cu?.name || "", dob: e.dob || "",
-    addr1: e.addr1 || "", addr2: e.addr2 || "",
-    city: e.city || "", county: e.county || "",
-    postcode: e.postcode || "", country: e.country || "United Kingdom",
-    emergencyName: e.emergencyName || "", emergencyPhone: e.emergencyPhone || "",
-    medical: e.medical || "", isChild: e.isChild || false, guardian: e.guardian || "",
-  })]);
-  const [activeIdx, setActiveIdx] = useState(0);
+  const buildInitialWaivers = () => {
+    if (addPlayerMode) {
+      // Pre-load all existing waivers + one new blank for the new player
+      const existingWaivers = [cu.waiverData, ...(cu.extraWaivers || [])].map(w => blankForm(w));
+      return [...existingWaivers, blankForm()];
+    }
+    return [blankForm({
+      name: e.name || cu?.name || "", dob: e.dob || "",
+      addr1: e.addr1 || "", addr2: e.addr2 || "",
+      city: e.city || "", county: e.county || "",
+      postcode: e.postcode || "", country: e.country || "United Kingdom",
+      emergencyName: e.emergencyName || "", emergencyPhone: e.emergencyPhone || "",
+      medical: e.medical || "", isChild: e.isChild || false, guardian: e.guardian || "",
+    })];
+  };
+  const [waivers, setWaivers] = useState(buildInitialWaivers);
+  const [activeIdx, setActiveIdx] = useState(addPlayerMode ? (cu.extraWaivers ? cu.extraWaivers.length + 1 : 1) : 0);
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
 
@@ -2241,7 +2249,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           </div>
         )}
 
-        {waiverModal && <WaiverModal cu={cu} updateUser={updateUser} onClose={() => setWaiverModal(false)} showToast={showToast} />}
+        {waiverModal && <WaiverModal cu={cu} updateUser={updateUser} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} addPlayerMode={waiverModal === "addPlayer"} />}
       </div>
     );
   }
@@ -3240,7 +3248,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
             {waiverValid
               ? <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
-                  <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>+ Add Player Waiver</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("addPlayer")}>+ Add Player Waiver</button>
                 </div>
               : <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>}
           </div>
@@ -3249,14 +3257,28 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
             const allWaivers = [cu.waiverData, ...(cu.extraWaivers || [])];
             return (
               <div style={{ marginTop: 12 }}>
+                {/* Player tabs if multiple waivers */}
+                {allWaivers.length > 1 && (
+                  <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:12 }}>
+                    {allWaivers.map((w, i) => (
+                      <button key={i} style={{
+                        padding:"4px 12px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700,
+                        fontSize:11, letterSpacing:".1em", textTransform:"uppercase",
+                        background:"var(--accent)", color:"#000", border:"none", borderRadius:2, cursor:"default"
+                      }}>
+                        {w.name || `Player ${i+1}`}{i === 0 ? " ★" : ""}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {allWaivers.map((w, i) => (
-                  <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 16 : 0 }}>
+                  <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 20 : 0, paddingBottom: i < allWaivers.length - 1 ? 20 : 0, borderBottom: i < allWaivers.length - 1 ? "1px solid #2a2a2a" : "none" }}>
                     {allWaivers.length > 1 && (
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:4 }}>
-                        PLAYER {i + 1}{i === 0 ? " (PRIMARY)" : ""}
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:6 }}>
+                        PLAYER {i + 1}{i === 0 ? " (PRIMARY)" : " (ADDITIONAL)"}
                       </div>
                     )}
-                    {[["Name", w.name], ["DOB", w.dob], ["Medical", w.medical || "None"], ["Signed", gmtShort(w.date)]].map(([k, v]) => (
+                    {[["Name", w.name], ["DOB", w.dob], ["Address", [w.addr1, w.addr2, w.city, w.county, w.postcode].filter(Boolean).join(", ") || "—"], ["Emergency", w.emergencyName ? `${w.emergencyName} · ${w.emergencyPhone}` : "—"], ["Medical", w.medical || "None"], ["Minor", w.isChild ? `Yes — Guardian: ${w.guardian}` : "No"], ["Signed", gmtShort(w.date)]].map(([k, v]) => (
                       <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
                         <span className="text-muted" style={{ minWidth: 130 }}>{k}:</span><span>{v}</span>
                       </div>
