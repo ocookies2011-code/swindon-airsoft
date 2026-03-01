@@ -4373,15 +4373,16 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
     win.document.close();
   };
 
-  const withTimeout = (promise, ms = 8000) =>
-    Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out — check Supabase RLS policies for events")), ms))]);
+  const withTimeout = (promise, ms = 30000) =>
+    Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out after 30s — check your internet connection and Supabase is reachable")), ms))]);
 
   const saveEvent = async () => {
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     setSavingEvent(true);
     try {
       if (modal === "new") {
-        const created = await withTimeout(api.events.create(form));
+        const { _descTab: _dt, ...createForm } = form;
+        const created = await withTimeout(api.events.create(createForm));
         if (form.banner && form.banner.startsWith("data:") && created?.id) {
           try {
             const res = await fetch(form.banner);
@@ -4393,7 +4394,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           }
         }
       } else {
-        await withTimeout(api.events.update(form.id, form));
+        const { _descTab, ...formToSave } = form;
+        await withTimeout(api.events.update(formToSave.id, formToSave));
         if (form.banner && form.banner.startsWith("data:") && form.id) {
           try {
             const res = await fetch(form.banner);
