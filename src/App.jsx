@@ -3156,10 +3156,12 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
   };
 
   const saveProfile = async () => {
-    const patch = { name: edit.name, phone: edit.phone, address: composeAddress(edit) };
     try {
-      await updateUser(cu.id, patch);
-      setCu(prev => ({ ...prev, ...patch }));
+      await updateUser(cu.id, {
+        name:    edit.name,
+        phone:   edit.phone,
+        address: composeAddress(edit),
+      });
       showToast("Profile updated!");
     } catch(e) {
       showToast("Failed to save: " + (e.message || "unknown error"), "red");
@@ -6800,7 +6802,10 @@ export default function App() {
   // Wrap updateUser to also refresh cu if editing self
   const updateUserAndRefresh = useCallback(async (id, patch) => {
     await updateUser(id, patch);
-    if (cu?.id === id) await refreshCu();
+    if (cu?.id === id) {
+      setCu(prev => prev ? { ...prev, ...patch } : prev);
+      refreshCu().catch(() => {});
+    }
   }, [updateUser, cu, refreshCu]);
 
   // Only show loading screen while initial data fetch is in progress
