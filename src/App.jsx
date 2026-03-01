@@ -256,8 +256,6 @@ function useData() {
       const users = prev.users.map(u => u.id === id ? { ...u, ...patch } : u);
       return { ...prev, users };
     });
-    // Also update cu if this is the logged-in user
-    setCu(prev => prev?.id === id ? { ...prev, ...patch } : prev);
   }, []);
 
   const updateEvent = useCallback(async (id, patch) => {
