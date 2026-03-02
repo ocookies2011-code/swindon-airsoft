@@ -466,7 +466,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 /* ── EVENT CARDS ── */
 .event-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all .15s;position:relative;border-radius:4px;}
 .event-card:hover{border-color:#3a3a3a;transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.6);}
-.event-banner-img{height:160px;overflow:hidden;position:relative;background:#1a1a1a;}
+.event-banner-img{height:220px;overflow:hidden;position:relative;background:#1a1a1a;}
 .event-card-body{padding:16px;}
 
 /* ── SHOP CARDS ── */
@@ -2365,9 +2365,25 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>📍 {ev.location}</div>
                 <div style={{ fontSize:12, color:"var(--muted)" }}>{ev.date} · {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT</div>
               </div>
-              <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
-                <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
-              </a>
+              <a href={(() => {
+  // Try to extract the embedded map's query/place from the iframe src
+  if (ev.mapEmbed) {
+    const srcMatch = ev.mapEmbed.match(/src="([^"]+)"/);
+    if (srcMatch) {
+      const embedUrl = srcMatch[1];
+      // Google Maps embed URLs contain q= or pb= parameters with the location
+      const qMatch = embedUrl.match(/[?&]q=([^&]+)/);
+      if (qMatch) return `https://www.google.com/maps/dir/?api=1&destination=${qMatch[1]}`;
+      // Embedded place URLs like /maps/embed/v1/place?key=...&q=...
+      const placeMatch = embedUrl.match(/place\?[^"]*q=([^&"]+)/);
+      if (placeMatch) return `https://www.google.com/maps/dir/?api=1&destination=${placeMatch[1]}`;
+    }
+  }
+  // Fall back to ev.location text
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location)}`;
+})()} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+  <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
+</a>
             </div>
           </div>
         )}
