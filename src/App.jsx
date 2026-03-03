@@ -186,7 +186,8 @@ function useData() {
       const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
 
       const [evList, shopList, postageList, albumList, qaList, homeMsg,
-             socialFacebook, socialInstagram, contactAddress, contactPhone, contactEmail] = await Promise.all([
+             socialFacebook, socialInstagram, contactAddress, contactPhone, contactEmail,
+             contactDepartmentsRaw] = await Promise.all([
         safe("events",  api.events.getAll()),
         safe("shop",    api.shop.getAll()),
         safe("postage", api.postage.getAll()),
@@ -198,6 +199,7 @@ function useData() {
         api.settings.get("contact_address").catch(() => ""),
         api.settings.get("contact_phone").catch(() => ""),
         api.settings.get("contact_email").catch(() => ""),
+        api.settings.get("contact_departments").catch(() => ""),
       ]);
 
       if (Object.keys(errors).length > 0) {
@@ -221,6 +223,7 @@ function useData() {
         contactAddress,
         contactPhone,
         contactEmail,
+        contactDepartments: (() => { try { return JSON.parse(contactDepartmentsRaw || "[]"); } catch { return []; } })(),
       }));
 
       // Load profiles after public data — only succeeds when authed, silently skipped for guests
@@ -1208,6 +1211,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     { id: "gallery", label: "Gallery", icon: "🖼" },
     { id: "qa", label: "Q&A", icon: "❓" },
     { id: "staff", label: "Staff", icon: "🪖" },
+    { id: "contact", label: "Contact", icon: "✉️" },
   ];
   const go = (id) => {
     // Guard: admin page requires admin role — never navigate there otherwise
@@ -3974,6 +3978,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "gallery-admin", label: "Gallery", icon: "🖼", group: null },
     { id: "qa-admin", label: "Q&A", icon: "❓", group: null },
     { id: "staff-admin", label: "Staff", icon: "🪖", group: null },
+    { id: "contact-admin", label: "Contact Depts", icon: "✉️", group: null },
     { id: "messages", label: "Site Messages", icon: "📢", group: null },
     { id: "cash", label: "Cash Sales", icon: "💵", group: "TOOLS" },
     { id: "settings", label: "Settings", icon: "⚙️", group: "SYSTEM" },
@@ -4037,6 +4042,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} />}
           {section === "staff-admin" && <AdminStaff showToast={showToast} />}
+          {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "settings" && <AdminSettings showToast={showToast} />}
@@ -7042,6 +7048,304 @@ function AdminStaff({ showToast }) {
   );
 }
 
+// ── Contact Page (public) ─────────────────────────────────
+function ContactPage({ data, cu, showToast }) {
+  const isMobile = useMobile(640);
+  const departments = data.contactDepartments || [];
+
+  const blank = { name: cu?.name || "", email: cu?.email || "", department: "", subject: "", message: "" };
+  const [form, setForm]     = useState(blank);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent]     = useState(false);
+  const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const selectedDept = departments.find(d => d.name === form.department);
+
+  const handleSend = async () => {
+    if (!form.name.trim())    { showToast("Please enter your name", "red"); return; }
+    if (!form.email.trim() || !form.email.includes("@")) { showToast("Please enter a valid email", "red"); return; }
+    if (!form.department)     { showToast("Please select a department", "red"); return; }
+    if (!form.subject.trim()) { showToast("Please enter a subject", "red"); return; }
+    if (!form.message.trim()) { showToast("Please enter a message", "red"); return; }
+    if (!selectedDept?.email) { showToast("This department has no email configured yet", "red"); return; }
+
+    setSending(true);
+    try {
+      await sendEmail({
+        toEmail: selectedDept.email,
+        toName:  selectedDept.name,
+        subject: `[${selectedDept.name}] ${form.subject}`,
+        htmlContent: `
+          <div style="font-family:sans-serif;max-width:600px">
+            <h2 style="color:#e05c00;font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">
+              New Contact Message — ${selectedDept.name}
+            </h2>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+              <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px;width:120px">FROM</td><td style="padding:8px;background:#111;color:#fff">${form.name}</td></tr>
+              <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">EMAIL</td><td style="padding:8px;background:#111;color:#fff"><a href="mailto:${form.email}" style="color:#e05c00">${form.email}</a></td></tr>
+              <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">DEPT</td><td style="padding:8px;background:#111;color:#fff">${selectedDept.name}</td></tr>
+              <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">SUBJECT</td><td style="padding:8px;background:#111;color:#fff">${form.subject}</td></tr>
+            </table>
+            <div style="background:#111;border-left:3px solid #e05c00;padding:16px;white-space:pre-wrap;color:#ccc;line-height:1.6">${form.message}</div>
+          </div>
+        `,
+      });
+      setSent(true);
+      showToast("Message sent successfully!");
+    } catch (e) {
+      showToast("Failed to send: " + (e.message || "Please try again"), "red");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <div className="page-wrap" style={{ textAlign:"center", padding:"80px 24px" }}>
+        <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:32, letterSpacing:".1em", marginBottom:12 }}>MESSAGE SENT</div>
+        <div style={{ color:"var(--muted)", fontSize:14, marginBottom:32, maxWidth:400, margin:"0 auto 32px" }}>
+          Your message has been sent to <strong style={{ color:"var(--accent)" }}>{form.department}</strong>. We'll get back to you at <strong>{form.email}</strong> as soon as possible.
+        </div>
+        <button className="btn btn-primary" onClick={() => { setSent(false); setForm(blank); }}>Send Another Message</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-wrap">
+      <div className="page-header" style={{ borderBottom:"1px solid var(--border)", marginBottom:32, paddingBottom:32 }}>
+        <div>
+          <div className="page-title" style={{ fontSize:32, letterSpacing:".12em" }}>✉️ CONTACT US</div>
+          <div className="page-sub" style={{ fontSize:14 }}>Get in touch with the right team</div>
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap:32, maxWidth:1000, margin:"0 auto" }}>
+
+        {/* Form */}
+        <div className="card">
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".1em", textTransform:"uppercase", marginBottom:20, color:"var(--text)" }}>Send a Message</div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Your Name *</label>
+              <input value={form.name} onChange={e => ff("name", e.target.value)} placeholder="Full name" />
+            </div>
+            <div className="form-group">
+              <label>Your Email *</label>
+              <input value={form.email} onChange={e => ff("email", e.target.value)} placeholder="you@example.com" type="email" />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Department *</label>
+            <select value={form.department} onChange={e => ff("department", e.target.value)}>
+              <option value="">— Select a department —</option>
+              {departments.length === 0
+                ? <option disabled>No departments configured yet</option>
+                : departments.map(d => <option key={d.name} value={d.name}>{d.name}</option>)
+              }
+            </select>
+            {selectedDept?.description && (
+              <div style={{ fontSize:11, color:"var(--muted)", marginTop:5, lineHeight:1.5 }}>{selectedDept.description}</div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Subject *</label>
+            <input value={form.subject} onChange={e => ff("subject", e.target.value)} placeholder="Brief summary of your enquiry" />
+          </div>
+
+          <div className="form-group">
+            <label>Message *</label>
+            <textarea rows={6} value={form.message} onChange={e => ff("message", e.target.value)} placeholder="Describe your enquiry in detail…" />
+          </div>
+
+          <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }} onClick={handleSend} disabled={sending}>
+            {sending ? "SENDING…" : "SEND MESSAGE"}
+          </button>
+        </div>
+
+        {/* Side info */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+          {/* Departments list */}
+          {departments.length > 0 && (
+            <div className="card">
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", textTransform:"uppercase", marginBottom:16, color:"var(--text)" }}>Departments</div>
+              {departments.map((d, i) => (
+                <div key={i} style={{ padding:"10px 0", borderBottom: i < departments.length-1 ? "1px solid var(--border)" : "none" }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".06em", color:"var(--accent)", textTransform:"uppercase" }}>{d.name}</div>
+                  {d.description && <div style={{ fontSize:12, color:"var(--muted)", marginTop:3, lineHeight:1.5 }}>{d.description}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* General contact info */}
+          {(data.contactAddress || data.contactPhone || data.contactEmail) && (
+            <div className="card">
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", textTransform:"uppercase", marginBottom:16, color:"var(--text)" }}>General Info</div>
+              {data.contactEmail && (
+                <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:12 }}>
+                  <span style={{ fontSize:16, flexShrink:0 }}>📧</span>
+                  <div><div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:2 }}>Email</div>
+                  <a href={`mailto:${data.contactEmail}`} style={{ color:"var(--accent)", fontSize:13 }}>{data.contactEmail}</a></div>
+                </div>
+              )}
+              {data.contactPhone && (
+                <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:12 }}>
+                  <span style={{ fontSize:16, flexShrink:0 }}>📞</span>
+                  <div><div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:2 }}>Phone</div>
+                  <a href={`tel:${data.contactPhone}`} style={{ color:"var(--text)", fontSize:13 }}>{data.contactPhone}</a></div>
+                </div>
+              )}
+              {data.contactAddress && (
+                <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+                  <span style={{ fontSize:16, flexShrink:0 }}>📍</span>
+                  <div><div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:2 }}>Address</div>
+                  <div style={{ fontSize:13, color:"var(--text)", lineHeight:1.6, whiteSpace:"pre-line" }}>{data.contactAddress}</div></div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Contact Departments ──────────────────────────────
+function AdminContactDepts({ showToast, save }) {
+  const [depts, setDepts]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]  = useState(false);
+  const [modal, setModal]    = useState(null); // null | "new" | index
+  const [form, setForm]      = useState({ name:"", email:"", description:"" });
+  const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    api.settings.get("contact_departments")
+      .then(raw => { try { setDepts(JSON.parse(raw || "[]")); } catch { setDepts([]); } })
+      .catch(() => setDepts([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const persist = async (updated) => {
+    setSaving(true);
+    try {
+      await api.settings.set("contact_departments", JSON.stringify(updated));
+      setDepts(updated);
+      // Refresh global data so ContactPage sees new depts immediately
+      save({ contactDepartments: updated });
+      showToast("Departments saved!");
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    } finally { setSaving(false); }
+  };
+
+  const openNew  = () => { setForm({ name:"", email:"", description:"" }); setModal("new"); };
+  const openEdit = (i) => { setForm({ ...depts[i] }); setModal(i); };
+
+  const saveDept = async () => {
+    if (!form.name.trim())  { showToast("Name is required", "red"); return; }
+    if (!form.email.trim() || !form.email.includes("@")) { showToast("Valid email required", "red"); return; }
+    const updated = modal === "new"
+      ? [...depts, { name: form.name.trim(), email: form.email.trim(), description: form.description.trim() }]
+      : depts.map((d, i) => i === modal ? { name: form.name.trim(), email: form.email.trim(), description: form.description.trim() } : d);
+    await persist(updated);
+    setModal(null);
+  };
+
+  const deleteDept = async (i) => {
+    await persist(depts.filter((_, idx) => idx !== i));
+  };
+
+  const moveUp   = (i) => { if (i === 0) return; const u = [...depts]; [u[i-1], u[i]] = [u[i], u[i-1]]; persist(u); };
+  const moveDown = (i) => { if (i === depts.length-1) return; const u = [...depts]; [u[i], u[i+1]] = [u[i+1], u[i]]; persist(u); };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Contact Departments</div>
+          <div className="page-sub">Manage the dropdown options and destination emails on the Contact Us page</div>
+        </div>
+        <button className="btn btn-primary" onClick={openNew}>+ Add Department</button>
+      </div>
+
+      {loading && <div style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>Loading…</div>}
+
+      {!loading && depts.length === 0 && (
+        <div className="card" style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>
+          No departments yet. Click <strong>+ Add Department</strong> to get started.
+        </div>
+      )}
+
+      {!loading && depts.length > 0 && (
+        <div className="card">
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr><th>Order</th><th>Department</th><th>Email Address</th><th>Description</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {depts.map((d, i) => (
+                  <tr key={i}>
+                    <td>
+                      <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                        <button className="btn btn-sm btn-ghost" style={{ padding:"2px 6px", fontSize:10 }} onClick={() => moveUp(i)} disabled={i === 0 || saving}>▲</button>
+                        <button className="btn btn-sm btn-ghost" style={{ padding:"2px 6px", fontSize:10 }} onClick={() => moveDown(i)} disabled={i === depts.length-1 || saving}>▼</button>
+                      </div>
+                    </td>
+                    <td style={{ fontWeight:700, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".06em", color:"var(--accent)", textTransform:"uppercase" }}>{d.name}</td>
+                    <td style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12 }}>{d.email}</td>
+                    <td style={{ fontSize:12, color:"var(--muted)", maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{d.description || "—"}</td>
+                    <td>
+                      <div className="gap-2">
+                        <button className="btn btn-sm btn-ghost" onClick={() => openEdit(i)}>Edit</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => deleteDept(i)} disabled={saving}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:12 }}>Emails are never shown publicly — they only receive the contact form submissions.</div>
+        </div>
+      )}
+
+      {modal !== null && (
+        <div className="overlay" onClick={() => setModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:480 }}>
+            <div className="modal-title">{modal === "new" ? "➕ Add Department" : `✏️ Edit — ${depts[modal]?.name}`}</div>
+
+            <div className="form-group">
+              <label>Department Name *</label>
+              <input value={form.name} onChange={e => ff("name", e.target.value)} placeholder="e.g. Bookings, General, Marshals" />
+            </div>
+            <div className="form-group">
+              <label>Email Address * <span style={{ color:"var(--muted)", fontWeight:400 }}>(not shown publicly)</span></label>
+              <input value={form.email} onChange={e => ff("email", e.target.value)} placeholder="department@example.com" type="email" />
+            </div>
+            <div className="form-group">
+              <label>Description <span style={{ color:"var(--muted)", fontWeight:400 }}>(optional — shown to users in dropdown)</span></label>
+              <textarea rows={2} value={form.description} onChange={e => ff("description", e.target.value)} placeholder="e.g. For questions about booking events and game days" />
+            </div>
+
+            <div className="gap-2" style={{ marginTop:18 }}>
+              <button className="btn btn-primary" onClick={saveDept} disabled={saving}>{saving ? "Saving…" : modal === "new" ? "Add Department" : "Save Changes"}</button>
+              <button className="btn btn-ghost" onClick={() => setModal(null)} disabled={saving}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Admin Settings ────────────────────────────────────────
 function AdminSettings({ showToast }) {
   const S = (key, def = "") => {
@@ -7414,7 +7718,7 @@ export default function App() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
   const getInitialPage = () => {
     const hash = window.location.hash.replace("#","");
-    const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile","staff"];
+    const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile","staff","contact"];
     return valid.includes(hash) ? hash : "home";
   };
   const [page, setPage] = useState(getInitialPage);
@@ -7423,7 +7727,7 @@ export default function App() {
   useEffect(() => {
     const onHash = () => {
       const hash = window.location.hash.replace("#","");
-      const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile","staff"];
+      const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile","staff","contact"];
       if (valid.includes(hash)) setPage(hash);
     };
     window.addEventListener("hashchange", onHash);
@@ -7640,6 +7944,7 @@ export default function App() {
         {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
         {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
         {page === "staff"       && <StaffPage />}
+        {page === "contact"     && <ContactPage data={data} cu={cu} showToast={showToast} />}
       </div>
 
       {/* FOOTER */}
@@ -7677,6 +7982,7 @@ export default function App() {
                 ["VIP Membership", "vip"],
                 ["Gallery", "gallery"],
                 ["Meet the Staff", "staff"],
+                ["Contact Us", "contact"],
               ].map(([label, pg]) => (
                 <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
               ))}
