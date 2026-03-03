@@ -5131,7 +5131,10 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const players = allUsers.filter(u => u.role !== "admin");
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
 
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const saveEdit = async () => {
+    setSavingEdit(true);
     try {
       const { error } = await supabase.from('profiles').update({
         name:           edit.name,
@@ -5145,16 +5148,17 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         delete_request: edit.deleteRequest || false,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
-      // Update local state directly — no reload needed
-      setData(prev => {
-        if (!prev) return prev;
-        const users = (prev.users || []).map(u => u.id === edit.id ? { ...u, ...edit } : u);
-        return { ...prev, users };
-      });
+      // Refresh from DB and update global state
+      const allProfiles = await api.profiles.getAll();
+      const updated = allProfiles.map(normaliseProfile);
+      setLocalUsers(updated);
+      save({ users: updated });
       showToast("Player updated!");
       setEdit(null);
     } catch (e) {
       showToast("Save failed: " + e.message, "red");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -5368,8 +5372,8 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               <label style={{ fontSize: 13, color: "var(--red)" }}>Account deletion requested</label>
             </div>
             <div className="gap-2">
-              <button className="btn btn-primary" onClick={saveEdit}>Save Changes</button>
-              <button className="btn btn-ghost" onClick={() => setEdit(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save Changes"}</button>
+              <button className="btn btn-ghost" onClick={() => setEdit(null)} disabled={savingEdit}>Cancel</button>
             </div>
           </div>
         </div>
