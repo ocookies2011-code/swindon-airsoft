@@ -1189,6 +1189,8 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
     setCu(null);
     setDrawerOpen(false);
+    // Always navigate to home on sign out — prevents being stuck on admin/protected pages
+    setPage("home");
   };
 
   return (
@@ -5090,6 +5092,88 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 // ── Admin Events (alias — kept for any legacy references) ──────
 
 // ── Admin Players ─────────────────────────────────────────
+function DeleteRequestTable({ players, updateUserAndRefresh, save, data, showToast }) {
+  const [busyId, setBusyId] = useState(null);
+  const deleteReqs = players.filter(u => u.deleteRequest);
+  return (
+    <div className="table-wrap"><table className="data-table">
+      <thead><tr><th>Player</th><th>Email</th><th>Joined</th><th>Actions</th></tr></thead>
+      <tbody>
+        {deleteReqs.map(u => (
+          <tr key={u.id}>
+            <td style={{ fontWeight: 600 }}>{u.name}</td>
+            <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
+            <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
+            <td>
+              <div className="gap-2">
+                <button className="btn btn-sm btn-danger" disabled={!!busyId} onClick={async () => {
+                  setBusyId(u.id + "-delete");
+                  try {
+                    await api.profiles.delete(u.id);
+                    save({ users: data.users.filter(x => x.id !== u.id) });
+                    showToast(`Account deleted: ${u.name}`, "red");
+                  } catch (e) { showToast("Delete failed: " + e.message, "red"); }
+                  finally { setBusyId(null); }
+                }}>{busyId === u.id + "-delete" ? "Deleting…" : "Delete Account"}</button>
+                <button className="btn btn-sm btn-ghost" disabled={!!busyId} onClick={async () => {
+                  setBusyId(u.id + "-cancel");
+                  try {
+                    await updateUserAndRefresh(u.id, { deleteRequest: false });
+                    showToast("Deletion request cancelled");
+                  } catch (e) { showToast("Failed: " + e.message, "red"); }
+                  finally { setBusyId(null); }
+                }}>{busyId === u.id + "-cancel" ? "…" : "Cancel Request"}</button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table></div>
+  );
+}
+
+// VIP approve/reject table — separate component so each row has its own busy state
+function VipAppTable({ vipApps, updateUserAndRefresh, showToast }) {
+  const [busyId, setBusyId] = useState(null);
+  return (
+    <div className="table-wrap"><table className="data-table">
+      <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Fee (£30)</th><th>Actions</th></tr></thead>
+      <tbody>
+        {vipApps.map(u => (
+          <tr key={u.id}>
+            <td style={{ fontWeight: 600 }}>{u.name}</td>
+            <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
+            <td style={{ color: u.gamesAttended >= 3 ? "var(--accent)" : "var(--red)" }}>{u.gamesAttended} / 3</td>
+            <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
+            <td><span style={{ fontSize:11, color:"var(--gold)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>£30 due on approval</span></td>
+            <td>
+              <div className="gap-2">
+                <button className="btn btn-sm btn-primary" disabled={!!busyId} onClick={async () => {
+                  setBusyId(u.id + "-approve");
+                  try {
+                    const ukara = `UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`;
+                    await updateUserAndRefresh(u.id, { vipStatus: "active", vipApplied: true, ukara });
+                    showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}. Collect £30 fee.`);
+                  } catch (e) { showToast("Failed: " + e.message, "red"); }
+                  finally { setBusyId(null); }
+                }}>{busyId === u.id + "-approve" ? "…" : "✓ Approve"}</button>
+                <button className="btn btn-sm btn-danger" disabled={!!busyId} onClick={async () => {
+                  setBusyId(u.id + "-reject");
+                  try {
+                    await updateUserAndRefresh(u.id, { vipApplied: false });
+                    showToast(`VIP application rejected for ${u.name}`, "red");
+                  } catch (e) { showToast("Failed: " + e.message, "red"); }
+                  finally { setBusyId(null); }
+                }}>{busyId === u.id + "-reject" ? "…" : "✗ Reject"}</button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table></div>
+  );
+}
+
 function AdminPlayers({ data, save, updateUser, showToast }) {
   const [edit, setEdit] = useState(null);
   const [tab, setTab] = useState("all");
@@ -5119,7 +5203,10 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const players = allUsers.filter(u => u.role !== "admin");
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
 
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const saveEdit = async () => {
+    setSavingEdit(true);
     try {
       const { error } = await supabase.from('profiles').update({
         name:           edit.name,
@@ -5133,16 +5220,17 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         delete_request: edit.deleteRequest || false,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
-      // Update local state directly — no reload needed
-      setData(prev => {
-        if (!prev) return prev;
-        const users = (prev.users || []).map(u => u.id === edit.id ? { ...u, ...edit } : u);
-        return { ...prev, users };
-      });
+      // Refresh local users list then update global state
+      const allProfiles = await api.profiles.getAll();
+      const updated = allProfiles.map(normaliseProfile);
+      setLocalUsers(updated);
+      save({ users: updated });
       showToast("Player updated!");
       setEdit(null);
     } catch (e) {
       showToast("Save failed: " + e.message, "red");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -5234,35 +5322,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
           {vipApps.length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No pending VIP applications.</div>
           ) : (
-            <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Fee (£30)</th><th>Actions</th></tr></thead>
-              <tbody>
-                {vipApps.map(u => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600 }}>{u.name}</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
-                    <td style={{ color: u.gamesAttended >= 3 ? "var(--accent)" : "var(--red)" }}>{u.gamesAttended} / 3</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
-                    <td>
-                      <span style={{ fontSize:11, color:"var(--gold)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>£30 due on approval</span>
-                    </td>
-                    <td>
-                      <div className="gap-2">
-                        <button className="btn btn-sm btn-primary" onClick={async () => {
-                          const ukara = `UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`;
-                          await updateUserAndRefresh(u.id, { vipStatus: "active", vipApplied: true, ukara });
-                          showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}. Collect £30 fee.`);
-                        }}>✓ Approve</button>
-                        <button className="btn btn-sm btn-danger" onClick={async () => {
-                          await updateUserAndRefresh(u.id, { vipApplied: false });
-                          showToast(`VIP application rejected for ${u.name}`, "red");
-                        }}>✗ Reject</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
+            <VipAppTable vipApps={vipApps} updateUserAndRefresh={updateUserAndRefresh} showToast={showToast} />
           )}
         </div>
       )}
@@ -5272,33 +5332,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
           {players.filter(u => u.deleteRequest).length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No deletion requests.</div>
           ) : (
-            <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Joined</th><th>Actions</th></tr></thead>
-              <tbody>
-                {players.filter(u => u.deleteRequest).map(u => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600 }}>{u.name}</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
-                    <td>
-                      <div className="gap-2">
-                        <button className="btn btn-sm btn-danger" onClick={async () => {
-                          try {
-                            await api.profiles.delete(u.id);
-                            save({ users: data.users.filter(x => x.id !== u.id) });
-                            showToast(`Account deleted: ${u.name}`, "red");
-                          } catch (e) { showToast("Delete failed: " + e.message, "red"); }
-                        }}>Delete Account</button>
-                        <button className="btn btn-sm btn-ghost" onClick={() => {
-                          updateUser(u.id, { deleteRequest: false });
-                          showToast("Deletion request cancelled");
-                        }}>Cancel Request</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
+            <DeleteRequestTable players={players} updateUserAndRefresh={updateUserAndRefresh} save={save} data={data} showToast={showToast} />
           )}
         </div>
       )}
@@ -5356,8 +5390,8 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               <label style={{ fontSize: 13, color: "var(--red)" }}>Account deletion requested</label>
             </div>
             <div className="gap-2">
-              <button className="btn btn-primary" onClick={saveEdit}>Save Changes</button>
-              <button className="btn btn-ghost" onClick={() => setEdit(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save Changes"}</button>
+              <button className="btn btn-ghost" onClick={() => setEdit(null)} disabled={savingEdit}>Cancel</button>
             </div>
           </div>
         </div>
