@@ -588,8 +588,8 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .hero-p{color:#888;font-size:15px;line-height:1.7;max-width:520px;margin-bottom:20px;margin-left:auto;margin-right:auto;}
 .hero-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
 .hero-stats{display:flex;gap:0;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f;background:rgba(0,0,0,.8);}
-.hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;}
-.hero-stat{flex:1;padding:20px;text-align:center;border-right:1px solid #1f1f1f;}
+.hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;flex-wrap:wrap;}
+.hero-stat{flex:1;min-width:50%;padding:16px 8px;text-align:center;border-right:1px solid #1f1f1f;box-sizing:border-box;}
 .hero-stat:last-child{border-right:none;}
 .hero-stat-num{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--accent);}
 .hero-stat-label{font-size:10px;letter-spacing:.15em;color:var(--muted);margin-top:2px;text-transform:uppercase;}
@@ -629,7 +629,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .section-link:hover{border-color:var(--accent);color:var(--accent);}
 
 /* ── VIP BANNER ── */
-.vip-banner{background:linear-gradient(135deg,#1a2000 0%,#0d1300 100%);border:1px solid #2a3a00;padding:48px 40px;text-align:center;position:relative;overflow:hidden;}
+.vip-banner{background:linear-gradient(135deg,#1a2000 0%,#0d1300 100%);border:1px solid #2a3a00;padding:48px 20px;text-align:center;position:relative;overflow:hidden;}
 
 /* ── FOOTER ── */
 .pub-footer{background:#0a0a0a;border-top:1px solid #1a1a1a;padding:48px 24px 24px;}
@@ -672,6 +672,11 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .bottom-nav{display:block;}
   .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + 16px);}
   .hero-cta{flex-direction:column;}
+  .vip-banner{padding:32px 16px;}
+  .hero-stat-num{font-size:24px;}
+}
+@media(max-width:700px){
+  .feature-strip{grid-template-columns:1fr;}
 }
 @media(min-width:769px){
   .pub-nav-hamburger{display:none;}
@@ -680,6 +685,16 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 `
 function Toast({ msg, type }) {
   return msg ? <div className={`toast toast-${type || "green"}`}>{msg}</div> : null;
+}
+
+function useMobile(bp = 640) {
+  const [mobile, setMobile] = useState(() => window.innerWidth <= bp);
+  useEffect(() => {
+    const fn = () => setMobile(window.innerWidth <= bp);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, [bp]);
+  return mobile;
 }
 
 function useToast() {
@@ -1306,6 +1321,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
 
 // ── Home Page ─────────────────────────────────────────────
 function HomePage({ data, setPage }) {
+  const isMobile = useMobile(700);
   const nextEvent = data.events
     .filter(e => e.published && new Date(e.date + "T" + e.time) > new Date())
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
@@ -1567,7 +1583,7 @@ function HomePage({ data, setPage }) {
 
       {/* FEATURE STRIP */}
       <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, padding:"40px 24px", maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:16, padding: isMobile ? "24px 16px" : "40px 24px", maxWidth:1200, margin:"0 auto" }}>
           {[
             { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
             { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
@@ -2178,7 +2194,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       </div>
                       {/* Body */}
                       <div style={{ position:"relative", zIndex:1, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
-                        <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px 12px" }}>
+                        <div style={{ flex:1, display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:"8px 12px" }}>
                           {[
                             ["KIT", b.type === "walkOn" ? "Walk-On" : "Rental"],
                             ["UNITS", `×${b.qty}`],
@@ -2721,6 +2737,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
 // ── Product Page ──────────────────────────────────────────
 function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
+  const isMobile = useMobile(700);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
 
@@ -2758,7 +2775,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
         </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32, marginBottom:40 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 16 : 32, marginBottom:40 }}>
 
         {/* LEFT — Image */}
         <div>
@@ -2780,7 +2797,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           </div>
 
           {/* Spec strip */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:1, marginTop:2 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap:1, marginTop:2 }}>
             {[
               { label:"POSTAGE", val: item.noPost ? "Collect Only" : "Standard" },
               { label:"AVAILABILITY", val: hasVariants && !selectedVariant ? "— SELECT —" : stockLabel(stockAvail).text, color: hasVariants && !selectedVariant ? "var(--muted)" : stockLabel(stockAvail).color },
@@ -3005,6 +3022,7 @@ function GalleryPage({ data }) {
 // ── Q&A ───────────────────────────────────────────────────
 // ── VIP Page ──────────────────────────────────────────────
 function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
+  const isMobile = useMobile(640);
   const [applying, setApplying] = useState(false);
 
   const myBookings = cu ? data.events.flatMap(ev =>
@@ -3156,7 +3174,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         {/* How it works */}
         <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px", marginBottom:32 }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"#fff", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>HOW IT WORKS</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:16 }}>
             {[
               { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
               { num:"02", title:"SUBMIT APPLICATION", desc:"Once eligible, apply for VIP membership through this page. Admin will review your application." },
@@ -3848,7 +3866,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 
                   {/* Body */}
                   <div style={{ position:"relative", zIndex:2, padding:"14px 22px 18px", display:"flex", gap:16, alignItems:"center" }}>
-                    <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"14px 16px" }}>
+                    <div style={{ flex:1, display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:"14px 16px" }}>
                       {[
                         ["KIT TYPE", b.type === "walkOn" ? "Walk-On" : "Rental"],
                         ["UNITS", b.qty],
