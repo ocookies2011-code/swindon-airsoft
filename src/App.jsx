@@ -6689,13 +6689,18 @@ function AdminQA({ data, save, showToast }) {
 function StaffPage() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
+    setError(null);
     api.staff.getAll()
-      .then(setStaff)
-      .catch(() => {})
+      .then(data => { setStaff(data); })
+      .catch(e => { setError(e.message || "Failed to load staff"); })
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const RANK_LABELS = {
     1: "OWNER", 2: "CO-OWNER", 3: "SITE MANAGER",
@@ -6719,10 +6724,24 @@ function StaffPage() {
         </div>
       </div>
 
-      {loading && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)", letterSpacing: ".15em" }}>LOADING...</div>}
-      {!loading && staff.length === 0 && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>No staff members listed yet.</div>}
+      {loading && (
+        <div style={{ textAlign: "center", padding: 60, color: "var(--muted)", letterSpacing: ".15em" }}>
+          <div style={{ marginBottom: 12 }}>LOADING...</div>
+        </div>
+      )}
 
-      {!loading && tiers.map((tier, tierIdx) => (
+      {!loading && error && (
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ color: "var(--red)", marginBottom: 16, fontSize: 13 }}>⚠️ {error}</div>
+          <button className="btn btn-ghost btn-sm" onClick={load}>🔄 Try Again</button>
+        </div>
+      )}
+
+      {!loading && !error && staff.length === 0 && (
+        <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>No staff members listed yet.</div>
+      )}
+
+      {!loading && !error && tiers.map((tier, tierIdx) => (
         <div key={tier.rank} style={{ position: "relative" }}>
           {tierIdx > 0 && (
             <div style={{ display: "flex", justifyContent: "center" }}>
@@ -6788,6 +6807,7 @@ function StaffCard({ member, isOwner }) {
 function AdminStaff({ showToast }) {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [modal, setModal] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -6804,10 +6824,14 @@ function AdminStaff({ showToast }) {
   const [form, setForm] = useState(blank);
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const loadStaff = () => {
-    setLoading(true);
-    api.staff.getAll().then(setStaffList).catch(e => showToast("Failed to load staff: " + e.message, "red")).finally(() => setLoading(false));
-  };
+  const loadStaff = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
+    setLoadError(null);
+    api.staff.getAll()
+      .then(data => { setStaffList(data); })
+      .catch(e => { setLoadError(e.message || "Failed to load staff"); showToast("Failed to load staff: " + e.message, "red"); })
+      .finally(() => setLoading(false));
+  }, []);
   useEffect(() => { loadStaff(); }, []);
 
   const openNew = () => { setForm(blank); setModal("new"); };
@@ -6847,7 +6871,7 @@ function AdminStaff({ showToast }) {
       }
       showToast(modal === "new" ? "Staff member added!" : "Staff member updated!");
       setModal(null);
-      loadStaff();
+      loadStaff(true); // silent refresh — no loading flash
     } catch (e) {
       showToast("Save failed: " + e.message, "red");
     } finally { setBusy(false); }
@@ -6855,7 +6879,7 @@ function AdminStaff({ showToast }) {
 
   const confirmDelete = async () => {
     setBusy(true);
-    try { await api.staff.delete(deleteConfirm.id); showToast("Staff member removed", "red"); setDeleteConfirm(null); loadStaff(); }
+    try { await api.staff.delete(deleteConfirm.id); showToast("Staff member removed", "red"); setDeleteConfirm(null); loadStaff(true); }
     catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setBusy(false); }
   };
@@ -6864,14 +6888,24 @@ function AdminStaff({ showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Staff</div><div className="page-sub">Manage chain of command — changes appear live on the Staff page</div></div>
-        <button className="btn btn-primary" onClick={openNew}>+ Add Staff Member</button>
+        <div className="gap-2">
+          <button className="btn btn-ghost btn-sm" onClick={() => loadStaff(true)}>🔄 Refresh</button>
+          <button className="btn btn-primary" onClick={openNew}>+ Add Staff Member</button>
+        </div>
       </div>
 
       {loading && <div style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>Loading...</div>}
-      {!loading && staffList.length === 0 && (
+
+      {!loading && loadError && (
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ color: "var(--red)", marginBottom: 16, fontSize: 13 }}>⚠️ {loadError}</div>
+          <button className="btn btn-ghost btn-sm" onClick={() => loadStaff()}>🔄 Try Again</button>
+        </div>
+      )}
+      {!loading && !loadError && staffList.length === 0 && (
         <div className="card" style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>No staff added yet. Click <strong>+ Add Staff Member</strong> to get started.</div>
       )}
-      {!loading && staffList.length > 0 && (
+      {!loading && !loadError && staffList.length > 0 && (
         <div className="card">
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Photo</th><th>Name</th><th>Job Title</th><th>Rank</th><th>Bio</th><th>Actions</th></tr></thead>
