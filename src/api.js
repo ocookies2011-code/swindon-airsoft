@@ -593,3 +593,59 @@ export const shopOrders = {
     return data
   }
 }
+
+// ── Staff ─────────────────────────────────────────────────
+export const staff = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .order('rank_order', { ascending: true })
+    if (error) throw error
+    return data || []
+  },
+
+  async create(member) {
+    const { data, error } = await supabase
+      .from('staff')
+      .insert({
+        name:        member.name,
+        job_title:   member.jobTitle,
+        bio:         member.bio || '',
+        photo:       member.photo || '',
+        rank_order:  member.rankOrder ?? 99,
+      })
+      .select().single()
+    if (error) throw error
+    return data
+  },
+
+  async update(id, member) {
+    const { error } = await supabase
+      .from('staff')
+      .update({
+        name:       member.name,
+        job_title:  member.jobTitle,
+        bio:        member.bio || '',
+        photo:      member.photo || '',
+        rank_order: member.rankOrder ?? 99,
+      })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('staff').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  async uploadPhoto(staffId, file) {
+    const ext  = file.name.split('.').pop()
+    const path = `staff/${staffId}.${ext}`
+    const { error } = await supabase.storage.from('images').upload(path, file, { upsert: true })
+    if (error) throw error
+    const { data } = supabase.storage.from('images').getPublicUrl(path)
+    await supabase.from('staff').update({ photo: data.publicUrl }).eq('id', staffId)
+    return data.publicUrl
+  },
+}
