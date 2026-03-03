@@ -874,7 +874,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     "I agree to follow all safety rules and marshal instructions.",
     "I confirm that I am at least 18 years of age or have parental/guardian consent.",
     "I will not consume alcohol or drugs before or during gameplay.",
-    "I release Zulu's Airsoft and its staff from liability for any injuries sustained during play.",
+    "I release Swindon Airsoft and its staff from liability for any injuries sustained during play.",
     "I understand that my participation is voluntary and at my own risk.",
     "I agree to treat all participants with respect and follow the site's code of conduct.",
     "I confirm that any replica firearms I bring to the site are legal to own in the UK.",
@@ -1158,8 +1158,8 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
         <div className="pub-nav-inner">
           {/* Logo */}
           <div className="pub-nav-logo" onClick={() => go("home")}>
-            <div className="pub-nav-logo-box">ZA</div>
-            <span className="pub-nav-logo-text">ZULU'S <span>AIRSOFT</span></span>
+            <div className="pub-nav-logo-box">SA</div>
+            <span className="pub-nav-logo-text">SWINDON <span>AIRSOFT</span></span>
           </div>
           {/* Desktop links */}
           <div className="pub-nav-links">
@@ -1195,7 +1195,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
       <div className={`pub-nav-drawer ${drawerOpen ? "open" : ""}`} onClick={() => setDrawerOpen(false)}>
         <div className="pub-nav-drawer-panel" onClick={e => e.stopPropagation()}>
           <div className="pub-nav-drawer-logo">
-            ZULU'S <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
+            SWINDON <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
           </div>
           {links.map(l => (
             <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
@@ -1409,18 +1409,18 @@ function HomePage({ data, setPage }) {
                     WELCOME TO
                   </text>
 
-                  {/* ZULU'S — large lime stencil */}
+                  {/* SWINDON — large lime stencil */}
                   <text x="320" y="155" textAnchor="middle"
                     fontFamily="'Barlow Condensed',sans-serif" fontSize="72" fontWeight="900"
                     fill="none" stroke="#c8ff00" strokeWidth="2.5"
                     letterSpacing=".08em" opacity=".3">
-                    ZULU'S
+                    SWINDON
                   </text>
                   <text x="320" y="155" textAnchor="middle"
                     fontFamily="'Barlow Condensed',sans-serif" fontSize="72" fontWeight="900"
                     fill="#c8ff00" letterSpacing=".08em"
                     style={{ filter:"drop-shadow(0 0 12px rgba(200,255,0,.6))" }}>
-                    ZULU'S
+                    SWINDON
                   </text>
 
                   {/* AIRSOFT — medium white */}
@@ -1703,7 +1703,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
       <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Booking Confirmation</div>
     </div>
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
@@ -1734,7 +1734,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
         <li>Under 18s must have signed parental consent</li>
       </ul>
     </div>
-    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft</div>
   </div>`;
 
   await sendEmail({
@@ -1751,12 +1751,12 @@ async function sendWelcomeEmail({ name, email }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
       <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Welcome to the Team</div>
     </div>
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;">
       <div style="font-size:22px;font-weight:900;margin-bottom:12px;">Hey ${name}! 👋</div>
-      <p style="font-size:14px;color:#ccc;line-height:1.8;">Your account has been created. You're now part of the Zulu's Airsoft community.</p>
+      <p style="font-size:14px;color:#ccc;line-height:1.8;">Your account has been created. You're now part of the Swindon Airsoft community.</p>
       <p style="font-size:14px;color:#ccc;line-height:1.8;margin-top:8px;">Here's what to do next:</p>
       <ul style="font-size:13px;color:#ccc;padding-left:18px;line-height:2.2;margin-top:8px;">
         <li>Sign your liability waiver in your profile</li>
@@ -1767,13 +1767,13 @@ async function sendWelcomeEmail({ name, email }) {
     <div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;text-align:center;">
       <div style="font-size:14px;font-weight:700;color:#fff;">See you on the field, soldier. 🎯</div>
     </div>
-    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft</div>
   </div>`;
 
   await sendEmail({
     toEmail:     email,
     toName:      name,
-    subject:     "Welcome to Zulu's Airsoft! 🎯",
+    subject:     "Welcome to Swindon Airsoft! 🎯",
     htmlContent,
   });
 }
@@ -1790,7 +1790,7 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">ZULU'S <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
       <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Order Confirmation</div>
     </div>
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
@@ -1819,7 +1819,7 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
     <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
       We'll notify you when your order is dispatched. Allow 3–5 working days for delivery.
     </div>
-    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Zulu's Airsoft</div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft</div>
   </div>`;
 
   await sendEmail({
@@ -1996,7 +1996,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               }} />
             ))}
             <div style={{ fontSize:9, letterSpacing:".22em", color:"#c8ff00", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
-              <span>⬡ ZULU'S AIRSOFT</span>
+              <span>⬡ SWINDON AIRSOFT</span>
               <span style={{ color:"#3a5010" }}>◆</span>
               <span style={{ color:"#4a6820" }}>OPERATION BRIEFING</span>
               {myBookings.length > 0 && <span style={{ marginLeft:"auto", background:"rgba(0,100,0,.3)", border:"1px solid #c8ff00", color:"#c8ff00", fontSize:9, padding:"2px 10px", letterSpacing:".15em" }}>✓ DEPLOYED</span>}
@@ -2077,7 +2077,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               <div style={{ background:"linear-gradient(135deg,rgba(8,18,2,.97) 0%,rgba(14,26,4,.92) 100%)", borderBottom:"1px solid #2a3a10", padding:"10px 18px", display:"flex", alignItems:"center", gap:10 }}>
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:10, letterSpacing:".22em", color:"#c8ff00", textTransform:"uppercase" }}>⬡ BOOK THIS EVENT</span>
                 <div style={{ flex:1, borderTop:"1px dashed #2a3a10" }} />
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, letterSpacing:".15em", color:"#4a6820" }}>ZULU'S AIRSOFT</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, letterSpacing:".15em", color:"#4a6820" }}>SWINDON AIRSOFT</span>
               </div>
               <div style={{ position:"relative", zIndex:1, padding:"16px 18px" }}>
 
@@ -2120,7 +2120,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       ))}
                       {/* Header strip */}
                       <div style={{ background:"linear-gradient(135deg,rgba(8,18,2,.95) 0%,rgba(14,26,4,.9) 100%)", borderBottom:"1px dashed #2a3a10", padding:"7px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:9, letterSpacing:".2em", color:"#c8ff00", textTransform:"uppercase" }}>⬡ ZULU'S AIRSOFT · FIELD PASS</span>
+                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:9, letterSpacing:".2em", color:"#c8ff00", textTransform:"uppercase" }}>⬡ SWINDON AIRSOFT · FIELD PASS</span>
                         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, letterSpacing:".15em", color:"#c8ff00", background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", padding:"1px 8px" }}>✓ DEPLOYED</span>
                       </div>
                       {/* Body */}
@@ -2651,7 +2651,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {cu && grandTotal > 0 && (
                   <PayPalCheckoutButton
                     amount={grandTotal}
-                    description={`Zulu's Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
+                    description={`Swindon Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
                     onSuccess={placeOrderAfterPayment}
                     disabled={placing}
                   />
@@ -3664,7 +3664,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 
   <div class="header">
     <div class="header-top">
-      <div class="org">⬡ Zulu's Airsoft</div>
+      <div class="org">⬡ Swindon Airsoft</div>
       <div class="classification">FIELD PASS // ${new Date().getFullYear()}</div>
     </div>
     <div class="event-name">${b.eventTitle || 'Operation'}</div>
@@ -3761,7 +3761,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
                       {["⬡","⬡","⬡","⬡","⬡","⬡"].map((h,i) => <span key={i} style={{ fontSize:22, color:"#c8ff00" }}>{h}</span>)}
                     </div>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"#7aaa30", fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase", marginBottom:7, display:"flex", gap:10, alignItems:"center" }}>
-                      <span style={{ color:"#c8ff00" }}>⬡ ZULU'S AIRSOFT</span>
+                      <span style={{ color:"#c8ff00" }}>⬡ SWINDON AIRSOFT</span>
                       <span style={{ color:"#3a5010" }}>◆</span>
                       <span>FIELD PASS // {new Date().getFullYear()}</span>
                     </div>
@@ -3901,7 +3901,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
       {/* Sidebar */}
       <div className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sb-logo">
-          <div className="sb-logo-text">ZULU'S <span>AIRSOFT</span></div>
+          <div className="sb-logo-text">SWINDON <span>AIRSOFT</span></div>
           <div className="sb-time"><GmtClock /></div>
         </div>
         <div style={{ padding: "8px 8px 0" }}>
@@ -4383,7 +4383,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         <thead><tr><th>Player</th><th>Ticket Type</th><th>Qty</th><th>Checked In</th><th>Extras</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="footer">Printed ${new Date().toLocaleString('en-GB')} · Zulu's Airsoft</div>
+      <div class="footer">Printed ${new Date().toLocaleString('en-GB')} · Swindon Airsoft</div>
       <script>window.onload=()=>window.print();<\/script>
     </body></html>`);
     win.document.close();
@@ -5563,7 +5563,7 @@ function AdminOrdersInline({ showToast }) {
                 const addr = detail.customer_address || "No address on file";
                 const items = (Array.isArray(detail.items) ? detail.items : []).map(i => `${i.name} x${i.qty}`).join(", ");
                 const win = window.open("", "_blank", "width=400,height=300");
-                win.document.write(`<html><head><title>Postage Label</title><style>body{font-family:Arial,sans-serif;padding:24px;border:3px solid #000;margin:20px;}.to{font-size:22px;font-weight:bold;margin:16px 0 8px;}.addr{font-size:16px;line-height:1.6;white-space:pre-line;}.from{font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px;}@media print{body{margin:0;border:none;}}</style></head><body><div style="font-size:11px;color:#888;">ORDER #${detail.id?.slice(-8).toUpperCase()} · ${gmtShort(detail.created_at)}</div><div class="to">TO:</div><div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div><div class="addr">${addr}</div><div class="from">FROM: Zulu's Airsoft</div><script>window.onload=()=>window.print();<\/script></body></html>`);
+                win.document.write(`<html><head><title>Postage Label</title><style>body{font-family:Arial,sans-serif;padding:24px;border:3px solid #000;margin:20px;}.to{font-size:22px;font-weight:bold;margin:16px 0 8px;}.addr{font-size:16px;line-height:1.6;white-space:pre-line;}.from{font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px;}@media print{body{margin:0;border:none;}}</style></head><body><div style="font-size:11px;color:#888;">ORDER #${detail.id?.slice(-8).toUpperCase()} · ${gmtShort(detail.created_at)}</div><div class="to">TO:</div><div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div><div class="addr">${addr}</div><div class="from">FROM: Swindon Airsoft</div><script>window.onload=()=>window.print();<\/script></body></html>`);
                 win.document.close();
               }}>🖨️ Print Label</button>
             </div>
@@ -5728,7 +5728,7 @@ function AdminOrders({ showToast }) {
                     <div class="to">TO:</div>
                     <div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div>
                     <div class="addr">${addr}</div>
-                    <div class="from">FROM: Zulu's Airsoft</div>
+                    <div class="from">FROM: Swindon Airsoft</div>
                     <script>window.onload=()=>window.print();<\/script>
                   </body></html>`);
                 win.document.close();
@@ -7004,7 +7004,7 @@ export default function App() {
   if (loading) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>ZA</div>
+        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
         <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
       </div>
@@ -7111,8 +7111,8 @@ export default function App() {
             {/* Brand col */}
             <div>
               <div className="pub-footer-logo">
-                <div className="pub-footer-logo-box">ZA</div>
-                <div className="pub-footer-logo-text">ZULU'S AIRSOFT</div>
+                <div className="pub-footer-logo-box">SA</div>
+                <div className="pub-footer-logo-text">SWINDON AIRSOFT</div>
               </div>
               <p className="pub-footer-desc">Premier airsoft venue. Experience tactical gameplay like never before.</p>
               {(data.socialFacebook || data.socialInstagram) && (
@@ -7165,7 +7165,7 @@ export default function App() {
             </div>
           </div>
           <div className="pub-footer-bottom">
-            <div className="pub-footer-copy">© {new Date().getFullYear()} Zulu's Airsoft. All rights reserved.</div>
+            <div className="pub-footer-copy">© {new Date().getFullYear()} Swindon Airsoft. All rights reserved.</div>
             <div className="pub-footer-legal">Players must be 18+ or accompanied by adult. Valid ID required.</div>
           </div>
         </div>
