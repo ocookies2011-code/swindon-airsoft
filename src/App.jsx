@@ -31,27 +31,62 @@ function stockLabel(qty) {
 
 
 
-const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
-const PAYMENT_LIVE = PAYPAL_CLIENT_ID && !PAYPAL_CLIENT_ID.includes("YOUR_LIVE");
+// ── PayPal config — loaded dynamically from Supabase site_settings ──
+// Fallback to env vars so local dev still works without DB rows.
+let _paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
+let _paypalMode = "sandbox"; // "live" | "sandbox"
+let _paypalConfigLoaded = false;
+
+async function loadPaypalConfig() {
+  if (_paypalConfigLoaded) return;
+  try {
+    const [clientId, mode] = await Promise.all([
+      api.settings.get("paypal_client_id"),
+      api.settings.get("paypal_mode"),
+    ]);
+    if (clientId) _paypalClientId = clientId;
+    if (mode === "live" || mode === "sandbox") _paypalMode = mode;
+  } catch {}
+  _paypalConfigLoaded = true;
+}
 
 function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
-  const [ppReady, setPpReady] = useState(!!window.paypal);
+  const [ppReady, setPpReady] = useState(false);
   const [ppError, setPpError] = useState(null);
+  const [isLive, setIsLive] = useState(false);
+  const [clientId, setClientId] = useState("");
+  const [configLoaded, setConfigLoaded] = useState(false);
   const containerRef = useRef(null);
   const rendered = useRef(false);
 
+  // Load config from Supabase on mount
   useEffect(() => {
-    if (!PAYMENT_LIVE) return;
-    if (window.paypal) { setPpReady(true); return; }
-    const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=GBP`;
-    script.onload = () => setPpReady(true);
-    script.onerror = () => setPpError("PayPal failed to load.");
-    document.head.appendChild(script);
+    loadPaypalConfig().then(() => {
+      setClientId(_paypalClientId);
+      setIsLive(_paypalMode === "live");
+      setConfigLoaded(true);
+    });
   }, []);
 
+  // Load PayPal SDK once config is ready and mode is live
   useEffect(() => {
-    if (!PAYMENT_LIVE || !ppReady || !containerRef.current || rendered.current || disabled) return;
+    if (!configLoaded || !isLive || !clientId) return;
+    if (window.paypal) { setPpReady(true); return; }
+    // Remove any old PayPal script to avoid double-loading
+    const old = document.getElementById("paypal-sdk");
+    if (old) old.remove();
+    rendered.current = false;
+    const script = document.createElement("script");
+    script.id = "paypal-sdk";
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=GBP`;
+    script.onload = () => setPpReady(true);
+    script.onerror = () => setPpError("PayPal failed to load. Check your Client ID in Admin → Settings.");
+    document.head.appendChild(script);
+  }, [configLoaded, isLive, clientId]);
+
+  // Render PayPal buttons
+  useEffect(() => {
+    if (!isLive || !ppReady || !containerRef.current || rendered.current || disabled) return;
     rendered.current = true;
     window.paypal.Buttons({
       style: { layout: "vertical", color: "black", shape: "rect", label: "pay" },
@@ -62,16 +97,20 @@ function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
         const order = await actions.order.capture();
         onSuccess({ id: order.id, status: order.status });
       },
-      onError: (err) => setPpError("Payment failed. Please try again."),
+      onError: () => setPpError("Payment failed. Please try again."),
     }).render(containerRef.current);
-  }, [ppReady, disabled, amount]);
+  }, [ppReady, disabled, amount, isLive]);
 
-  if (!PAYMENT_LIVE) {
+  if (!configLoaded) {
+    return <div style={{ color: "var(--muted)", fontSize: 12, padding: 8, marginTop: 12 }}>Loading payment options...</div>;
+  }
+
+  if (!isLive) {
     return (
       <div style={{ marginTop: 12 }}>
         <div style={{ background: "#0d1a0d", border: "1px solid #1e3a1e", padding: "8px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
-          <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken.</span>
+          <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken. Set PayPal to Live in Admin → Settings.</span>
         </div>
         <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
           <span>{description}</span>
@@ -3889,6 +3928,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "qa-admin", label: "Q&A", icon: "❓", group: null },
     { id: "messages", label: "Site Messages", icon: "📢", group: null },
     { id: "cash", label: "Cash Sales", icon: "💵", group: "TOOLS" },
+    { id: "settings", label: "Settings", icon: "⚙️", group: "SYSTEM" },
   ];
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -3950,6 +3990,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
+          {section === "settings" && <AdminSettings showToast={showToast} />}
         </div>
       </div>
     </div>
@@ -6624,6 +6665,129 @@ function AdminQA({ data, save, showToast }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Admin Settings ────────────────────────────────────────
+function AdminSettings({ showToast }) {
+  const S = (key, def = "") => {
+    const [val, setVal] = useState(def);
+    const [loaded, setLoaded] = useState(false);
+    useEffect(() => {
+      api.settings.get(key).then(v => { if (v) setVal(v); setLoaded(true); }).catch(() => setLoaded(true));
+    }, []);
+    return [val, setVal, loaded];
+  };
+
+  const [paypalClientId, setPaypalClientId] = S("paypal_client_id");
+  const [paypalMode, setPaypalMode, ppLoaded] = S("paypal_mode", "sandbox");
+  const [savingPP, setSavingPP] = useState(false);
+  const [showClientId, setShowClientId] = useState(false);
+
+  const savePaypal = async () => {
+    setSavingPP(true);
+    try {
+      await api.settings.set("paypal_client_id", paypalClientId.trim());
+      await api.settings.set("paypal_mode", paypalMode);
+      // Reset cached config so next checkout reloads it
+      _paypalConfigLoaded = false;
+      showToast("✅ PayPal settings saved! Changes take effect on next checkout.");
+    } catch (e) {
+      showToast("Save failed: " + e.message, "red");
+    } finally { setSavingPP(false); }
+  };
+
+  const sectionHead = (label) => (
+    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14, color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em", textTransform: "uppercase" }}>{label}</div>
+  );
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Settings</div>
+          <div className="page-sub">Payment configuration and API keys</div>
+        </div>
+      </div>
+
+      {/* PayPal */}
+      <div className="card mb-2">
+        {sectionHead("💳 PayPal Payments")}
+
+        <div className="form-group">
+          <label>Mode</label>
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            {["sandbox", "live"].map(m => (
+              <button key={m} onClick={() => setPaypalMode(m)}
+                style={{
+                  padding: "8px 22px", borderRadius: 4, border: "1px solid",
+                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer",
+                  background: paypalMode === m ? (m === "live" ? "var(--accent)" : "#2d7a2d") : "var(--card)",
+                  color: paypalMode === m ? "#000" : "var(--muted)",
+                  borderColor: paypalMode === m ? (m === "live" ? "var(--accent)" : "#2d7a2d") : "var(--border)",
+                }}>
+                {m === "live" ? "🟠 Live" : "🟢 Sandbox / Test"}
+              </button>
+            ))}
+          </div>
+          {paypalMode === "live"
+            ? <div className="alert alert-red mt-2" style={{ fontSize: 12 }}>⚠️ LIVE mode — real payments will be charged to customers.</div>
+            : <div className="alert alert-green mt-2" style={{ fontSize: 12 }}>Sandbox mode — test payments only, no real money taken.</div>
+          }
+        </div>
+
+        <div className="form-group">
+          <label>PayPal Client ID {paypalMode === "live" ? "(Live)" : "(Sandbox)"}</label>
+          <div style={{ position: "relative" }}>
+            <input
+              type={showClientId ? "text" : "password"}
+              value={paypalClientId}
+              onChange={e => setPaypalClientId(e.target.value)}
+              placeholder={paypalMode === "live" ? "AaBbCc... (Live Client ID from PayPal Developer Dashboard)" : "AaBbCc... (Sandbox Client ID)"}
+              style={{ paddingRight: 80 }}
+            />
+            <button onClick={() => setShowClientId(v => !v)}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>
+              {showClientId ? "Hide" : "Show"}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
+            Get your Client ID from{" "}
+            <a href="https://developer.paypal.com/developer/applications" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+              developer.paypal.com → My Apps &amp; Credentials
+            </a>
+            . Use the <strong>Live</strong> Client ID for real payments.
+          </div>
+        </div>
+
+        <button className="btn btn-primary" onClick={savePaypal} disabled={savingPP || !ppLoaded}>
+          {savingPP ? "Saving..." : "Save PayPal Settings"}
+        </button>
+
+        {paypalMode === "live" && paypalClientId && (
+          <div className="alert alert-green mt-2" style={{ fontSize: 12 }}>
+            ✅ Live PayPal is configured. Customers will see the real PayPal button at checkout.
+          </div>
+        )}
+        {paypalMode === "live" && !paypalClientId && (
+          <div className="alert alert-red mt-2" style={{ fontSize: 12 }}>
+            ⚠️ Mode is set to Live but no Client ID is saved — checkouts will show an error.
+          </div>
+        )}
+      </div>
+
+      {/* How to get PayPal keys guide */}
+      <div className="card mb-2" style={{ background: "#0a140a", border: "1px solid #1a2e1a" }}>
+        {sectionHead("📋 PayPal Setup Guide")}
+        <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 2 }}>
+          <div>1. Go to <a href="https://developer.paypal.com" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>developer.paypal.com</a> and log in with your PayPal business account.</div>
+          <div>2. Click <strong style={{ color: "var(--text)" }}>Apps &amp; Credentials</strong> → switch to <strong style={{ color: "var(--text)" }}>Live</strong> tab.</div>
+          <div>3. Click your app (or create one) → copy the <strong style={{ color: "var(--text)" }}>Client ID</strong>.</div>
+          <div>4. Paste it above, set Mode to <strong style={{ color: "var(--accent)" }}>Live</strong>, and click Save.</div>
+          <div>5. Payments will now go directly into your PayPal business account.</div>
+        </div>
+      </div>
     </div>
   );
 }
