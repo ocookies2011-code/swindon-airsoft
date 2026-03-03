@@ -501,6 +501,8 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .nav-tab{padding:12px 20px;font-size:12px;font-weight:700;background:transparent;border:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .15s;}
 .nav-tab:hover{color:#fff;}
 .nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.profile-tab-select{display:none;width:100%;padding:11px 14px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border-radius:3px;margin-bottom:20px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+@media(max-width:640px){.nav-tabs.profile-tabs{display:none;}.profile-tab-select{display:block;}}
 
 /* ── EVENT CARDS ── */
 .event-card{background:var(--bg2);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all .15s;position:relative;border-radius:4px;}
@@ -3369,9 +3371,22 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
         </div>
       </div>
 
-      <div className="nav-tabs">
-        {["profile", "waiver", "bookings", "orders", "vip"].map(t => <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
+      <div className="nav-tabs profile-tabs">
+        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],["orders","📦 Orders"],["vip","⭐ VIP"]].map(([t, label]) => (
+          <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{label}</button>
+        ))}
       </div>
+      <select
+        className="profile-tab-select"
+        value={tab}
+        onChange={e => setTab(e.target.value)}
+      >
+        <option value="profile">👤 Profile</option>
+        <option value="waiver">📋 Waiver</option>
+        <option value="bookings">🎟 Bookings</option>
+        <option value="orders">📦 Orders</option>
+        <option value="vip">⭐ VIP</option>
+      </select>
 
       {tab === "profile" && (
         <div className="card">
