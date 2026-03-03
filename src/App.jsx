@@ -653,14 +653,19 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .pub-footer-social-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
 
 /* ── TICKER / MARQUEE ── */
-.ticker-wrap{overflow:hidden;background:#000;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:0;white-space:nowrap;position:relative;}
+.ticker-wrap{overflow:hidden;background:#000;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:10px 24px;white-space:nowrap;position:relative;}
 .ticker-wrap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:60px;background:linear-gradient(90deg,#000,transparent);z-index:2;pointer-events:none;}
 .ticker-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:60px;background:linear-gradient(270deg,#000,transparent);z-index:2;pointer-events:none;}
-.ticker-track{display:inline-flex;animation:ticker-scroll 18s linear infinite;}
+.ticker-track{display:inline-block;animation:ticker-bounce 22s ease-in-out infinite;}
 .ticker-track:hover{animation-play-state:paused;}
-.ticker-item{display:inline-flex;align-items:center;gap:20px;padding:10px 40px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);white-space:nowrap;}
+.ticker-item{display:inline-flex;align-items:center;gap:12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);white-space:nowrap;}
 .ticker-sep{color:#333;font-size:18px;flex-shrink:0;}
-@keyframes ticker-scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+@keyframes ticker-bounce{
+  0%   { transform:translateX(0); }
+  45%  { transform:translateX(calc(100vw - 100% - 80px)); }
+  55%  { transform:translateX(calc(100vw - 100% - 80px)); }
+  100% { transform:translateX(0); }
+}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -1334,15 +1339,12 @@ function HomePage({ data, setPage }) {
     <div>
       {data.homeMsg && (
         <div className="ticker-wrap">
-          {/* Duplicate content so ticker scrolls seamlessly */}
           <div className="ticker-track">
-            {[...Array(6)].map((_, i) => (
-              <span key={i} className="ticker-item">
-                <span style={{ color:"var(--accent)", fontSize:16 }}>⚡</span>
-                {data.homeMsg}
-                <span className="ticker-sep">◆</span>
-              </span>
-            ))}
+            <span className="ticker-item">
+              <span style={{ color:"var(--accent)", fontSize:16 }}>⚡</span>
+              {data.homeMsg}
+              <span style={{ color:"var(--accent)", fontSize:16 }}>⚡</span>
+            </span>
           </div>
         </div>
       )}
@@ -6727,15 +6729,38 @@ function StaffPage() {
   const [error, setError] = useState(null);
 
   const load = () => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
+
+    // Safety timeout — never stay stuck loading more than 10s
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        cancelled = true;
+        setLoading(false);
+        setError("Request timed out. Please try again.");
+      }
+    }, 10000);
+
     api.staff.getAll()
-      .then(data => { setStaff(data); })
-      .catch(e => { setError(e.message || "Failed to load staff"); })
-      .finally(() => setLoading(false));
+      .then(data => {
+        if (!cancelled) { setStaff(data); }
+      })
+      .catch(e => {
+        if (!cancelled) { setError(e.message || "Failed to load staff"); }
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (!cancelled) { setLoading(false); }
+      });
+
+    return () => { cancelled = true; clearTimeout(timeout); };
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const cleanup = load();
+    return cleanup;
+  }, []);
 
   const RANK_LABELS = {
     1: "OWNER", 2: "CO-OWNER", 3: "SITE MANAGER",
