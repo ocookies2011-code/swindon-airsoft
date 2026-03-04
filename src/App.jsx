@@ -4556,6 +4556,8 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                     const lp = (data?.shop || []).find(p => p.id === ex?.productId);
                     const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
                     const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
+                    return (
+                      <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
                         {label} ×{qty}
                       </div>
                     );
