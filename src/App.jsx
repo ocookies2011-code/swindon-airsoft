@@ -8519,6 +8519,11 @@ export default function App() {
   // Sync URL hash with page state
   useEffect(() => { window.location.hash = page; }, [page]);
 
+  const [cu, setCu] = useState(null);          // current user profile
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authModal, setAuthModal] = useState(null);
+  const [toast, showToast] = useToast();
+
   // ── Page visit tracking ──────────────────────────────────
   useEffect(() => {
     // Only track public pages, not admin
@@ -8542,11 +8547,6 @@ export default function App() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
-  const [cu, setCu] = useState(null);          // current user profile
-  const [authLoading, setAuthLoading] = useState(true);
-  const [authModal, setAuthModal] = useState(null);
-  const [toast, showToast] = useToast();
-
   // Shop state — lifted to App level so cart persists between shop & product page
   const [shopCart, setShopCart] = useState([]);
   const [shopCartOpen, setShopCartOpen] = useState(false);
