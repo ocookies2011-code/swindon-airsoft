@@ -150,9 +150,9 @@ function QRCode({ value, size = 120 }) {
       if (!window.QRCode) {
         await new Promise((resolve, reject) => {
           const scriptEl = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-          s.onload = resolve; s.onerror = reject;
-          document.head.appendChild(s);
+          scriptEl.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+          scriptEl.onload = resolve; scriptEl.onerror = reject;
+          document.head.appendChild(scriptEl);
         });
       }
       if (ref.current) {
@@ -771,7 +771,7 @@ function QRScanner({ onScan, onClose }) {
       const qrScriptEl = document.createElement('script');
       qrScriptEl.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
       qrScriptEl.onload = () => resolve(true);
-      s.onerror = () => resolve(false);
+      qrScriptEl.onerror = () => resolve(false);
       document.head.appendChild(qrScriptEl);
     });
 
