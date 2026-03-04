@@ -7170,6 +7170,7 @@ function StaffPage({ staff = [] }) {
           </div>
         ))}
       </div>
+    </div>
   );
 }
 
