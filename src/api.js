@@ -329,7 +329,7 @@ export const gallery = {
     const { error } = await supabase.storage.from('images').upload(path, file)
     if (error) throw error
     const { data } = supabase.storage.from('images').getPublicUrl(path)
-    await gallery.addImageUrl(albumId, data.publicUrl)
+    await this.addImageUrl(albumId, data.publicUrl)
     return data.publicUrl
   },
 
