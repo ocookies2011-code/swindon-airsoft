@@ -22,7 +22,7 @@ function renderMd(md) {
     .replace(/\n/g, "<br>");
 }
 function stockLabel(qty) {
-  const n = Number(qty);
+  const qty_num = Number(qty);
   if (n < 1)  return { text: "OUT OF STOCK", color: "var(--red)" };
   if (n < 10) return { text: "LOW STOCK",    color: "var(--gold)" };
   if (n < 20) return { text: "MED STOCK",    color: "#4fc3f7" };
@@ -149,7 +149,7 @@ function QRCode({ value, size = 120 }) {
     const loadQR = async () => {
       if (!window.QRCode) {
         await new Promise((resolve, reject) => {
-          const s = document.createElement('script');
+          const scriptEl = document.createElement('script');
           s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
           s.onload = resolve; s.onerror = reject;
           document.head.appendChild(s);
@@ -720,8 +720,8 @@ function useToast() {
 function GmtClock({ style }) {
   const [time, setTime] = useState(gmtNow());
   useEffect(() => {
-    const t = setInterval(() => setTime(gmtNow()), 1000);
-    return () => clearInterval(t);
+    const clockInterval = setInterval(() => setTime(gmtNow()), 1000);
+    return () => clearInterval(clockInterval);
   }, []);
   return <span className="mono" style={{ fontSize: 11, color: "var(--muted)", ...style }}>{time} GMT</span>;
 }
@@ -732,13 +732,13 @@ function Countdown({ target }) {
   useEffect(() => {
     const tick = () => setDiff(Math.max(0, new Date(target) - new Date()));
     tick();
-    const t = setInterval(tick, 1000);
+    const tickInterval = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, [target]);
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor((diff % 86400000) / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
+  const diffDays = Math.floor(diff / 86400000);
+  const diffHours = Math.floor((diff % 86400000) / 3600000);
+  const diffMins = Math.floor((diff % 3600000) / 60000);
+  const diffSecs = Math.floor((diff % 60000) / 1000);
   return (
     <div className="countdown-wrap">
       {[["DAYS", d], ["HRS", h], ["MIN", m], ["SEC", s]].map(([l, n]) => (
@@ -768,11 +768,11 @@ function QRScanner({ onScan, onClose }) {
     // Load jsQR from CDN if not already loaded
     const ensureJsQR = () => new Promise((resolve) => {
       if (window.jsQR) { resolve(true); return; }
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
-      s.onload = () => resolve(true);
+      const qrScriptEl = document.createElement('script');
+      qrScriptEl.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+      qrScriptEl.onload = () => resolve(true);
       s.onerror = () => resolve(false);
-      document.head.appendChild(s);
+      document.head.appendChild(qrScriptEl);
     });
 
     (async () => {
@@ -871,7 +871,7 @@ function QRScanner({ onScan, onClose }) {
 function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [busy, setBusy] = useState(false);
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   const login = async () => {
     if (!form.email || !form.password) { showToast("Email and password required", "red"); return; }
@@ -910,12 +910,12 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-title">{mode === "login" ? "🔐 Sign In" : "🎯 Create Account"}</div>
         {mode === "register" && (
-          <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e => f("name", e.target.value)} placeholder="John Smith" /></div>
+          <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} placeholder="John Smith" /></div>
         )}
-        <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => f("email", e.target.value)} /></div>
-        <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => f("password", e.target.value)} onKeyDown={e => e.key === "Enter" && (mode === "login" ? login() : register())} /></div>
+        <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} /></div>
+        <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setField("password", e.target.value)} onKeyDown={e => e.key === "Enter" && (mode === "login" ? login() : register())} /></div>
         {mode === "register" && (
-          <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e => f("phone", e.target.value)} placeholder="07700..." /></div>
+          <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="07700..." /></div>
         )}
         {mode === "register" && (
           <div className="alert alert-blue" style={{ marginBottom: 12 }}>
@@ -959,7 +959,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     guardian: prefill?.guardian || "", sigData: prefill?.sigData || "", agreed: false,
   });
 
-  const e = editMode && existing ? existing : {};
+  const existingData = editMode && existing ? existing : {};
   const buildInitialWaivers = () => {
     if (addPlayerMode) {
       // Pre-load all existing waivers + one new blank for the new player
@@ -971,7 +971,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
       return [cu.waiverData, ...(cu.extraWaivers || [])].map(w => blankForm(w));
     }
     return [blankForm({
-      name: e.name || cu?.name || "", dob: e.dob || "",
+      name: existingData.name || cu?.name || "", dob: existingData.dob || "",
       addr1: e.addr1 || "", addr2: e.addr2 || "",
       city: e.city || "", county: e.county || "",
       postcode: e.postcode || "", country: e.country || "United Kingdom",
@@ -1007,24 +1007,24 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
   }, [activeIdx]);
 
   const getPos = (ev, canvas) => {
-    const r = canvas.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
     const src = ev.touches ? ev.touches[0] : ev;
     const scaleX = canvas.width / r.width;
     const scaleY = canvas.height / r.height;
-    return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+    return { x: (src.clientX - canvasRect.left) * scaleX, y: (src.clientY - canvasRect.top) * scaleY };
   };
-  const startDraw = (ev) => { ev.preventDefault(); const c = canvasRef.current; const ctx = c.getContext("2d"); const p = getPos(ev, c); ctx.beginPath(); ctx.moveTo(p.x, p.y); setDrawing(true); };
-  const draw = (ev) => { if (!drawing) return; ev.preventDefault(); const c = canvasRef.current; const ctx = c.getContext("2d"); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#c8ff00"; const p = getPos(ev, c); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+  const startDraw = (ev) => { ev.preventDefault(); const canvasEl = canvasRef.current; const ctx = canvasEl.getContext("2d"); const canvasPos = getPos(ev, c); ctx.beginPath(); ctx.moveTo(canvasPos.x, canvasPos.y); setDrawing(true); };
+  const draw = (ev) => { if (!drawing) return; ev.preventDefault(); const canvasEl = canvasRef.current; const ctx = canvasEl.getContext("2d"); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#c8ff00"; const canvasPos = getPos(ev, c); ctx.lineTo(canvasPos.x, canvasPos.y); ctx.stroke(); };
   const endDraw = () => { if (!drawing) return; setDrawing(false); fw("sigData", canvasRef.current.toDataURL()); };
   const clearSig = () => { canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); fw("sigData", ""); };
 
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
-    for (let i = 0; i < waivers.length; i++) {
-      const w = waivers[i];
-      if (!w.name)  { showToast(`Waiver ${i+1}: Full name required`, "red"); setActiveIdx(i); return; }
-      if (!w.dob)   { showToast(`Waiver ${i+1}: Date of birth required`, "red"); setActiveIdx(i); return; }
+    for (let waiverIdx = 0; waiverIdx < waivers.length; waiverIdx++) {
+      const waiverItem = waivers[i];
+      if (!waiverItem.name)  { showToast(`Waiver ${i+1}: Full name required`, "red"); setActiveIdx(i); return; }
+      if (!waiverItem.dob)   { showToast(`Waiver ${i+1}: Date of birth required`, "red"); setActiveIdx(i); return; }
       if (!w.addr1 || !w.city || !w.postcode) { showToast(`Waiver ${i+1}: Address required`, "red"); setActiveIdx(i); return; }
       if (!w.emergencyName || !w.emergencyPhone) { showToast(`Waiver ${i+1}: Emergency contact required`, "red"); setActiveIdx(i); return; }
       if (!w.sigData) { showToast(`Waiver ${i+1}: Signature required`, "red"); setActiveIdx(i); return; }
@@ -1704,13 +1704,13 @@ function CountdownPanel({ target }) {
   useEffect(() => {
     const tick = () => setDiff(Math.max(0, new Date(target) - new Date()));
     tick();
-    const t = setInterval(tick, 1000);
+    const countdownInterval = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, [target]);
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor((diff % 86400000) / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
+  const cdDays = Math.floor(diff / 86400000);
+  const cdHours = Math.floor((diff % 86400000) / 3600000);
+  const cdMins = Math.floor((diff % 3600000) / 60000);
+  const cdSecs = Math.floor((diff % 60000) / 1000);
   return (
     <>
       {[["DAYS", d], ["HRS", h], ["MIN", m], ["SEC", s]].map(([l, n]) => (
@@ -1733,8 +1733,8 @@ async function sendEmail({ toEmail, toName, subject, htmlContent }) {
   if (!toEmail) throw new Error("No email address");
   if (!window.emailjs) {
     await new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+      const paypalScriptEl = document.createElement("script");
+      paypalScriptEl.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
       s.onload = res; s.onerror = rej;
       document.head.appendChild(s);
     });
@@ -1952,7 +1952,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
     const setExtra = (id, qty, variantId) => {
-      const k = extraKey(id, variantId);
+      const extraKeyVal = extraKey(id, variantId);
       setBCart(p => {
         const next = { ...p.extras };
         if (qty > 0) next[k] = Math.max(0, qty); else delete next[k];
@@ -2362,22 +2362,22 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       return lp.variants
                         .filter(v => getExtraQty(ex.id, v.id) > 0)
                         .map(v => {
-                          const q = getExtraQty(ex.id, v.id);
+                          const extraQty = getExtraQty(ex.id, v.id);
                           return (
                             <div key={ex.id + ":" + v.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
-                              <span className="text-muted">{ex.name} — {v.name} ×{q}</span>
-                              <span>£{(q * Number(v.price)).toFixed(2)}</span>
+                              <span className="text-muted">{ex.name} — {v.name} ×{extraQty}</span>
+                              <span>£{(extraQty * Number(v.price)).toFixed(2)}</span>
                             </div>
                           );
                         });
                     }
-                    const q = getExtraQty(ex.id, null);
-                    if (!q) return [];
+                    const extraQty = getExtraQty(ex.id, null);
+                    if (!extraQty) return [];
                     const livePrice = lp ? lp.price : ex.price;
                     return [(
                       <div key={ex.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
-                        <span className="text-muted">{ex.name} ×{q}</span>
-                        <span>£{(q * Number(livePrice)).toFixed(2)}</span>
+                        <span className="text-muted">{ex.name} ×{extraQty}</span>
+                        <span>£{(extraQty * Number(livePrice)).toFixed(2)}</span>
                       </div>
                     )];
                   })}
@@ -3218,13 +3218,13 @@ function GalleryPage({ data }) {
   const closeLightbox = () => setLightbox(null);
   const prevImg = () => {
     const imgs = lightbox.album.images;
-    const i = (lightbox.index - 1 + imgs.length) % imgs.length;
-    setLightbox({ ...lightbox, url: imgs[i], index: i });
+    const prevImgIdx = (lightbox.index - 1 + imgs.length) % imgs.length;
+    setLightbox({ ...lightbox, url: imgs[i], index: prevImgIdx });
   };
   const nextImg = () => {
     const imgs = lightbox.album.images;
-    const i = (lightbox.index + 1) % imgs.length;
-    setLightbox({ ...lightbox, url: imgs[i], index: i });
+    const nextImgIdx = (lightbox.index + 1) % imgs.length;
+    setLightbox({ ...lightbox, url: imgs[i], index: nextImgIdx });
   };
 
   return (
@@ -4155,9 +4155,9 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 </div>
 <button class="print-btn noprint" onclick="window.print()">🖨 PRINT / SAVE FIELD PASS</button>
 </body></html>`;
-                const w = window.open('', '_blank');
-                w.document.write(html);
-                w.document.close();
+                const printWin = window.open('', '_blank');
+                printWin.document.write(html);
+                printWin.document.close();
               };
 
               return (
@@ -4412,7 +4412,7 @@ function AdminDash({ data, setSection }) {
   const days = ["M", "T", "W", "T", "F", "S", "S"];
   const weekCounts = [0, 0, 0, 0, 0, 0, 0];
   allBookings.forEach(b => {
-    const d = new Date(b.date).getDay();
+    const weekday = new Date(b.date).getDay();
     weekCounts[(d + 6) % 7]++;
   });
   const maxBar = Math.max(...weekCounts, 1);
@@ -4554,8 +4554,8 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                     const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
                     const ex = b.eventObj?.extras?.find(e => e.id === extraId);
                     const lp = (data?.shop || []).find(p => p.id === ex?.productId);
-                    const v = variantId ? lp?.variants?.find(v => v.id === variantId) : null;
-                    const label = ex ? (v ? `${ex.name} — ${v.name}` : ex.name) : key;
+                    const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+                    const label = ex ? (v ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
                     return (
                       <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
                         {label} ×{qty}
@@ -4625,10 +4625,10 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
 
       {/* Delete confirm modal */}
       {viewBooking && (() => {
-        const b = viewBooking;
-        const extras = Object.entries(b.extras || {}).filter(([,v]) => v > 0);
-        const ticketLabel = b.type === "walkOn" ? "Walk-On" : "Rental Package";
-        const ticketPrice = b.type === "walkOn" ? b.eventObj?.walkOnPrice : b.eventObj?.rentalPrice;
+        const currentBooking = viewBooking;
+        const extras = Object.entries(currentBooking.extras || {}).filter(([,v]) => v > 0);
+        const ticketLabel = currentBooking.type === "walkOn" ? "Walk-On" : "Rental Package";
+        const ticketPrice = currentBooking.type === "walkOn" ? b.eventObj?.walkOnPrice : b.eventObj?.rentalPrice;
         return (
           <div className="overlay" onClick={() => setViewBooking(null)}>
             <div className="modal-box wide" onClick={e => e.stopPropagation()}>
@@ -4636,10 +4636,10 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
 
               {/* Header info */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{b.userName}</div></div>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{currentBooking.userName}</div></div>
                 <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{b.eventTitle}</div></div>
                 <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(b.date)}</div></div>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{b.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{currentBooking.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
               </div>
 
               {/* Order breakdown */}
@@ -4648,17 +4648,17 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                 <div style={{ padding:"0 14px" }}>
                   {/* Ticket */}
                   <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
-                    <span>{b.type === "walkOn" ? "🎯" : "🪖"} {ticketLabel} ×{b.qty}</span>
-                    <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(Number(ticketPrice) * b.qty).toFixed(2)}</span>
+                    <span>{currentBooking.type === "walkOn" ? "🎯" : "🪖"} {ticketLabel} ×{currentBooking.qty}</span>
+                    <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(Number(ticketPrice) * currentBooking.qty).toFixed(2)}</span>
                   </div>
                   {/* Extras */}
                   {extras.length > 0 && extras.map(([key, qty]) => {
                     const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
                     const ex = b.eventObj?.extras?.find(e => e.id === extraId);
                     const lp = (data?.shop || []).find(p => p.id === ex?.productId);
-                    const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-                    const label = ex ? (v ? `${ex.name} — ${v.name}` : ex.name) : key;
-                    const unitPrice = v ? Number(v.price) : (lp ? Number(lp.price) : 0);
+                    const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+                    const label = ex ? (v ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
+                    const unitPrice = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : 0);
                     return (
                       <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                         <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
@@ -4712,7 +4712,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const [viewId, setViewId] = useState(null);
   const blank = { title: "", date: "", time: "09:00", endTime: "17:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false };
   const [form, setForm] = useState(blank);
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   // ── Check-in state ──
   const [evId, setEvId] = useState(data.events[0]?.id || "");
@@ -4745,20 +4745,20 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 
   const manualCheckin = () => {
     if (!ev || !manual.trim()) return;
-    const b = ev.bookings.find(x =>
+    const foundBooking = ev.bookings.find(x =>
       x.userName.toLowerCase().includes(manual.toLowerCase()) || x.id === manual.trim()
     );
-    if (!b) { showToast("Booking not found", "red"); return; }
-    if (b.checkedIn) { showToast("Already checked in", "gold"); return; }
-    doCheckin(b, ev); setManual("");
+    if (!foundBooking) { showToast("Booking not found", "red"); return; }
+    if (foundBooking.checkedIn) { showToast("Already checked in", "gold"); return; }
+    doCheckin(foundBooking, ev); setManual("");
   };
 
   const onQRScan = (code) => {
     setScanning(false);
     for (const evObj of data.events) {
-      const b = evObj.bookings.find(x => x.id === code);
+      const scannedBooking = evObj.bookings.find(x => x.id === code);
       if (b) {
-        if (b.checkedIn) { showToast(`${b.userName} already checked in`, "gold"); return; }
+        if (scannedBooking.checkedIn) { showToast(`${scannedBooking.userName} already checked in`, "gold"); return; }
         doCheckin(b, evObj); return;
       }
     }
@@ -4768,11 +4768,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const downloadList = () => {
     if (!ev) return;
     const rows = ["Name,Type,Qty,Total,Checked In",
-      ...ev.bookings.map(b => `${b.userName},${b.type},${b.qty},${b.total.toFixed(2)},${b.checkedIn}`)
+      ...ev.bookings.map(b => `${scannedBooking.userName},${b.type},${b.qty},${b.total.toFixed(2)},${scannedBooking.checkedIn}`)
     ].join("\n");
-    const a = document.createElement("a");
-    a.href = "data:text/csv," + encodeURIComponent(rows);
-    a.download = ev.title + "-players.csv"; a.click();
+    const downloadLink = document.createElement("a");
+    downloadLink.href = "data:text/csv," + encodeURIComponent(rows);
+    downloadLink.download = ev.title + "-players.csv"; downloadLink.click();
     showToast("Player list downloaded!");
   };
 
@@ -4895,8 +4895,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
         const ex = targetEv.extras.find(e => e.id === extraId);
         const lp = (data.shop || []).find(p => p.id === ex?.productId);
-        const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-        const price = v ? Number(v.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+        const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+        const price = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
         return s + price * qty;
       }, 0);
       const newBooking = await api.bookings.create({
@@ -5345,8 +5345,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
           const ex = targetEv?.extras?.find(e => e.id === extraId);
           const lp = (data.shop || []).find(p => p.id === ex?.productId);
-          const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-          const price = v ? Number(v.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+          const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+          const price = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
           return s + price * qty;
         }, 0);
         const previewTotal = ticketPrice * addBookingForm.qty + extrasPreviewTotal;
@@ -5738,10 +5738,10 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               {(() => {
                 const parts = (edit.address || "").split("\n");
                 const setAddrPart = (idx, val) => {
-                  const p = (edit.address || "").split("\n");
-                  while (p.length <= idx) p.push("");
+                  const addrLines = (edit.address || "").split("\n");
+                  while (addrLines.length <= idx) p.push("");
                   p[idx] = val;
-                  setEdit(prev => ({ ...prev, address: p.join("\n") }));
+                  setEdit(prev => ({ ...prev, address: addrLines.join("\n") }));
                 };
                 return (
                   <>
@@ -5930,7 +5930,7 @@ function AdminOrdersInline({ showToast }) {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { const t = setTimeout(fetchOrders, 400); return () => clearTimeout(t); }, []);
+  useEffect(() => { const ordersTimeout = setTimeout(fetchOrders, 400); return () => clearTimeout(ordersTimeout); }, []);
 
   const setStatus = async (id, status) => {
     try {
@@ -6072,7 +6072,7 @@ function AdminOrders({ showToast }) {
 
   useEffect(() => {
     // Small delay so auth session is confirmed before querying RLS-protected table
-    const t = setTimeout(fetchOrders, 600);
+    const ordersTimer = setTimeout(fetchOrders, 600);
     return () => clearTimeout(t);
   }, []);
 
@@ -6236,7 +6236,7 @@ function AdminShop({ data, save, showToast }) {
   const uid = () => Math.random().toString(36).slice(2,10);
   const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, variants: [] };
   const [form, setForm] = useState(blank);
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   // Variant editor state
   const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "" });
@@ -6244,11 +6244,11 @@ function AdminShop({ data, save, showToast }) {
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
     const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0 };
-    f("variants", [...(form.variants || []), newVar]);
+    setField("variants", [...(form.variants || []), newVar]);
     setNewVariant({ name: "", price: "", stock: "" });
   };
-  const removeVariant = (id) => f("variants", form.variants.filter(varItem => varItem.id !== id));
-  const updateVariant = (id, key, val) => f("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
+  const removeVariant = (id) => setField("variants", form.variants.filter(varItem => varItem.id !== id));
+  const updateVariant = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
 
   const hasVariants = (form.variants || []).length > 0;
 
@@ -6270,7 +6270,7 @@ function AdminShop({ data, save, showToast }) {
         canvas2.width  = Math.round(img2.width  * scale2);
         canvas2.height = Math.round(img2.height * scale2);
         canvas2.getContext("2d").drawImage(img2, 0, 0, canvas2.width, canvas2.height);
-        f("image", canvas2.toDataURL("image/jpeg", 0.75));
+        setField("image", canvas2.toDataURL("image/jpeg", 0.75));
       };
       img2.src = ev.target.result;
     };
@@ -6403,15 +6403,15 @@ function AdminShop({ data, save, showToast }) {
             <div className="modal-title">{modal === "new" ? "Add Product" : "Edit Product"}</div>
 
             <div className="form-row">
-              <div className="form-group"><label>Name</label><input value={form.name} onChange={e => f("name", e.target.value)} /></div>
-              <div className="form-group"><label>Description</label><input value={form.description} onChange={e => f("description", e.target.value)} /></div>
+              <div className="form-group"><label>Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} /></div>
+              <div className="form-group"><label>Description</label><input value={form.description} onChange={e => setField("description", e.target.value)} /></div>
             </div>
 
             {/* Base price + stock — only relevant if no variants */}
             {!hasVariants && (
               <div className="form-row">
-                <div className="form-group"><label>Base Price (£)</label><input type="number" step="0.01" value={form.price} onChange={e => f("price", +e.target.value)} /></div>
-                <div className="form-group"><label>Stock</label><input type="number" value={form.stock} onChange={e => f("stock", +e.target.value)} /></div>
+                <div className="form-group"><label>Base Price (£)</label><input type="number" step="0.01" value={form.price} onChange={e => setField("price", +e.target.value)} /></div>
+                <div className="form-group"><label>Stock</label><input type="number" value={form.stock} onChange={e => setField("stock", +e.target.value)} /></div>
               </div>
             )}
             {hasVariants && (
@@ -6422,19 +6422,19 @@ function AdminShop({ data, save, showToast }) {
             {!hasVariants && (
               <>
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
-                  <input type="checkbox" checked={form.onSale} onChange={e => f("onSale", e.target.checked)} />
+                  <input type="checkbox" checked={form.onSale} onChange={e => setField("onSale", e.target.checked)} />
                   <label style={{fontSize:13}}>On Sale</label>
                 </div>
-                {form.onSale && <div className="form-group"><label>Sale Price (£)</label><input type="number" step="0.01" value={form.salePrice || ""} onChange={e => f("salePrice", +e.target.value)} /></div>}
+                {form.onSale && <div className="form-group"><label>Sale Price (£)</label><input type="number" step="0.01" value={form.salePrice || ""} onChange={e => setField("salePrice", +e.target.value)} /></div>}
               </>
             )}
 
             <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
-              <input type="checkbox" checked={form.noPost} onChange={e => f("noPost", e.target.checked)} />
+              <input type="checkbox" checked={form.noPost} onChange={e => setField("noPost", e.target.checked)} />
               <label style={{fontSize:13}}>No Post — Collection Only (e.g. Pyro)</label>
             </div>
             <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
-              <input type="checkbox" checked={form.gameExtra || false} onChange={e => f("gameExtra", e.target.checked)} />
+              <input type="checkbox" checked={form.gameExtra || false} onChange={e => setField("gameExtra", e.target.checked)} />
               <label style={{fontSize:13}}>Available as Game Day Extra <span style={{color:"var(--muted)",fontSize:11}}>(shows in event extras product picker)</span></label>
             </div>
 
@@ -6481,8 +6481,8 @@ function AdminShop({ data, save, showToast }) {
         <div className="overlay" onClick={() => setPostModal(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-title">{postModal === "new" ? "Add Postage Option" : "Edit Postage"}</div>
-            <div className="form-group"><label>Option Name</label><input value={postForm.name} onChange={e => pf("name", e.target.value)} placeholder="e.g. Standard (3-5 days)" /></div>
-            <div className="form-group"><label>Price (£) — set 0 for free/collection</label><input type="number" min={0} step={0.01} value={postForm.price} onChange={e => pf("price", +e.target.value)} /></div>
+            <div className="form-group"><label>Option Name</label><input value={postForm.name} onChange={e => psetField("name", e.target.value)} placeholder="e.g. Standard (3-5 days)" /></div>
+            <div className="form-group"><label>Price (£) — set 0 for free/collection</label><input type="number" min={0} step={0.01} value={postForm.price} onChange={e => psetField("price", +e.target.value)} /></div>
             <div className="gap-2 mt-2">
               <button className="btn btn-primary" onClick={savePostage}>Save</button>
               <button className="btn btn-ghost" onClick={() => setPostModal(null)}>Cancel</button>
@@ -6925,8 +6925,8 @@ function AdminRevenue({ data }) {
 
   const byMonth = {};
   all.forEach(b => {
-    const m = new Date(b.date).toLocaleString("en-GB", { month: "short", year: "numeric", timeZone: "Europe/London" });
-    byMonth[m] = (byMonth[m] || 0) + b.total;
+    const monthKey = new Date(b.date).toLocaleString("en-GB", { month: "short", year: "numeric", timeZone: "Europe/London" });
+    byMonth[monthKey] = (byMonth[monthKey] || 0) + b.total;
   });
   const months = Object.entries(byMonth).sort((a, b) => new Date("01 " + b[0]) - new Date("01 " + a[0]));
 
@@ -6945,9 +6945,9 @@ function AdminRevenue({ data }) {
         const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
         const ex = t.eventExtras?.find(e => e.id === extraId);
         const lp = (data.shop || []).find(p => p.id === ex?.productId);
-        const v = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-        const label = ex ? (v ? `${ex.name} — ${v.name}` : ex.name) : key;
-        const unitP = v ? Number(v.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+        const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+        const label = ex ? (v ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
+        const unitP = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
         lines.push({ name: label, qty, price: unitP, line: unitP * qty });
       });
       return lines;
@@ -7186,11 +7186,11 @@ function insertMarkdown(text, setText, before, after = "") {
     setText(text + before + after);
     return;
   }
-  const s = ta.selectionStart ?? text.length;
-  const e = ta.selectionEnd ?? text.length;
-  const sel = text.slice(s, e);
-  const newVal = text.slice(0, s) + before + sel + after + text.slice(e);
-  const newCursor = s + before.length + sel.length + after.length;
+  const selStart = ta.selectionStart ?? text.length;
+  const selEnd = ta.selectionEnd ?? text.length;
+  const sel = text.slice(selStart, selEnd);
+  const newVal = text.slice(0, selStart) + before + sel + after + text.slice(selEnd);
+  const newCursor = selStart + before.length + sel.length + after.length;
   setText(newVal);
   // Restore cursor after React re-render
   requestAnimationFrame(() => {
@@ -7273,7 +7273,7 @@ function AdminQA({ data, save, showToast }) {
 
   const [qaSaving, setQASaving] = useState(false);
   // Safety reset — if stuck, clicking the button area will unstick it
-  useEffect(() => { if (qaSaving) { const t = setTimeout(() => setQASaving(false), 10000); return () => clearTimeout(t); } }, [qaSaving]);
+  useEffect(() => { if (qaSaving) { const qaSaveTimer = setTimeout(() => setQASaving(false), 10000); return () => clearTimeout(qaSaveTimer); } }, [qaSaving]);
   const dragIdx = useRef(null);
   const dragOver = useRef(null);
 
