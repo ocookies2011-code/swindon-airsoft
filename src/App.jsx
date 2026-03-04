@@ -7075,11 +7075,11 @@ function AdminQA({ data, save, showToast }) {
 // ── Staff Page (public) ──────────────────────────────────
 function StaffPage({ staff = [] }) {
   const RANK_LABELS = {
-    1: "COMMANDING OFFICER", 2: "EXECUTIVE OFFICER", 3: "SITE MANAGER",
-    4: "SENIOR MARSHAL", 5: "MARSHAL", 6: "STAFF", 7: "VOLUNTEER",
+    1: "COMMANDING OFFICER",
+    4: "SENIOR MARSHAL", 5: "MARSHAL", 7: "VOLUNTEER",
   };
-  const RANK_PIPS = { 1: 5, 2: 4, 3: 3, 4: 2, 5: 1, 6: 1, 7: 1 };
-  const getRankLabel = r => RANK_LABELS[r] || "STAFF";
+  const RANK_PIPS = { 1: 5, 4: 3, 5: 2, 7: 1 };
+  const getRankLabel = r => RANK_LABELS[r] || "MARSHAL";
 
   const tiers = staff.reduce((acc, member) => {
     const t = acc.find(t => t.rank === member.rank_order);
@@ -7148,8 +7148,8 @@ function StaffPage({ staff = [] }) {
                 fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11,
                 letterSpacing:".3em", textTransform:"uppercase",
                 padding:"5px 22px", margin:"0 12px",
-                color: tier.rank===1 ? "#c8a000" : tier.rank<=2 ? "#c8ff00" : "#3a5010",
-                border:`1px solid ${tier.rank===1 ? "rgba(200,160,0,.4)" : tier.rank<=2 ? "rgba(200,255,0,.2)" : "#1a2808"}`,
+                color: tier.rank===1 ? "#c8a000" : tier.rank===4 ? "#c8ff00" : "#3a5010",
+                border:`1px solid ${tier.rank===1 ? "rgba(200,160,0,.4)" : tier.rank===4 ? "rgba(200,255,0,.2)" : "#1a2808"}`,
                 background: tier.rank===1 ? "rgba(200,160,0,.06)" : "rgba(200,255,0,.02)",
                 whiteSpace:"nowrap", position:"relative",
               }}>
@@ -7176,7 +7176,7 @@ function StaffPage({ staff = [] }) {
 
 function StaffCard({ member, rank, pips }) {
   const isOwner   = rank === 1;
-  const isCommand = rank <= 2;
+  const isCommand = rank === 4;
   const gold   = "#c8a000";
   const green  = "#c8ff00";
   const accent = isOwner ? gold : isCommand ? green : "#4a6820";
@@ -7291,9 +7291,9 @@ function AdminStaff({ showToast }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const RANK_OPTIONS = [
-    { value: 1, label: "1 — Owner" }, { value: 2, label: "2 — Co-Owner" },
-    { value: 3, label: "3 — Site Manager" }, { value: 4, label: "4 — Senior Marshal" },
-    { value: 5, label: "5 — Marshal" }, { value: 6, label: "6 — Staff" },
+    { value: 1, label: "1 — Owner" },
+    { value: 4, label: "4 — Senior Marshal" },
+    { value: 5, label: "5 — Marshal" },
     { value: 7, label: "7 — Volunteer" },
   ];
 
