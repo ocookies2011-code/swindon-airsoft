@@ -176,7 +176,7 @@ function useData() {
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
-    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [] };
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [] };
     const timeout = setTimeout(() => {
       setData(prev => prev || emptyData);
       setLoading(false);
@@ -185,7 +185,7 @@ function useData() {
       const errors = {};
       const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
 
-      const [evList, shopList, postageList, albumList, qaList, homeMsg,
+      const [evList, shopList, postageList, albumList, qaList, staffList, homeMsg,
              socialFacebook, socialInstagram, contactAddress, contactPhone, contactEmail,
              contactDepartmentsRaw] = await Promise.all([
         safe("events",  api.events.getAll()),
@@ -193,6 +193,7 @@ function useData() {
         safe("postage", api.postage.getAll()),
         safe("gallery", api.gallery.getAll()),
         safe("qa",      api.qa.getAll()),
+        safe("staff",   api.staff.getAll()),
         api.settings.get("home_message").catch(() => ""),
         api.settings.get("social_facebook").catch(() => ""),
         api.settings.get("social_instagram").catch(() => ""),
@@ -217,6 +218,7 @@ function useData() {
         postageOptions: postageList,
         albums: albumList,
         qa: qaList,
+        staff: staffList,
         homeMsg,
         socialFacebook,
         socialInstagram,
@@ -7071,34 +7073,7 @@ function AdminQA({ data, save, showToast }) {
 }
 
 // ── Staff Page (public) ──────────────────────────────────
-function StaffPage() {
-  const [staff, setStaff]     = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    // 30s timeout — Supabase can be slow on cold start
-    const timeout = setTimeout(() => {
-      if (!cancelled) {
-        cancelled = true;
-        setLoading(false);
-        setError("Taking longer than expected — please try again.");
-      }
-    }, 30000);
-
-    api.staff.getAll()
-      .then(d  => { if (!cancelled) setStaff(d); })
-      .catch(e => { if (!cancelled) setError(e.message || "Failed to load staff"); })
-      .finally(() => { clearTimeout(timeout); if (!cancelled) setLoading(false); });
-
-    return () => { cancelled = true; clearTimeout(timeout); };
-  }, [attempt]); // incrementing attempt triggers a fresh fetch
-
+function StaffPage({ staff = [] }) {
   const RANK_LABELS = {
     1: "COMMANDING OFFICER", 2: "EXECUTIVE OFFICER", 3: "SITE MANAGER",
     4: "SENIOR MARSHAL", 5: "MARSHAL", 6: "STAFF", 7: "VOLUNTEER",
@@ -7148,36 +7123,15 @@ function StaffPage() {
 
       <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 16px 80px" }}>
 
-        {/* Loading */}
-        {loading && (
-          <div style={{ textAlign:"center", padding:"80px 24px" }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", letterSpacing:".25em", fontSize:11, color:"#3a5010", marginBottom:6 }}>◈ RETRIEVING PERSONNEL FILES</div>
-            <div style={{ display:"flex", justifyContent:"center", gap:4, marginTop:16 }}>
-              {[0,1,2,3,4].map(i => (
-                <div key={i} style={{ width:6, height:6, background:"#2a3a10", borderRadius:"50%",
-                  animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite alternate` }} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Error */}
-        {!loading && error && (
-          <div style={{ textAlign:"center", padding:"60px 24px" }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", color:"var(--red)", marginBottom:16, fontSize:12, letterSpacing:".1em" }}>⚠ COMMS ERROR: {error}</div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAttempt(a => a + 1)}>↺ RETRY CONNECTION</button>
-          </div>
-        )}
-
         {/* Empty */}
-        {!loading && !error && staff.length === 0 && (
+        {staff.length === 0 && (
           <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>
             NO PERSONNEL ON FILE
           </div>
         )}
 
         {/* Tiers */}
-        {!loading && !error && tiers.map((tier, tierIdx) => (
+        {tiers.map((tier, tierIdx) => (
           <div key={tier.rank}>
             {/* Connector from above */}
             {tierIdx > 0 && (
@@ -7216,8 +7170,6 @@ function StaffPage() {
           </div>
         ))}
       </div>
-      <style>{`@keyframes pulse{from{opacity:.2;transform:scale(.8)}to{opacity:1;transform:scale(1.2)}}`}</style>
-    </div>
   );
 }
 
@@ -8429,7 +8381,7 @@ export default function App() {
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
         {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
         {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
-        {page === "staff"       && <StaffPage />}
+        {page === "staff"       && <StaffPage staff={data.staff || []} />}
         {page === "contact"     && <ContactPage data={data} cu={cu} showToast={showToast} />}
       </div>
 
