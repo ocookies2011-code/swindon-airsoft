@@ -1733,8 +1733,8 @@ async function sendEmail({ toEmail, toName, subject, htmlContent }) {
   if (!toEmail) throw new Error("No email address");
   if (!window.emailjs) {
     await new Promise((res, rej) => {
-      const paypalScriptEl = document.createElement("script");
-      paypalScriptEl.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
       s.onload = res; s.onerror = rej;
       document.head.appendChild(s);
     });
