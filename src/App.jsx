@@ -2468,56 +2468,156 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   }
 
   // ── Event list ──
+  const publishedEvents = data.events.filter(e => e.published);
   return (
-    <div className="page-content">
-      <div className="page-header">
-        <div><div className="page-title">Events</div><div className="page-sub">Book your next game day</div></div>
+    <div style={{ background:"#080a06", minHeight:"100vh" }}>
+      {/* Header */}
+      <div style={{ position:"relative", overflow:"hidden", background:"linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom:"2px solid #2a3a10", padding:"52px 24px 44px" }}>
+        <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents:"none" }} />
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position:"absolute", width:28, height:28, zIndex:2,
+            top:v==="top"?14:"auto", bottom:v==="bottom"?14:"auto",
+            left:h==="left"?14:"auto", right:h==="right"?14:"auto",
+            borderTop:v==="top"?"2px solid #c8ff00":"none", borderBottom:v==="bottom"?"2px solid #c8ff00":"none",
+            borderLeft:h==="left"?"2px solid #c8ff00":"none", borderRight:h==="right"?"2px solid #c8ff00":"none",
+          }} />
+        ))}
+        <div style={{ maxWidth:1100, margin:"0 auto", textAlign:"center", position:"relative", zIndex:1 }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>◈ — SWINDON AIRSOFT — ACTIVE OPERATIONS — ◈</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+            UPCOMING <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>OPERATIONS</span>
+          </div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".25em", color:"#3a5010", marginTop:12 }}>▸ SELECT A MISSION AND REPORT FOR DUTY ◂</div>
+          <div style={{ display:"flex", alignItems:"center", gap:16, marginTop:22, justifyContent:"center" }}>
+            <div style={{ flex:1, maxWidth:160, height:1, background:"linear-gradient(to right,transparent,#2a3a10)" }} />
+            <div style={{ color:"#c8ff00", fontSize:18, opacity:.6 }}>✦</div>
+            <div style={{ flex:1, maxWidth:160, height:1, background:"linear-gradient(to left,transparent,#2a3a10)" }} />
+          </div>
+        </div>
       </div>
-      <div className="grid-3">
-        {data.events.filter(e => e.published).map(ev => {
-          const booked = ev.bookings.reduce((s,b) => s + b.qty, 0);
-          const total  = ev.walkOnSlots + ev.rentalSlots;
-          return (
-            <div key={ev.id} className="event-card" onClick={() => { setDetail(ev.id); setTab("info"); resetCart(); }}>
-              <div className="event-banner-img" style={{ position:"relative" }}>
-                {ev.banner
-                  ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
-                  : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#333", fontSize:32 }}>📅</div>
-                }
-                <div style={{ position:"absolute", top:12, left:12, display:"flex", flexDirection:"column", gap:4 }}>
-                  <span style={{ background:"var(--accent)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>SKIRMISH</span>
-                  {ev.vipOnly && <span style={{ background:"var(--gold)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>⭐ VIP ONLY</span>}
-                </div>
-              </div>
-              <div className="event-card-body">
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".06em", textTransform:"uppercase", marginBottom:10, color:"#fff" }}>{ev.title}</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:12 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
-                    <span>📅</span> {ev.date}
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
-                    <span>⏱</span> {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
-                    <span>📍</span> {ev.location}
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--muted)" }}>
-                    <span>👥</span> {booked} / {total} spots
-                  </div>
-                </div>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)" }}>
-                    From £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
-                  </div>
-                  <button className="btn btn-primary" style={{ padding:"8px 18px", fontSize:12 }}>BOOK NOW</button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {data.events.filter(e => e.published).length === 0 && (
-          <div className="card" style={{ gridColumn:"1/-1", textAlign:"center", color:"var(--muted)", padding:40 }}>No events published yet.</div>
+
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"40px 16px 80px" }}>
+        {publishedEvents.length === 0 && (
+          <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>NO OPERATIONS SCHEDULED — CHECK BACK SOON</div>
         )}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
+          {publishedEvents.map((ev, idx) => {
+            const booked = ev.bookings.reduce((s,b) => s + b.qty, 0);
+            const total  = ev.walkOnSlots + ev.rentalSlots;
+            const fillPct = total > 0 ? booked / total : 0;
+            const isFull = fillPct >= 1;
+            const isAlmostFull = fillPct >= 0.8;
+            const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
+            const opCode = operationCodes[idx % operationCodes.length];
+            return (
+              <div key={ev.id}
+                onClick={() => { setDetail(ev.id); setTab("info"); resetCart(); }}
+                style={{
+                  background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden",
+                  cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}
+              >
+                {/* Scanlines */}
+                <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px)", pointerEvents:"none", zIndex:5 }} />
+                {/* Corner brackets */}
+                {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                  <div key={v+h} style={{ position:"absolute", width:14, height:14, zIndex:6,
+                    top:v==="top"?6:"auto", bottom:v==="bottom"?6:"auto",
+                    left:h==="left"?6:"auto", right:h==="right"?6:"auto",
+                    borderTop:v==="top"?"1px solid #c8ff00":"none", borderBottom:v==="bottom"?"1px solid #c8ff00":"none",
+                    borderLeft:h==="left"?"1px solid #c8ff00":"none", borderRight:h==="right"?"1px solid #c8ff00":"none",
+                    opacity:.5,
+                  }} />
+                ))}
+
+                {/* Banner image */}
+                <div style={{ height:180, background:"#080a06", overflow:"hidden", position:"relative" }}>
+                  {ev.banner
+                    ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.8)", transition:"transform .3s" }}
+                        onMouseOver={e => e.currentTarget.style.transform="scale(1.03)"}
+                        onMouseOut={e => e.currentTarget.style.transform=""} alt="" />
+                    : <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#0c1009,#080a06)", gap:8 }}>
+                        <div style={{ fontSize:36, opacity:.1 }}>🎯</div>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#1e2c0a" }}>NO IMAGERY CLASSIFIED</div>
+                      </div>
+                  }
+                  {/* Gradient overlay */}
+                  <div style={{ position:"absolute", bottom:0, left:0, right:0, height:60, background:"linear-gradient(to top,rgba(12,16,9,1),transparent)", zIndex:2 }} />
+                  {/* Top ID strip */}
+                  <div style={{ position:"absolute", top:0, left:0, right:0, background:"rgba(0,0,0,.7)", borderBottom:"1px solid rgba(200,255,0,.15)", padding:"5px 10px", display:"flex", justifyContent:"space-between", alignItems:"center", zIndex:3 }}>
+                    <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#c8ff00", opacity:.7 }}>SA · OP-{opCode}</span>
+                    <div style={{ display:"flex", gap:4 }}>
+                      <span style={{ background:"#c8ff00", color:"#000", fontSize:8, fontWeight:900, padding:"2px 8px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em" }}>SKIRMISH</span>
+                      {ev.vipOnly && <span style={{ background:"#c8a000", color:"#000", fontSize:8, fontWeight:900, padding:"2px 8px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".12em" }}>★ VIP</span>}
+                    </div>
+                  </div>
+                  {/* Full badge */}
+                  {isFull && (
+                    <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:4 }}>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, letterSpacing:".2em", color:"#ef4444", border:"2px solid #ef4444", padding:"6px 18px", transform:"rotate(-5deg)" }}>FULLY DEPLOYED</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card body */}
+                <div style={{ padding:"14px 14px 0", position:"relative", zIndex:6 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".08em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1.1, marginBottom:10 }}>{ev.title}</div>
+                  {/* Data rows */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:12 }}>
+                    {[
+                      { icon:"▸", label:"DATE", val:ev.date, color:"#c8ff00" },
+                      { icon:"▸", label:"TIME", val:`${ev.time}${ev.endTime ? `–${ev.endTime}` : ""} GMT`, color:"#4fc3f7" },
+                      { icon:"▸", label:"LOCATION", val:ev.location, color:"#ce93d8" },
+                    ].map(row => (
+                      <div key={row.label} style={{ display:"flex", gap:8, alignItems:"baseline" }}>
+                        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".18em", color:"#2a3a10", flexShrink:0, width:58 }}>{row.label}</span>
+                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, fontWeight:700, color:"#6a8050", letterSpacing:".04em" }}>{row.val}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Capacity bar */}
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".18em", color:"#2a3a10" }}>CAPACITY</span>
+                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isAlmostFull ? "#ef4444" : "#3a5010", letterSpacing:".1em" }}>{booked}/{total} SLOTS</span>
+                    </div>
+                    <div style={{ height:3, background:"#0a0f06", borderRadius:2, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${Math.min(100, fillPct*100)}%`, background: isAlmostFull ? "#ef4444" : "#c8ff00", boxShadow: isAlmostFull ? "0 0 6px #ef4444" : "0 0 6px rgba(200,255,0,.5)", borderRadius:2, transition:"width .4s" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div style={{ borderTop:"1px solid #1a2808", padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(0,0,0,.3)", position:"relative", zIndex:6 }}>
+                  <div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".15em", color:"#2a3a10", marginBottom:2 }}>FROM</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:"#c8ff00", lineHeight:1 }}>
+                      £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" style={{ padding:"8px 20px", fontSize:11, letterSpacing:".18em", borderRadius:0 }}>
+                    ▸ DEPLOY
+                  </button>
+                </div>
+
+                {/* Barcode strip */}
+                <div style={{ borderTop:"1px solid #1a2808", padding:"4px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(0,0,0,.5)", position:"relative", zIndex:6 }}>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#1a2808", letterSpacing:".08em" }}>
+                    {ev.id ? ev.id.slice(0,12).toUpperCase() : "------------"}
+                  </div>
+                  <div style={{ display:"flex", gap:"1px", alignItems:"center" }}>
+                    {Array.from({length:22},(_,i) => (
+                      <div key={i} style={{ background:"#1a2808", width:i%3===0?2:1, height:3+Math.abs(Math.sin(i*1.9)*5), borderRadius:1 }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -2577,10 +2677,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         total: grandTotal, paypalOrderId: paypalOrder.id,
       });
-
-      // Success — clear cart immediately
       showToast("✅ Order confirmed! Thank you.");
-      // Send order confirmation email
       try {
         const cartSnapshot = [...cart];
         sendOrderEmail({
@@ -2591,8 +2688,6 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         }).catch(() => {});
       } catch (emailErr) { console.warn("Order email failed:", emailErr); }
       setCart([]); setCartOpen(false);
-
-      // Background: deduct stock + refresh (non-blocking)
       const cartSnapshot = [...cart];
       Promise.all([
         ...cartSnapshot.map(ci => (
@@ -2602,7 +2697,6 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         )),
         api.shop.getAll().then(freshShop => save({ shop: freshShop })).catch(() => {}),
       ]);
-
     } catch (e) {
       setShopPaypalError("Order failed — please contact us. Error: " + (e.message || String(e)));
     } finally {
@@ -2614,125 +2708,218 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
-    <div className="page-content">
-      <div className="page-header">
-        <div><div className="page-title">Armoury</div><div className="page-sub">Gear up for battle</div></div>
-        <button className="btn btn-ghost" onClick={() => setCartOpen(true)}>
-          🛒 Cart {cartCount > 0 && <span style={{ background:"var(--accent)", color:"#fff", padding:"1px 7px", fontSize:11, marginLeft:6, fontWeight:700 }}>{cartCount}</span>}
-        </button>
+    <div style={{ background:"#080a06", minHeight:"100vh" }}>
+      {/* Header */}
+      <div style={{ position:"relative", overflow:"hidden", background:"linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom:"2px solid #2a3a10", padding:"52px 24px 44px" }}>
+        <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents:"none" }} />
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position:"absolute", width:28, height:28, zIndex:2,
+            top:v==="top"?14:"auto", bottom:v==="bottom"?14:"auto",
+            left:h==="left"?14:"auto", right:h==="right"?14:"auto",
+            borderTop:v==="top"?"2px solid #c8ff00":"none", borderBottom:v==="bottom"?"2px solid #c8ff00":"none",
+            borderLeft:h==="left"?"2px solid #c8ff00":"none", borderRight:h==="right"?"2px solid #c8ff00":"none",
+          }} />
+        ))}
+        <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1, display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
+          <div style={{ textAlign:"center", flex:1 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>◈ — SWINDON AIRSOFT — QUARTERMASTER — ◈</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+              FIELD <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>ARMOURY</span>
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".25em", color:"#3a5010", marginTop:12 }}>▸ PROCURE YOUR GEAR — REPORT TO QUARTERMASTER ◂</div>
+          </div>
+          {/* Cart button */}
+          <div style={{ flexShrink:0, marginTop:4 }}>
+            <button style={{ background:"rgba(200,255,0,.06)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", padding:"10px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background="rgba(200,255,0,.12)"; e.currentTarget.style.borderColor="#c8ff00"; }}
+              onMouseLeave={e => { e.currentTarget.style.background="rgba(200,255,0,.06)"; e.currentTarget.style.borderColor="#2a3a10"; }}
+              onClick={() => setCartOpen(true)}>
+              ◈ LOADOUT
+              {cartCount > 0 && <span style={{ background:"#c8ff00", color:"#000", padding:"1px 8px", fontSize:11, fontWeight:900 }}>{cartCount}</span>}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {cu?.vipStatus === "active" && <div className="alert alert-gold mb-2">⭐ VIP member — 10% discount applied</div>}
-
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:16 }}>
-        {data.shop.map(item => {
-          const hasV = item.variants?.length > 0;
-          const displayPrice = hasV
-            ? Math.min(...item.variants.map(v => Number(v.price)))
-            : (item.onSale && item.salePrice ? item.salePrice : item.price);
-          const inStock = item.stock > 0;
-          return (
-            <div key={item.id} className="shop-card" style={{ cursor:"pointer" }} onClick={() => onProductClick(item)}>
-              <div className="shop-img">
-                {item.image ? <img src={item.image} alt="" /> : <span style={{ fontSize:40 }}>🎯</span>}
-                
-              </div>
-              <div className="shop-body">
-                <div className="gap-2 mb-1">
-                  {item.noPost && <span className="tag tag-gold">Collect Only</span>}
-                  {hasV && <span className="tag tag-blue">{item.variants.length} variants</span>}
-                  {item.onSale && !hasV && <span className="tag tag-red">SALE</span>}
-                </div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, marginBottom:4, letterSpacing:".03em", color:"#fff" }}>{item.name}</div>
-                <p style={{ fontSize:11, color:"var(--muted)", marginBottom:10, lineHeight:1.5, fontFamily:"'Share Tech Mono',monospace" }}>{(item.description||"").replace(/[*#_~`]/g,"").slice(0,80)}{(item.description||"").length>80?"…":""}</p>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                  <div>
-                    {hasV && <span style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>from </span>}
-                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:20, color:"var(--accent)" }}>
-                      £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
-                    </span>
-                    {cu?.vipStatus === "active" && <span className="text-gold" style={{ fontSize:10, marginLeft:4 }}>VIP</span>}
-                  </div>
-                  <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                    {hasV ? `${item.variants.length} options` : ""}
-                  </span>
-                </div>
-                <button className="btn btn-primary" style={{ width:"100%", padding:"8px", fontSize:12 }} disabled={!inStock}>
-                  {!inStock ? "OUT OF STOCK" : "VIEW PRODUCT →"}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-        {data.shop.length === 0 && (
-          <div style={{ gridColumn:"1/-1", textAlign:"center", padding:60, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-            No products in the armoury yet.
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"40px 16px 80px" }}>
+        {cu?.vipStatus === "active" && (
+          <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"10px 16px", marginBottom:24, display:"flex", alignItems:"center", gap:10, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"#c8a000" }}>
+            ★ VIP OPERATIVE — 10% DISCOUNT APPLIED ON ALL ITEMS
           </div>
         )}
+
+        {data.shop.length === 0 && (
+          <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>ARMOURY IS EMPTY — AWAITING RESUPPLY</div>
+        )}
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
+          {data.shop.map((item, idx) => {
+            const hasV = item.variants?.length > 0;
+            const displayPrice = hasV
+              ? Math.min(...item.variants.map(v => Number(v.price)))
+              : (item.onSale && item.salePrice ? item.salePrice : item.price);
+            const inStock = item.stock > 0;
+            const sl = stockLabel(hasV ? item.variants.reduce((s,v)=>s+Number(v.stock),0) : item.stock);
+            return (
+              <div key={item.id}
+                style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s" }}
+                onClick={() => onProductClick(item)}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}
+              >
+                {/* Scanlines */}
+                <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px)", pointerEvents:"none", zIndex:5 }} />
+                {/* Corner brackets */}
+                {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                  <div key={v+h} style={{ position:"absolute", width:12, height:12, zIndex:6,
+                    top:v==="top"?5:"auto", bottom:v==="bottom"?5:"auto",
+                    left:h==="left"?5:"auto", right:h==="right"?5:"auto",
+                    borderTop:v==="top"?"1px solid rgba(200,255,0,.4)":"none",
+                    borderBottom:v==="bottom"?"1px solid rgba(200,255,0,.4)":"none",
+                    borderLeft:h==="left"?"1px solid rgba(200,255,0,.4)":"none",
+                    borderRight:h==="right"?"1px solid rgba(200,255,0,.4)":"none",
+                  }} />
+                ))}
+
+                {/* Top ID strip */}
+                <div style={{ background:"rgba(0,0,0,.7)", borderBottom:"1px solid #1a2808", padding:"5px 10px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"relative", zIndex:6 }}>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".18em", color:"rgba(200,255,0,.5)" }}>QM · ITEM-{String(idx+1).padStart(3,"0")}</span>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:sl.color, letterSpacing:".12em" }}>{sl.text}</span>
+                </div>
+
+                {/* Image */}
+                <div style={{ height:170, background:"#080a06", overflow:"hidden", position:"relative" }}>
+                  {item.image
+                    ? <img src={item.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.8)", transition:"transform .3s" }}
+                        onMouseOver={e => e.currentTarget.style.transform="scale(1.05)"}
+                        onMouseOut={e => e.currentTarget.style.transform=""} />
+                    : <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
+                        <div style={{ fontSize:40, opacity:.08 }}>🎯</div>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".15em", color:"#1e2c0a" }}>NO IMAGERY</div>
+                      </div>
+                  }
+                  <div style={{ position:"absolute", bottom:0, left:0, right:0, height:40, background:"linear-gradient(to top,rgba(12,16,9,1),transparent)", zIndex:2 }} />
+                  {!inStock && !hasV && (
+                    <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3 }}>
+                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, letterSpacing:".2em", color:"#ef4444", border:"2px solid #ef4444", padding:"4px 14px", transform:"rotate(-3deg)" }}>OUT OF STOCK</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Body */}
+                <div style={{ padding:"12px 12px 0", position:"relative", zIndex:6 }}>
+                  <div className="gap-2 mb-1" style={{ flexWrap:"wrap" }}>
+                    {item.noPost && <span className="tag tag-gold" style={{ fontSize:9 }}>COLLECT ONLY</span>}
+                    {hasV && <span className="tag tag-blue" style={{ fontSize:9 }}>{item.variants.length} VARIANTS</span>}
+                    {item.onSale && !hasV && <span className="tag tag-red" style={{ fontSize:9 }}>SALE</span>}
+                  </div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".06em", textTransform:"uppercase", color:"#dce8c8", lineHeight:1.1, marginBottom:6 }}>{item.name}</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", lineHeight:1.6, marginBottom:10 }}>
+                    {(item.description||"").replace(/[*#_~`]/g,"").slice(0,70)}{(item.description||"").length>70?"…":""}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div style={{ borderTop:"1px solid #1a2808", padding:"10px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(0,0,0,.3)", position:"relative", zIndex:6 }}>
+                  <div>
+                    {hasV && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", marginBottom:2, letterSpacing:".1em" }}>FROM</div>}
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, color:"#c8ff00", lineHeight:1 }}>
+                      £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
+                      {cu?.vipStatus === "active" && <span style={{ fontSize:9, color:"#c8a000", marginLeft:5, fontFamily:"'Share Tech Mono',monospace" }}>VIP</span>}
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" style={{ padding:"7px 16px", fontSize:10, letterSpacing:".15em", borderRadius:0 }} disabled={!inStock && !hasV}>
+                    {!inStock && !hasV ? "OUT OF STOCK" : "▸ ACQUIRE"}
+                  </button>
+                </div>
+
+                {/* Barcode strip */}
+                <div style={{ borderTop:"1px solid #1a2808", padding:"3px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(0,0,0,.5)", position:"relative", zIndex:6 }}>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#1a2808", letterSpacing:".06em" }}>
+                    {item.id ? item.id.slice(0,10).toUpperCase() : "----------"}
+                  </div>
+                  <div style={{ display:"flex", gap:"1px", alignItems:"center" }}>
+                    {Array.from({length:16},(_,i) => (
+                      <div key={i} style={{ background:"#1a2808", width:i%3===0?2:1, height:2+Math.abs(Math.sin(i*2.1)*5), borderRadius:1 }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* CART MODAL */}
       {cartOpen && (
         <div className="overlay" onClick={() => setCartOpen(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">🛒 Cart</div>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background:"#0c1009", border:"1px solid #2a3a10", borderRadius:0 }}>
+            {/* Modal header */}
+            <div style={{ borderBottom:"1px solid #2a3a10", paddingBottom:16, marginBottom:16 }}>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".25em", color:"#3a5010", marginBottom:4 }}>◈ — QUARTERMASTER</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>LOADOUT REVIEW</div>
+            </div>
+
             {cart.length === 0
-              ? <p className="text-muted" style={{ fontFamily:"'Share Tech Mono',monospace" }}>Your cart is empty.</p>
+              ? <div style={{ textAlign:"center", padding:"32px 0", fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#2a3a10", letterSpacing:".15em" }}>LOADOUT IS EMPTY</div>
               : (
               <>
                 {cart.map(item => (
-                  <div key={item.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
+                  <div key={item.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid #1a2808" }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".05em", fontSize:14 }}>{item.name}</div>
-                      <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>£{item.price.toFixed(2)} each</div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".06em", fontSize:14, textTransform:"uppercase", color:"#b0c090" }}>{item.name}</div>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", marginTop:2 }}>£{item.price.toFixed(2)} EACH</div>
                     </div>
                     <div className="gap-2" style={{ alignItems:"center" }}>
-                      <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#111" }}>
-                        <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"4px 10px", cursor:"pointer" }}>−</button>
-                        <span style={{ padding:"0 8px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:14 }}>{item.qty}</span>
-                        <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"4px 10px", cursor:"pointer" }}>+</button>
+                      <div style={{ display:"flex", alignItems:"center", border:"1px solid #2a3a10", background:"#080a06" }}>
+                        <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{ background:"none", border:"none", color:"#c8ff00", padding:"4px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>−</button>
+                        <span style={{ padding:"0 8px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#c8ff00" }}>{item.qty}</span>
+                        <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{ background:"none", border:"none", color:"#c8ff00", padding:"4px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>+</button>
                       </div>
-                      <span className="text-green" style={{ fontFamily:"'Barlow Condensed',sans-serif", minWidth:60, textAlign:"right" }}>£{(item.price * item.qty).toFixed(2)}</span>
-                      <button style={{ background:"none", border:"none", color:"var(--red)", cursor:"pointer", fontSize:16 }} onClick={() => removeFromCart(item.key)}>✕</button>
+                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:16, fontWeight:900, color:"#c8ff00", minWidth:60, textAlign:"right" }}>£{(item.price * item.qty).toFixed(2)}</span>
+                      <button style={{ background:"none", border:"none", color:"#ef4444", cursor:"pointer", fontSize:14, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }} onClick={() => removeFromCart(item.key)}>✕</button>
                     </div>
                   </div>
                 ))}
 
                 {!hasNoPost && postageOptions.length > 0 && (
                   <div className="form-group mt-2">
-                    <label>Postage</label>
-                    <select value={postageId} onChange={e => setPostageId(e.target.value)}>
+                    <label style={{ color:"#3a5010", fontSize:9, letterSpacing:".2em" }}>POSTAGE METHOD</label>
+                    <select value={postageId} onChange={e => setPostageId(e.target.value)} style={{ background:"#080a06", border:"1px solid #2a3a10", borderRadius:0, color:"#b0c090", fontFamily:"'Barlow Condensed',sans-serif" }}>
                       {postageOptions.map(p => <option key={p.id} value={p.id}>{p.name} — £{Number(p.price).toFixed(2)}</option>)}
                     </select>
                   </div>
                 )}
-                {hasNoPost && <div className="alert alert-gold mt-1">🔥 Collection-only items in cart — no posting</div>}
-                {cu?.vipStatus === "active" && <div className="alert alert-gold mt-1">⭐ VIP 10% discount applied</div>}
+                {hasNoPost && <div className="alert alert-gold mt-1" style={{ borderRadius:0 }}>⚠ COLLECTION-ONLY ITEMS — NO POSTING</div>}
+                {cu?.vipStatus === "active" && <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"8px 12px", marginTop:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".12em", color:"#c8a000" }}>★ VIP 10% DISCOUNT APPLIED</div>}
 
-                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:22, marginTop:14, color:"#fff" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:24, marginTop:16, paddingTop:12, borderTop:"1px solid #2a3a10", color:"#e8f0d8" }}>
                   <span>TOTAL</span>
-                  <span style={{ color:"var(--accent)" }}>£{grandTotal.toFixed(2)}</span>
+                  <span style={{ color:"#c8ff00" }}>£{grandTotal.toFixed(2)}</span>
                 </div>
                 {!hasNoPost && postageTotal > 0 && (
-                  <div style={{ fontSize:11, color:"var(--muted)", textAlign:"right", marginTop:2, fontFamily:"'Share Tech Mono',monospace" }}>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", textAlign:"right", marginTop:2 }}>
                     incl. {postage.name} £{postageTotal.toFixed(2)}
                   </div>
                 )}
 
-                {!cu && <div className="alert alert-red mt-2">Log in to checkout with PayPal</div>}
-                {shopPaypalError && <div className="alert alert-red mt-1">⚠️ {shopPaypalError}</div>}
-                {placing && <div className="alert alert-blue mt-1">⏳ Confirming your order…</div>}
+                {!cu && <div className="alert alert-red mt-2" style={{ borderRadius:0 }}>LOG IN TO COMPLETE REQUISITION</div>}
+                {shopPaypalError && <div className="alert alert-red mt-1" style={{ borderRadius:0 }}>⚠ {shopPaypalError}</div>}
+                {placing && <div className="alert alert-blue mt-1" style={{ borderRadius:0 }}>⏳ PROCESSING REQUISITION…</div>}
                 {cu && grandTotal > 0 && (
                   <PayPalCheckoutButton
                     amount={grandTotal}
-                    description={`Swindon Airsoft Shop — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
+                    description={`Swindon Airsoft Armoury — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
                     onSuccess={placeOrderAfterPayment}
                     disabled={placing}
                   />
                 )}
               </>
             )}
-            <button className="btn btn-ghost mt-1" style={{ width:"100%" }} onClick={() => setCartOpen(false)}>Close</button>
+            <button style={{ width:"100%", marginTop:12, background:"transparent", border:"1px solid #2a3a10", color:"#3a5010", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".2em", padding:"10px", cursor:"pointer", transition:"all .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="#c8ff00"; e.currentTarget.style.color="#c8ff00"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.color="#3a5010"; }}
+              onClick={() => setCartOpen(false)}>✕ CLOSE LOADOUT</button>
           </div>
         </div>
       )}
@@ -2763,24 +2950,27 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
     setQty(1);
   };
 
-  // Related items — same category approximated by stock/naming, just show a few others
   return (
-    <div className="page-content">
-      {/* Breadcrumb */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20, fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)" }}>
-        <button onClick={onBack} style={{ background:"none", border:"none", color:"var(--accent)", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".1em", fontSize:12 }}>
-          ← ARMOURY
-        </button>
-        <span style={{ color:"#333" }}>/</span>
-        <span style={{ color:"var(--text)", textTransform:"uppercase", letterSpacing:".1em" }}>{item.name}</span>
-        <div style={{ marginLeft:"auto" }}>
-          <button className="btn btn-ghost btn-sm" onClick={onCartOpen}>
-            🛒 {cartCount > 0 && <span style={{ background:"var(--accent)", color:"#fff", padding:"1px 6px", fontSize:10, marginLeft:4, fontWeight:700 }}>{cartCount}</span>}
+    <div style={{ background:"#080a06", minHeight:"100vh" }}>
+      {/* Breadcrumb bar */}
+      <div style={{ background:"#0c1009", borderBottom:"1px solid #1a2808", padding:"12px 24px" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"flex", alignItems:"center", gap:8, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#2a3a10" }}>
+          <button onClick={onBack} style={{ background:"none", border:"none", color:"#c8ff00", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".15em", fontSize:11, padding:0 }}>
+            ← ARMOURY
           </button>
+          <span style={{ color:"#1a2808" }}>▸</span>
+          <span style={{ color:"#3a5010", textTransform:"uppercase", letterSpacing:".12em" }}>{item.name}</span>
+          <div style={{ marginLeft:"auto" }}>
+            <button style={{ background:"rgba(200,255,0,.06)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".18em", padding:"6px 14px", cursor:"pointer" }}
+              onClick={onCartOpen}>
+              ◈ LOADOUT {cartCount > 0 && <span style={{ background:"#c8ff00", color:"#000", padding:"1px 6px", fontSize:10, marginLeft:4, fontWeight:900 }}>{cartCount}</span>}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 16 : 32, marginBottom:40 }}>
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"32px 16px 80px" }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 16 : 32, marginBottom:40 }}>
 
         {/* LEFT — Image */}
         <div>
@@ -2905,11 +3095,12 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             </button>
           )}
 
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", display:"flex", gap:16 }}>
-            <span>{item.noPost ? "⚠️ Collection at game day only" : "✓ Standard postage available"}</span>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#3a5010", display:"flex", gap:16, letterSpacing:".06em" }}>
+            <span>{item.noPost ? "⚠ COLLECTION AT GAME DAY ONLY" : "✓ STANDARD POSTAGE AVAILABLE"}</span>
             
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
