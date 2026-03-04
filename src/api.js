@@ -649,3 +649,46 @@ export const staff = {
     return data.publicUrl
   },
 }
+
+// ── Page Visits ───────────────────────────────────────────
+export const visits = {
+  async track({ page, userId, userName, sessionId }) {
+    // Fire-and-forget — never throw, never block the UI
+    try {
+      let city = null, country = null, lat = null, lon = null;
+      try {
+        const geo = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+        if (geo.ok) {
+          const g = await geo.json();
+          city    = g.city    || null;
+          country = g.country_name || null;
+          lat     = g.latitude  || null;
+          lon     = g.longitude || null;
+        }
+      } catch { /* geo unavailable */ }
+
+      await supabase.from('page_visits').insert({
+        page,
+        user_id:    userId    || null,
+        user_name:  userName  || null,
+        session_id: sessionId || null,
+        city,
+        country,
+        lat,
+        lon,
+        user_agent: navigator.userAgent || null,
+        referrer:   document.referrer   || null,
+      });
+    } catch { /* never break the site */ }
+  },
+
+  async getAll() {
+    const { data, error } = await supabase
+      .from('page_visits')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(5000);
+    if (error) throw error;
+    return data || [];
+  },
+}
