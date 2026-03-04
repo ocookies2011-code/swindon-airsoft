@@ -1905,7 +1905,7 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
   });
 }
 
-function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save }) {
+function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
   const [detail, setDetail] = useState(null);
   const [waiverModal, setWaiverModal] = useState(false);
   const [tab, setTab] = useState("info");
@@ -2441,21 +2441,20 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 <div style={{ fontSize:12, color:"var(--muted)" }}>{ev.date} · {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT</div>
               </div>
               <a href={(() => {
-  // Try to extract the embedded map's query/place from the iframe src
+  // Always prefer the explicit location field — it's the full address admin entered
+  if (ev.location && ev.location.trim()) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location.trim())}`;
+  }
+  // Fallback: try to parse coordinates or query from an embedded map iframe
   if (ev.mapEmbed) {
     const srcMatch = ev.mapEmbed.match(/src="([^"]+)"/);
     if (srcMatch) {
       const embedUrl = srcMatch[1];
-      // Google Maps embed URLs contain q= or pb= parameters with the location
       const qMatch = embedUrl.match(/[?&]q=([^&]+)/);
       if (qMatch) return `https://www.google.com/maps/dir/?api=1&destination=${qMatch[1]}`;
-      // Embedded place URLs like /maps/embed/v1/place?key=...&q=...
-      const placeMatch = embedUrl.match(/place\?[^"]*q=([^&"]+)/);
-      if (placeMatch) return `https://www.google.com/maps/dir/?api=1&destination=${placeMatch[1]}`;
     }
   }
-  // Fall back to ev.location text
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location)}`;
+  return `https://www.google.com/maps/search/Swindon+Airsoft+Field`;
 })()} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
   <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
 </a>
@@ -6730,140 +6729,256 @@ function AdminQA({ data, save, showToast }) {
 
 // ── Staff Page (public) ──────────────────────────────────
 function StaffPage() {
-  const [staff, setStaff] = useState([]);
+  const [staff, setStaff]     = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError]     = useState(null);
+  const [attempt, setAttempt] = useState(0);
 
-  const load = () => {
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    // Safety timeout — never stay stuck loading more than 10s
+    // 30s timeout — Supabase can be slow on cold start
     const timeout = setTimeout(() => {
       if (!cancelled) {
         cancelled = true;
         setLoading(false);
-        setError("Request timed out. Please try again.");
+        setError("Taking longer than expected — please try again.");
       }
-    }, 10000);
+    }, 30000);
 
     api.staff.getAll()
-      .then(data => {
-        if (!cancelled) { setStaff(data); }
-      })
-      .catch(e => {
-        if (!cancelled) { setError(e.message || "Failed to load staff"); }
-      })
-      .finally(() => {
-        clearTimeout(timeout);
-        if (!cancelled) { setLoading(false); }
-      });
+      .then(d  => { if (!cancelled) setStaff(d); })
+      .catch(e => { if (!cancelled) setError(e.message || "Failed to load staff"); })
+      .finally(() => { clearTimeout(timeout); if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; clearTimeout(timeout); };
-  };
-
-  useEffect(() => {
-    const cleanup = load();
-    return cleanup;
-  }, []);
+  }, [attempt]); // incrementing attempt triggers a fresh fetch
 
   const RANK_LABELS = {
-    1: "OWNER", 2: "CO-OWNER", 3: "SITE MANAGER",
-    4: "SENIOR MARSHAL", 5: "MARSHAL",
+    1: "COMMANDING OFFICER", 2: "EXECUTIVE OFFICER", 3: "SITE MANAGER",
+    4: "SENIOR MARSHAL", 5: "MARSHAL", 6: "STAFF", 7: "VOLUNTEER",
   };
-  const getRankLabel = (r) => RANK_LABELS[r] || "STAFF";
+  const RANK_PIPS = { 1: 5, 2: 4, 3: 3, 4: 2, 5: 1, 6: 1, 7: 1 };
+  const getRankLabel = r => RANK_LABELS[r] || "STAFF";
 
   const tiers = staff.reduce((acc, member) => {
-    const existing = acc.find(t => t.rank === member.rank_order);
-    if (existing) { existing.members.push(member); }
-    else { acc.push({ rank: member.rank_order, members: [member] }); }
+    const t = acc.find(t => t.rank === member.rank_order);
+    if (t) t.members.push(member);
+    else acc.push({ rank: member.rank_order, members: [member] });
     return acc;
   }, []).sort((a, b) => a.rank - b.rank);
 
   return (
-    <div className="page-wrap">
-      <div className="page-header" style={{ borderBottom: "1px solid var(--border)", marginBottom: 0, paddingBottom: 32 }}>
-        <div>
-          <div className="page-title" style={{ fontSize: 32, letterSpacing: ".12em" }}>🪖 MEET THE STAFF</div>
-          <div className="page-sub" style={{ fontSize: 14 }}>Chain of Command — Swindon Airsoft</div>
+    <div style={{ background:"#080a06", minHeight:"100vh" }}>
+
+      {/* ── HEADER ── */}
+      <div style={{ position:"relative", overflow:"hidden", background:"linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom:"2px solid #2a3a10", padding:"52px 24px 44px" }}>
+        <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents:"none" }} />
+        {/* Corner brackets */}
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position:"absolute", width:28, height:28, zIndex:2,
+            top:v==="top"?14:"auto", bottom:v==="bottom"?14:"auto",
+            left:h==="left"?14:"auto", right:h==="right"?14:"auto",
+            borderTop:v==="top"?"2px solid #c8ff00":"none", borderBottom:v==="bottom"?"2px solid #c8ff00":"none",
+            borderLeft:h==="left"?"2px solid #c8ff00":"none", borderRight:h==="right"?"2px solid #c8ff00":"none",
+          }} />
+        ))}
+        <div style={{ maxWidth:900, margin:"0 auto", textAlign:"center", position:"relative", zIndex:1 }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>
+            ◈ — SWINDON AIRSOFT — PERSONNEL DOSSIER — ◈
+          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+            CHAIN OF <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>COMMAND</span>
+          </div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".25em", color:"#3a5010", marginTop:12 }}>
+            ▸ FIELD OPERATIONS — AUTHORISED PERSONNEL ONLY ◂
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:16, marginTop:22, justifyContent:"center" }}>
+            <div style={{ flex:1, maxWidth:160, height:1, background:"linear-gradient(to right,transparent,#2a3a10)" }} />
+            <div style={{ color:"#c8ff00", fontSize:18, opacity:.6 }}>✦</div>
+            <div style={{ flex:1, maxWidth:160, height:1, background:"linear-gradient(to left,transparent,#2a3a10)" }} />
+          </div>
         </div>
       </div>
 
-      {loading && (
-        <div style={{ textAlign: "center", padding: 60, color: "var(--muted)", letterSpacing: ".15em" }}>
-          <div style={{ marginBottom: 12 }}>LOADING...</div>
-        </div>
-      )}
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 16px 80px" }}>
 
-      {!loading && error && (
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <div style={{ color: "var(--red)", marginBottom: 16, fontSize: 13 }}>⚠️ {error}</div>
-          <button className="btn btn-ghost btn-sm" onClick={load}>🔄 Try Again</button>
-        </div>
-      )}
-
-      {!loading && !error && staff.length === 0 && (
-        <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>No staff members listed yet.</div>
-      )}
-
-      {!loading && !error && tiers.map((tier, tierIdx) => (
-        <div key={tier.rank} style={{ position: "relative" }}>
-          {tierIdx > 0 && (
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <div style={{ width: 2, height: 32, background: "linear-gradient(to bottom, var(--accent), var(--border))" }} />
+        {/* Loading */}
+        {loading && (
+          <div style={{ textAlign:"center", padding:"80px 24px" }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", letterSpacing:".25em", fontSize:11, color:"#3a5010", marginBottom:6 }}>◈ RETRIEVING PERSONNEL FILES</div>
+            <div style={{ display:"flex", justifyContent:"center", gap:4, marginTop:16 }}>
+              {[0,1,2,3,4].map(i => (
+                <div key={i} style={{ width:6, height:6, background:"#2a3a10", borderRadius:"50%",
+                  animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite alternate` }} />
+              ))}
             </div>
-          )}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, margin: "8px 0 20px", justifyContent: "center" }}>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            <div style={{
-              fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 11,
-              letterSpacing: ".25em", color: tier.rank === 1 ? "var(--gold)" : tier.rank <= 2 ? "var(--accent)" : "var(--muted)",
-              textTransform: "uppercase", padding: "3px 14px",
-              border: `1px solid ${tier.rank === 1 ? "var(--gold)" : tier.rank <= 2 ? "var(--accent)" : "var(--border)"}`,
-              background: "var(--bg)", whiteSpace: "nowrap",
-            }}>{getRankLabel(tier.rank)}</div>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 20, justifyContent: "center", paddingBottom: tierIdx < tiers.length - 1 ? 8 : 40 }}>
-            {tier.members.map(member => <StaffCard key={member.id} member={member} isOwner={tier.rank === 1} />)}
+        )}
+
+        {/* Error */}
+        {!loading && error && (
+          <div style={{ textAlign:"center", padding:"60px 24px" }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", color:"var(--red)", marginBottom:16, fontSize:12, letterSpacing:".1em" }}>⚠ COMMS ERROR: {error}</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAttempt(a => a + 1)}>↺ RETRY CONNECTION</button>
           </div>
-          {tierIdx < tiers.length - 1 && (
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <div style={{ width: 2, height: 16, background: "var(--border)" }} />
+        )}
+
+        {/* Empty */}
+        {!loading && !error && staff.length === 0 && (
+          <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>
+            NO PERSONNEL ON FILE
+          </div>
+        )}
+
+        {/* Tiers */}
+        {!loading && !error && tiers.map((tier, tierIdx) => (
+          <div key={tier.rank}>
+            {/* Connector from above */}
+            {tierIdx > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", margin:"0 0 0" }}>
+                <div style={{ width:1, height:28, background:"linear-gradient(to bottom,#2a3a10,transparent)" }} />
+                <div style={{ color:"#2a3a10", fontSize:10 }}>▼</div>
+              </div>
+            )}
+
+            {/* Rank label */}
+            <div style={{ display:"flex", alignItems:"center", margin: tierIdx===0 ? "36px 0 28px" : "4px 0 28px" }}>
+              <div style={{ flex:1, height:1, background:"linear-gradient(to right,transparent,#1e2c0a)" }} />
+              <div style={{
+                fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11,
+                letterSpacing:".3em", textTransform:"uppercase",
+                padding:"5px 22px", margin:"0 12px",
+                color: tier.rank===1 ? "#c8a000" : tier.rank<=2 ? "#c8ff00" : "#3a5010",
+                border:`1px solid ${tier.rank===1 ? "rgba(200,160,0,.4)" : tier.rank<=2 ? "rgba(200,255,0,.2)" : "#1a2808"}`,
+                background: tier.rank===1 ? "rgba(200,160,0,.06)" : "rgba(200,255,0,.02)",
+                whiteSpace:"nowrap", position:"relative",
+              }}>
+                {Array.from({length: RANK_PIPS[tier.rank] || 1}).map((_,i) => (
+                  <span key={i} style={{ marginRight:3, opacity:.7 }}>★</span>
+                ))}
+                {getRankLabel(tier.rank)}
+              </div>
+              <div style={{ flex:1, height:1, background:"linear-gradient(to left,transparent,#1e2c0a)" }} />
             </div>
-          )}
-        </div>
-      ))}
+
+            {/* Cards */}
+            <div style={{ display:"flex", flexWrap:"wrap", gap:20, justifyContent:"center", paddingBottom:8 }}>
+              {tier.members.map(member => (
+                <StaffCard key={member.id} member={member} rank={tier.rank} pips={RANK_PIPS[tier.rank] || 1} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <style>{`@keyframes pulse{from{opacity:.2;transform:scale(.8)}to{opacity:1;transform:scale(1.2)}}`}</style>
     </div>
   );
 }
 
-function StaffCard({ member, isOwner }) {
+function StaffCard({ member, rank, pips }) {
+  const isOwner   = rank === 1;
+  const isCommand = rank <= 2;
+  const gold   = "#c8a000";
+  const green  = "#c8ff00";
+  const accent = isOwner ? gold : isCommand ? green : "#4a6820";
+  const border = isOwner ? "rgba(200,160,0,.35)" : isCommand ? "rgba(200,255,0,.18)" : "#1a2808";
+  const bg     = isOwner
+    ? "linear-gradient(180deg,#171200 0%,#0c0b06 100%)"
+    : "linear-gradient(180deg,#0c1009 0%,#080a06 100%)";
+
   return (
     <div style={{
-      background: isOwner ? "linear-gradient(135deg, #1a1400, #0d0d0d)" : "var(--card)",
-      border: `1px solid ${isOwner ? "var(--gold)" : "var(--border)"}`,
-      borderRadius: 4, width: 200, textAlign: "center", overflow: "hidden",
-      boxShadow: isOwner ? "0 0 24px rgba(200,160,0,.15)" : "none",
-      transition: "transform .2s, box-shadow .2s",
+      width:210, overflow:"hidden", position:"relative",
+      background:bg, border:`1px solid ${border}`,
+      boxShadow: isOwner ? `0 0 40px rgba(200,160,0,.12), inset 0 1px 0 rgba(200,160,0,.06)` : `inset 0 1px 0 rgba(200,255,0,.02)`,
+      transition:"transform .2s, box-shadow .2s",
     }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = isOwner ? "0 8px 32px rgba(200,160,0,.25)" : "0 8px 24px rgba(0,0,0,.4)"; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = isOwner ? "0 0 24px rgba(200,160,0,.15)" : "none"; }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = "translateY(-5px)";
+        e.currentTarget.style.boxShadow = isOwner
+          ? "0 16px 48px rgba(200,160,0,.22), inset 0 1px 0 rgba(200,160,0,.1)"
+          : "0 10px 36px rgba(200,255,0,.07), inset 0 1px 0 rgba(200,255,0,.04)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = "";
+        e.currentTarget.style.boxShadow = isOwner
+          ? "0 0 40px rgba(200,160,0,.12), inset 0 1px 0 rgba(200,160,0,.06)"
+          : "inset 0 1px 0 rgba(200,255,0,.02)";
+      }}
     >
-      <div style={{ width: "100%", height: 200, background: "#111", overflow: "hidden", position: "relative" }}>
+      {/* Scanlines */}
+      <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.07) 3px,rgba(0,0,0,.07) 4px)", pointerEvents:"none", zIndex:5 }} />
+
+      {/* ID strip */}
+      <div style={{ background:"rgba(0,0,0,.7)", borderBottom:`1px solid ${border}`, padding:"5px 10px", display:"flex", justifyContent:"space-between", alignItems:"center", zIndex:6, position:"relative" }}>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:accent, opacity:.6 }}>SA · FIELD PASS</div>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:accent, opacity:.4 }}>
+          {Array.from({length:pips}).map((_,i)=><span key={i}>★</span>)}
+        </div>
+      </div>
+
+      {/* Photo */}
+      <div style={{ width:"100%", height:195, background:"#06080500", overflow:"hidden", position:"relative" }}>
         {member.photo
-          ? <img src={member.photo} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
-          : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#1a1a1a,#0d0d0d)", fontSize: 56, opacity: .3 }}>👤</div>
+          ? <img src={member.photo} alt={member.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"top", filter:"contrast(1.05) saturate(0.85)" }} />
+          : <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#0a0c08", gap:8 }}>
+              <div style={{ fontSize:52, opacity:.08 }}>👤</div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#1e2c0a" }}>NO PHOTO ON FILE</div>
+            </div>
         }
+        {/* Gradient overlay */}
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:70, background:"linear-gradient(to top,rgba(8,10,6,.98),transparent)", zIndex:2 }} />
+        {/* Corner brackets on photo */}
+        {[["top","left"],["top","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position:"absolute", width:14, height:14, zIndex:3, top:7,
+            left:h==="left"?7:"auto", right:h==="right"?7:"auto",
+            borderTop:`1px solid ${accent}`, opacity:.5,
+            borderLeft:h==="left"?`1px solid ${accent}`:"none",
+            borderRight:h==="right"?`1px solid ${accent}`:"none",
+          }} />
+        ))}
+        {/* Rank badge for owner */}
         {isOwner && (
-          <div style={{ position: "absolute", top: 8, right: 8, background: "var(--gold)", color: "#000", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 9, letterSpacing: ".15em", padding: "2px 8px" }}>⭐ OWNER</div>
+          <div style={{ position:"absolute", top:8, right:8, background:gold, color:"#000", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:8, letterSpacing:".15em", padding:"2px 8px", zIndex:4 }}>
+            ★ C/O
+          </div>
         )}
       </div>
-      <div style={{ padding: "14px 12px 16px" }}>
-        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 17, letterSpacing: ".08em", color: isOwner ? "var(--gold)" : "var(--text)", textTransform: "uppercase", marginBottom: 4 }}>{member.name}</div>
-        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11, letterSpacing: ".18em", color: "var(--accent)", fontWeight: 700, textTransform: "uppercase", marginBottom: member.bio ? 10 : 0 }}>{member.job_title}</div>
-        {member.bio && <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginTop: 8, textAlign: "left" }}>{member.bio}</div>}
+
+      {/* Info */}
+      <div style={{ padding:"12px 12px 10px", position:"relative", zIndex:6 }}>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:17, letterSpacing:".1em", color: isOwner ? gold : "#dce8c8", textTransform:"uppercase", lineHeight:1.15, marginBottom:5 }}>
+          {member.name}
+        </div>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".16em", color:accent, opacity:.85, marginBottom:8 }}>
+          ▸ {member.job_title}
+        </div>
+        {/* Rank bar */}
+        <div style={{ display:"flex", gap:2, marginBottom: member.bio ? 10 : 4 }}>
+          {Array.from({length:5}).map((_,i) => (
+            <div key={i} style={{ flex:1, height:2, background: i < pips ? accent : "#141a0e", borderRadius:1 }} />
+          ))}
+        </div>
+        {member.bio && (
+          <div style={{ fontSize:11, color:"#3a4f28", lineHeight:1.65, borderTop:"1px solid #141a0e", paddingTop:8, fontFamily:"'Share Tech Mono',monospace" }}>
+            {member.bio}
+          </div>
+        )}
+      </div>
+
+      {/* Barcode footer */}
+      <div style={{ borderTop:`1px solid ${border}`, padding:"4px 10px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(0,0,0,.5)", zIndex:6, position:"relative" }}>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#1a2808", letterSpacing:".08em" }}>
+          {member.id ? member.id.slice(0,8).toUpperCase() : "--------"}
+        </div>
+        <div style={{ display:"flex", gap:"1px", alignItems:"center" }}>
+          {Array.from({length:18},(_,i) => (
+            <div key={i} style={{ background:border, width:i%3===0?2:1, height:3+Math.abs(Math.sin(i*1.9)*6), borderRadius:1, opacity:.7 }} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -7476,7 +7591,7 @@ function AdminMessages({ data, save, showToast }) {
   const [instagram, setInstagram] = useState(data.socialInstagram || "");
   const [contactAddress, setContactAddress] = useState(data.contactAddress || "");
   const [contactPhone, setContactPhone] = useState(data.contactPhone || "");
-  const [contactEmail, setContactEmail] = useState(data.contactEmail || "");
+  const [contactEmail, setContactEmail] = useState(data.contactEmail || "swindonairsoftfield@gmail.com");
   const [saving, setSaving] = useState(false);
   const [savingSocial, setSavingSocial] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
@@ -7493,10 +7608,7 @@ function AdminMessages({ data, save, showToast }) {
     } finally { setSaving(false); }
   };
 
-  const upsertSetting = async (key, value) => {
-    const { error } = await supabase.from('site_settings').upsert({ key, value }, { onConflict: 'key' });
-    if (error) throw new Error(error.message);
-  };
+  const upsertSetting = (key, value) => api.settings.set(key, value);
 
   const saveSocial = async () => {
     setSavingSocial(true);
@@ -7905,7 +8017,7 @@ export default function App() {
 
       <div className="pub-page-wrap">
         {page === "home"        && <HomePage data={data} setPage={setPage} />}
-        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} />}
+        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} />}
         {page === "shop" && !selectedProduct && (
           <ShopPage
             data={data} cu={cu} showToast={showToast} save={save}
