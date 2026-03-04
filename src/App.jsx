@@ -2921,37 +2921,95 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
     .filter(u => !u.leaderboardOptOut && u.role === "player")
     .sort((a, b) => b.gamesAttended - a.gamesAttended);
 
+  const RANK_INSIGNIA = ["★★★★★", "★★★★", "★★★", "★★", "★"];
+  const RANK_TITLES = ["FIELD COMMANDER", "SENIOR OPERATIVE", "OPERATIVE", "RECRUIT", "PRIVATE"];
+
   return (
-    <div className="page-content-sm">
-      <div className="page-header">
-        <div><div className="page-title">Leaderboard</div><div className="page-sub">Ranked by game days attended — dedication, not kills</div></div>
-      </div>
-      {cu?.role === "player" && (
-        <div className="card mb-2" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 13 }}>Show my name on the leaderboard</span>
-          <div className="gap-2">
-            <span className="text-muted" style={{ fontSize: 12 }}>{cu.leaderboardOptOut ? "Hidden" : "Visible"}</span>
-            <button className={`btn btn-sm ${cu.leaderboardOptOut ? "btn-primary" : "btn-ghost"}`}
-              onClick={() => { updateUser(cu.id, { leaderboardOptOut: !cu.leaderboardOptOut }); showToast("Preference saved"); }}>
-              {cu.leaderboardOptOut ? "Opt In" : "Opt Out"}
-            </button>
+    <div style={{ background: "#080a06", minHeight: "100vh" }}>
+      {/* Header */}
+      <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom: "2px solid #2a3a10", padding: "52px 24px 44px" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents: "none" }} />
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position: "absolute", width: 28, height: 28, zIndex: 2,
+            top: v==="top" ? 14 : "auto", bottom: v==="bottom" ? 14 : "auto",
+            left: h==="left" ? 14 : "auto", right: h==="right" ? 14 : "auto",
+            borderTop: v==="top" ? "2px solid #c8ff00" : "none", borderBottom: v==="bottom" ? "2px solid #c8ff00" : "none",
+            borderLeft: h==="left" ? "2px solid #c8ff00" : "none", borderRight: h==="right" ? "2px solid #c8ff00" : "none",
+          }} />
+        ))}
+        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".35em", color: "#3a5010", marginBottom: 14, textTransform: "uppercase" }}>◈ — SWINDON AIRSOFT — FIELD RECORDS — ◈</div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
+            COMBAT <span style={{ color: "#c8ff00", textShadow: "0 0 30px rgba(200,255,0,.35)" }}>ROLL</span>
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ RANKED BY FIELD DEPLOYMENTS — DEDICATION, NOT KILLS ◂</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 22, justifyContent: "center" }}>
+            <div style={{ flex: 1, maxWidth: 160, height: 1, background: "linear-gradient(to right,transparent,#2a3a10)" }} />
+            <div style={{ color: "#c8ff00", fontSize: 18, opacity: .6 }}>✦</div>
+            <div style={{ flex: 1, maxWidth: 160, height: 1, background: "linear-gradient(to left,transparent,#2a3a10)" }} />
           </div>
         </div>
-      )}
-      <div>
-        {board.map((u, i) => (
-          <div key={u.id} className="lb-row">
-            <div className={`lb-rank ${i < 3 ? "top" : ""}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</div>
-            <div className="lb-avatar">{u.profilePic ? <img src={u.profilePic} alt="" /> : u.name[0]}</div>
+      </div>
+
+      <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 16px 80px" }}>
+        {cu?.role === "player" && (
+          <div style={{ background: "#0c1009", border: "1px solid #1e2c0a", padding: "12px 18px", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div>
-              <div className="gap-2 mt-1">{u.vipStatus === "active" && <span className="tag tag-gold">⭐ VIP</span>}</div>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".2em", color: "#c8ff00", marginBottom: 2 }}>FIELD VISIBILITY</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a5010" }}>{cu.leaderboardOptOut ? "STATUS: GHOST — YOUR NAME IS HIDDEN" : "STATUS: ACTIVE — YOUR NAME IS VISIBLE"}</div>
             </div>
-            <div className="lb-games">{u.gamesAttended}</div>
-            <div className="text-muted" style={{ fontSize: 11 }}>games</div>
+            <button className={`btn btn-sm ${cu.leaderboardOptOut ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => { updateUser(cu.id, { leaderboardOptOut: !cu.leaderboardOptOut }); showToast("Preference saved"); }}>
+              {cu.leaderboardOptOut ? "GO ACTIVE" : "GO GHOST"}
+            </button>
           </div>
-        ))}
-        {board.length === 0 && <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No players on the leaderboard yet.</div>}
+        )}
+
+        {board.length === 0 && (
+          <div style={{ textAlign: "center", padding: 80, fontFamily: "'Share Tech Mono',monospace", color: "#2a3a10", fontSize: 11, letterSpacing: ".2em" }}>NO COMBAT RECORDS ON FILE</div>
+        )}
+
+        {board.map((u, i) => {
+          const isTop3 = i < 3;
+          const medalColor = i === 0 ? "#c8a000" : i === 1 ? "#8a8a8a" : i === 2 ? "#8b4513" : null;
+          const rankTitle = i === 0 ? "FIELD COMMANDER" : i === 1 ? "SENIOR OPERATIVE" : i === 2 ? "OPERATIVE" : i < 10 ? "RECRUIT" : "PRIVATE";
+          return (
+            <div key={u.id} style={{
+              display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", marginBottom: 3,
+              background: isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.04)` : "#0c1009",
+              border: `1px solid ${isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}`,
+              position: "relative", overflow: "hidden",
+              transition: "border-color .15s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.5)` : "#2a3a10"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}
+            >
+              {/* Scanlines */}
+              <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px)", pointerEvents: "none" }} />
+              {/* Rank number */}
+              <div style={{ width: 40, textAlign: "center", flexShrink: 0, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: isTop3 ? 26 : 18, color: medalColor || "#2a3a10", lineHeight: 1 }}>
+                {i + 1}
+              </div>
+              {/* Avatar */}
+              <div style={{ width: 38, height: 38, background: "#0a0c08", border: `1px solid ${medalColor || "#1a2808"}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, overflow: "hidden", flexShrink: 0, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif" }}>
+                {u.profilePic ? <img src={u.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : u.name[0]}
+              </div>
+              {/* Name + rank */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".08em", color: isTop3 ? (medalColor || "#e8f0d8") : "#b0c090", textTransform: "uppercase", lineHeight: 1.1 }}>{u.name}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".15em", color: medalColor || "#2a3a10", marginTop: 3 }}>{rankTitle}</div>
+                {u.vipStatus === "active" && <span className="tag tag-gold" style={{ marginTop: 4, display: "inline-flex" }}>★ VIP OPERATIVE</span>}
+              </div>
+              {/* Games count */}
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: medalColor || "#c8ff00", lineHeight: 1 }}>{u.gamesAttended}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".2em", color: "#2a3a10", marginTop: 2 }}>DEPLOYMENTS</div>
+              </div>
+              {/* Left accent bar for top 3 */}
+              {isTop3 && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: medalColor }} />}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -2960,7 +3018,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
 // ── Gallery ───────────────────────────────────────────────
 function GalleryPage({ data }) {
   const [active, setActive] = useState(null);
-  const [lightbox, setLightbox] = useState(null); // { url, album, index }
+  const [lightbox, setLightbox] = useState(null);
   const albums = active ? data.albums.filter(a => a.id === active) : data.albums;
 
   const openLightbox = (url, album, index) => setLightbox({ url, album, index });
@@ -2977,46 +3035,98 @@ function GalleryPage({ data }) {
   };
 
   return (
-    <div className="page-content">
-      <div className="page-header"><div className="page-title">Gallery</div></div>
-      <div className="gap-2 mb-2">
-        <button className={`btn btn-sm ${!active ? "btn-primary" : "btn-ghost"}`} onClick={() => setActive(null)}>All</button>
-        {data.albums.map(a => <button key={a.id} className={`btn btn-sm ${active === a.id ? "btn-primary" : "btn-ghost"}`} onClick={() => setActive(a.id)}>{a.title}</button>)}
-      </div>
-      {albums.map(album => (
-        <div key={album.id} className="mb-2">
-          <div style={{ fontSize: 11, letterSpacing: ".1em", fontWeight: 700, color: "var(--muted)", marginBottom: 10 }}>{album.title.toUpperCase()}</div>
-          {album.images.length === 0
-            ? <div className="card" style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No photos yet.</div>
-            : <div className="photo-grid">
-                {album.images.map((img, i) => (
-                  <div key={i} className="photo-cell" onClick={() => openLightbox(img, album, i)}>
-                    <img src={img} alt="" />
-                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "all .2s" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,.4)"; e.currentTarget.style.opacity = 1; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0)"; e.currentTarget.style.opacity = 0; }}>
-                      <span style={{ fontSize: 28, color: "#fff" }}>🔍</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-          }
+    <div style={{ background: "#080a06", minHeight: "100vh" }}>
+      {/* Header */}
+      <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom: "2px solid #2a3a10", padding: "52px 24px 44px" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents: "none" }} />
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position: "absolute", width: 28, height: 28, zIndex: 2,
+            top: v==="top" ? 14 : "auto", bottom: v==="bottom" ? 14 : "auto",
+            left: h==="left" ? 14 : "auto", right: h==="right" ? 14 : "auto",
+            borderTop: v==="top" ? "2px solid #c8ff00" : "none", borderBottom: v==="bottom" ? "2px solid #c8ff00" : "none",
+            borderLeft: h==="left" ? "2px solid #c8ff00" : "none", borderRight: h==="right" ? "2px solid #c8ff00" : "none",
+          }} />
+        ))}
+        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".35em", color: "#3a5010", marginBottom: 14, textTransform: "uppercase" }}>◈ — SWINDON AIRSOFT — FIELD INTELLIGENCE — ◈</div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
+            MISSION <span style={{ color: "#c8ff00", textShadow: "0 0 30px rgba(200,255,0,.35)" }}>ARCHIVE</span>
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ CLASSIFIED FIELD FOOTAGE — AUTHORISED VIEWING ONLY ◂</div>
         </div>
-      ))}
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 16px 80px" }}>
+        {/* Album filter tabs */}
+        {data.albums.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 28 }}>
+            <button style={{ background: !active ? "var(--accent)" : "transparent", color: !active ? "#000" : "#3a5010", border: `1px solid ${!active ? "var(--accent)" : "#1a2808"}`, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".2em", padding: "6px 16px", textTransform: "uppercase", cursor: "pointer", transition: "all .15s" }} onClick={() => setActive(null)}>ALL MISSIONS</button>
+            {data.albums.map(a => (
+              <button key={a.id} style={{ background: active === a.id ? "var(--accent)" : "transparent", color: active === a.id ? "#000" : "#3a5010", border: `1px solid ${active === a.id ? "var(--accent)" : "#1a2808"}`, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".2em", padding: "6px 16px", textTransform: "uppercase", cursor: "pointer", transition: "all .15s" }} onClick={() => setActive(a.id)}>{a.title}</button>
+            ))}
+          </div>
+        )}
+
+        {albums.map((album, ai) => (
+          <div key={album.id} style={{ marginBottom: 36 }}>
+            {/* Album label */}
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 14, gap: 12 }}>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".3em", color: "#c8ff00", textTransform: "uppercase" }}>▸ {album.title}</div>
+              <div style={{ flex: 1, height: 1, background: "linear-gradient(to right,#1e2c0a,transparent)" }} />
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".15em" }}>{album.images.length} IMAGES</div>
+            </div>
+            {album.images.length === 0
+              ? <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: 30, textAlign: "center", fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#2a3a10", letterSpacing: ".15em" }}>NO FOOTAGE ON FILE</div>
+              : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 4 }}>
+                  {album.images.map((img, i) => (
+                    <div key={i} style={{ aspectRatio: "4/3", overflow: "hidden", background: "#0a0c08", position: "relative", cursor: "pointer", border: "1px solid #1a2808" }}
+                      onClick={() => openLightbox(img, album, i)}>
+                      <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .3s, filter .3s", filter: "contrast(1.05) saturate(0.8)" }} />
+                      {/* Corner brackets on hover */}
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .2s" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,.5)"; e.currentTarget.querySelector(".gal-hover-label").style.opacity = 1; e.currentTarget.previousElementSibling.style.filter = "contrast(1.1) saturate(1.1)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0)"; e.currentTarget.querySelector(".gal-hover-label").style.opacity = 0; e.currentTarget.previousElementSibling.style.filter = "contrast(1.05) saturate(0.8)"; }}>
+                        <div className="gal-hover-label" style={{ opacity: 0, transition: "opacity .2s", fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#c8ff00", textAlign: "center" }}>
+                          <div style={{ fontSize: 22, marginBottom: 4 }}>⊕</div>
+                          ENLARGE
+                        </div>
+                      </div>
+                      {/* Frame index */}
+                      <div style={{ position: "absolute", bottom: 4, right: 6, fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "rgba(200,255,0,.4)", letterSpacing: ".1em" }}>{String(i+1).padStart(3,"0")}</div>
+                    </div>
+                  ))}
+                </div>
+            }
+          </div>
+        ))}
+
+        {data.albums.length === 0 && (
+          <div style={{ textAlign: "center", padding: 80, fontFamily: "'Share Tech Mono',monospace", color: "#2a3a10", fontSize: 11, letterSpacing: ".2em" }}>NO MISSION FOOTAGE ON FILE</div>
+        )}
+      </div>
 
       {/* Lightbox */}
       {lightbox && (
-        <div onClick={closeLightbox} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div onClick={closeLightbox} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.96)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {/* Corner brackets */}
+          {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+            <div key={v+h} style={{ position: "absolute", width: 32, height: 32, zIndex: 501,
+              top: v==="top" ? 12 : "auto", bottom: v==="bottom" ? 12 : "auto",
+              left: h==="left" ? 12 : "auto", right: h==="right" ? 12 : "auto",
+              borderTop: v==="top" ? "2px solid rgba(200,255,0,.4)" : "none", borderBottom: v==="bottom" ? "2px solid rgba(200,255,0,.4)" : "none",
+              borderLeft: h==="left" ? "2px solid rgba(200,255,0,.4)" : "none", borderRight: h==="right" ? "2px solid rgba(200,255,0,.4)" : "none",
+            }} />
+          ))}
           <button onClick={e => { e.stopPropagation(); prevImg(); }}
-            style={{ position: "absolute", left: 16, background: "rgba(255,255,255,.1)", border: "none", color: "#fff", fontSize: 28, width: 52, height: 52, borderRadius: "50%", cursor: "pointer" }}>‹</button>
+            style={{ position: "absolute", left: 16, background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#c8ff00", fontSize: 24, width: 48, height: 48, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900 }}>‹</button>
           <img src={lightbox.url} alt="" onClick={e => e.stopPropagation()}
-            style={{ maxWidth: "90vw", maxHeight: "88vh", objectFit: "contain", borderRadius: 8, boxShadow: "0 0 60px rgba(0,0,0,.8)" }} />
+            style={{ maxWidth: "88vw", maxHeight: "84vh", objectFit: "contain", boxShadow: "0 0 80px rgba(0,0,0,.9), 0 0 0 1px #1a2808" }} />
           <button onClick={e => { e.stopPropagation(); nextImg(); }}
-            style={{ position: "absolute", right: 16, background: "rgba(255,255,255,.1)", border: "none", color: "#fff", fontSize: 28, width: 52, height: 52, borderRadius: "50%", cursor: "pointer" }}>›</button>
+            style={{ position: "absolute", right: 16, background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#c8ff00", fontSize: 24, width: 48, height: 48, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900 }}>›</button>
           <button onClick={closeLightbox}
-            style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", fontSize: 20, width: 40, height: 40, borderRadius: "50%", cursor: "pointer" }}>✕</button>
-          <div style={{ position: "absolute", bottom: 16, color: "rgba(255,255,255,.5)", fontSize: 13 }}>
-            {lightbox.index + 1} / {lightbox.album.images.length}
+            style={{ position: "absolute", top: 16, right: 16, background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#c8ff00", fontSize: 14, width: 36, height: 36, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, letterSpacing: ".1em", zIndex: 502 }}>✕</button>
+          <div style={{ position: "absolute", bottom: 16, fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "rgba(200,255,0,.4)", letterSpacing: ".2em" }}>
+            FRAME {String(lightbox.index+1).padStart(3,"0")} / {String(lightbox.album.images.length).padStart(3,"0")}
           </div>
         </div>
       )}
@@ -3063,17 +3173,28 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   return (
     <div>
       {/* Hero */}
-      <div style={{ background:"linear-gradient(135deg,#0d1300 0%,#0a0a0a 100%)", borderBottom:"1px solid #2a3a00", padding:"64px 24px", textAlign:"center" }}>
-        <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.2)", padding:"6px 16px", borderRadius:20, marginBottom:20 }}>
-          <span>👑</span>
-          <span style={{ fontSize:11, fontWeight:700, letterSpacing:".2em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase" }}>ELITE MEMBERSHIP</span>
+      <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom: "2px solid #2a3a10", padding: "52px 24px 44px" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents: "none" }} />
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position: "absolute", width: 28, height: 28, zIndex: 2,
+            top: v==="top" ? 14 : "auto", bottom: v==="bottom" ? 14 : "auto",
+            left: h==="left" ? 14 : "auto", right: h==="right" ? 14 : "auto",
+            borderTop: v==="top" ? "2px solid #c8a000" : "none", borderBottom: v==="bottom" ? "2px solid #c8a000" : "none",
+            borderLeft: h==="left" ? "2px solid #c8a000" : "none", borderRight: h==="right" ? "2px solid #c8a000" : "none",
+          }} />
+        ))}
+        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".35em", color: "#3a5010", marginBottom: 14, textTransform: "uppercase" }}>◈ — SWINDON AIRSOFT — ELITE CLEARANCE — ◈</div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
+            ELITE <span style={{ color: "#c8a000", textShadow: "0 0 30px rgba(200,160,0,.35)" }}>OPERATIVE</span>
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ UNLOCK EXCLUSIVE CLEARANCE — JOIN OUR ELITE SQUAD ◂</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 22, justifyContent: "center" }}>
+            <div style={{ flex: 1, maxWidth: 160, height: 1, background: "linear-gradient(to right,transparent,#3a2a00)" }} />
+            <div style={{ color: "#c8a000", fontSize: 18, opacity: .6 }}>★</div>
+            <div style={{ flex: 1, maxWidth: 160, height: 1, background: "linear-gradient(to left,transparent,#3a2a00)" }} />
+          </div>
         </div>
-        <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(44px,8vw,80px)", textTransform:"uppercase", letterSpacing:".04em", marginBottom:16 }}>
-          BECOME A <span style={{ color:"var(--accent)" }}>VIP</span>
-        </h1>
-        <p style={{ fontSize:15, color:"#888", maxWidth:560, margin:"0 auto", lineHeight:1.7 }}>
-          Unlock exclusive benefits, discounts, and VIP-only events. Join our elite squad of dedicated operators.
-        </p>
       </div>
 
       <div className="page-content" style={{ maxWidth:960 }}>
@@ -3205,22 +3326,53 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
 function QAPage({ data }) {
   const [open, setOpen] = useState(null);
   return (
-    <div className="page-content-sm">
-      <div className="page-header"><div><div className="page-title">Q&amp;A</div><div className="page-sub">Got questions? We've got answers.</div></div></div>
-      {data.qa.length === 0 && <div style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>No questions yet — check back soon.</div>}
-      {data.qa.map(item => (
-        <div key={item.id} className="accordion-item">
-          <div className="accordion-q" onClick={() => setOpen(open === item.id ? null : item.id)}>
-            <span>{item.q}</span>
-            <span style={{ color:"var(--accent)", fontSize:20, lineHeight:1 }}>{open === item.id ? "−" : "+"}</span>
+    <div style={{ background: "#080a06", minHeight: "100vh" }}>
+      {/* Header */}
+      <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom: "2px solid #2a3a10", padding: "52px 24px 44px" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents: "none" }} />
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position: "absolute", width: 28, height: 28, zIndex: 2,
+            top: v==="top" ? 14 : "auto", bottom: v==="bottom" ? 14 : "auto",
+            left: h==="left" ? 14 : "auto", right: h==="right" ? 14 : "auto",
+            borderTop: v==="top" ? "2px solid #c8ff00" : "none", borderBottom: v==="bottom" ? "2px solid #c8ff00" : "none",
+            borderLeft: h==="left" ? "2px solid #c8ff00" : "none", borderRight: h==="right" ? "2px solid #c8ff00" : "none",
+          }} />
+        ))}
+        <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".35em", color: "#3a5010", marginBottom: 14, textTransform: "uppercase" }}>◈ — SWINDON AIRSOFT — FIELD BRIEFING — ◈</div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
+            INTEL <span style={{ color: "#c8ff00", textShadow: "0 0 30px rgba(200,255,0,.35)" }}>BRIEFING</span>
           </div>
-          {open === item.id && (
-            <div className="accordion-a">
-              {renderQAAnswer(item.a)}
-            </div>
-          )}
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ PRE-MISSION INTELLIGENCE — READ BEFORE DEPLOYMENT ◂</div>
         </div>
-      ))}
+      </div>
+
+      <div style={{ maxWidth: 820, margin: "0 auto", padding: "40px 16px 80px" }}>
+        {data.qa.length === 0 && (
+          <div style={{ textAlign: "center", padding: 80, fontFamily: "'Share Tech Mono',monospace", color: "#2a3a10", fontSize: 11, letterSpacing: ".2em" }}>NO INTELLIGENCE ON FILE — CHECK BACK SOON</div>
+        )}
+        {data.qa.map((item, i) => (
+          <div key={item.id} style={{ marginBottom: 3, background: "#0c1009", border: `1px solid ${open === item.id ? "#2a3a10" : "#1a2808"}`, overflow: "hidden", transition: "border-color .15s" }}>
+            <div style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}
+              onClick={() => setOpen(open === item.id ? null : item.id)}>
+              <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flex: 1 }}>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#2a3a10", letterSpacing: ".1em", flexShrink: 0, marginTop: 3 }}>Q{String(i+1).padStart(2,"0")}</div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 16, letterSpacing: ".06em", color: "#b0c090", lineHeight: 1.3 }}>{item.q}</div>
+              </div>
+              <div style={{ color: "#c8ff00", fontSize: 18, lineHeight: 1, flexShrink: 0, marginTop: 2, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900 }}>
+                {open === item.id ? "−" : "+"}
+              </div>
+            </div>
+            {open === item.id && (
+              <div style={{ padding: "0 18px 18px 18px", borderTop: "1px solid #1a2808" }}>
+                <div style={{ paddingTop: 14, fontSize: 13, color: "#3a5028", lineHeight: 1.7, fontFamily: "'Share Tech Mono',monospace" }}>
+                  {renderQAAnswer(item.a)}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -7192,16 +7344,16 @@ function ContactPage({ data, cu, showToast }) {
         subject: `[${selectedDept.name}] ${form.subject}`,
         htmlContent: `
           <div style="font-family:sans-serif;max-width:600px">
-            <h2 style="color:#e05c00;font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">
+            <h2 style="color:#c8ff00;font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">
               New Contact Message — ${selectedDept.name}
             </h2>
             <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
               <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px;width:120px">FROM</td><td style="padding:8px;background:#111;color:#fff">${form.name}</td></tr>
-              <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">EMAIL</td><td style="padding:8px;background:#111;color:#fff"><a href="mailto:${form.email}" style="color:#e05c00">${form.email}</a></td></tr>
+              <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">EMAIL</td><td style="padding:8px;background:#111;color:#fff"><a href="mailto:${form.email}" style="color:#c8ff00">${form.email}</a></td></tr>
               <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">DEPT</td><td style="padding:8px;background:#111;color:#fff">${selectedDept.name}</td></tr>
               <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">SUBJECT</td><td style="padding:8px;background:#111;color:#fff">${form.subject}</td></tr>
             </table>
-            <div style="background:#111;border-left:3px solid #e05c00;padding:16px;white-space:pre-wrap;color:#ccc;line-height:1.6">${form.message}</div>
+            <div style="background:#111;border-left:3px solid #c8ff00;padding:16px;white-space:pre-wrap;color:#ccc;line-height:1.6">${form.message}</div>
           </div>
         `,
       });
@@ -7216,115 +7368,146 @@ function ContactPage({ data, cu, showToast }) {
 
   if (sent) {
     return (
-      <div className="page-wrap" style={{ textAlign:"center", padding:"80px 24px" }}>
-        <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:32, letterSpacing:".1em", marginBottom:12 }}>MESSAGE SENT</div>
-        <div style={{ color:"var(--muted)", fontSize:14, marginBottom:32, maxWidth:400, margin:"0 auto 32px" }}>
-          Your message has been sent to <strong style={{ color:"var(--accent)" }}>{form.department}</strong>. We'll get back to you at <strong>{form.email}</strong> as soon as possible.
+      <div style={{ background: "#080a06", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 24px", textAlign: "center" }}>
+        <div style={{ position: "relative", display: "inline-block", marginBottom: 28 }}>
+          {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+            <div key={v+h} style={{ position: "absolute", width: 20, height: 20, zIndex: 2,
+              top: v==="top" ? -8 : "auto", bottom: v==="bottom" ? -8 : "auto",
+              left: h==="left" ? -8 : "auto", right: h==="right" ? -8 : "auto",
+              borderTop: v==="top" ? "2px solid #c8ff00" : "none", borderBottom: v==="bottom" ? "2px solid #c8ff00" : "none",
+              borderLeft: h==="left" ? "2px solid #c8ff00" : "none", borderRight: h==="right" ? "2px solid #c8ff00" : "none",
+            }} />
+          ))}
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 48, color: "#c8ff00", padding: "8px 24px", letterSpacing: ".1em" }}>✓</div>
         </div>
-        <button className="btn btn-primary" onClick={() => { setSent(false); setForm(blank); }}>Send Another Message</button>
+        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: ".2em", textTransform: "uppercase", color: "#e8f0d8", marginBottom: 12 }}>TRANSMISSION SENT</div>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "#3a5010", letterSpacing: ".1em", marginBottom: 8 }}>MESSAGE ROUTED TO: <span style={{ color: "#c8ff00" }}>{form.department.toUpperCase()}</span></div>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#2a3a10", letterSpacing: ".08em", marginBottom: 32 }}>REPLY WILL BE SENT TO: {form.email}</div>
+        <button className="btn btn-primary" style={{ letterSpacing: ".15em" }} onClick={() => { setSent(false); setForm(blank); }}>SEND ANOTHER TRANSMISSION</button>
       </div>
     );
   }
 
   return (
-    <div className="page-wrap">
-      <div className="page-header" style={{ borderBottom:"1px solid var(--border)", marginBottom:32, paddingBottom:32 }}>
-        <div>
-          <div className="page-title" style={{ fontSize:32, letterSpacing:".12em" }}>✉️ CONTACT US</div>
-          <div className="page-sub" style={{ fontSize:14 }}>Get in touch with the right team</div>
+    <div style={{ background: "#080a06", minHeight: "100vh" }}>
+      {/* Header */}
+      <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom: "2px solid #2a3a10", padding: "52px 24px 44px" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents: "none" }} />
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position: "absolute", width: 28, height: 28, zIndex: 2,
+            top: v==="top" ? 14 : "auto", bottom: v==="bottom" ? 14 : "auto",
+            left: h==="left" ? 14 : "auto", right: h==="right" ? 14 : "auto",
+            borderTop: v==="top" ? "2px solid #c8ff00" : "none", borderBottom: v==="bottom" ? "2px solid #c8ff00" : "none",
+            borderLeft: h==="left" ? "2px solid #c8ff00" : "none", borderRight: h==="right" ? "2px solid #c8ff00" : "none",
+          }} />
+        ))}
+        <div style={{ maxWidth: 1000, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".35em", color: "#3a5010", marginBottom: 14, textTransform: "uppercase" }}>◈ — SWINDON AIRSOFT — COMMAND COMMS — ◈</div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
+            OPEN <span style={{ color: "#c8ff00", textShadow: "0 0 30px rgba(200,255,0,.35)" }}>CHANNEL</span>
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ SECURE TRANSMISSION LINE — ALL COMMS MONITORED ◂</div>
         </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap:32, maxWidth:1000, margin:"0 auto" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "40px 16px 80px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 320px", gap: 24 }}>
 
-        {/* Form */}
-        <div className="card">
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".1em", textTransform:"uppercase", marginBottom:20, color:"var(--text)" }}>Send a Message</div>
+          {/* Form */}
+          <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "28px 24px" }}>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, letterSpacing: ".3em", color: "#c8ff00", marginBottom: 22, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1, height: 1, background: "linear-gradient(to right,#c8ff00,transparent)", opacity: .3 }} />
+              SEND TRANSMISSION
+              <div style={{ flex: 1, height: 1, background: "linear-gradient(to left,#c8ff00,transparent)", opacity: .3 }} />
+            </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Your Name *</label>
-              <input value={form.name} onChange={e => ff("name", e.target.value)} placeholder="Full name" />
+            <div className="form-row">
+              <div className="form-group">
+                <label>OPERATIVE NAME *</label>
+                <input value={form.name} onChange={e => ff("name", e.target.value)} placeholder="Full name" style={{ background: "#080a06", border: "1px solid #1a2808", borderRadius: 0 }} />
+              </div>
+              <div className="form-group">
+                <label>COMMS ADDRESS *</label>
+                <input value={form.email} onChange={e => ff("email", e.target.value)} placeholder="you@example.com" type="email" style={{ background: "#080a06", border: "1px solid #1a2808", borderRadius: 0 }} />
+              </div>
             </div>
+
             <div className="form-group">
-              <label>Your Email *</label>
-              <input value={form.email} onChange={e => ff("email", e.target.value)} placeholder="you@example.com" type="email" />
+              <label>TARGET DEPARTMENT *</label>
+              <select value={form.department} onChange={e => ff("department", e.target.value)} style={{ background: "#080a06", border: "1px solid #1a2808", borderRadius: 0 }}>
+                <option value="">— SELECT DEPARTMENT —</option>
+                {departments.length === 0
+                  ? <option disabled>No departments configured yet</option>
+                  : departments.map(d => <option key={d.name} value={d.name}>{d.name.toUpperCase()}</option>)
+                }
+              </select>
+              {selectedDept?.description && (
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a5010", marginTop: 6, letterSpacing: ".05em", lineHeight: 1.5 }}>▸ {selectedDept.description}</div>
+              )}
             </div>
+
+            <div className="form-group">
+              <label>SUBJECT *</label>
+              <input value={form.subject} onChange={e => ff("subject", e.target.value)} placeholder="Brief summary of your enquiry" style={{ background: "#080a06", border: "1px solid #1a2808", borderRadius: 0 }} />
+            </div>
+
+            <div className="form-group">
+              <label>MESSAGE BODY *</label>
+              <textarea rows={6} value={form.message} onChange={e => ff("message", e.target.value)} placeholder="Describe your enquiry in detail…" style={{ background: "#080a06", border: "1px solid #1a2808", borderRadius: 0 }} />
+            </div>
+
+            <button className="btn btn-primary" style={{ width: "100%", padding: "14px", fontSize: 14, letterSpacing: ".2em", borderRadius: 0 }} onClick={handleSend} disabled={sending}>
+              {sending ? "TRANSMITTING…" : "▸ SEND TRANSMISSION"}
+            </button>
           </div>
 
-          <div className="form-group">
-            <label>Department *</label>
-            <select value={form.department} onChange={e => ff("department", e.target.value)}>
-              <option value="">— Select a department —</option>
-              {departments.length === 0
-                ? <option disabled>No departments configured yet</option>
-                : departments.map(d => <option key={d.name} value={d.name}>{d.name}</option>)
-              }
-            </select>
-            {selectedDept?.description && (
-              <div style={{ fontSize:11, color:"var(--muted)", marginTop:5, lineHeight:1.5 }}>{selectedDept.description}</div>
+          {/* Side panel */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {departments.length > 0 && (
+              <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "20px 18px" }}>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: ".3em", color: "#c8ff00", marginBottom: 14, textTransform: "uppercase" }}>◈ DEPARTMENTS</div>
+                {departments.map((d, i) => (
+                  <div key={i} style={{ padding: "10px 0", borderBottom: i < departments.length-1 ? "1px solid #1a2808" : "none" }}>
+                    <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".15em", color: "#c8ff00", textTransform: "uppercase", marginBottom: 4 }}>▸ {d.name}</div>
+                    {d.description && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a5010", lineHeight: 1.5 }}>{d.description}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(data.contactAddress || data.contactPhone || data.contactEmail) && (
+              <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "20px 18px" }}>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: ".3em", color: "#c8ff00", marginBottom: 14, textTransform: "uppercase" }}>◈ BASE COORDINATES</div>
+                {data.contactEmail && (
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#2a3a10", letterSpacing: ".1em", flexShrink: 0, marginTop: 1 }}>✉</div>
+                    <div>
+                      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".15em", marginBottom: 3 }}>COMMS</div>
+                      <a href={`mailto:${data.contactEmail}`} style={{ color: "#c8ff00", fontSize: 12, fontFamily: "'Share Tech Mono',monospace", textDecoration: "none" }}>{data.contactEmail}</a>
+                    </div>
+                  </div>
+                )}
+                {data.contactPhone && (
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#2a3a10", letterSpacing: ".1em", flexShrink: 0, marginTop: 1 }}>☎</div>
+                    <div>
+                      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".15em", marginBottom: 3 }}>FIELD LINE</div>
+                      <a href={`tel:${data.contactPhone}`} style={{ color: "#b0c090", fontSize: 12, fontFamily: "'Share Tech Mono',monospace", textDecoration: "none" }}>{data.contactPhone}</a>
+                    </div>
+                  </div>
+                )}
+                {data.contactAddress && (
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#2a3a10", letterSpacing: ".1em", flexShrink: 0, marginTop: 1 }}>⊕</div>
+                    <div>
+                      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".15em", marginBottom: 3 }}>GRID REF</div>
+                      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#b0c090", lineHeight: 1.6, whiteSpace: "pre-line" }}>{data.contactAddress}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-
-          <div className="form-group">
-            <label>Subject *</label>
-            <input value={form.subject} onChange={e => ff("subject", e.target.value)} placeholder="Brief summary of your enquiry" />
-          </div>
-
-          <div className="form-group">
-            <label>Message *</label>
-            <textarea rows={6} value={form.message} onChange={e => ff("message", e.target.value)} placeholder="Describe your enquiry in detail…" />
-          </div>
-
-          <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }} onClick={handleSend} disabled={sending}>
-            {sending ? "SENDING…" : "SEND MESSAGE"}
-          </button>
-        </div>
-
-        {/* Side info */}
-        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-
-          {/* Departments list */}
-          {departments.length > 0 && (
-            <div className="card">
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", textTransform:"uppercase", marginBottom:16, color:"var(--text)" }}>Departments</div>
-              {departments.map((d, i) => (
-                <div key={i} style={{ padding:"10px 0", borderBottom: i < departments.length-1 ? "1px solid var(--border)" : "none" }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".06em", color:"var(--accent)", textTransform:"uppercase" }}>{d.name}</div>
-                  {d.description && <div style={{ fontSize:12, color:"var(--muted)", marginTop:3, lineHeight:1.5 }}>{d.description}</div>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* General contact info */}
-          {(data.contactAddress || data.contactPhone || data.contactEmail) && (
-            <div className="card">
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", textTransform:"uppercase", marginBottom:16, color:"var(--text)" }}>General Info</div>
-              {data.contactEmail && (
-                <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:12 }}>
-                  <span style={{ fontSize:16, flexShrink:0 }}>📧</span>
-                  <div><div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:2 }}>Email</div>
-                  <a href={`mailto:${data.contactEmail}`} style={{ color:"var(--accent)", fontSize:13 }}>{data.contactEmail}</a></div>
-                </div>
-              )}
-              {data.contactPhone && (
-                <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:12 }}>
-                  <span style={{ fontSize:16, flexShrink:0 }}>📞</span>
-                  <div><div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:2 }}>Phone</div>
-                  <a href={`tel:${data.contactPhone}`} style={{ color:"var(--text)", fontSize:13 }}>{data.contactPhone}</a></div>
-                </div>
-              )}
-              {data.contactAddress && (
-                <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                  <span style={{ fontSize:16, flexShrink:0 }}>📍</span>
-                  <div><div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:2 }}>Address</div>
-                  <div style={{ fontSize:13, color:"var(--text)", lineHeight:1.6, whiteSpace:"pre-line" }}>{data.contactAddress}</div></div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
