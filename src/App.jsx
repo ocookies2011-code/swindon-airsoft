@@ -4413,7 +4413,7 @@ function AdminDash({ data, setSection }) {
   const weekCounts = [0, 0, 0, 0, 0, 0, 0];
   allBookings.forEach(b => {
     const weekday = new Date(b.date).getDay();
-    weekCounts[(d + 6) % 7]++;
+    weekCounts[(weekday + 6) % 7]++;
   });
   const maxBar = Math.max(...weekCounts, 1);
 
@@ -4555,9 +4555,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                     const ex = b.eventObj?.extras?.find(e => e.id === extraId);
                     const lp = (data?.shop || []).find(p => p.id === ex?.productId);
                     const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-                    const label = ex ? (v ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
-                    return (
-                      <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
+                    const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
                         {label} ×{qty}
                       </div>
                     );
@@ -4628,7 +4626,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
         const currentBooking = viewBooking;
         const extras = Object.entries(currentBooking.extras || {}).filter(([,v]) => v > 0);
         const ticketLabel = currentBooking.type === "walkOn" ? "Walk-On" : "Rental Package";
-        const ticketPrice = currentBooking.type === "walkOn" ? b.eventObj?.walkOnPrice : b.eventObj?.rentalPrice;
+        const ticketPrice = currentBooking.type === "walkOn" ? currentBooking.eventObj?.walkOnPrice : currentBooking.eventObj?.rentalPrice;
         return (
           <div className="overlay" onClick={() => setViewBooking(null)}>
             <div className="modal-box wide" onClick={e => e.stopPropagation()}>
@@ -4637,8 +4635,8 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
               {/* Header info */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
                 <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{currentBooking.userName}</div></div>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{b.eventTitle}</div></div>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(b.date)}</div></div>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{currentBooking.eventTitle}</div></div>
+                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(currentBooking.date)}</div></div>
                 <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{currentBooking.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
               </div>
 
@@ -4654,11 +4652,11 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                   {/* Extras */}
                   {extras.length > 0 && extras.map(([key, qty]) => {
                     const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-                    const ex = b.eventObj?.extras?.find(e => e.id === extraId);
+                    const ex = currentBooking.eventObj?.extras?.find(e => e.id === extraId);
                     const lp = (data?.shop || []).find(p => p.id === ex?.productId);
                     const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-                    const label = ex ? (v ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
-                    const unitPrice = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : 0);
+                    const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
+                    const unitPrice = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : 0);
                     return (
                       <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                         <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
@@ -4669,14 +4667,14 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                   {/* Total */}
                   <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>
                     <span>TOTAL</span>
-                    <span style={{ color:"var(--accent)" }}>£{b.total.toFixed(2)}</span>
+                    <span style={{ color:"var(--accent)" }}>£{currentBooking.total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="gap-2">
                 <button className="btn btn-ghost" onClick={() => setViewBooking(null)}>Close</button>
-                <button className="btn btn-ghost" onClick={() => { setViewBooking(null); openEdit(b); }}>Edit Booking</button>
+                <button className="btn btn-ghost" onClick={() => { setViewBooking(null); openEdit(currentBooking); }}>Edit Booking</button>
               </div>
             </div>
           </div>
