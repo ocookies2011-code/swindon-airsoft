@@ -4896,10 +4896,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         const ex = targetEv.extras.find(e => e.id === extraId);
         const lp = (data.shop || []).find(p => p.id === ex?.productId);
         const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-        const price = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+        const price = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
         return s + price * qty;
       }, 0);
-      const newBooking = await api.bookings.create({
         eventId: targetEv.id,
         userId: player.id,
         userName: player.name,
@@ -5346,7 +5345,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           const ex = targetEv?.extras?.find(e => e.id === extraId);
           const lp = (data.shop || []).find(p => p.id === ex?.productId);
           const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-          const price = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+          const price = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
           return s + price * qty;
         }, 0);
         const previewTotal = ticketPrice * addBookingForm.qty + extrasPreviewTotal;
@@ -6073,7 +6072,7 @@ function AdminOrders({ showToast }) {
   useEffect(() => {
     // Small delay so auth session is confirmed before querying RLS-protected table
     const ordersTimer = setTimeout(fetchOrders, 600);
-    return () => clearTimeout(t);
+    return () => clearTimeout(ordersTimer);
   }, []);
 
   const setStatus = async (id, status) => {
@@ -6946,8 +6945,8 @@ function AdminRevenue({ data }) {
         const ex = t.eventExtras?.find(e => e.id === extraId);
         const lp = (data.shop || []).find(p => p.id === ex?.productId);
         const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-        const label = ex ? (v ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
-        const unitP = v ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
+        const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
+        const unitP = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
         lines.push({ name: label, qty, price: unitP, line: unitP * qty });
       });
       return lines;
