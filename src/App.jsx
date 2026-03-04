@@ -6520,127 +6520,135 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
 
 // ── Admin Visitor Stats ───────────────────────────────────
 function AdminVisitorStats() {
-  const [visits, setVisits]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-  const [tab, setTab]         = useState("overview");
+  const [visitData, setVisitData] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
   const [dateRange, setDateRange] = useState("7d");
 
   useEffect(() => {
     setLoading(true);
     api.visits.getAll()
-      .then(d => { setVisits(d); setLoading(false); })
-      .catch(e => { setError(e.message); setLoading(false); });
+      .then(rows => { setVisitData(rows); setLoading(false); })
+      .catch(err  => { setError(err.message); setLoading(false); });
   }, []);
 
-  const now = new Date();
-  const cutoff = new Date(now);
-  if      (dateRange === "1d")  cutoff.setDate(now.getDate() - 1);
-  else if (dateRange === "7d")  cutoff.setDate(now.getDate() - 7);
-  else if (dateRange === "30d") cutoff.setDate(now.getDate() - 30);
-  else if (dateRange === "90d") cutoff.setDate(now.getDate() - 90);
-  else cutoff.setFullYear(2000); // "all"
+  const nowDate = new Date();
+  const cutoffDate = new Date(nowDate);
+  if      (dateRange === "1d")  cutoffDate.setDate(nowDate.getDate() - 1);
+  else if (dateRange === "7d")  cutoffDate.setDate(nowDate.getDate() - 7);
+  else if (dateRange === "30d") cutoffDate.setDate(nowDate.getDate() - 30);
+  else if (dateRange === "90d") cutoffDate.setDate(nowDate.getDate() - 90);
+  else cutoffDate.setFullYear(2000);
 
-  const filtered = visits.filter(v => new Date(v.created_at) >= cutoff);
+  const filtered = visitData.filter(row => new Date(row.created_at) >= cutoffDate);
 
   // ── Derived stats ──
-  const totalVisits     = filtered.length;
-  const uniqueSessions  = new Set(filtered.map(v => v.session_id).filter(Boolean)).size;
-  const uniqueUsers     = new Set(filtered.map(v => v.user_id).filter(Boolean)).size;
-  const loggedInVisits  = filtered.filter(v => v.user_id).length;
-  const anonVisits      = totalVisits - loggedInVisits;
+  const totalVisits    = filtered.length;
+  const uniqueSessions = new Set(filtered.map(row => row.session_id).filter(Boolean)).size;
+  const uniqueUsers    = new Set(filtered.map(row => row.user_id).filter(Boolean)).size;
+  const loggedInVisits = filtered.filter(row => row.user_id).length;
+  const anonVisits     = totalVisits - loggedInVisits;
 
   // Page breakdown
-  const pageCounts = filtered.reduce((acc, v) => {
-    acc[v.page] = (acc[v.page] || 0) + 1; return acc;
+  const pageCounts = filtered.reduce((acc, row) => {
+    acc[row.page] = (acc[row.page] || 0) + 1; return acc;
   }, {});
-  const pageRows = Object.entries(pageCounts).sort((a,b) => b[1]-a[1]);
+  const pageRows = Object.entries(pageCounts).sort((aa, bb) => bb[1] - aa[1]);
 
-  // Visits by day (last N days)
+  // Visits by day
   const dayMap = {};
-  filtered.forEach(v => {
-    const d = v.created_at?.slice(0,10);
-    if (d) dayMap[d] = (dayMap[d] || 0) + 1;
+  filtered.forEach(row => {
+    const dayKey = row.created_at?.slice(0, 10);
+    if (dayKey) dayMap[dayKey] = (dayMap[dayKey] || 0) + 1;
   });
-  const days = [];
   const daysToShow = dateRange === "1d" ? 1 : dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : 14;
-  for (let i = daysToShow - 1; i >= 0; i--) {
-    const d = new Date(now); d.setDate(now.getDate() - i);
-    const key = d.toISOString().slice(0,10);
-    days.push({ date: key, label: d.toLocaleDateString("en-GB",{day:"numeric",month:"short"}), count: dayMap[key] || 0 });
+  const dayBars = [];
+  for (let offset = daysToShow - 1; offset >= 0; offset--) {
+    const dayDate = new Date(nowDate);
+    dayDate.setDate(nowDate.getDate() - offset);
+    const dayKey = dayDate.toISOString().slice(0, 10);
+    dayBars.push({ date: dayKey, label: dayDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" }), count: dayMap[dayKey] || 0 });
   }
-  const maxDay = Math.max(...days.map(d => d.count), 1);
+  const maxDayCount = Math.max(...dayBars.map(db => db.count), 1);
 
-  // Visits by hour of day
-  const hourMap = Array(24).fill(0);
-  filtered.forEach(v => {
-    if (v.created_at) hourMap[new Date(v.created_at).getHours()]++;
+  // Visits by hour
+  const hourCounts = Array(24).fill(0);
+  filtered.forEach(row => {
+    if (row.created_at) hourCounts[new Date(row.created_at).getHours()]++;
   });
-  const maxHour = Math.max(...hourMap, 1);
+  const maxHourCount = Math.max(...hourCounts, 1);
 
-  // Location breakdown
-  const countryCounts = filtered.reduce((acc, v) => {
-    const k = v.country || "Unknown";
-    acc[k] = (acc[k] || 0) + 1; return acc;
+  // Country breakdown
+  const countryCounts = filtered.reduce((acc, row) => {
+    const ckey = row.country || "Unknown";
+    acc[ckey] = (acc[ckey] || 0) + 1; return acc;
   }, {});
-  const countryRows = Object.entries(countryCounts).sort((a,b) => b[1]-a[1]).slice(0,10);
+  const countryRows = Object.entries(countryCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 10);
 
-  const cityCounts = filtered.reduce((acc, v) => {
-    const k = v.city ? `${v.city}${v.country ? ", "+v.country : ""}` : "Unknown";
-    acc[k] = (acc[k] || 0) + 1; return acc;
+  // City breakdown
+  const cityCounts = filtered.reduce((acc, row) => {
+    const ckey = row.city ? `${row.city}${row.country ? ", " + row.country : ""}` : "Unknown";
+    acc[ckey] = (acc[ckey] || 0) + 1; return acc;
   }, {});
-  const cityRows = Object.entries(cityCounts).sort((a,b) => b[1]-a[1]).slice(0,12);
+  const cityRows = Object.entries(cityCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 12);
 
-  // Logged-in user visits
+  // Logged-in user breakdown
   const userVisitMap = {};
-  filtered.filter(v => v.user_id).forEach(v => {
-    if (!userVisitMap[v.user_id]) userVisitMap[v.user_id] = { name: v.user_name || v.user_id, count: 0, pages: {}, last: v.created_at };
-    userVisitMap[v.user_id].count++;
-    userVisitMap[v.user_id].pages[v.page] = (userVisitMap[v.user_id].pages[v.page] || 0) + 1;
-    if (v.created_at > userVisitMap[v.user_id].last) userVisitMap[v.user_id].last = v.created_at;
+  filtered.filter(row => row.user_id).forEach(row => {
+    if (!userVisitMap[row.user_id]) {
+      userVisitMap[row.user_id] = { name: row.user_name || row.user_id, count: 0, pages: {}, last: row.created_at };
+    }
+    userVisitMap[row.user_id].count++;
+    userVisitMap[row.user_id].pages[row.page] = (userVisitMap[row.user_id].pages[row.page] || 0) + 1;
+    if (row.created_at > userVisitMap[row.user_id].last) userVisitMap[row.user_id].last = row.created_at;
   });
-  const userRows = Object.values(userVisitMap).sort((a,b) => b.count - a.count).slice(0, 20);
+  const userRows = Object.values(userVisitMap).sort((aa, bb) => bb.count - aa.count).slice(0, 20);
 
-  // Recent visits feed
-  const recent = [...filtered].slice(0, 50);
+  // Recent feed
+  const recentRows = [...filtered].slice(0, 50);
 
   // Referrers
-  const refCounts = filtered.reduce((acc, v) => {
-    const r = v.referrer ? (v.referrer.replace(/^https?:\/\//,"").split("/")[0] || "Direct") : "Direct";
-    acc[r] = (acc[r] || 0) + 1; return acc;
+  const refCounts = filtered.reduce((acc, row) => {
+    const refKey = row.referrer ? (row.referrer.replace(/^https?:\/\//, "").split("/")[0] || "Direct") : "Direct";
+    acc[refKey] = (acc[refKey] || 0) + 1; return acc;
   }, {});
-  const refRows = Object.entries(refCounts).sort((a,b) => b[1]-a[1]).slice(0,8);
+  const refRows = Object.entries(refCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 8);
 
   const PAGE_ICONS = { home:"🏠", events:"📅", shop:"🛒", gallery:"🖼", staff:"🪖", leaderboard:"🏆", vip:"⭐", qa:"❓", contact:"✉️", profile:"👤" };
 
-  const statCard = (label, value, sub, color="#c8ff00") => (
+  const CORNERS = [["top","left"],["top","right"],["bottom","left"],["bottom","right"]];
+
+  const statCard = (cardLabel, cardValue, cardSub, cardColor = "#c8ff00") => (
     <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px", position:"relative", overflow:"hidden" }}>
       <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px)", pointerEvents:"none" }} />
-      {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
-        <div key={v+h} style={{ position:"absolute", width:10, height:10,
-          top:v==="top"?5:"auto", bottom:v==="bottom"?5:"auto",
-          left:h==="left"?5:"auto", right:h==="right"?5:"auto",
-          borderTop:v==="top"?`1px solid ${color}`:0, borderBottom:v==="bottom"?`1px solid ${color}`:0,
-          borderLeft:h==="left"?`1px solid ${color}`:0, borderRight:h==="right"?`1px solid ${color}`:0,
+      {CORNERS.map(([cv, ch]) => (
+        <div key={cv + ch} style={{ position:"absolute", width:10, height:10,
+          top:cv==="top"?5:"auto", bottom:cv==="bottom"?5:"auto",
+          left:ch==="left"?5:"auto", right:ch==="right"?5:"auto",
+          borderTop:cv==="top"?`1px solid ${cardColor}`:0,
+          borderBottom:cv==="bottom"?`1px solid ${cardColor}`:0,
+          borderLeft:ch==="left"?`1px solid ${cardColor}`:0,
+          borderRight:ch==="right"?`1px solid ${cardColor}`:0,
           opacity:.5,
         }} />
       ))}
       <div style={{ position:"relative", zIndex:1 }}>
-        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010", marginBottom:6, textTransform:"uppercase" }}>{label}</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:32, color, lineHeight:1 }}>{value}</div>
-        {sub && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", marginTop:4 }}>{sub}</div>}
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010", marginBottom:6, textTransform:"uppercase" }}>{cardLabel}</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:32, color:cardColor, lineHeight:1 }}>{cardValue}</div>
+        {cardSub && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", marginTop:4 }}>{cardSub}</div>}
       </div>
     </div>
   );
 
-  const barRow = (label, count, total, color="#c8ff00") => (
-    <div key={label} style={{ marginBottom:8 }}>
+  const barRow = (barLabel, barCount, barTotal, barColor = "#c8ff00") => (
+    <div key={barLabel} style={{ marginBottom:8 }}>
       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#b0c090", textTransform:"uppercase", letterSpacing:".04em" }}>{label}</span>
-        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00" }}>{count} <span style={{ color:"#3a5010" }}>({Math.round(count/total*100)}%)</span></span>
+        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#b0c090", textTransform:"uppercase", letterSpacing:".04em" }}>{barLabel}</span>
+        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00" }}>{barCount} <span style={{ color:"#3a5010" }}>({Math.round(barCount / barTotal * 100)}%)</span></span>
       </div>
       <div style={{ height:4, background:"#0a0f06", borderRadius:2, overflow:"hidden" }}>
-        <div style={{ height:"100%", width:`${Math.round(count/total*100)}%`, background:color, boxShadow:`0 0 6px ${color}80`, transition:"width .4s" }} />
+        <div style={{ height:"100%", width:`${Math.round(barCount / barTotal * 100)}%`, background:barColor, boxShadow:`0 0 6px ${barColor}80`, transition:"width .4s" }} />
       </div>
     </div>
   );
@@ -6667,114 +6675,110 @@ function AdminVisitorStats() {
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".25em", color:"#3a5010", marginBottom:4 }}>◈ ANALYTICS</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".1em", color:"#e8f0d8" }}>VISITOR INTELLIGENCE</div>
         </div>
-        {/* Date range selector */}
         <div style={{ display:"flex", gap:4 }}>
-          {[["1d","24H"],["7d","7D"],["30d","30D"],["90d","90D"],["all","ALL"]].map(([val,label]) => (
-            <button key={val} onClick={() => setDateRange(val)} style={{
+          {[["1d","24H"],["7d","7D"],["30d","30D"],["90d","90D"],["all","ALL"]].map(([rangeVal, rangeLabel]) => (
+            <button key={rangeVal} onClick={() => setDateRange(rangeVal)} style={{
               fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em",
               padding:"6px 12px", cursor:"pointer", border:"1px solid",
-              borderColor: dateRange===val ? "#c8ff00" : "#2a3a10",
-              background: dateRange===val ? "rgba(200,255,0,.1)" : "transparent",
-              color: dateRange===val ? "#c8ff00" : "#3a5010",
-            }}>{label}</button>
+              borderColor: dateRange===rangeVal ? "#c8ff00" : "#2a3a10",
+              background:  dateRange===rangeVal ? "rgba(200,255,0,.1)" : "transparent",
+              color:       dateRange===rangeVal ? "#c8ff00" : "#3a5010",
+            }}>{rangeLabel}</button>
           ))}
         </div>
       </div>
 
       {/* Tabs */}
       <div style={{ borderBottom:"1px solid #1a2808", padding:"0 24px", display:"flex", gap:0 }}>
-        {[["overview","OVERVIEW"],["pages","PAGES"],["locations","LOCATIONS"],["users","USERS"],["activity","ACTIVITY"]].map(([id,label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{
+        {[["overview","OVERVIEW"],["pages","PAGES"],["locations","LOCATIONS"],["users","USERS"],["activity","ACTIVITY"]].map(([tabId, tabLabel]) => (
+          <button key={tabId} onClick={() => setActiveTab(tabId)} style={{
             fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em",
             padding:"12px 16px", cursor:"pointer", background:"none", border:"none",
-            borderBottom: tab===id ? "2px solid #c8ff00" : "2px solid transparent",
-            color: tab===id ? "#c8ff00" : "#3a5010",
+            borderBottom: activeTab===tabId ? "2px solid #c8ff00" : "2px solid transparent",
+            color: activeTab===tabId ? "#c8ff00" : "#3a5010",
             marginBottom:-1,
-          }}>{label}</button>
+          }}>{tabLabel}</button>
         ))}
       </div>
 
       <div style={{ padding:"24px" }}>
 
-        {/* ── OVERVIEW TAB ── */}
-        {tab === "overview" && (
+        {/* ── OVERVIEW ── */}
+        {activeTab === "overview" && (
           <div>
-            {/* Stat cards */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
-              {statCard("Total Visits", totalVisits.toLocaleString())}
-              {statCard("Unique Sessions", uniqueSessions.toLocaleString(), null, "#4fc3f7")}
+              {statCard("Total Visits",     totalVisits.toLocaleString())}
+              {statCard("Unique Sessions",  uniqueSessions.toLocaleString(), null, "#4fc3f7")}
               {statCard("Logged-In Visits", loggedInVisits.toLocaleString(), `${uniqueUsers} unique users`, "#c8a000")}
               {statCard("Anonymous Visits", anonVisits.toLocaleString(), null, "#6a8050")}
             </div>
 
-            {/* Visits per day chart */}
+            {/* Day chart */}
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px", marginBottom:20 }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>VISITS PER DAY</div>
               <div style={{ display:"flex", alignItems:"flex-end", gap:4, height:80 }}>
-                {days.map(d => (
-                  <div key={d.date} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a5010" }}>{d.count||""}</div>
-                    <div style={{ width:"100%", background: d.count ? "#c8ff00" : "#1a2808", height: `${Math.round((d.count/maxDay)*56)+4}px`, minHeight:4, boxShadow: d.count ? "0 0 4px rgba(200,255,0,.3)" : "none", transition:"height .3s" }} />
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#2a3a10", whiteSpace:"nowrap", transform:"rotate(-45deg)", transformOrigin:"top left", marginTop:4, marginLeft:4 }}>{d.label}</div>
+                {dayBars.map(dayBar => (
+                  <div key={dayBar.date} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a5010" }}>{dayBar.count || ""}</div>
+                    <div style={{ width:"100%", background: dayBar.count ? "#c8ff00" : "#1a2808", height:`${Math.round((dayBar.count / maxDayCount) * 56) + 4}px`, minHeight:4, boxShadow: dayBar.count ? "0 0 4px rgba(200,255,0,.3)" : "none", transition:"height .3s" }} />
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#2a3a10", whiteSpace:"nowrap", transform:"rotate(-45deg)", transformOrigin:"top left", marginTop:4, marginLeft:4 }}>{dayBar.label}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Hour-of-day heatmap */}
+            {/* Hour heatmap */}
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px", marginBottom:20 }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>VISITS BY HOUR (LOCAL TIME)</div>
               <div style={{ display:"flex", gap:3 }}>
-                {hourMap.map((count, h) => {
-                  const intensity = count / maxHour;
-                  const bg = count === 0 ? "#0a0f06" : `rgba(200,255,0,${0.1 + intensity * 0.9})`;
+                {hourCounts.map((hourCount, hourIndex) => {
+                  const intensity = hourCount / maxHourCount;
+                  const heatBg = hourCount === 0 ? "#0a0f06" : `rgba(200,255,0,${0.1 + intensity * 0.9})`;
                   return (
-                    <div key={h} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }} title={`${h}:00 — ${count} visits`}>
-                      <div style={{ width:"100%", height:32, background:bg, border:"1px solid #1a2808", transition:"background .3s" }} />
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#2a3a10" }}>{h%6===0?`${h}h`:""}</div>
+                    <div key={hourIndex} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }} title={`${hourIndex}:00 — ${hourCount} visits`}>
+                      <div style={{ width:"100%", height:32, background:heatBg, border:"1px solid #1a2808", transition:"background .3s" }} />
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#2a3a10" }}>{hourIndex % 6 === 0 ? `${hourIndex}h` : ""}</div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Top pages + referrers side by side */}
+            {/* Top pages + referrers */}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
               <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>TOP PAGES</div>
-                {pageRows.slice(0,6).map(([pg, cnt]) => barRow(`${PAGE_ICONS[pg]||"▸"} ${pg}`, cnt, totalVisits))}
+                {pageRows.slice(0, 6).map(([pg, cnt]) => barRow(`${PAGE_ICONS[pg] || "▸"} ${pg}`, cnt, totalVisits))}
                 {pageRows.length === 0 && <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No data</div>}
               </div>
               <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>REFERRERS</div>
-                {refRows.map(([ref, cnt]) => barRow(ref, cnt, totalVisits, "#4fc3f7"))}
+                {refRows.map(([refKey, cnt]) => barRow(refKey, cnt, totalVisits, "#4fc3f7"))}
                 {refRows.length === 0 && <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No data</div>}
               </div>
             </div>
           </div>
         )}
 
-        {/* ── PAGES TAB ── */}
-        {tab === "pages" && (
+        {/* ── PAGES ── */}
+        {activeTab === "pages" && (
           <div style={{ background:"#0c1009", border:"1px solid #1a2808" }}>
             <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:8 }}>
-              {["PAGE","VISITS","SHARE"].map(h => (
-                <div key={h} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{h}</div>
+              {["PAGE","VISITS","SHARE"].map(colHead => (
+                <div key={colHead} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{colHead}</div>
               ))}
             </div>
             {pageRows.map(([pg, cnt]) => (
               <div key={pg} style={{ borderBottom:"1px solid #0f1a08", padding:"12px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:8, alignItems:"center" }}>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:15, color:"#b0c090", textTransform:"uppercase", letterSpacing:".05em" }}>
-                  {PAGE_ICONS[pg]||"▸"} {pg}
+                  {PAGE_ICONS[pg] || "▸"} {pg}
                 </div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, fontWeight:900, color:"#c8ff00" }}>{cnt}</div>
-                <div>
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <div style={{ flex:1, height:3, background:"#0a0f06" }}>
-                      <div style={{ height:"100%", width:`${Math.round(cnt/totalVisits*100)}%`, background:"#c8ff00" }} />
-                    </div>
-                    <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", minWidth:32 }}>{Math.round(cnt/totalVisits*100)}%</span>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ flex:1, height:3, background:"#0a0f06" }}>
+                    <div style={{ height:"100%", width:`${Math.round(cnt / totalVisits * 100)}%`, background:"#c8ff00" }} />
                   </div>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", minWidth:32 }}>{Math.round(cnt / totalVisits * 100)}%</span>
                 </div>
               </div>
             ))}
@@ -6782,42 +6786,42 @@ function AdminVisitorStats() {
           </div>
         )}
 
-        {/* ── LOCATIONS TAB ── */}
-        {tab === "locations" && (
+        {/* ── LOCATIONS ── */}
+        {activeTab === "locations" && (
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>BY COUNTRY</div>
-              {countryRows.map(([country, cnt]) => barRow(country, cnt, totalVisits))}
+              {countryRows.map(([countryName, cnt]) => barRow(countryName, cnt, totalVisits))}
               {countryRows.length === 0 && <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No location data yet — geo lookup fires on each new visit.</div>}
             </div>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>BY CITY</div>
-              {cityRows.map(([city, cnt]) => barRow(city, cnt, totalVisits, "#ce93d8"))}
+              {cityRows.map(([cityName, cnt]) => barRow(cityName, cnt, totalVisits, "#ce93d8"))}
               {cityRows.length === 0 && <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No location data yet.</div>}
             </div>
           </div>
         )}
 
-        {/* ── USERS TAB ── */}
-        {tab === "users" && (
+        {/* ── USERS ── */}
+        {activeTab === "users" && (
           <div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>
               {uniqueUsers} UNIQUE LOGGED-IN USERS · {loggedInVisits} VISITS
             </div>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808" }}>
               <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8 }}>
-                {["USER","VISITS","TOP PAGE","LAST SEEN"].map(h => (
-                  <div key={h} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{h}</div>
+                {["USER","VISITS","TOP PAGE","LAST SEEN"].map(colHead => (
+                  <div key={colHead} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{colHead}</div>
                 ))}
               </div>
-              {userRows.map((u, i) => {
-                const topPage = Object.entries(u.pages).sort((a,b)=>b[1]-a[1])[0]?.[0] || "—";
+              {userRows.map((userRow, userIdx) => {
+                const topPage = Object.entries(userRow.pages).sort((aa, bb) => bb[1] - aa[1])[0]?.[0] || "—";
                 return (
-                  <div key={i} style={{ borderBottom:"1px solid #0f1a08", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8, alignItems:"center" }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}>{u.name}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, fontWeight:900, color:"#c8ff00" }}>{u.count}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#3a5010", textTransform:"uppercase" }}>{PAGE_ICONS[topPage]||"▸"} {topPage}</div>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>{new Date(u.last).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+                  <div key={userIdx} style={{ borderBottom:"1px solid #0f1a08", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8, alignItems:"center" }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}>{userRow.name}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, fontWeight:900, color:"#c8ff00" }}>{userRow.count}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#3a5010", textTransform:"uppercase" }}>{PAGE_ICONS[topPage] || "▸"} {topPage}</div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>{new Date(userRow.last).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}</div>
                   </div>
                 );
               })}
@@ -6826,38 +6830,38 @@ function AdminVisitorStats() {
           </div>
         )}
 
-        {/* ── ACTIVITY TAB (raw feed) ── */}
-        {tab === "activity" && (
+        {/* ── ACTIVITY ── */}
+        {activeTab === "activity" && (
           <div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>
-              SHOWING {recent.length} MOST RECENT VISITS
+              SHOWING {recentRows.length} MOST RECENT VISITS
             </div>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808" }}>
               <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"1.5fr 1fr 1fr 1.5fr 1fr", gap:8 }}>
-                {["TIME","PAGE","USER","LOCATION","SESSION"].map(h => (
-                  <div key={h} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{h}</div>
+                {["TIME","PAGE","USER","LOCATION","SESSION"].map(colHead => (
+                  <div key={colHead} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{colHead}</div>
                 ))}
               </div>
-              {recent.map((v, i) => (
-                <div key={i} style={{ borderBottom:"1px solid #0a0f06", padding:"8px 16px", display:"grid", gridTemplateColumns:"1.5fr 1fr 1fr 1.5fr 1fr", gap:8, alignItems:"center" }}>
+              {recentRows.map((feedRow, feedIdx) => (
+                <div key={feedIdx} style={{ borderBottom:"1px solid #0a0f06", padding:"8px 16px", display:"grid", gridTemplateColumns:"1.5fr 1fr 1fr 1.5fr 1fr", gap:8, alignItems:"center" }}>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>
-                    {new Date(v.created_at).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}
+                    {new Date(feedRow.created_at).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}
                   </div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, color:"#c8ff00", textTransform:"uppercase" }}>
-                    {PAGE_ICONS[v.page]||"▸"} {v.page}
+                    {PAGE_ICONS[feedRow.page] || "▸"} {feedRow.page}
                   </div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, color: v.user_name ? "#b0c090" : "#2a3a10" }}>
-                    {v.user_name || "anon"}
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, color: feedRow.user_name ? "#b0c090" : "#2a3a10" }}>
+                    {feedRow.user_name || "anon"}
                   </div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>
-                    {[v.city, v.country].filter(Boolean).join(", ") || "—"}
+                    {[feedRow.city, feedRow.country].filter(Boolean).join(", ") || "—"}
                   </div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#1e2c0a", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                    {v.session_id?.slice(0,8)||"—"}
+                    {feedRow.session_id?.slice(0, 8) || "—"}
                   </div>
                 </div>
               ))}
-              {recent.length === 0 && <div style={{ padding:40, textAlign:"center", color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>NO ACTIVITY IN RANGE</div>}
+              {recentRows.length === 0 && <div style={{ padding:40, textAlign:"center", color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>NO ACTIVITY IN RANGE</div>}
             </div>
           </div>
         )}
