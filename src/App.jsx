@@ -3162,12 +3162,12 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
           <div style={{ textAlign: "center", padding: 80, fontFamily: "'Share Tech Mono',monospace", color: "#2a3a10", fontSize: 11, letterSpacing: ".2em" }}>NO COMBAT RECORDS ON FILE</div>
         )}
 
-        {board.map((u, i) => {
+        {board.map((player, i) => {
           const isTop3 = i < 3;
           const medalColor = i === 0 ? "#c8a000" : i === 1 ? "#8a8a8a" : i === 2 ? "#8b4513" : null;
           const rankTitle = i === 0 ? "FIELD COMMANDER" : i === 1 ? "SENIOR OPERATIVE" : i === 2 ? "OPERATIVE" : i < 10 ? "RECRUIT" : "PRIVATE";
           return (
-            <div key={u.id} style={{
+            <div key={player.id} style={{
               display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", marginBottom: 3,
               background: isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.04)` : "#0c1009",
               border: `1px solid ${isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}`,
@@ -3185,17 +3185,17 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
               </div>
               {/* Avatar */}
               <div style={{ width: 38, height: 38, background: "#0a0c08", border: `1px solid ${medalColor || "#1a2808"}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, overflow: "hidden", flexShrink: 0, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif" }}>
-                {u.profilePic ? <img src={u.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : u.name[0]}
+                {player.profilePic ? <img src={player.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : player.name[0]}
               </div>
               {/* Name + rank */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".08em", color: isTop3 ? (medalColor || "#e8f0d8") : "#b0c090", textTransform: "uppercase", lineHeight: 1.1 }}>{u.name}</div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".08em", color: isTop3 ? (medalColor || "#e8f0d8") : "#b0c090", textTransform: "uppercase", lineHeight: 1.1 }}>{player.name}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".15em", color: medalColor || "#2a3a10", marginTop: 3 }}>{rankTitle}</div>
-                {u.vipStatus === "active" && <span className="tag tag-gold" style={{ marginTop: 4, display: "inline-flex" }}>★ VIP OPERATIVE</span>}
+                {player.vipStatus === "active" && <span className="tag tag-gold" style={{ marginTop: 4, display: "inline-flex" }}>★ VIP OPERATIVE</span>}
               </div>
               {/* Games count */}
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: medalColor || "#c8ff00", lineHeight: 1 }}>{u.gamesAttended}</div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: medalColor || "#c8ff00", lineHeight: 1 }}>{player.gamesAttended}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".2em", color: "#2a3a10", marginTop: 2 }}>DEPLOYMENTS</div>
               </div>
               {/* Left accent bar for top 3 */}
@@ -4735,8 +4735,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       const actualCount = await api.bookings.checkIn(booking.id, booking.userId);
       const evList = await api.events.getAll();
       save({ events: evList });
-      const u = data.users.find(x => x.id === booking.userId);
-      if (u) updateUser(u.id, { gamesAttended: actualCount });
+      const checkedInUser = data.users.find(x => x.id === booking.userId);
+      if (checkedInUser) updateUser(checkedInUser.id, { gamesAttended: actualCount });
       showToast(`✅ ${booking.userName} checked in! Games: ${actualCount}`);
     } catch (e) {
       showToast("Check-in failed: " + e.message, "red");
@@ -6243,11 +6243,11 @@ function AdminShop({ data, save, showToast }) {
 
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
-    const v = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0 };
-    f("variants", [...(form.variants || []), v]);
+    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0 };
+    f("variants", [...(form.variants || []), newVar]);
     setNewVariant({ name: "", price: "", stock: "" });
   };
-  const removeVariant = (id) => f("variants", form.variants.filter(v => v.id !== id));
+  const removeVariant = (id) => f("variants", form.variants.filter(varItem => varItem.id !== id));
   const updateVariant = (id, key, val) => f("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
 
   const hasVariants = (form.variants || []).length > 0;
@@ -6504,11 +6504,11 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
         <div className="table-wrap"><table className="data-table">
           <thead><tr><th>Rank</th><th>Player</th><th>Games</th><th>VIP</th><th>Visible</th></tr></thead>
           <tbody>
-            {board.map((u, i) => (
-              <tr key={u.id}>
-                <td>{i + 1}</td><td style={{ fontWeight: 600 }}>{u.name}</td><td>{u.gamesAttended}</td>
-                <td>{u.vipStatus === "active" ? <span className="tag tag-gold">⭐</span> : "—"}</td>
-                <td>{u.leaderboardOptOut ? <span className="tag tag-red">Hidden</span> : <span className="tag tag-green">Visible</span>}</td>
+            {board.map((boardPlayer, i) => (
+              <tr key={boardPlayer.id}>
+                <td>{i + 1}</td><td style={{ fontWeight: 600 }}>{boardPlayer.name}</td><td>{boardPlayer.gamesAttended}</td>
+                <td>{boardPlayer.vipStatus === "active" ? <span className="tag tag-gold">⭐</span> : "—"}</td>
+                <td>{boardPlayer.leaderboardOptOut ? <span className="tag tag-red">Hidden</span> : <span className="tag tag-green">Visible</span>}</td>
               </tr>
             ))}
           </tbody>
@@ -7437,11 +7437,11 @@ function StaffPage({ staff = [] }) {
   const getRankLabel = r => RANK_LABELS[r] || "MARSHAL";
 
   const tiers = staff.reduce((acc, member) => {
-    const t = acc.find(t => t.rank === member.rank_order);
-    if (t) t.members.push(member);
+    const existingTier = acc.find(tier => tier.rank === member.rank_order);
+    if (existingTier) existingTier.members.push(member);
     else acc.push({ rank: member.rank_order, members: [member] });
     return acc;
-  }, []).sort((a, b) => a.rank - b.rank);
+  }, []).sort((tierA, tierB) => tierA.rank - tierB.rank);
 
   return (
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
@@ -8059,8 +8059,8 @@ function AdminContactDepts({ showToast, save }) {
     await persist(depts.filter((_, idx) => idx !== i));
   };
 
-  const moveUp   = (i) => { if (i === 0) return; const u = [...depts]; [u[i-1], u[i]] = [u[i], u[i-1]]; persist(u); };
-  const moveDown = (i) => { if (i === depts.length-1) return; const u = [...depts]; [u[i], u[i+1]] = [u[i+1], u[i]]; persist(u); };
+  const moveUp   = (i) => { if (i === 0) return; const deptsArr = [...depts]; [deptsArr[i-1], deptsArr[i]] = [deptsArr[i], deptsArr[i-1]]; persist(deptsArr); };
+  const moveDown = (i) => { if (i === depts.length-1) return; const deptsArr = [...depts]; [deptsArr[i], deptsArr[i+1]] = [deptsArr[i+1], deptsArr[i]]; persist(deptsArr); };
 
   return (
     <div>
