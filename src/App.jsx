@@ -733,7 +733,7 @@ function Countdown({ target }) {
     const tick = () => setDiff(Math.max(0, new Date(target) - new Date()));
     tick();
     const tickInterval = setInterval(tick, 1000);
-    return () => clearInterval(t);
+    return () => clearInterval(tickInterval);
   }, [target]);
   const diffDays = Math.floor(diff / 86400000);
   const diffHours = Math.floor((diff % 86400000) / 3600000);
@@ -741,7 +741,7 @@ function Countdown({ target }) {
   const diffSecs = Math.floor((diff % 60000) / 1000);
   return (
     <div className="countdown-wrap">
-      {[["DAYS", d], ["HRS", h], ["MIN", m], ["SEC", s]].map(([l, n]) => (
+      {[["DAYS", diffDays], ["HRS", diffHours], ["MIN", diffMins], ["SEC", diffSecs]].map(([l, n]) => (
         <div className="countdown-unit" key={l}>
           <div className="countdown-num">{String(n).padStart(2, "0")}</div>
           <div className="countdown-lbl">{l}</div>
@@ -1705,7 +1705,7 @@ function CountdownPanel({ target }) {
     const tick = () => setDiff(Math.max(0, new Date(target) - new Date()));
     tick();
     const countdownInterval = setInterval(tick, 1000);
-    return () => clearInterval(t);
+    return () => clearInterval(countdownInterval);
   }, [target]);
   const cdDays = Math.floor(diff / 86400000);
   const cdHours = Math.floor((diff % 86400000) / 3600000);
@@ -1713,7 +1713,7 @@ function CountdownPanel({ target }) {
   const cdSecs = Math.floor((diff % 60000) / 1000);
   return (
     <>
-      {[["DAYS", d], ["HRS", h], ["MIN", m], ["SEC", s]].map(([l, n]) => (
+      {[["DAYS", cdDays], ["HRS", cdHours], ["MIN", cdMins], ["SEC", cdSecs]].map(([l, n]) => (
         <div className="countdown-panel-unit" key={l}>
           <div className="countdown-panel-num">{String(n).padStart(2, "0")}</div>
           <div className="countdown-panel-lbl">{l}</div>
