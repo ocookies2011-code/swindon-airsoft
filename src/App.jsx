@@ -4899,6 +4899,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         const price = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
         return s + price * qty;
       }, 0);
+      const newBooking = await api.bookings.create({
         eventId: targetEv.id,
         userId: player.id,
         userName: player.name,
