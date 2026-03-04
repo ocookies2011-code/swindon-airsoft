@@ -22,7 +22,7 @@ function renderMd(md) {
     .replace(/\n/g, "<br>");
 }
 function stockLabel(qty) {
-  const qty_num = Number(qty);
+  const n = Number(qty);
   if (n < 1)  return { text: "OUT OF STOCK", color: "var(--red)" };
   if (n < 10) return { text: "LOW STOCK",    color: "var(--gold)" };
   if (n < 20) return { text: "MED STOCK",    color: "#4fc3f7" };

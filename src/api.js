@@ -488,7 +488,7 @@ function normaliseProduct(p) {
   }
 }
 
-function normaliseProfile(p) {
+export function normaliseProfile(p) {
   return {
     id:                 p.id,
     name:               p.name,
@@ -513,8 +513,6 @@ function normaliseProfile(p) {
     joinDate:           p.join_date,
   }
 }
-
-export { normaliseProfile }
 
 function toSnakeEvent(ev) {
   // Strip base64 banners — too large for DB text column; only store URLs
