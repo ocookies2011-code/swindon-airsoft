@@ -4849,6 +4849,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const blank = { title: "", date: "", time: "09:00", endTime: "17:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false };
   const [form, setForm] = useState(blank);
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
+  const f = setField;
 
   // ── Check-in state ──
   const [evId, setEvId] = useState(data.events[0]?.id || "");
