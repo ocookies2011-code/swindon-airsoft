@@ -6084,15 +6084,25 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               <button className="btn btn-primary" disabled={vipApproveBusy || !vipUkara.trim()} onClick={async () => {
                 setVipApproveBusy(true);
                 try {
-                  // Write only vip fields directly — avoids any side-effects from updateUser
-                  // and explicitly preserves games_attended so it cannot be reset
-                  const { error } = await supabase.from('profiles').update({
-                    vip_status:     "active",
-                    vip_applied:    true,
-                    ukara:          vipUkara.trim(),
-                    games_attended: vipApproveModal.gamesAttended ?? 0,
+                  // Step 1: read the current games_attended from DB before touching anything
+                  const { data: freshProfile, error: readErr } = await supabase
+                    .from('profiles').select('games_attended').eq('id', vipApproveModal.id).single();
+                  if (readErr) throw new Error(readErr.message);
+                  const preservedCount = freshProfile?.games_attended ?? vipApproveModal.gamesAttended ?? 0;
+
+                  // Step 2: write the VIP fields
+                  const { error: vipErr } = await supabase.from('profiles').update({
+                    vip_status:  "active",
+                    vip_applied: true,
+                    ukara:       vipUkara.trim(),
                   }).eq('id', vipApproveModal.id);
-                  if (error) throw new Error(error.message);
+                  if (vipErr) throw new Error(vipErr.message);
+
+                  // Step 3: immediately restore games_attended in case any trigger reset it
+                  await supabase.from('profiles')
+                    .update({ games_attended: preservedCount })
+                    .eq('id', vipApproveModal.id);
+
                   await loadUsers();
                   showToast(`✅ VIP approved for ${vipApproveModal.name}! UKARA: ${vipUkara.trim()}`);
                   setVipApproveModal(null);
