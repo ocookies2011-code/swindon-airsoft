@@ -3502,6 +3502,8 @@ function GalleryPage({ data }) {
 function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   const isMobile = useMobile(640);
   const [applying, setApplying] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [vipPayError, setVipPayError] = useState(null);
 
   const myBookings = cu ? data.events.flatMap(ev =>
     ev.bookings.filter(b => b.userId === cu.id && b.checkedIn).map(b => b)
@@ -3512,14 +3514,18 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   const isVip = cu?.vipStatus === "active";
   const hasPending = cu?.vipApplied && !isVip;
 
-  const applyForVip = async () => {
-    if (!cu) { setAuthModal("login"); return; }
+  const handleVipPaymentSuccess = async (paypalOrder) => {
     setApplying(true);
+    setVipPayError(null);
     try {
       await updateUser(cu.id, { vipApplied: true });
-      showToast("VIP application submitted! Admin will review shortly.");
-    } catch(e) { showToast("Failed: " + e.message, "red"); }
-    finally { setApplying(false); }
+      setShowPayment(false);
+      showToast("🎉 Payment received! VIP application submitted — admin will activate your status shortly.");
+    } catch (e) {
+      setVipPayError("Payment succeeded but application failed — please contact us. Ref: " + paypalOrder.id);
+    } finally {
+      setApplying(false);
+    }
   };
 
   const benefits = [
@@ -3636,17 +3642,36 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
               <div className="alert alert-green" style={{ textAlign:"center" }}>⭐ You are already a VIP member!</div>
             )}
             {cu && hasPending && (
-              <div className="alert alert-blue" style={{ textAlign:"center" }}>⏳ Application under review</div>
+              <div className="alert alert-blue" style={{ textAlign:"center" }}>⏳ Payment received — application under review. Admin will activate your status shortly.</div>
             )}
-            {cu && canApply && (
-              <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }} onClick={applyForVip} disabled={applying}>
-                {applying ? "Submitting…" : "APPLY FOR VIP — £30/YEAR"}
+            {cu && canApply && !showPayment && (
+              <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }}
+                onClick={() => { setShowPayment(true); setVipPayError(null); }}>
+                APPLY &amp; PAY — £30/YEAR
               </button>
+            )}
+            {cu && canApply && showPayment && (
+              <div>
+                <div style={{ background:"#0d1a0d", border:"1px solid #1e3a1e", padding:"10px 14px", marginBottom:12, fontSize:12, color:"#8aaa60" }}>
+                  💳 Pay now to submit your VIP application. Your status will be activated by admin after payment is confirmed.
+                </div>
+                {vipPayError && (
+                  <div className="alert alert-red" style={{ marginBottom:10 }}>{vipPayError}</div>
+                )}
+                <PayPalCheckoutButton
+                  amount={30}
+                  description="Swindon Airsoft — VIP Membership (Annual)"
+                  disabled={applying}
+                  onSuccess={handleVipPaymentSuccess}
+                />
+                <button className="btn btn-ghost" style={{ width:"100%", marginTop:10, fontSize:12 }}
+                  onClick={() => setShowPayment(false)}>Cancel</button>
+              </div>
             )}
             {cu && !isVip && !hasPending && !canApply && (
               <div>
                 <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14, opacity:.5, cursor:"not-allowed" }} disabled>
-                  APPLY FOR VIP — £30/YEAR
+                  APPLY &amp; PAY — £30/YEAR
                 </button>
                 <div style={{ fontSize:12, color:"var(--muted)", textAlign:"center", marginTop:8 }}>
                   Complete {gamesNeeded} more game day{gamesNeeded !== 1 ? "s" : ""} to unlock
@@ -3655,7 +3680,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             )}
 
             <div style={{ marginTop:16, fontSize:11, color:"var(--muted)", lineHeight:1.6, textAlign:"center" }}>
-              Payment will be collected by the admin upon approval. VIP status is activated manually after review.
+              Pay the £30 annual fee now. Admin will review and activate your VIP status — usually within 24 hours.
             </div>
           </div>
         </div>
@@ -3666,8 +3691,8 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
           <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:16 }}>
             {[
               { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
-              { num:"02", title:"SUBMIT APPLICATION", desc:"Once eligible, apply for VIP membership through this page. Admin will review your application." },
-              { num:"03", title:"PAY & ACTIVATE", desc:"After approval, pay the £30 annual fee and your VIP status is activated immediately." },
+              { num:"02", title:"PAY & APPLY", desc:"Once eligible, pay the £30 annual fee directly on this page. Your application is submitted automatically on payment." },
+              { num:"03", title:"ADMIN ACTIVATES", desc:"Admin reviews your application and activates your VIP status — usually within 24 hours of payment." },
             ].map(step => (
               <div key={step.num} style={{ padding:16, background:"#0d0d0d", border:"1px solid #1a1a1a" }}>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:36, color:"var(--accent)", opacity:.4, lineHeight:1, marginBottom:8 }}>{step.num}</div>
@@ -5719,6 +5744,18 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
 
   const [savingEdit, setSavingEdit] = useState(false);
+  const [delAccountConfirm, setDelAccountConfirm] = useState(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const confirmDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await api.profiles.delete(delAccountConfirm.id);
+      save({ users: data.users.filter(x => x.id !== delAccountConfirm.id) });
+      showToast(`Account deleted: ${delAccountConfirm.name}`, "red");
+      setDelAccountConfirm(null);
+    } catch (e) { showToast("Delete failed: " + e.message, "red"); }
+    finally { setDeletingAccount(false); }
+  };
 
   const saveEdit = async () => {
     setSavingEdit(true);
@@ -5838,7 +5875,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No pending VIP applications.</div>
           ) : (
             <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Fee (£30)</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Payment</th><th>Actions</th></tr></thead>
               <tbody>
                 {vipApps.map(u => (
                   <tr key={u.id}>
@@ -5847,14 +5884,14 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     <td style={{ color: u.gamesAttended >= 3 ? "var(--accent)" : "var(--red)" }}>{u.gamesAttended} / 3</td>
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
                     <td>
-                      <span style={{ fontSize:11, color:"var(--gold)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>£30 due on approval</span>
+                      <span className="tag tag-green" style={{ fontSize:11 }}>✓ £30 paid</span>
                     </td>
                     <td>
                       <div className="gap-2">
                         <button className="btn btn-sm btn-primary" onClick={async () => {
                           const ukara = `UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`;
                           await updateUserAndRefresh(u.id, { vipStatus: "active", vipApplied: true, ukara });
-                          showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}. Collect £30 fee.`);
+                          showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}.`);
                         }}>✓ Approve</button>
                         <button className="btn btn-sm btn-danger" onClick={async () => {
                           await updateUserAndRefresh(u.id, { vipApplied: false });
@@ -5885,13 +5922,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
                     <td>
                       <div className="gap-2">
-                        <button className="btn btn-sm btn-danger" onClick={async () => {
-                          try {
-                            await api.profiles.delete(u.id);
-                            save({ users: data.users.filter(x => x.id !== u.id) });
-                            showToast(`Account deleted: ${u.name}`, "red");
-                          } catch (e) { showToast("Delete failed: " + e.message, "red"); }
-                        }}>Delete Account</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => setDelAccountConfirm(u)}>Delete Account</button>
                         <button className="btn btn-sm btn-ghost" onClick={() => {
                           updateUser(u.id, { deleteRequest: false });
                           showToast("Deletion request cancelled");
@@ -5961,6 +5992,26 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save Changes"}</button>
               <button className="btn btn-ghost" onClick={() => setEdit(null)} disabled={savingEdit}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {delAccountConfirm && (
+        <div className="overlay" onClick={() => !deletingAccount && setDelAccountConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🗑 Delete Account?</div>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 4px" }}>
+              Permanently delete the account for <strong style={{ color: "var(--text)" }}>{delAccountConfirm.name}</strong>?
+            </p>
+            <p style={{ fontSize: 12, color: "var(--red)", marginBottom: 20 }}>
+              ⚠️ This will delete their profile, waiver data, and auth account. Their booking history will be unlinked. This cannot be undone.
+            </p>
+            <div className="gap-2">
+              <button className="btn btn-danger" disabled={deletingAccount} onClick={confirmDeleteAccount}>
+                {deletingAccount ? "Deleting…" : "Yes, Delete Account"}
+              </button>
+              <button className="btn btn-ghost" disabled={deletingAccount} onClick={() => setDelAccountConfirm(null)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -6478,6 +6529,19 @@ function AdminShop({ data, save, showToast }) {
     reader2.readAsDataURL(file);
   };
 
+  const [delProductConfirm, setDelProductConfirm] = useState(null);
+  const [deletingProduct, setDeletingProduct] = useState(false);
+  const confirmDeleteProduct = async () => {
+    setDeletingProduct(true);
+    try {
+      await api.shop.delete(delProductConfirm.id);
+      save({ shop: await api.shop.getAll() });
+      showToast("Product deleted");
+      setDelProductConfirm(null);
+    } catch (e) { showToast("Delete failed: " + e.message, "red"); }
+    finally { setDeletingProduct(false); }
+  };
+
   const [savingProduct, setSavingProduct] = useState(false);
   const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
@@ -6562,7 +6626,7 @@ function AdminShop({ data, save, showToast }) {
                   <td>
                     <div className="gap-2">
                       <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setModal(item.id); }}>Edit</button>
-                      <button className="btn btn-sm btn-danger" onClick={async () => { try { await api.shop.delete(item.id); save({ shop: await api.shop.getAll() }); showToast("Deleted"); } catch(e) { showToast("Delete failed", "red"); } }}>Del</button>
+                      <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
                     </div>
                   </td>
                 </tr>
@@ -6687,6 +6751,26 @@ function AdminShop({ data, save, showToast }) {
             <div className="gap-2 mt-2">
               <button className="btn btn-primary" onClick={savePostage}>Save</button>
               <button className="btn btn-ghost" onClick={() => setPostModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {delProductConfirm && (
+        <div className="overlay" onClick={() => !deletingProduct && setDelProductConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🗑 Delete Product?</div>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 4px" }}>
+              Permanently delete <strong style={{ color: "var(--text)" }}>{delProductConfirm.name}</strong>?
+            </p>
+            <p style={{ fontSize: 12, color: "var(--red)", marginBottom: 20 }}>
+              ⚠️ This cannot be undone. Any event extras linked to this product will also lose their pricing reference.
+            </p>
+            <div className="gap-2">
+              <button className="btn btn-danger" disabled={deletingProduct} onClick={confirmDeleteProduct}>
+                {deletingProduct ? "Deleting…" : "Yes, Delete Product"}
+              </button>
+              <button className="btn btn-ghost" disabled={deletingProduct} onClick={() => setDelProductConfirm(null)}>Cancel</button>
             </div>
           </div>
         </div>
