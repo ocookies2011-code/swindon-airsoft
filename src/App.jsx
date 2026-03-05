@@ -2085,7 +2085,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
   if (ev) {
     const vipDisc   = cu?.vipStatus === "active" ? 0.1 : 0;
-    const waiverValid = (cu?.waiverSigned && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
+    const waiverValid = (cu?.waiverSigned === true && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
     const myBookings  = cu ? ev.bookings.filter(b => b.userId === cu.id) : [];
 
     // Per-type slots remaining
@@ -2132,6 +2132,46 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       const safety = setTimeout(() => setBookingBusy(false), 30000);
       try {
         const extrasSnapshot = Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0));
+
+        // ── Stock check: verify extras haven't sold out between cart and payment ──
+        const extrasToCheck = Object.entries(extrasSnapshot).filter(([,qty]) => qty > 0);
+        if (extrasToCheck.length > 0) {
+          const productIds = [...new Set(extrasToCheck.map(([key]) => {
+            const [extraId] = key.includes(":") ? key.split(":") : [key, null];
+            return visibleExtras.find(e => e.id === extraId)?.productId;
+          }).filter(Boolean))];
+
+          if (productIds.length > 0) {
+            const { data: freshProducts } = await supabase
+              .from('shop_products').select('id, stock, variants').in('id', productIds);
+
+            const stockInsufficient = extrasToCheck.find(([key, qty]) => {
+              const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+              const extra = visibleExtras.find(e => e.id === extraId);
+              if (!extra?.productId) return false;
+              const product = (freshProducts || []).find(p => p.id === extra.productId);
+              if (!product) return false;
+              if (variantId) {
+                const variants = Array.isArray(product.variants) ? product.variants : [];
+                const variant = variants.find(v => v.id === variantId);
+                return !variant || Number(variant.stock) < qty;
+              }
+              return Number(product.stock) < qty;
+            });
+
+            if (stockInsufficient) {
+              const [key] = stockInsufficient;
+              const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+              const extra = visibleExtras.find(e => e.id === extraId);
+              const name = extra?.name || "an item";
+              clearTimeout(safety);
+              setBookingBusy(false);
+              setPaypalError(`Sorry — ${name}${variantId ? " (selected variant)" : ""} just sold out while you were paying. Your payment has been taken — please contact us immediately with your PayPal reference (${paypalOrder.id}) and we will refund or substitute.`);
+              return;
+            }
+          }
+        }
+
         // Create booking records in parallel
         const bookingPromises = [];
         if (bCart.walkOn > 0) {
@@ -3878,7 +3918,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
 
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
-  const waiverValid = (cu.waiverSigned && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin";
+  const waiverValid = (cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin";
   const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date })));
 
   // Count actual checked-in games from booking records — source of truth
@@ -4502,7 +4542,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
   const pendingWaivers = data.users.filter(u => u.waiverPending).length;
   const pendingVip = data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length;  const deleteReqs = data.users.filter(u => u.deleteRequest).length;
-  const unsigned = data.users.filter(u => u.role === "player" && !u.waiverSigned).length;
+  const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
   const upcomingEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
   const totalBookings = data.events.flatMap(e => e.bookings).length;
   const checkins = data.events.flatMap(e => e.bookings).filter(b => b.checkedIn).length;
@@ -4601,8 +4641,7 @@ function AdminDash({ data, setSection }) {
   const revenue = allBookings.filter(b => !b.paypalOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
   const checkins = allBookings.filter(b => b.checkedIn).length;
   const players = data.users.filter(u => u.role === "player").length;
-  const unsigned = data.users.filter(u => u.role === "player" && !u.waiverSigned).length;
-  const activeEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
+  const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
   const pendingWaivers = data.users.filter(u => u.waiverPending).length;
 
   // Weekly bookings bar chart
@@ -5593,7 +5632,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                 </select>
                 {selectedPlayer && (
                   <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>
-                    Waiver: {selectedPlayer.waiverSigned && selectedPlayer.waiverYear === new Date().getFullYear()
+                    Waiver: {selectedPlayer.waiverSigned === true && selectedPlayer.waiverYear === new Date().getFullYear()
                       ? <span style={{ color: "var(--accent)" }}>✓ Signed {selectedPlayer.waiverYear}</span>
                       : <span style={{ color: "var(--red)" }}>✗ Not signed</span>}
                     {" · "} UKARA: {selectedPlayer.ukara || "—"}
@@ -5855,7 +5894,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     {u.vipStatus === "active" ? <span className="tag tag-gold">⭐ VIP</span> : u.vipApplied ? <span className="tag tag-blue">Applied</span> : "—"}
                     {u.ukara && <span className="mono" style={{ fontSize: 10, color: "var(--accent)", marginLeft: 6 }}>{u.ukara}</span>}
                   </td>
-                  <td>{u.waiverSigned && u.waiverYear === new Date().getFullYear() ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
+                  <td>{u.waiverSigned === true && u.waiverYear === new Date().getFullYear() ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
                   <td>{u.credits > 0 ? <span className="text-gold">£{u.credits}</span> : "—"}</td>
                   <td><button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button></td>
                 </tr>
@@ -6034,7 +6073,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned })
   const allUsers = localUsers ?? data.users;
   const withWaiver = allUsers.filter(u => u.role !== 'admin' && (u.waiverData || u.waiverPending));
   const displayUsers = filterUnsigned
-    ? allUsers.filter(u => u.role === 'player' && !u.waiverSigned)
+    ? allUsers.filter(u => u.role === 'player' && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear()))
     : withWaiver;
 
   const approve = (u) => {
