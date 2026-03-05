@@ -5790,6 +5790,9 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const [savingEdit, setSavingEdit] = useState(false);
   const [delAccountConfirm, setDelAccountConfirm] = useState(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [vipApproveModal, setVipApproveModal] = useState(null); // user being approved
+  const [vipUkara, setVipUkara] = useState("");
+  const [vipApproveBusy, setVipApproveBusy] = useState(false);
   const confirmDeleteAccount = async () => {
     setDeletingAccount(true);
     try {
@@ -5932,10 +5935,9 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     </td>
                     <td>
                       <div className="gap-2">
-                        <button className="btn btn-sm btn-primary" onClick={async () => {
-                          const ukara = `UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`;
-                          await updateUserAndRefresh(u.id, { vipStatus: "active", vipApplied: true, ukara });
-                          showToast(`✅ VIP approved for ${u.name}! UKARA: ${ukara}.`);
+                        <button className="btn btn-sm btn-primary" onClick={() => {
+                          setVipUkara(`UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`);
+                          setVipApproveModal(u);
                         }}>✓ Approve</button>
                         <button className="btn btn-sm btn-danger" onClick={async () => {
                           await updateUserAndRefresh(u.id, { vipApplied: false });
@@ -6056,6 +6058,44 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                 {deletingAccount ? "Deleting…" : "Yes, Delete Account"}
               </button>
               <button className="btn btn-ghost" disabled={deletingAccount} onClick={() => setDelAccountConfirm(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {vipApproveModal && (
+        <div className="overlay" onClick={() => !vipApproveBusy && setVipApproveModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">⭐ Approve VIP — {vipApproveModal.name}</div>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 16px" }}>
+              Set the UKARA ID for this player. A unique ID has been pre-generated — edit it if needed.
+            </p>
+            <div className="form-group">
+              <label>UKARA ID</label>
+              <input
+                value={vipUkara}
+                onChange={e => setVipUkara(e.target.value)}
+                placeholder="e.g. UKARA-2025-042"
+                style={{ fontFamily: "'Share Tech Mono',monospace" }}
+                disabled={vipApproveBusy}
+              />
+            </div>
+            <div className="gap-2" style={{ marginTop: 8 }}>
+              <button className="btn btn-primary" disabled={vipApproveBusy || !vipUkara.trim()} onClick={async () => {
+                setVipApproveBusy(true);
+                try {
+                  await updateUserAndRefresh(vipApproveModal.id, { vipStatus: "active", vipApplied: true, ukara: vipUkara.trim() });
+                  showToast(`✅ VIP approved for ${vipApproveModal.name}! UKARA: ${vipUkara.trim()}`);
+                  setVipApproveModal(null);
+                } catch (e) {
+                  showToast("Approval failed: " + e.message, "red");
+                } finally {
+                  setVipApproveBusy(false);
+                }
+              }}>
+                {vipApproveBusy ? "Approving…" : "✓ Confirm Approval"}
+              </button>
+              <button className="btn btn-ghost" disabled={vipApproveBusy} onClick={() => setVipApproveModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
