@@ -4646,6 +4646,7 @@ function AdminDash({ data, setSection }) {
   const checkins = allBookings.filter(b => b.checkedIn).length;
   const players = data.users.filter(u => u.role === "player").length;
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
+  const activeEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
   const pendingWaivers = data.users.filter(u => u.waiverPending).length;
 
   // Weekly bookings bar chart
