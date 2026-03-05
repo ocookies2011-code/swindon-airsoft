@@ -8363,12 +8363,20 @@ function AdminMessages({ data, save, showToast }) {
 // ── Admin Cash Sales ──────────────────────────────────────
 function AdminCash({ data, cu, showToast }) {
   const [items, setItems] = useState([]);
+  const [shopProducts, setShopProducts] = useState(data.shop || []);
+  const [shopLoading, setShopLoading] = useState(true);
   const [playerId, setPlayerId] = useState("manual");
   const [manual, setManual] = useState({ name: "", email: "" });
   const [busy, setBusy] = useState(false);
   const [lastError, setLastError] = useState(null);
   const [diagResult, setDiagResult] = useState(null);
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+
+  useEffect(() => {
+    api.shop.getAll()
+      .then(list => { setShopProducts(list); setShopLoading(false); })
+      .catch(() => { setShopProducts(data.shop || []); setShopLoading(false); });
+  }, []);
 
   const add = (item) => setItems(c => {
     const ex = c.find(x => x.id === item.id);
@@ -8459,13 +8467,41 @@ function AdminCash({ data, cu, showToast }) {
       <div className="grid-2">
         <div className="card">
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>PRODUCTS</div>
-          {data.shop.length === 0 && <p className="text-muted" style={{ fontSize: 13 }}>No products in shop yet. Add products in the Shop section.</p>}
-          {data.shop.map(item => (
-            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-              <span style={{ fontSize: 13 }}>{item.name}</span>
-              <div className="gap-2"><span className="text-green">£{item.price}</span><button className="btn btn-sm btn-primary" onClick={() => add(item)}>+</button></div>
-            </div>
-          ))}
+          {shopLoading && <p className="text-muted" style={{ fontSize: 13 }}>Loading products…</p>}
+          {!shopLoading && shopProducts.length === 0 && <p className="text-muted" style={{ fontSize: 13 }}>No products in shop yet. Add products in the Shop section.</p>}
+          {!shopLoading && shopProducts.map(item => {
+            const effectivePrice = item.onSale && item.salePrice ? item.salePrice : item.price;
+            if (item.variants && item.variants.length > 0) {
+              return (
+                <div key={item.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8, marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
+                  {item.variants.map(v => (
+                    <div key={v.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0 3px 12px" }}>
+                      <span style={{ fontSize: 12, color: "var(--muted)" }}>{v.name}</span>
+                      <div className="gap-2">
+                        <span className="text-green" style={{ fontSize: 12 }}>£{Number(v.price).toFixed(2)}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted)" }}>({v.stock})</span>
+                        <button className="btn btn-sm btn-primary" onClick={() => add({ id: `${item.id}::${v.id}`, name: `${item.name} — ${v.name}`, price: Number(v.price) })}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                <div>
+                  <span style={{ fontSize: 13 }}>{item.name}</span>
+                  {item.onSale && item.salePrice && <span className="tag tag-red" style={{ fontSize: 9, marginLeft: 6 }}>SALE</span>}
+                </div>
+                <div className="gap-2">
+                  <span className="text-green">£{Number(effectivePrice).toFixed(2)}</span>
+                  <span style={{ fontSize: 11, color: "var(--muted)" }}>({item.stock})</span>
+                  <button className="btn btn-sm btn-primary" onClick={() => add({ id: item.id, name: item.name, price: Number(effectivePrice) })}>+</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
         <div>
           <div className="card mb-2">
