@@ -4381,6 +4381,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
           {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
+          {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
@@ -4419,7 +4420,7 @@ function AdminDash({ data, setSection }) {
   const maxBar = Math.max(...weekCounts, 1);
 
   const alerts = [
-    unsigned > 0 && { msg: `${unsigned} player(s) with unsigned waivers.`, section: "waivers" },
+    unsigned > 0 && { msg: `${unsigned} player(s) with unsigned waivers.`, section: "unsigned-waivers" },
     pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers" },
     data.users.filter(u => u.deleteRequest).length > 0 && { msg: `${data.users.filter(u => u.deleteRequest).length} account deletion request(s).`, section: "players" },
     data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length > 0 && { msg: `${data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length} VIP application(s) awaiting review.`, section: "players" },
@@ -5773,7 +5774,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 }
 
 // ── Admin Waivers ─────────────────────────────────────────
-function AdminWaivers({ data, updateUser, showToast, embedded }) {
+function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned }) {
   const [view, setView] = useState(null);
   const [localUsers, setLocalUsers] = useState(null);
 
@@ -5785,6 +5786,9 @@ function AdminWaivers({ data, updateUser, showToast, embedded }) {
 
   const allUsers = localUsers ?? data.users;
   const withWaiver = allUsers.filter(u => u.role !== 'admin' && (u.waiverData || u.waiverPending));
+  const displayUsers = filterUnsigned
+    ? allUsers.filter(u => u.role === 'player' && !u.waiverSigned)
+    : withWaiver;
 
   const approve = (u) => {
     updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
@@ -5808,12 +5812,12 @@ function AdminWaivers({ data, updateUser, showToast, embedded }) {
 
   return (
     <div>
-      {!embedded && <div className="page-header"><div><div className="page-title">Waivers</div><div className="page-sub">Valid for {new Date().getFullYear()} calendar year</div></div></div>}
+      {!embedded && <div className="page-header"><div><div className="page-title">{filterUnsigned ? "Unsigned Waivers" : "Waivers"}</div><div className="page-sub">{filterUnsigned ? `${displayUsers.length} player(s) without a signed waiver` : `Valid for ${new Date().getFullYear()} calendar year`}</div></div></div>}
       <div className="card">
         <div className="table-wrap"><table className="data-table">
           <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Players</th><th>Pending</th><th></th></tr></thead>
           <tbody>
-            {withWaiver.map(u => {
+            {displayUsers.map(u => {
               const totalWaivers = 1 + (u.extraWaivers?.length || 0);
               return (
                 <tr key={u.id}>
@@ -5826,7 +5830,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded }) {
                 </tr>
               );
             })}
-            {withWaiver.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No waivers on file</td></tr>}
+            {displayUsers.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>{filterUnsigned ? "All players have signed waivers ✓" : "No waivers on file"}</td></tr>}
           </tbody>
         </table></div>
       </div>
