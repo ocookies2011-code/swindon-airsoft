@@ -129,6 +129,14 @@ export const events = {
     delete eventRow.extras_json
     const { error } = await supabase.from('events').update(eventRow).eq('id', id)
     if (error) throw error
+
+    // Verify map_embed actually saved — column may not exist in DB yet
+    if (eventRow.map_embed !== undefined && eventRow.map_embed !== null) {
+      const { data: check } = await supabase.from('events').select('map_embed').eq('id', id).single()
+      if (check && check.map_embed !== eventRow.map_embed) {
+        throw new Error('map_embed column is missing from your events table in Supabase. Run this SQL in your Supabase SQL Editor:\n\nALTER TABLE events ADD COLUMN IF NOT EXISTS map_embed text;')
+      }
+    }
     if (extras !== undefined) {
       await supabase.from('event_extras').delete().eq('event_id', id)
       if (extras.length) {
