@@ -6084,7 +6084,16 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               <button className="btn btn-primary" disabled={vipApproveBusy || !vipUkara.trim()} onClick={async () => {
                 setVipApproveBusy(true);
                 try {
-                  await updateUserAndRefresh(vipApproveModal.id, { vipStatus: "active", vipApplied: true, ukara: vipUkara.trim() });
+                  // Write only vip fields directly — avoids any side-effects from updateUser
+                  // and explicitly preserves games_attended so it cannot be reset
+                  const { error } = await supabase.from('profiles').update({
+                    vip_status:     "active",
+                    vip_applied:    true,
+                    ukara:          vipUkara.trim(),
+                    games_attended: vipApproveModal.gamesAttended ?? 0,
+                  }).eq('id', vipApproveModal.id);
+                  if (error) throw new Error(error.message);
+                  await loadUsers();
                   showToast(`✅ VIP approved for ${vipApproveModal.name}! UKARA: ${vipUkara.trim()}`);
                   setVipApproveModal(null);
                 } catch (e) {
