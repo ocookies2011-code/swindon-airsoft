@@ -4380,6 +4380,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         <div className="admin-content">
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
           {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
+          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
