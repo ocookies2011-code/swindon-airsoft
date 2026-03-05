@@ -3877,7 +3877,7 @@ function PlayerOrders({ cu }) {
   );
 }
 
-function ProfilePage({ data, cu, updateUser, showToast, save }) {
+function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const [tab, setTab] = useState("profile");
 
   // Parse stored address string back into structured fields
@@ -4519,7 +4519,11 @@ function ProfilePage({ data, cu, updateUser, showToast, save }) {
               <span style={{ display: "flex", gap: 8, alignItems: "center" }}>{value} <span style={{ color: ok ? "var(--accent)" : "var(--subtle)" }}>{ok ? "✓" : "○"}</span></span>
             </div>
           ))}
-          {canApplyVip && <button className="btn btn-gold mt-2" onClick={() => { updateUser(cu.id, { vipApplied: true }); showToast("VIP application submitted!"); }}>Apply for VIP Membership</button>}
+          {canApplyVip && (
+            <button className="btn btn-gold mt-2" style={{ width:"100%" }} onClick={() => setPage("vip")}>
+              Apply &amp; Pay for VIP Membership — £30/year →
+            </button>
+          )}
           {cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-blue mt-2">⏳ Application pending admin review</div>}
           {cu.vipStatus === "active" && <div className="alert alert-gold mt-2">⭐ You are an active VIP member!</div>}
           {!canApplyVip && !cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-gold mt-2">Need {Math.max(0, 3 - gamesAttended)} more game(s) to be eligible for VIP.</div>}
@@ -9125,7 +9129,7 @@ export default function App() {
         {page === "gallery"     && <GalleryPage data={data} />}
         {page === "qa"          && <QAPage data={data} />}
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
-        {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} />}
+        {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
         {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
         {page === "staff"       && <StaffPage staff={data.staff || []} />}
         {page === "contact"     && <ContactPage data={data} cu={cu} showToast={showToast} />}
