@@ -177,10 +177,30 @@ function useData() {
   const loadAll = useCallback(async () => {
     setLoadError(null);
     const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [] };
-    const timeout = setTimeout(() => {
-      setData(prev => prev || emptyData);
-      setLoading(false);
-    }, 5000);
+
+    // Retry up to 3 times with increasing delays to handle cold DB / Supabase wake-up
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS = [3000, 5000, 8000]; // ms to wait before each retry
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const isLastAttempt = attempt === MAX_RETRIES;
+
+      // On retries, wait before trying again (gives DB time to wake up)
+      if (attempt > 0) {
+        await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
+      }
+
+      // Per-attempt timeout grows slightly each retry to give the DB more time
+      const attemptTimeoutMs = 5000 + attempt * 2000;
+      let timeoutFired = false;
+      const timeout = setTimeout(() => {
+        timeoutFired = true;
+        if (isLastAttempt) {
+          setData(prev => prev || emptyData);
+          setLoading(false);
+        }
+      }, attemptTimeoutMs);
+
     try {
       const errors = {};
       const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
@@ -203,9 +223,19 @@ function useData() {
         api.settings.get("contact_departments").catch(() => ""),
       ]);
 
-      if (Object.keys(errors).length > 0) {
+      // If all key collections came back empty and it's a partial error, treat as a cold-start failure
+      const allEmpty = evList.length === 0 && shopList.length === 0 && staffList.length === 0;
+      const hasErrors = Object.keys(errors).length > 0;
+
+      if (hasErrors && allEmpty && !isLastAttempt) {
+        // Data looks like a cold-start failure — retry
+        console.warn(`loadAll attempt ${attempt + 1} got empty data with errors, retrying...`, errors);
+        clearTimeout(timeout);
+        continue; // next iteration of retry loop
+      }
+
+      if (hasErrors) {
         console.error("loadAll partial errors:", errors);
-        // Show first error to help diagnose
         const firstErr = Object.values(errors)[0];
         setLoadError(firstErr);
       }
@@ -232,14 +262,20 @@ function useData() {
       api.profiles.getAll()
         .then(userList => setData(prev => prev ? { ...prev, users: userList.map(normaliseProfile) } : prev))
         .catch(() => {}); // guests can't see profiles — that's fine
+
+      setLoading(false);
+      return; // success — exit retry loop
     } catch (e) {
       clearTimeout(timeout);
-      console.error("loadAll critical error:", e);
-      setLoadError(e.message);
-      setData(prev => prev || emptyData);
-    } finally {
-      setLoading(false);
+      console.error(`loadAll attempt ${attempt + 1} critical error:`, e);
+      if (isLastAttempt) {
+        setLoadError(e.message);
+        setData(prev => prev || emptyData);
+        setLoading(false);
+      }
+      // Otherwise loop continues to next retry
     }
+    } // end retry loop
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
@@ -8850,13 +8886,28 @@ export default function App() {
     }
   }, [updateUser, cu, refreshCu]);
 
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => setLoadingSeconds(s => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
   // Only show loading screen while initial data fetch is in progress
   // Auth loads in the background - never block the site on it
   if (loading) {
+    const isSlowLoad = loadingSeconds >= 6;
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
         <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
-        <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>LOADING...</div>
+        <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>
+          {isSlowLoad ? "WAKING UP DATABASE..." : "LOADING..."}
+        </div>
+        {isSlowLoad && (
+          <div style={{ color: "#555", fontSize: 11, letterSpacing: ".05em", textAlign: "center", maxWidth: 260 }}>
+            This can take a moment after a period of inactivity
+          </div>
+        )}
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
       </div>
     );
