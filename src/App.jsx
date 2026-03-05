@@ -260,7 +260,18 @@ function useData() {
 
       // Load profiles after public data — only succeeds when authed, silently skipped for guests
       api.profiles.getAll()
-        .then(userList => setData(prev => prev ? { ...prev, users: userList.map(normaliseProfile) } : prev))
+        .then(userList => {
+          const profiles = userList.map(normaliseProfile);
+          // Auto-expire any VIP members whose expiry date has passed
+          const now = new Date();
+          profiles.forEach(u => {
+            if (u.vipStatus === "active" && u.vipExpiresAt && new Date(u.vipExpiresAt) < now) {
+              supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).catch(() => {});
+              u.vipStatus = "expired"; // update local copy immediately
+            }
+          });
+          setData(prev => prev ? { ...prev, users: profiles } : prev);
+        })
         .catch(() => {}); // guests can't see profiles — that's fine
 
       setLoading(false);
@@ -317,7 +328,7 @@ function useData() {
       gamesAttended: "games_attended", waiverSigned: "waiver_signed",
       waiverYear: "waiver_year", waiverData: "waiver_data", extraWaivers: "extra_waivers",
       waiverPending: "waiver_pending", vipStatus: "vip_status",
-      vipApplied: "vip_applied", ukara: "ukara", credits: "credits",
+      vipApplied: "vip_applied", vipExpiresAt: "vip_expires_at", ukara: "ukara", credits: "credits",
       leaderboardOptOut: "leaderboard_opt_out", profilePic: "profile_pic",
       deleteRequest: "delete_request", permissions: "permissions",
     };
@@ -4511,9 +4522,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           {[
             { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
+            cu.vipStatus === "active" && cu.vipExpiresAt && { label: "Expires", value: new Date(cu.vipExpiresAt).toLocaleDateString("en-GB"), ok: new Date(cu.vipExpiresAt) > new Date() },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
             { label: "VIP Discount", value: "10% off game days & shop", ok: cu.vipStatus === "active" },
-          ].map(({ label, value, ok }) => (
+          ].filter(Boolean).map(({ label, value, ok }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg4)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
               <span className="text-muted">{label}</span>
               <span style={{ display: "flex", gap: 8, alignItems: "center" }}>{value} <span style={{ color: ok ? "var(--accent)" : "var(--subtle)" }}>{ok ? "✓" : "○"}</span></span>
@@ -4525,6 +4537,9 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             </button>
           )}
           {cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-blue mt-2">⏳ Application pending admin review</div>}
+          {cu.vipStatus === "active" && cu.vipExpiresAt && new Date(cu.vipExpiresAt) < new Date(Date.now() + 30*24*60*60*1000) && new Date(cu.vipExpiresAt) > new Date() && (
+            <div className="alert alert-gold mt-2">⚠ Your VIP membership expires on {new Date(cu.vipExpiresAt).toLocaleDateString("en-GB")} — renew soon.</div>
+          )}
           {cu.vipStatus === "active" && <div className="alert alert-gold mt-2">⭐ You are an active VIP member!</div>}
           {!canApplyVip && !cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-gold mt-2">Need {Math.max(0, 3 - gamesAttended)} more game(s) to be eligible for VIP.</div>}
         </div>
@@ -5807,12 +5822,30 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const saveEdit = async () => {
     setSavingEdit(true);
     try {
+      // Determine vip_applied and vip_expires_at based on status change
+      let vipApplied = edit.vipApplied ?? false;
+      let vipExpiresAt = edit.vipExpiresAt || null;
+      if (edit.vipStatus === "none") {
+        // Demoting to None — re-queue their application so they show up for re-approval
+        vipApplied   = true;
+        vipExpiresAt = null;
+      } else if (edit.vipStatus === "active" && !edit.vipExpiresAt) {
+        // Manually setting active without an expiry — set 1 year from now
+        const exp = new Date();
+        exp.setFullYear(exp.getFullYear() + 1);
+        vipExpiresAt = exp.toISOString();
+      } else if (edit.vipStatus === "expired") {
+        vipExpiresAt = null;
+      }
+
       const { error } = await supabase.from('profiles').update({
         name:           edit.name,
         email:          edit.email,
         phone:          edit.phone || '',
         games_attended: edit.gamesAttended,
         vip_status:     edit.vipStatus,
+        vip_applied:    vipApplied,
+        vip_expires_at: vipExpiresAt,
         ukara:          edit.ukara || '',
         credits:        Number(edit.credits) || 0,
         address:        edit.address || '',
@@ -5900,6 +5933,11 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   <td>{u.gamesAttended}</td>
                   <td>
                     {u.vipStatus === "active" ? <span className="tag tag-gold">⭐ VIP</span> : u.vipApplied ? <span className="tag tag-blue">Applied</span> : "—"}
+                    {u.vipStatus === "active" && u.vipExpiresAt && (
+                      <span style={{ fontSize: 10, color: new Date(u.vipExpiresAt) < new Date() ? "var(--red)" : "var(--muted)", marginLeft: 4, fontFamily: "'Share Tech Mono',monospace" }}>
+                        exp {new Date(u.vipExpiresAt).toLocaleDateString("en-GB")}
+                      </span>
+                    )}
                     {u.ukara && <span className="mono" style={{ fontSize: 10, color: "var(--accent)", marginLeft: 6 }}>{u.ukara}</span>}
                   </td>
                   <td>{u.waiverSigned === true && u.waiverYear === new Date().getFullYear() ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
@@ -6002,6 +6040,16 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                 <select value={edit.vipStatus} onChange={e => setEdit(p => ({ ...p, vipStatus: e.target.value }))}>
                   <option value="none">None</option><option value="active">Active VIP</option><option value="expired">Expired</option>
                 </select>
+                {edit.vipStatus === "none" && (
+                  <div style={{ fontSize: 11, color: "var(--gold)", marginTop: 4 }}>⚠ Saving as None will re-queue this player's VIP application.</div>
+                )}
+                {edit.vipStatus === "active" && edit.vipExpiresAt && (
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+                    Expires: <span style={{ color: new Date(edit.vipExpiresAt) < new Date() ? "var(--red)" : "var(--accent)" }}>
+                      {new Date(edit.vipExpiresAt).toLocaleDateString("en-GB")}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="form-group"><label>UKARA ID</label><input value={edit.ukara || ""} onChange={e => setEdit(p => ({ ...p, ukara: e.target.value }))} /></div>
             </div>
@@ -6091,10 +6139,13 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   const preservedCount = freshProfile?.games_attended ?? vipApproveModal.gamesAttended ?? 0;
 
                   // Step 2: write the VIP fields
+                  const vipExpiry = new Date();
+                  vipExpiry.setFullYear(vipExpiry.getFullYear() + 1);
                   const { error: vipErr } = await supabase.from('profiles').update({
-                    vip_status:  "active",
-                    vip_applied: true,
-                    ukara:       vipUkara.trim(),
+                    vip_status:     "active",
+                    vip_applied:    true,
+                    ukara:          vipUkara.trim(),
+                    vip_expires_at: vipExpiry.toISOString(),
                   }).eq('id', vipApproveModal.id);
                   if (vipErr) throw new Error(vipErr.message);
 

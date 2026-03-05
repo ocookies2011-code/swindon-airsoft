@@ -512,6 +512,7 @@ export function normaliseProfile(p) {
     waiverPending:      p.waiver_pending,
     vipStatus:          p.vip_status,
     vipApplied:         p.vip_applied,
+    vipExpiresAt:       p.vip_expires_at || null,
     ukara:              p.ukara,
     credits:            Number(p.credits),
     leaderboardOptOut:  p.leaderboard_opt_out,
