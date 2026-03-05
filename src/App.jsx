@@ -2569,33 +2569,27 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 <div style={{ fontSize:12, color:"var(--muted)" }}>{ev.date} · {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT</div>
               </div>
               <a href={(() => {
-  // 1. Try to extract exact coordinates from the map embed (most precise)
+  // Extract exact coordinates from the map embed (most precise)
   if (ev.mapEmbed) {
     const srcMatch = ev.mapEmbed.match(/src="([^"]+)"/);
     if (srcMatch) {
       const embedUrl = decodeURIComponent(srcMatch[1]);
-      // Format: !3d<lat>!4d<lng> (standard Google Maps embed)
-      const coordMatch = embedUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+      // Google Maps embed pb= format: !2d<longitude>!3d<latitude>
+      const coordMatch = embedUrl.match(/!2d(-?\d+\.\d+)!3d(-?\d+\.\d+)/);
       if (coordMatch) {
-        return `https://www.google.com/maps/dir/?api=1&destination=${coordMatch[1]},${coordMatch[2]}`;
+        return `https://www.google.com/maps/dir/?api=1&destination=${coordMatch[2]},${coordMatch[1]}`;
       }
-      // Format: @lat,lng in URL
-      const atMatch = embedUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-      if (atMatch) {
-        return `https://www.google.com/maps/dir/?api=1&destination=${atMatch[1]},${atMatch[2]}`;
-      }
-      // Format: q=lat,lng or q=place+name
+      // q= param (place name or coords)
       const qMatch = embedUrl.match(/[?&]q=([^&]+)/);
       if (qMatch) {
         return `https://www.google.com/maps/dir/?api=1&destination=${qMatch[1]}`;
       }
     }
   }
-  // 2. Fall back to location text field
+  // Fall back to location text field
   if (ev.location && ev.location.trim()) {
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location.trim())}`;
   }
-  // 3. Last resort
   return `https://www.google.com/maps/search/Swindon+Airsoft+Field`;
 })()} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
   <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
