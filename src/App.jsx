@@ -1907,6 +1907,132 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
   });
 }
 
+// ── Send New Event Announcement Email ────────────────────────
+async function sendNewEventEmail({ ev, users }) {
+  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
+  });
+  const timeStr = ev.endTime ? `${ev.time}–${ev.endTime} GMT` : ev.time ? `${ev.time} GMT` : "";
+  const lowestPrice = Math.min(
+    Number(ev.walkOnPrice) || 0,
+    Number(ev.rentalPrice) || 0
+  );
+
+  const htmlContent = `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:0;font-family:Arial,sans-serif;color:#e0e0e0;">
+
+    <!-- Top accent bar -->
+    <div style="height:3px;background:#c8ff00;"></div>
+
+    <!-- Header -->
+    <div style="background:#0d0d0d;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;padding:28px 32px;text-align:center;">
+      <div style="font-size:11px;letter-spacing:.3em;color:#c8ff00;text-transform:uppercase;margin-bottom:10px;font-weight:700;">◈ NEW EVENT</div>
+      <div style="font-size:34px;font-weight:900;letter-spacing:.08em;color:#fff;line-height:1;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <div style="font-size:10px;color:#3a3a3a;letter-spacing:.25em;margin-top:6px;text-transform:uppercase;">FIELD INTELLIGENCE</div>
+    </div>
+
+    <!-- Banner / title block -->
+    ${ev.banner ? `<div style="background:#111;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;"><img src="${ev.banner}" style="width:100%;display:block;max-height:260px;object-fit:cover;opacity:.85;" alt="${ev.title}" /></div>` : ""}
+
+    <!-- Event title -->
+    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+      <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:10px;font-weight:700;">MISSION BRIEFING</div>
+      <div style="font-size:30px;font-weight:900;letter-spacing:.05em;color:#e8f0d8;text-transform:uppercase;line-height:1.1;margin-bottom:20px;">${ev.title}</div>
+
+      <!-- Key details grid -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">DATE</div>
+            <div style="font-size:14px;font-weight:700;color:#c8ff00;">${dateStr}</div>
+          </td>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;border-left:none;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">TIME</div>
+            <div style="font-size:14px;font-weight:700;color:#4fc3f7;">${timeStr || "TBC"}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;border-top:none;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">LOCATION</div>
+            <div style="font-size:14px;font-weight:700;color:#ce93d8;">${ev.location || "Swindon Airsoft Field"}</div>
+          </td>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;border-top:none;border-left:none;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">FROM</div>
+            <div style="font-size:22px;font-weight:900;color:#c8ff00;line-height:1;">£${lowestPrice.toFixed(2)}</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Description -->
+      ${ev.description ? `
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:16px 20px;margin-bottom:20px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:8px;font-weight:700;">BRIEFING NOTES</div>
+        <div style="font-size:13px;color:#8aaa60;line-height:1.8;">${ev.description.replace(/\n/g, "<br>")}</div>
+      </div>` : ""}
+
+      <!-- Pricing breakdown -->
+      <div style="background:#0a0f06;border:1px solid #1a2808;padding:16px 20px;margin-bottom:20px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:12px;font-weight:700;">TICKET PRICES</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid #1a2808;font-size:13px;color:#b0c090;">🎯 Walk-On</td>
+            <td style="padding:8px 0;border-bottom:1px solid #1a2808;font-size:16px;font-weight:900;color:#c8ff00;text-align:right;">£${Number(ev.walkOnPrice||0).toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-size:13px;color:#b0c090;">🪖 Rental Package</td>
+            <td style="padding:8px 0;font-size:16px;font-weight:900;color:#c8ff00;text-align:right;">£${Number(ev.rentalPrice||0).toFixed(2)}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Max players -->
+      ${ev.maxPlayers ? `<div style="font-size:11px;color:#3a5010;text-align:center;margin-bottom:20px;letter-spacing:.1em;">⚠ LIMITED TO ${ev.maxPlayers} PLAYERS — BOOK EARLY</div>` : ""}
+
+      <!-- CTA -->
+      <div style="text-align:center;margin-top:8px;">
+        <a href="https://swindonairsoft.co.uk/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK YOUR SLOT →</a>
+      </div>
+    </div>
+
+    <!-- Rules reminder -->
+    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:20px 32px;">
+      <div style="font-size:8px;letter-spacing:.25em;color:#2a2a2a;text-transform:uppercase;margin-bottom:10px;">FIELD RULES</div>
+      <table style="width:100%;border-collapse:collapse;">
+        ${["Full-seal eye protection mandatory at all times","Arrive 30 minutes before start time","Under 18s require signed parental consent","All players must have a valid waiver on file"].map(rule => `
+        <tr><td style="padding:5px 0;font-size:12px;color:#3a3a3a;"><span style="color:#c8ff00;margin-right:8px;">▸</span>${rule}</td></tr>`).join("")}
+      </table>
+    </div>
+
+    <!-- Bottom bar -->
+    <div style="height:1px;background:#1a1a1a;"></div>
+    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:16px 32px;text-align:center;">
+      <div style="font-size:9px;color:#2a2a2a;letter-spacing:.2em;text-transform:uppercase;">SWINDON AIRSOFT · swindonairsoft.co.uk</div>
+      <div style="font-size:9px;color:#1e1e1e;margin-top:4px;letter-spacing:.1em;">You're receiving this because you have an account. Log in to manage your preferences.</div>
+    </div>
+    <div style="height:3px;background:#1a2808;"></div>
+  </div>`;
+
+  const recipients = (users || []).filter(u => u.email && u.role !== "admin");
+  const results = { sent: 0, failed: 0, errors: [] };
+  for (const u of recipients) {
+    try {
+      await sendEmail({
+        toEmail:     u.email,
+        toName:      u.name || "Player",
+        subject:     `🎯 New Event: ${ev.title} — ${dateStr}`,
+        htmlContent,
+      });
+      results.sent++;
+      // Small delay to avoid rate-limiting
+      await new Promise(r => setTimeout(r, 200));
+    } catch (e) {
+      results.failed++;
+      results.errors.push(`${u.email}: ${e.message}`);
+    }
+  }
+  return results;
+}
+
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
   const [detail, setDetail] = useState(null);
   const [waiverModal, setWaiverModal] = useState(false);
@@ -4841,7 +4967,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
     setSavingEvent(true);
     try {
       if (modal === "new") {
-        const { _descTab: _dt, ...createForm } = form;
+        const { _descTab: _dt, _emailUsers, ...createForm } = form;
         const created = await withTimeout(api.events.create(createForm));
         if (form.banner && form.banner.startsWith("data:") && created?.id) {
           try {
@@ -4851,6 +4977,17 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
             await api.events.uploadBanner(created.id, file);
           } catch (bannerErr) {
             console.warn("Banner upload failed (non-fatal):", bannerErr);
+          }
+        }
+        // Email all users if checkbox was ticked
+        if (form._emailUsers && created) {
+          const evToSend = { ...createForm, id: created.id };
+          showToast("Sending announcement emails…", "gold");
+          try {
+            const results = await sendNewEventEmail({ ev: evToSend, users: data.users });
+            showToast(`📧 Emails sent: ${results.sent} delivered${results.failed > 0 ? `, ${results.failed} failed` : ""}`, results.failed > 0 ? "gold" : "");
+          } catch (emailErr) {
+            showToast("Event saved but emails failed: " + emailErr.message, "gold");
           }
         }
       } else {
@@ -5326,6 +5463,20 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
               </div>
             </div>
 
+            {modal === "new" && (
+              <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="checkbox"
+                  id="email-announce"
+                  checked={!!form._emailUsers}
+                  onChange={e => f("_emailUsers", e.target.checked)}
+                  style={{ accentColor: "#c8ff00", width: 16, height: 16 }}
+                />
+                <label htmlFor="email-announce" style={{ cursor: "pointer", fontSize: 13, color: "#8aaa60" }}>
+                  📧 Send announcement email to all players <span style={{ color: "#3a5010", fontSize: 11 }}>({(data.users||[]).filter(u => u.email && u.role !== "admin").length} recipients)</span>
+                </label>
+              </div>
+            )}
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveEvent} disabled={savingEvent}>{savingEvent ? "Saving…" : "Save Event"}</button>
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Cancel</button>
