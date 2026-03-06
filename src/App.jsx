@@ -1732,7 +1732,14 @@ function HomePage({ data, setPage }) {
               <button className="section-link" onClick={() => setPage("shop")}>SHOP ALL →</button>
             </div>
             <div className="grid-4">
-              {data.shop.filter(p => p.published !== false).slice(0, 4).map(prod => (
+              {data.shop.filter(p => p.published !== false).slice(0, 4).map(prod => {
+                const hasV = prod.variants?.length > 0;
+                const lowestVariant = hasV ? Math.min(...prod.variants.map(v => Number(v.price))) : null;
+                const displayPrice = hasV
+                  ? lowestVariant
+                  : (prod.onSale && prod.salePrice ? prod.salePrice : prod.price);
+                const priceLabel = hasV ? `From £${displayPrice}` : `£${Number(displayPrice).toFixed(2)}`;
+                return (
                 <div key={prod.id} className="shop-card" onClick={() => setPage("shop")} style={{ cursor:"pointer" }}>
                   <div className="shop-img">
                     {prod.image ? <img src={prod.image} alt={prod.name} /> : <span style={{ fontSize:32, opacity:.3 }}>📦</span>}
@@ -1740,10 +1747,11 @@ function HomePage({ data, setPage }) {
                   <div className="shop-body">
                     <div style={{ fontSize:10, fontWeight:700, letterSpacing:".12em", color:"var(--muted)", textTransform:"uppercase", fontFamily:"'Barlow Condensed',sans-serif", marginBottom:4 }}>{prod.category || "GEAR"}</div>
                     <div style={{ fontWeight:700, fontSize:14, marginBottom:6, color:"#fff" }}>{prod.name}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)" }}>£{prod.price}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)" }}>{priceLabel}</div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
