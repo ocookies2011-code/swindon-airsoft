@@ -174,119 +174,129 @@ function useData() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+function useData() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // Guard: prevent concurrent loadAll calls from racing each other.
+  // If one is already running, the next call is a no-op until it finishes.
+  const loadingRef = useRef(false);
+
   const loadAll = useCallback(async () => {
+    if (loadingRef.current) return; // already in progress — skip
+    loadingRef.current = true;
     setLoadError(null);
     const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [] };
+
+    // Single top-level timeout — if the whole thing takes too long, unblock the UI
+    const globalTimeout = setTimeout(() => {
+      loadingRef.current = false;
+      setData(prev => prev || emptyData);
+      setLoading(false);
+    }, 20000);
 
     // Retry up to 3 times with increasing delays to handle cold DB / Supabase wake-up
     const MAX_RETRIES = 3;
     const RETRY_DELAYS = [3000, 5000, 8000]; // ms to wait before each retry
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const isLastAttempt = attempt === MAX_RETRIES;
-
-      // On retries, wait before trying again (gives DB time to wake up)
-      if (attempt > 0) {
-        await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
-      }
-
-      // Per-attempt timeout grows slightly each retry to give the DB more time
-      const attemptTimeoutMs = 5000 + attempt * 2000;
-      let timeoutFired = false;
-      const timeout = setTimeout(() => {
-        timeoutFired = true;
-        if (isLastAttempt) {
-          setData(prev => prev || emptyData);
-          setLoading(false);
-        }
-      }, attemptTimeoutMs);
-
     try {
-      const errors = {};
-      const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const isLastAttempt = attempt === MAX_RETRIES;
 
-      const [evList, shopList, postageList, albumList, qaList, staffList, homeMsg,
-             socialFacebook, socialInstagram, contactAddress, contactPhone, contactEmail,
-             contactDepartmentsRaw] = await Promise.all([
-        safe("events",  api.events.getAll()),
-        safe("shop",    api.shop.getAll()),
-        safe("postage", api.postage.getAll()),
-        safe("gallery", api.gallery.getAll()),
-        safe("qa",      api.qa.getAll()),
-        safe("staff",   api.staff.getAll()),
-        api.settings.get("home_message").catch(() => ""),
-        api.settings.get("social_facebook").catch(() => ""),
-        api.settings.get("social_instagram").catch(() => ""),
-        api.settings.get("contact_address").catch(() => ""),
-        api.settings.get("contact_phone").catch(() => ""),
-        api.settings.get("contact_email").catch(() => ""),
-        api.settings.get("contact_departments").catch(() => ""),
-      ]);
+        // On retries, wait before trying again (gives DB time to wake up)
+        if (attempt > 0) {
+          await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
+        }
 
-      // If all key collections came back empty and it's a partial error, treat as a cold-start failure
-      const allEmpty = evList.length === 0 && shopList.length === 0 && staffList.length === 0;
-      const hasErrors = Object.keys(errors).length > 0;
+        try {
+          const errors = {};
+          const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
 
-      if (hasErrors && allEmpty && !isLastAttempt) {
-        // Data looks like a cold-start failure — retry
-        console.warn(`loadAll attempt ${attempt + 1} got empty data with errors, retrying...`, errors);
-        clearTimeout(timeout);
-        continue; // next iteration of retry loop
-      }
+          const [evList, shopList, postageList, albumList, qaList, staffList, homeMsg,
+                 socialFacebook, socialInstagram, contactAddress, contactPhone, contactEmail,
+                 contactDepartmentsRaw] = await Promise.all([
+            safe("events",  api.events.getAll()),
+            safe("shop",    api.shop.getAll()),
+            safe("postage", api.postage.getAll()),
+            safe("gallery", api.gallery.getAll()),
+            safe("qa",      api.qa.getAll()),
+            safe("staff",   api.staff.getAll()),
+            api.settings.get("home_message").catch(() => ""),
+            api.settings.get("social_facebook").catch(() => ""),
+            api.settings.get("social_instagram").catch(() => ""),
+            api.settings.get("contact_address").catch(() => ""),
+            api.settings.get("contact_phone").catch(() => ""),
+            api.settings.get("contact_email").catch(() => ""),
+            api.settings.get("contact_departments").catch(() => ""),
+          ]);
 
-      if (hasErrors) {
-        console.error("loadAll partial errors:", errors);
-        const firstErr = Object.values(errors)[0];
-        setLoadError(firstErr);
-      }
+          // If all key collections came back empty and it's a partial error, treat as a cold-start failure
+          const allEmpty = evList.length === 0 && shopList.length === 0 && staffList.length === 0;
+          const hasErrors = Object.keys(errors).length > 0;
 
-      clearTimeout(timeout);
-      setData(prev => ({
-        ...(prev || emptyData),
-        events: evList,
-        shop: shopList,
-        postageOptions: postageList,
-        albums: albumList,
-        qa: qaList,
-        staff: staffList,
-        homeMsg,
-        socialFacebook,
-        socialInstagram,
-        contactAddress,
-        contactPhone,
-        contactEmail,
-        contactDepartments: (() => { try { return JSON.parse(contactDepartmentsRaw || "[]"); } catch { return []; } })(),
-      }));
+          if (hasErrors && allEmpty && !isLastAttempt) {
+            // Data looks like a cold-start failure — retry
+            console.warn(`loadAll attempt ${attempt + 1} got empty data with errors, retrying...`, errors);
+            continue;
+          }
 
-      // Load profiles after public data — only succeeds when authed, silently skipped for guests
-      api.profiles.getAll()
-        .then(userList => {
-          const profiles = userList.map(normaliseProfile);
-          // Auto-expire any VIP members whose expiry date has passed
-          const now = new Date();
-          profiles.forEach(u => {
-            if (u.vipStatus === "active" && u.vipExpiresAt && new Date(u.vipExpiresAt) < now) {
-              supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).catch(() => {});
-              u.vipStatus = "expired"; // update local copy immediately
-            }
-          });
-          setData(prev => prev ? { ...prev, users: profiles } : prev);
-        })
-        .catch(() => {}); // guests can't see profiles — that's fine
+          if (hasErrors) {
+            console.error("loadAll partial errors:", errors);
+            setLoadError(Object.values(errors)[0]);
+          }
 
+          setData(prev => ({
+            ...(prev || emptyData),
+            events: evList,
+            shop: shopList,
+            postageOptions: postageList,
+            albums: albumList,
+            qa: qaList,
+            staff: staffList,
+            homeMsg,
+            socialFacebook,
+            socialInstagram,
+            contactAddress,
+            contactPhone,
+            contactEmail,
+            contactDepartments: (() => { try { return JSON.parse(contactDepartmentsRaw || "[]"); } catch { return []; } })(),
+          }));
+
+          // Load profiles after public data — only succeeds when authed, silently skipped for guests
+          api.profiles.getAll()
+            .then(userList => {
+              const profiles = userList.map(normaliseProfile);
+              // Auto-expire any VIP members whose expiry date has passed
+              const now = new Date();
+              profiles.forEach(u => {
+                if (u.vipStatus === "active" && u.vipExpiresAt && new Date(u.vipExpiresAt) < now) {
+                  supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).catch(() => {});
+                  u.vipStatus = "expired";
+                }
+              });
+              setData(prev => prev ? { ...prev, users: profiles } : prev);
+            })
+            .catch(() => {}); // guests can't see profiles — that's fine
+
+          clearTimeout(globalTimeout);
+          setLoading(false);
+          return; // success — exit retry loop
+        } catch (e) {
+          console.error(`loadAll attempt ${attempt + 1} critical error:`, e);
+          if (isLastAttempt) {
+            setLoadError(e.message);
+            setData(prev => prev || emptyData);
+          }
+          // Otherwise loop continues to next retry
+        }
+      } // end retry loop
+    } finally {
+      // Always release the guard, even if something threw unexpectedly
+      clearTimeout(globalTimeout);
+      loadingRef.current = false;
       setLoading(false);
-      return; // success — exit retry loop
-    } catch (e) {
-      clearTimeout(timeout);
-      console.error(`loadAll attempt ${attempt + 1} critical error:`, e);
-      if (isLastAttempt) {
-        setLoadError(e.message);
-        setData(prev => prev || emptyData);
-        setLoading(false);
-      }
-      // Otherwise loop continues to next retry
     }
-    } // end retry loop
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
@@ -9147,9 +9157,7 @@ export default function App() {
           try {
             const profile = await api.profiles.getById(session.user.id);
             setCu(normaliseProfile(profile));
-            api.profiles.getAll().catch(() => []).then(list =>
-              save({ users: list.map(normaliseProfile) })
-            );
+            // profiles are already loaded by loadAll — no need to trigger save/refresh here
           } catch { setCu(null); }
           setAuthLoading(false);
           return;
@@ -9201,10 +9209,11 @@ export default function App() {
             } catch { setCu(null); }
           }
         } catch { setCu(null); }
-        if (event === "SIGNED_IN") refresh();
+        // Do NOT call refresh() here — onLogin already calls it, and a duplicate
+        // loadAll() would race the existing one and cause UI lockups
       } else {
         setCu(null);
-        if (event === "SIGNED_OUT") refresh();
+        // Do NOT call refresh() on sign-out — setCu(null) is enough to update the UI
       }
     });
 
