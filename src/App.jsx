@@ -174,11 +174,6 @@ function useData() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
-function useData() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(null);
-
   // Guard: prevent concurrent loadAll calls from racing each other.
   // If one is already running, the next call is a no-op until it finishes.
   const loadingRef = useRef(false);
