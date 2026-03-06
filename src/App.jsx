@@ -296,6 +296,20 @@ function useData() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  // When the tab becomes visible again after being hidden, refresh data.
+  // This handles stale state after browser tab suspension.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        // Force-release the guard in case it got stuck while the tab was frozen
+        loadingRef.current = false;
+        loadAll();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadAll]);
+
   // save() now delegates to specific API calls based on what changed
   const save = useCallback(async (patch) => {
     // Optimistic local update
@@ -5144,6 +5158,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   // ── Events logic ──
   const [savingEvent, setSavingEvent] = useState(false);
 
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setSavingEvent(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   const printPlayerList = (ev) => {
     const bookings = ev.bookings || [];
     const ticketTypes = {};
@@ -5916,6 +5936,12 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
 
   const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setSavingEdit(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
   const [delAccountConfirm, setDelAccountConfirm] = useState(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [vipApproveModal, setVipApproveModal] = useState(null); // user being approved
@@ -6835,6 +6861,16 @@ function AdminShop({ data, save, showToast }) {
   };
 
   const [savingProduct, setSavingProduct] = useState(false);
+
+  // Reset any stuck saving state when the tab becomes visible again
+  // (browser can freeze JS mid-async when tab is hidden, leaving busy=true forever)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") setSavingProduct(false);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
   const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
     setSavingProduct(true);
