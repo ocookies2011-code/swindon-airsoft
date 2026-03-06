@@ -6838,10 +6838,14 @@ function AdminShop({ data, save, showToast }) {
   const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
     setSavingProduct(true);
-    const safety = setTimeout(() => setSavingProduct(false), 20000);
     try {
-      if (modal === "new") await api.shop.create(form);
-      else await api.shop.update(form.id, form);
+      if (modal === "new") {
+        const created = await api.shop.create(form);
+        // Update form with real DB id so a follow-up edit works immediately
+        setForm(prev => ({ ...prev, id: created.id }));
+      } else {
+        await api.shop.update(form.id, form);
+      }
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
       showToast("Product saved!");
@@ -6850,7 +6854,6 @@ function AdminShop({ data, save, showToast }) {
       console.error("saveItem FAILED at:", e?.message, e);
       showToast("Save failed: " + (e?.message || String(e)), "red");
     } finally {
-      clearTimeout(safety);
       setSavingProduct(false);
     }
   };
@@ -6877,7 +6880,7 @@ function AdminShop({ data, save, showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Shop</div></div>
-        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setModal("new"); }}>+ Add Product</button>}
+        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
         {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
       </div>
 
@@ -6917,7 +6920,7 @@ function AdminShop({ data, save, showToast }) {
                   <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
                   <td>
                     <div className="gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setModal(item.id); }}>Edit</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
                       <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
                     </div>
                   </td>
