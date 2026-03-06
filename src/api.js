@@ -565,6 +565,7 @@ function toSnakeProduct(p) {
     no_post:     p.noPost,
     game_extra:  p.gameExtra || false,
     variants:    p.variants || [],
+    // Note: _descTab is a UI-only field, never saved
   }
 }
 

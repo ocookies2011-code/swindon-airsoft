@@ -3320,9 +3320,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
 
           {/* Description */}
-          <p style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}>
-            <span dangerouslySetInnerHTML={{ __html: renderMd(item.description) || "No description available." }} />
-          </p>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}
+            dangerouslySetInnerHTML={{ __html: renderMd(item.description) || "No description available." }}
+          />
 
           {/* Variant selector */}
           {hasVariants && (
@@ -7040,7 +7040,63 @@ function AdminShop({ data, save, showToast }) {
 
             <div className="form-row">
               <div className="form-group"><label>Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} /></div>
-              <div className="form-group"><label>Description</label><input value={form.description} onChange={e => setField("description", e.target.value)} /></div>
+            </div>
+
+            {/* Rich description editor */}
+            <div className="form-group">
+              <label>Description</label>
+              <div style={{ border:"1px solid var(--border)", borderRadius:4, overflow:"hidden" }}>
+                {/* Toolbar */}
+                <div style={{ display:"flex", gap:2, flexWrap:"wrap", padding:"6px 8px", background:"#1a1a1a", borderBottom:"1px solid var(--border)" }}>
+                  {[
+                    { label:"B",  title:"Bold",      wrap:["**","**"] },
+                    { label:"I",  title:"Italic",     wrap:["*","*"] },
+                    { label:"H2", title:"Heading",    line:"## " },
+                    { label:"•",  title:"Bullet",     line:"- " },
+                    { label:"—",  title:"Divider",    insert:"\n---\n" },
+                  ].map(btn => (
+                    <button key={btn.label} title={btn.title} type="button"
+                      style={{ background:"#2a2a2a", border:"1px solid #333", color:"#ccc", width:30, height:26, fontSize:11, fontWeight:700, cursor:"pointer", borderRadius:2 }}
+                      onClick={() => {
+                        const ta = document.getElementById("prod-desc-ta");
+                        if (!ta) return;
+                        const start = ta.selectionStart, end = ta.selectionEnd;
+                        const val = form.description || "";
+                        let newVal, cursor;
+                        if (btn.wrap) {
+                          newVal = val.slice(0,start) + btn.wrap[0] + val.slice(start,end) + btn.wrap[1] + val.slice(end);
+                          cursor = end + btn.wrap[0].length + btn.wrap[1].length;
+                        } else if (btn.line) {
+                          const lineStart = val.lastIndexOf("\n", start-1)+1;
+                          newVal = val.slice(0,lineStart) + btn.line + val.slice(lineStart);
+                          cursor = start + btn.line.length;
+                        } else {
+                          newVal = val.slice(0,start) + btn.insert + val.slice(end);
+                          cursor = start + btn.insert.length;
+                        }
+                        setField("description", newVal);
+                        setTimeout(() => { ta.focus(); ta.setSelectionRange(cursor, cursor); }, 0);
+                      }}
+                    >{btn.label}</button>
+                  ))}
+                  <span style={{ fontSize:10, color:"#555", marginLeft:4, alignSelf:"center" }}>**bold** *italic* ## heading - bullet ---</span>
+                </div>
+                {/* Edit / Preview tabs */}
+                <div style={{ display:"flex", borderBottom:"1px solid var(--border)", background:"#111" }}>
+                  {["edit","preview"].map(t => (
+                    <button key={t} type="button" onClick={() => setField("_descTab", t)}
+                      style={{ padding:"5px 16px", fontSize:11, fontWeight:700, letterSpacing:".1em", textTransform:"uppercase", background:"none", border:"none", borderBottom:(form._descTab||"edit")===t?"2px solid var(--accent)":"2px solid transparent", color:(form._descTab||"edit")===t?"var(--accent)":"#555", cursor:"pointer" }}>
+                      {t==="edit"?"✏ EDIT":"👁 PREVIEW"}
+                    </button>
+                  ))}
+                </div>
+                {(form._descTab||"edit") !== "preview"
+                  ? <textarea id="prod-desc-ta" rows={6} value={form.description||""} onChange={e => setField("description", e.target.value)}
+                      style={{ width:"100%", background:"#111", border:"none", padding:"10px", resize:"vertical", color:"var(--text)", fontFamily:"'Share Tech Mono',monospace", fontSize:13, outline:"none", boxSizing:"border-box" }} />
+                  : <div style={{ minHeight:120, padding:"10px 14px", background:"#0d0d0d", color:"var(--muted)", fontSize:13, lineHeight:1.8 }}
+                      dangerouslySetInnerHTML={{ __html: renderMd(form.description) || "<span style='color:#444'>Nothing to preview yet…</span>" }} />
+                }
+              </div>
             </div>
 
             {/* Base price + stock — only relevant if no variants */}
