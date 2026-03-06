@@ -2086,13 +2086,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const [tab, setTab] = useState("info");
   const [paypalError, setPaypalError] = useState(null);
   const [bookingBusy, setBookingBusy] = useState(false);
+  const [useCredits, setUseCredits] = useState(false);
 
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
   const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
 
   const ev = detail ? data.events.find(e => e.id === detail) : null;
 
-  const resetCart = () => setBCart({ walkOn: 0, rental: 0, extras: {} });
+  const resetCart = () => { setBCart({ walkOn: 0, rental: 0, extras: {} }); setUseCredits(false); };
 
   if (ev) {
     const vipDisc   = cu?.vipStatus === "active" ? 0.1 : 0;
@@ -2124,6 +2125,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     }, 0);
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
+    const availCredits = cu?.credits || 0;
+    const creditsApplied = useCredits ? Math.min(availCredits, grandTotal) : 0;
+    const payTotal     = Math.max(0, grandTotal - creditsApplied);
     const setExtra = (id, qty, variantId) => {
       const extraKeyVal = extraKey(id, variantId);
       setBCart(p => {
@@ -2205,9 +2209,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         }
         await Promise.all(bookingPromises);
 
+        // Deduct credits if used
+        if (creditsApplied > 0) {
+          const newCredits = Math.max(0, availCredits - creditsApplied);
+          await supabase.from('profiles').update({ credits: newCredits }).eq('id', cu.id);
+          updateUser(cu.id, { credits: newCredits });
+        }
+
         // Show success immediately — stock deduction and refresh happen in background
         resetCart();
-        showToast("🎉 Booked! Payment confirmed.");
+        showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
 
         // Send ticket email with real booking IDs
         try {
@@ -2599,10 +2610,31 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <span>VIP 10% discount applied</span>
                     </div>
                   )}
+                  {/* Credits toggle */}
+                  {cu && availCredits > 0 && !cartEmpty && (
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 10px", background:"rgba(0,120,255,.06)", border:"1px solid rgba(0,120,255,.2)", borderRadius:3, marginTop:8, marginBottom:4 }}>
+                      <div>
+                        <span style={{ fontSize:12, color:"#60a0ff" }}>💳 Account Credits — £{availCredits.toFixed(2)} available</span>
+                      </div>
+                      <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
+                        <input type="checkbox" checked={useCredits} onChange={e => setUseCredits(e.target.checked)} />
+                        <span style={{ fontSize:11, color:"var(--muted)" }}>Apply</span>
+                      </label>
+                    </div>
+                  )}
+                  {creditsApplied > 0 && (
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:4, color:"#60a0ff" }}>
+                      <span>Credits applied</span>
+                      <span>−£{creditsApplied.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div style={{ borderTop:"1px solid #2a2a2a", marginTop:10, paddingTop:10, display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:22, color:"#fff" }}>
                     <span>TOTAL</span>
-                    <span style={{ color:"var(--accent)" }}>£{grandTotal.toFixed(2)}</span>
+                    <span style={{ color:"var(--accent)" }}>£{payTotal.toFixed(2)}</span>
                   </div>
+                  {creditsApplied > 0 && payTotal === 0 && (
+                    <div style={{ fontSize:11, color:"var(--muted)", textAlign:"center", marginTop:4 }}>Fully covered by credits — no payment needed</div>
+                  )}
                 </div>
               )}
 
@@ -2625,13 +2657,20 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   SIGN WAIVER TO CONTINUE
                 </button>
               )}
-              {!bookingBlocked && (
+              {!bookingBlocked && payTotal > 0 && (
                 <PayPalCheckoutButton
-                  amount={grandTotal}
+                  amount={payTotal}
                   description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
                   onSuccess={confirmBookingAfterPayment}
                   disabled={bookingBusy}
                 />
+              )}
+              {!bookingBlocked && payTotal === 0 && !cartEmpty && (
+                <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }}
+                  disabled={bookingBusy}
+                  onClick={() => confirmBookingAfterPayment({ id: "CREDITS-" + Date.now(), status: "COMPLETED" })}>
+                  {bookingBusy ? "⏳ Confirming…" : "✓ CONFIRM — FULLY COVERED BY CREDITS"}
+                </button>
               )}
               </div>
             </div>
@@ -3203,10 +3242,12 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             <div style={{ position:"absolute", top:10, right:10, width:18, height:18, borderTop:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
             <div style={{ position:"absolute", bottom:10, left:10, width:18, height:18, borderBottom:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
             <div style={{ position:"absolute", bottom:10, right:10, width:18, height:18, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
-            {item.image
-              ? <img src={item.image} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", filter:"contrast(1.05)" }} />
-              : <div style={{ aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", fontSize:80, color:"#333" }}>🎯</div>
-            }
+            {(() => {
+              const displayImg = (selectedVariant?.image) || item.image;
+              return displayImg
+                ? <img src={displayImg} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", filter:"contrast(1.05)", transition:"opacity .15s" }} />
+                : <div style={{ aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", fontSize:80, color:"#333" }}>🎯</div>;
+            })()}
             {!item.stock && (
               <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:28, letterSpacing:".2em", color:"var(--red)", border:"3px solid var(--red)", padding:"8px 24px", transform:"rotate(-5deg)" }}>OUT OF STOCK</span>
@@ -3561,8 +3602,9 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   ) : [];
   const gamesAttended = cu ? Math.max(cu.gamesAttended || 0, myBookings.length) : 0;
   const gamesNeeded = Math.max(0, 3 - gamesAttended);
-  const canApply = cu && gamesAttended >= 3 && cu.vipStatus !== "active" && !cu.vipApplied;
+  const canApply = cu && gamesAttended >= 3 && (cu.vipStatus === "none" || cu.vipStatus === "expired") && !cu.vipApplied;
   const isVip = cu?.vipStatus === "active";
+  const isExpired = cu?.vipStatus === "expired";
   const hasPending = cu?.vipApplied && !isVip;
 
   const handleVipPaymentSuccess = async (paypalOrder) => {
@@ -3698,20 +3740,20 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             {cu && canApply && !showPayment && (
               <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }}
                 onClick={() => { setShowPayment(true); setVipPayError(null); }}>
-                APPLY &amp; PAY — £30/YEAR
+                {isExpired ? "RENEW VIP — £30/YEAR" : "APPLY & PAY — £30/YEAR"}
               </button>
             )}
             {cu && canApply && showPayment && (
               <div>
                 <div style={{ background:"#0d1a0d", border:"1px solid #1e3a1e", padding:"10px 14px", marginBottom:12, fontSize:12, color:"#8aaa60" }}>
-                  💳 Pay now to submit your VIP application. Your status will be activated by admin after payment is confirmed.
+                  💳 {isExpired ? "Pay now to renew your VIP membership for another year." : "Pay now to submit your VIP application. Your status will be activated by admin after payment is confirmed."}
                 </div>
                 {vipPayError && (
                   <div className="alert alert-red" style={{ marginBottom:10 }}>{vipPayError}</div>
                 )}
                 <PayPalCheckoutButton
                   amount={30}
-                  description="Swindon Airsoft — VIP Membership (Annual)"
+                  description={`Swindon Airsoft — VIP Membership (Annual${isExpired ? " Renewal" : ""})`}
                   disabled={applying}
                   onSuccess={handleVipPaymentSuccess}
                 />
@@ -4515,35 +4557,66 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
       {tab === "orders" && <PlayerOrders cu={cu} />}
 
-      {tab === "vip" && (
+      {tab === "vip" && (() => {
+        const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
+        const expiry      = cu.vipExpiresAt ? new Date(cu.vipExpiresAt) : null;
+        const now         = new Date();
+        const isExpired   = expiry && expiry < now;
+        const nearExpiry  = expiry && !isExpired && (expiry - now) < THREE_WEEKS;
+        return (
         <div className="card">
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
           <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
           {[
             { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
-            cu.vipStatus === "active" && cu.vipExpiresAt && { label: "Expires", value: new Date(cu.vipExpiresAt).toLocaleDateString("en-GB"), ok: new Date(cu.vipExpiresAt) > new Date() },
+            cu.vipStatus === "active" && expiry && { label: "Expires", value: expiry.toLocaleDateString("en-GB"), ok: !isExpired },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
             { label: "VIP Discount", value: "10% off game days & shop", ok: cu.vipStatus === "active" },
           ].filter(Boolean).map(({ label, value, ok }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg4)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
               <span className="text-muted">{label}</span>
-              <span style={{ display: "flex", gap: 8, alignItems: "center" }}>{value} <span style={{ color: ok ? "var(--accent)" : "var(--subtle)" }}>{ok ? "✓" : "○"}</span></span>
+              <span style={{ display: "flex", gap: 8, alignItems: "center" }}>{value} <span style={{ color: ok ? "var(--accent)" : "var(--red)" }}>{ok ? "✓" : "✗"}</span></span>
             </div>
           ))}
-          {canApplyVip && (
+          {/* Active — near expiry: show renew button */}
+          {cu.vipStatus === "active" && nearExpiry && (
+            <div style={{ background: "rgba(200,160,0,.08)", border: "1px solid rgba(200,160,0,.3)", padding: "14px 16px", marginTop: 8, borderRadius: 4 }}>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 14, color: "var(--gold)", marginBottom: 6 }}>
+                ⚠ VIP expires {expiry.toLocaleDateString("en-GB")}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Renew now to keep your discount and UKARA registration.</div>
+              <button className="btn btn-gold" style={{ width: "100%" }} onClick={() => setPage("vip")}>
+                Renew VIP — £30/year →
+              </button>
+            </div>
+          )}
+          {/* Active — not near expiry */}
+          {cu.vipStatus === "active" && !nearExpiry && (
+            <div className="alert alert-gold mt-2">⭐ You are an active VIP member!</div>
+          )}
+          {/* Expired */}
+          {cu.vipStatus === "expired" && (
+            <div style={{ background: "rgba(200,0,0,.07)", border: "1px solid rgba(200,0,0,.25)", padding: "14px 16px", marginTop: 8, borderRadius: 4 }}>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 14, color: "var(--red)", marginBottom: 6 }}>✗ VIP Membership Expired</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Your membership has lapsed. Renew to restore your benefits.</div>
+              <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setPage("vip")}>
+                Renew VIP — £30/year →
+              </button>
+            </div>
+          )}
+          {canApplyVip && cu.vipStatus !== "expired" && (
             <button className="btn btn-gold mt-2" style={{ width:"100%" }} onClick={() => setPage("vip")}>
               Apply &amp; Pay for VIP Membership — £30/year →
             </button>
           )}
           {cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-blue mt-2">⏳ Application pending admin review</div>}
-          {cu.vipStatus === "active" && cu.vipExpiresAt && new Date(cu.vipExpiresAt) < new Date(Date.now() + 30*24*60*60*1000) && new Date(cu.vipExpiresAt) > new Date() && (
-            <div className="alert alert-gold mt-2">⚠ Your VIP membership expires on {new Date(cu.vipExpiresAt).toLocaleDateString("en-GB")} — renew soon.</div>
+          {!canApplyVip && !cu.vipApplied && cu.vipStatus === "none" && (
+            <div className="alert alert-gold mt-2">Need {Math.max(0, 3 - gamesAttended)} more game(s) to be eligible for VIP.</div>
           )}
-          {cu.vipStatus === "active" && <div className="alert alert-gold mt-2">⭐ You are an active VIP member!</div>}
-          {!canApplyVip && !cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-gold mt-2">Need {Math.max(0, 3 - gamesAttended)} more game(s) to be eligible for VIP.</div>}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
@@ -5826,8 +5899,8 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       let vipApplied = edit.vipApplied ?? false;
       let vipExpiresAt = edit.vipExpiresAt || null;
       if (edit.vipStatus === "none") {
-        // Demoting to None — re-queue their application so they show up for re-approval
-        vipApplied   = true;
+        // Demoting to None — clear applied flag, player must go through the full apply+pay flow again
+        vipApplied   = false;
         vipExpiresAt = null;
       } else if (edit.vipStatus === "active" && !edit.vipExpiresAt) {
         // Manually setting active without an expiry — set 1 year from now
@@ -6041,7 +6114,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   <option value="none">None</option><option value="active">Active VIP</option><option value="expired">Expired</option>
                 </select>
                 {edit.vipStatus === "none" && (
-                  <div style={{ fontSize: 11, color: "var(--gold)", marginTop: 4 }}>⚠ Saving as None will re-queue this player's VIP application.</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Player will need to apply and pay again to rejoin VIP.</div>
                 )}
                 {edit.vipStatus === "active" && edit.vipExpiresAt && (
                   <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
@@ -6649,12 +6722,32 @@ function AdminShop({ data, save, showToast }) {
 
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
-    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0 };
+    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, image: "" };
     setField("variants", [...(form.variants || []), newVar]);
     setNewVariant({ name: "", price: "", stock: "" });
   };
   const removeVariant = (id) => setField("variants", form.variants.filter(varItem => varItem.id !== id));
   const updateVariant = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
+  const updateVariantRaw = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: val } : v));
+
+  const handleVariantImg = (id, e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const img2 = new Image();
+    const reader2 = new FileReader();
+    reader2.onload = ev => {
+      img2.onload = () => {
+        const MAX2 = 900;
+        const scale2 = Math.min(1, MAX2 / Math.max(img2.width, img2.height));
+        const canvas2 = document.createElement("canvas");
+        canvas2.width  = Math.round(img2.width  * scale2);
+        canvas2.height = Math.round(img2.height * scale2);
+        canvas2.getContext("2d").drawImage(img2, 0, 0, canvas2.width, canvas2.height);
+        updateVariantRaw(id, "image", canvas2.toDataURL("image/jpeg", 0.75));
+      };
+      img2.src = ev.target.result;
+    };
+    reader2.readAsDataURL(file);
+  };
 
   const hasVariants = (form.variants || []).length > 0;
 
@@ -6867,11 +6960,23 @@ function AdminShop({ data, save, showToast }) {
                   <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--muted)",marginBottom:10}}>No variants — product uses base price and stock above.</div>
                 )}
                 {(form.variants || []).map(v => (
-                  <div key={v.id} style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 36px",gap:8,alignItems:"center",marginBottom:8}}>
-                    <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
-                    <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Price £" style={{fontSize:12}} />
-                    <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
-                    <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
+                  <div key={v.id} style={{marginBottom:10,background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:2,padding:"10px 12px"}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 36px",gap:8,alignItems:"center",marginBottom:8}}>
+                      <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
+                      <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Price £" style={{fontSize:12}} />
+                      <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
+                      <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      {v.image && <img src={v.image} style={{width:52,height:52,objectFit:"cover",border:"1px solid #333",flexShrink:0}} alt="" />}
+                      <label style={{cursor:"pointer",flex:1}}>
+                        <div className="btn btn-sm btn-ghost" style={{pointerEvents:"none",fontSize:11,padding:"4px 10px"}}>
+                          {v.image ? "📷 Change Image" : "📷 Add Image"}
+                        </div>
+                        <input type="file" accept="image/*" style={{display:"none"}} onChange={e => handleVariantImg(v.id, e)} />
+                      </label>
+                      {v.image && <button className="btn btn-sm btn-ghost" style={{fontSize:11,padding:"4px 8px",color:"var(--red)"}} onClick={() => updateVariantRaw(v.id, "image", "")}>✕ Remove</button>}
+                    </div>
                   </div>
                 ))}
                 {/* Add new variant row */}
