@@ -8096,7 +8096,7 @@ function AboutPage({ setPage }) {
             NEED TO <span style={{ color:"#c8ff00" }}>KNOW</span>
           </div>
         </div>
-        <div style={{ background:"#0a0f07", border:"1px solid #2a3a10", padding:"24px 26px", marginBottom:10 }}>
+        <div style={{ background:"#0a0f07", border:"1px solid #2a3a10", padding:"24px 26px", marginBottom:44 }}>
           <InfoRow icon="🎯">
             New to Airsoft? We have a limited number of <span style={{ color:"#c8ff00" }}>rental kits available to pre-book</span>. Full details on the rental kit can be found in our Shop.
           </InfoRow>
@@ -8110,11 +8110,6 @@ function AboutPage({ setPage }) {
             Please ensure the <span style={{ color:"#c8ff00" }}>digital waiver is signed</span> before attending. You can do this from your Profile page.
           </InfoRow>
         </div>
-        <div style={{ display:"flex", gap:10, marginBottom:44, flexWrap:"wrap" }}>
-          <button className="btn btn-primary" style={{ fontSize:11, padding:"9px 20px", letterSpacing:".14em" }} onClick={() => setPage("shop")}>RENTAL KITS →</button>
-          <button className="btn btn-ghost" style={{ fontSize:11, padding:"9px 20px", letterSpacing:".14em" }} onClick={() => setPage("profile")}>SIGN WAIVER →</button>
-        </div>
-
         <Divider />
 
         {/* ── DAY SCHEDULE ── */}
@@ -8128,7 +8123,7 @@ function AboutPage({ setPage }) {
         <TimelineItem time="08:45" title="Chrono" desc="All weapons are chronographed. Make sure your kit is prepped and ready to go." />
         <TimelineItem time="09:30" title="Morning Brief" desc="Led by one of our staff — we outline the site rules and make sure everyone knows what to expect on the day." />
         <TimelineItem time="10:00" title="First Game On" desc="Make sure you are kitted up and ready. First game kicks off — get stuck in!" />
-        <TimelineItem time="12:30 – 13:00" title="Lunch Break" desc="We stop for lunch and set up the second half of the day. Tuck shop on site with drinks and sweet treats. We recommend bringing your own lunch — there is also a local Co-op just down the road. Times can sometimes change." />
+        <TimelineItem time="12:30 – 13:00" title="Lunch Break" desc="We stop for lunch and set up the second half of the day. We have an onsite shop with drinks available. We recommend bringing your own lunch — there is also a local Co-op just down the road. Times can sometimes change." />
         <TimelineItem time="Afternoon" title="Second Half" desc="Back into it for the afternoon games until end of day." />
 
         <Divider />
