@@ -2086,7 +2086,15 @@ async function sendNewEventEmail({ ev, users }) {
 }
 
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
-  const [detail, setDetail] = useState(null);
+  const getInitDetail = () => {
+    const p = window.location.hash.replace("#","").split("/");
+    return p[0]==="events" && p[1] ? p[1] : null;
+  };
+  const [detail, setDetailState] = useState(getInitDetail);
+  const setDetail = (id) => {
+    setDetailState(id);
+    window.location.hash = id ? "events/" + id : "events";
+  };
   const [waiverModal, setWaiverModal] = useState(false);
   const [tab, setTab] = useState("info");
   const [paypalError, setPaypalError] = useState(null);
@@ -3936,7 +3944,12 @@ function PlayerOrders({ cu }) {
 }
 
 function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
-  const [tab, setTab] = useState("profile");
+  const getInitTab = () => {
+    const p = window.location.hash.replace("#","").split("/");
+    return p[0]==="profile" && ["profile","waiver","bookings","orders","vip"].includes(p[1]) ? p[1] : "profile";
+  };
+  const [tab, setTabState] = useState(getInitTab);
+  const setTab = (t) => { setTabState(t); window.location.hash = "profile/" + t; };
 
   // Parse stored address string back into structured fields
   const parseAddress = (addr) => {
@@ -4631,7 +4644,18 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 // ═══════════════════════════════════════════════════════
 
 function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
-  const [section, setSection] = useState("dashboard");
+  const getInitialSection = () => {
+    const parts = window.location.hash.replace("#","").split("/");
+    const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
+      "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
+      "contact-admin","messages","cash","settings"];
+    return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
+  };
+  const [section, setSectionState] = useState(getInitialSection);
+  const setSection = (s) => {
+    setSectionState(s);
+    window.location.hash = "admin/" + s;
+  };
 
   const isMain = cu.role === "admin";
 
@@ -5039,7 +5063,12 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
 }
 
 function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast }) {
-  const [tab, setTab] = useState("events");
+  const getInitTab = () => {
+    const p = window.location.hash.replace("#","").split("/");
+    return p[0]==="admin" && p[1]==="events" && ["events","bookings","checkin"].includes(p[2]) ? p[2] : "events";
+  };
+  const [tab, setTabState] = useState(getInitTab);
+  const setTab = (t) => { setTabState(t); window.location.hash = "admin/events/" + t; };
 
   // ── Events state ──
   const [modal, setModal] = useState(null);
@@ -5852,8 +5881,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 
 // ── Admin Players ─────────────────────────────────────────
 function AdminPlayers({ data, save, updateUser, showToast }) {
+  const getInitTab = () => {
+    const p = window.location.hash.replace("#","").split("/");
+    return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
+  };
   const [edit, setEdit] = useState(null);
-  const [tab, setTab] = useState("all");
+  const [tab, setTabState] = useState(getInitTab);
+  const setTab = (t) => { setTabState(t); window.location.hash = "admin/players/" + t; };
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
 
@@ -6715,7 +6749,12 @@ function AdminOrders({ showToast }) {
 
 // ── Admin Shop ─────────────────────────────────────────────
 function AdminShop({ data, save, showToast }) {
-  const [tab, setTab] = useState("products");
+  const getInitTab = () => {
+    const p = window.location.hash.replace("#","").split("/");
+    return p[0]==="admin" && p[1]==="shop" && ["products","postage","orders"].includes(p[2]) ? p[2] : "products";
+  };
+  const [tab, setTabState] = useState(getInitTab);
+  const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
   const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, variants: [] };
@@ -9095,14 +9134,34 @@ function AdminCash({ data, cu, showToast }) {
 // ── Root App ──────────────────────────────────────────────────
 export default function App() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
+  // ── Hash routing ──────────────────────────────────────────
+  // Format: #page  |  #admin/section  |  #admin/section/tab
+  //         #profile/tab  |  #events/eventId
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","leaderboard","profile","staff","contact"];
+  const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
+    "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
+    "contact-admin","messages","cash","settings"];
+
   const getInitialPage = () => {
-    const hash = window.location.hash.replace("#","");
-    const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile","staff","contact"];
-    return valid.includes(hash) ? hash : "home";
+    const parts = window.location.hash.replace("#","").split("/");
+    const p = parts[0];
+    if (p === "admin") return "admin";
+    return PUBLIC_PAGES.includes(p) ? p : "home";
   };
-  const [page, setPage] = useState(getInitialPage);
-  // Sync URL hash with page state
-  useEffect(() => { window.location.hash = page; }, [page]);
+  const [page, setPageState] = useState(getInitialPage);
+
+  // setPage writes the hash AND updates state
+  const setPage = (p) => {
+    setPageState(p);
+    // Preserve admin sub-hash when returning; otherwise just set the page
+    if (p !== "admin") window.location.hash = p;
+    else {
+      const cur = window.location.hash.replace("#","").split("/");
+      const sec = cur[0] === "admin" && cur[1] ? cur[1] : "dashboard";
+      const tab = cur[2] || "";
+      window.location.hash = "admin/" + sec + (tab ? "/" + tab : "");
+    }
+  };
 
   const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
@@ -9125,9 +9184,10 @@ export default function App() {
   }, [page, cu?.id]);
   useEffect(() => {
     const onHash = () => {
-      const hash = window.location.hash.replace("#","");
-      const valid = ["home","events","shop","gallery","qa","vip","leaderboard","profile","staff","contact"];
-      if (valid.includes(hash)) setPage(hash);
+      const parts = window.location.hash.replace("#","").split("/");
+      const p = parts[0];
+      if (p === "admin") { setPageState("admin"); return; }
+      if (PUBLIC_PAGES.includes(p)) setPageState(p);
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
