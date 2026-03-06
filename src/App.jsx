@@ -6785,6 +6785,15 @@ function AdminShop({ data, save, showToast }) {
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
   const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, variants: [] };
+
+  // Drag-to-reorder state for products
+  const [shopOrder, setShopOrder] = useState(data.shop);
+  const dragProductIdx = useRef(null);
+  // Keep shopOrder in sync when data.shop changes (after save/refresh)
+  useEffect(() => { setShopOrder(data.shop); }, [data.shop]);
+
+  // Drag-to-reorder ref for variants (inside modal)
+  const dragVariantIdx = useRef(null);
   const [form, setForm] = useState(blank);
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
@@ -6928,11 +6937,34 @@ function AdminShop({ data, save, showToast }) {
 
       {tab === "products" && (
         <div className="card">
+          <p style={{fontSize:12,color:"var(--muted)",marginBottom:12}}>
+            ☰ Drag rows to reorder how products appear in the shop. Variants can also be reordered inside the edit modal.
+          </p>
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Product</th><th>Base Price</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
+            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Base Price</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
             <tbody>
-              {data.shop.map(item => (
-                <tr key={item.id}>
+              {shopOrder.map((item, idx) => (
+                <tr key={item.id}
+                  draggable
+                  onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragProductIdx.current = idx; }}
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect="move"; }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    const from = dragProductIdx.current;
+                    if (from === idx) return;
+                    const next = [...shopOrder];
+                    const [moved] = next.splice(from, 1);
+                    next.splice(idx, 0, moved);
+                    setShopOrder(next);
+                    dragProductIdx.current = null;
+                    // Persist to DB
+                    api.shop.reorder(next.map(p => p.id))
+                      .then(() => save({ shop: next }))
+                      .catch(() => showToast("Reorder failed", "red"));
+                  }}
+                  style={{cursor:"grab"}}
+                >
+                  <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
                   <td style={{ fontWeight:600 }}>{item.name}</td>
                   <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
                   <td>
@@ -6962,7 +6994,7 @@ function AdminShop({ data, save, showToast }) {
                   </td>
                 </tr>
               ))}
-              {data.shop.length === 0 && <tr><td colSpan={7} style={{textAlign:"center",color:"var(--muted)",padding:30}}>No products yet</td></tr>}
+              {shopOrder.length === 0 && <tr><td colSpan={9} style={{textAlign:"center",color:"var(--muted)",padding:30}}>No products yet</td></tr>}
             </tbody>
           </table></div>
         </div>
@@ -7037,15 +7069,31 @@ function AdminShop({ data, save, showToast }) {
             {/* ── VARIANTS EDITOR ── */}
             <div style={{border:"1px solid #2a2a2a",borderLeft:"3px solid var(--accent)",marginBottom:14}}>
               <div style={{background:"#0d0d0d",padding:"8px 14px",fontSize:9,letterSpacing:".25em",color:"var(--accent)",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #2a2a2a"}}>
-                VARIANTS (optional) — e.g. sizes, colours
+                VARIANTS (optional) — e.g. sizes, colours &nbsp;<span style={{fontWeight:400,fontSize:10,color:"var(--muted)",letterSpacing:".05em"}}>☰ drag to reorder</span>
               </div>
               <div style={{padding:14}}>
                 {(form.variants || []).length === 0 && (
                   <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--muted)",marginBottom:10}}>No variants — product uses base price and stock above.</div>
                 )}
-                {(form.variants || []).map(v => (
-                  <div key={v.id} style={{marginBottom:10,background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:2,padding:"10px 12px"}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 36px",gap:8,alignItems:"center",marginBottom:8}}>
+                {(form.variants || []).map((v, vIdx) => (
+                  <div key={v.id}
+                    draggable
+                    onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragVariantIdx.current = vIdx; }}
+                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect="move"; }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      const from = dragVariantIdx.current;
+                      if (from === vIdx) return;
+                      const next = [...form.variants];
+                      const [moved] = next.splice(from, 1);
+                      next.splice(vIdx, 0, moved);
+                      setField("variants", next);
+                      dragVariantIdx.current = null;
+                    }}
+                    style={{marginBottom:10,background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:2,padding:"10px 12px",cursor:"grab"}}
+                  >
+                    <div style={{display:"grid",gridTemplateColumns:"20px 1fr 100px 100px 36px",gap:8,alignItems:"center",marginBottom:8}}>
+                      <span style={{color:"var(--muted)",fontSize:14,textAlign:"center",userSelect:"none",cursor:"grab"}}>☰</span>
                       <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
                       <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Price £" style={{fontSize:12}} />
                       <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />

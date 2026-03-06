@@ -265,6 +265,15 @@ export const shop = {
     if (error) throw error
   },
 
+  async reorder(orderedIds) {
+    // Bulk update sort_order for each product
+    await Promise.all(
+      orderedIds.map((id, i) =>
+        supabase.from('shop_products').update({ sort_order: i }).eq('id', id)
+      )
+    )
+  },
+
   async uploadImage(productId, file) {
     const ext = file.name.split('.').pop()
     const path = `shop/${productId}/image.${ext}`
