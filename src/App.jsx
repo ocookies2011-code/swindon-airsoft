@@ -3158,6 +3158,13 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
+  const [shopCatFilter, setShopCatFilter] = useState("");
+  const allShopCategories = useMemo(() => {
+    const cats = [...new Set((data.shop || []).map(p => p.category).filter(Boolean))].sort();
+    return cats;
+  }, [data.shop]);
+  const filteredShop = shopCatFilter ? (data.shop || []).filter(p => p.category === shopCatFilter) : (data.shop || []);
+
   return (
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
       {/* Header */}
@@ -3203,8 +3210,31 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>ARMOURY IS EMPTY — AWAITING RESUPPLY</div>
         )}
 
+        {allShopCategories.length > 0 && (
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:24, alignItems:"center" }}>
+            <button
+              onClick={() => setShopCatFilter("")}
+              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", textTransform:"uppercase",
+                padding:"6px 16px", border:"1px solid", cursor:"pointer", transition:"all .15s",
+                background: shopCatFilter === "" ? "#c8ff00" : "transparent",
+                borderColor: shopCatFilter === "" ? "#c8ff00" : "#2a3a10",
+                color: shopCatFilter === "" ? "#000" : "#5a7a30" }}
+            >ALL</button>
+            {allShopCategories.map(cat => (
+              <button key={cat}
+                onClick={() => setShopCatFilter(shopCatFilter === cat ? "" : cat)}
+                style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", textTransform:"uppercase",
+                  padding:"6px 16px", border:"1px solid", cursor:"pointer", transition:"all .15s",
+                  background: shopCatFilter === cat ? "#c8ff00" : "transparent",
+                  borderColor: shopCatFilter === cat ? "#c8ff00" : "#2a3a10",
+                  color: shopCatFilter === cat ? "#000" : "#5a7a30" }}
+              >{cat}</button>
+            ))}
+          </div>
+        )}
+
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
-          {data.shop.map((item, idx) => {
+          {filteredShop.map((item, idx) => {
             const hasV = item.variants?.length > 0;
             const displayPrice = hasV
               ? Math.min(...item.variants.map(v => Number(v.price)))
@@ -3264,6 +3294,9 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                     {hasV && <span className="tag tag-blue" style={{ fontSize:9 }}>{item.variants.length} VARIANTS</span>}
                     {item.onSale && !hasV && <span className="tag tag-red" style={{ fontSize:9 }}>SALE</span>}
                   </div>
+                  {item.category && (
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#4a6a20", textTransform:"uppercase", marginBottom:4 }}>◈ {item.category}</div>
+                  )}
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".06em", textTransform:"uppercase", color:"#dce8c8", lineHeight:1.1, marginBottom:6 }}>{item.name}</div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", lineHeight:1.6, marginBottom:10 }}>
                     {(item.description||"").replace(/[*#_~`]/g,"").slice(0,70)}{(item.description||"").length>70?"…":""}
