@@ -522,6 +522,7 @@ function normaliseProduct(p) {
     baseStock:   p.stock, // raw DB stock (only used when no variants)
     noPost:      p.no_post,
     gameExtra:   p.game_extra || false,
+    costPrice:   p.cost_price ? Number(p.cost_price) : null,
     variants,
   }
 }
@@ -585,6 +586,7 @@ function toSnakeProduct(p) {
     stock:       p.variants && p.variants.length > 0 ? 0 : p.stock,
     no_post:     p.noPost,
     game_extra:  p.gameExtra || false,
+    cost_price:  p.costPrice ?? null,
     variants:    p.variants || [],
     // Note: _descTab is a UI-only field, never saved
   }

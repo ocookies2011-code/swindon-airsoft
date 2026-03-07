@@ -979,11 +979,16 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
       if (error) throw error;
-      // Fetch profile directly and update state — no reload needed
-      const profile = await api.profiles.getById(data.user.id);
-      if (profile) onLogin(normaliseProfile(profile));
+      // Fetch profile — if this fails, still close the modal.
+      // onAuthStateChange will also fire and set the user, so the UI will update either way.
+      try {
+        const profile = await api.profiles.getById(data.user.id);
+        if (profile) onLogin(normaliseProfile(profile));
+      } catch {
+        // Profile fetch failed (e.g. timeout) — auth is still valid.
+        // onAuthStateChange will recover the session on next render.
+      }
       onClose();
-      return;
     } catch (e) {
       showToast(e.message || "Login failed", "red");
       setBusy(false);
@@ -6826,7 +6831,7 @@ function AdminShop({ data, save, showToast }) {
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, costPrice: null, variants: [] };
 
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
@@ -6983,7 +6988,7 @@ function AdminShop({ data, save, showToast }) {
             ☰ Drag rows to reorder how products appear in the shop. Variants can also be reordered inside the edit modal.
           </p>
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Base Price</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
+            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Base Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
             <tbody>
               {shopOrder.map((item, idx) => (
                 <tr key={item.id}
@@ -7009,6 +7014,17 @@ function AdminShop({ data, save, showToast }) {
                   <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
                   <td style={{ fontWeight:600 }}>{item.name}</td>
                   <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
+                  <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                    {item.costPrice ? `£${Number(item.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>}
+                  </td>
+                  <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                    {item.costPrice && item.price > 0 && !item.variants?.length ? (() => {
+                      const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
+                      const m = sell - item.costPrice;
+                      const pct = ((m / sell) * 100).toFixed(0);
+                      return <span style={{color: m > 0 ? "var(--accent)" : "var(--red)"}}>£{m.toFixed(2)} ({pct}%)</span>;
+                    })() : <span style={{color:"var(--muted)"}}>—</span>}
+                  </td>
                   <td>
                     {item.variants?.length > 0
                       ? <span className="tag tag-blue">{item.variants.length} variants</span>
@@ -7154,6 +7170,35 @@ function AdminShop({ data, save, showToast }) {
                 {form.onSale && <div className="form-group"><label>Sale Price (£)</label><input type="number" step="0.01" value={form.salePrice || ""} onChange={e => setField("salePrice", +e.target.value)} /></div>}
               </>
             )}
+
+            {/* Cost price — admin only, never shown to public */}
+            <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:3,padding:"10px 14px",marginBottom:12}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:8,fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase"}}>🔒 Admin Only — Cost &amp; Margin</div>
+              <div className="form-row" style={{marginBottom:0}}>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label>Your Cost Price (£) <span style={{fontWeight:400,color:"var(--muted)"}}>— not shown to customers</span></label>
+                  <input type="number" step="0.01" min="0" value={form.costPrice ?? ""} onChange={e => setField("costPrice", e.target.value === "" ? null : +e.target.value)} placeholder="0.00" />
+                </div>
+                {form.costPrice != null && form.costPrice > 0 && (() => {
+                  const sellPrice = form.onSale && form.salePrice ? form.salePrice : form.price;
+                  const margin = sellPrice - form.costPrice;
+                  const pct = sellPrice > 0 ? ((margin / sellPrice) * 100).toFixed(0) : 0;
+                  const colour = margin > 0 ? "var(--accent)" : "var(--red)";
+                  return (
+                    <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",paddingBottom:2}}>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:colour}}>
+                        Margin: <strong>£{margin.toFixed(2)}</strong> ({pct}%)
+                      </div>
+                      {!hasVariants && form.costPrice > 0 && (
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:10,color:"var(--muted)",marginTop:3}}>
+                          Break-even sell: £{(form.costPrice * 1.0).toFixed(2)} · 2× cost: £{(form.costPrice * 2).toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
 
             <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
               <input type="checkbox" checked={form.noPost} onChange={e => setField("noPost", e.target.checked)} />
