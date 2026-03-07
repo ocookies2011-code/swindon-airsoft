@@ -31,6 +31,22 @@ function stockLabel(qty) {
 
 
 
+
+// ── Network error helper ─────────────────────────────────────
+// Converts raw error messages into friendly UI text.
+// NETWORK_TIMEOUT means the Supabase fetch was killed after 10s —
+// most commonly happens when the browser resumes from sleep with
+// stale TCP connections. Tell the user to try again.
+function fmtErr(e) {
+  if (!e) return "Unknown error";
+  const msg = e.message || String(e);
+  if (msg === "NETWORK_TIMEOUT" || msg.includes("NETWORK_TIMEOUT"))
+    return "Request timed out — your connection may have dropped. Please try again.";
+  if (msg.includes("JWT") || msg.includes("expired") || msg.includes("token"))
+    return "Your session expired. Please refresh the page and log in again.";
+  return msg;
+}
+
 // ── PayPal config — loaded dynamically from Supabase site_settings ──
 // Fallback to env vars so local dev still works without DB rows.
 let _paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
@@ -296,18 +312,36 @@ function useData() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // When the tab becomes visible again after being hidden, refresh data.
-  // This handles stale state after browser tab suspension.
+  // When the tab becomes visible after being hidden:
+  //  - Always force-release loadingRef (may have been frozen mid-fetch)
+  //  - After 30s hidden, reload all data (stale content)
+  //  - After 5min hidden, also re-validate the Supabase session
+  //    (JWT may have expired; this forces a token refresh before next write)
+  const lastHiddenRef = useRef(0);
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        // Force-release the guard in case it got stuck while the tab was frozen
-        loadingRef.current = false;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        lastHiddenRef.current = Date.now();
+        return;
+      }
+      // Always release the guard — a frozen async may have left it stuck
+      loadingRef.current = false;
+
+      const hiddenMs = Date.now() - lastHiddenRef.current;
+
+      // Re-validate session if hidden for 5+ minutes
+      // This forces Supabase to refresh the JWT before any writes happen
+      if (hiddenMs > 5 * 60 * 1000) {
+        supabase.auth.getSession().catch(() => {});
+      }
+
+      // Reload data if hidden for 30+ seconds
+      if (hiddenMs > 30000) {
         loadAll();
       }
     };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [loadAll]);
 
   // save() now delegates to specific API calls based on what changed
@@ -5275,7 +5309,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       setModal(null);
     } catch (e) {
       console.error("saveEvent failed:", e);
-      showToast("Save failed: " + (e.message || JSON.stringify(e)), "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally {
       setSavingEvent(false);
     }
@@ -6007,7 +6041,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       showToast("Player updated!");
       setEdit(null);
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally {
       setSavingEdit(false);
     }
@@ -6905,7 +6939,7 @@ function AdminShop({ data, save, showToast }) {
       setModal(null);
     } catch (e) {
       console.error("saveItem FAILED at:", e?.message, e);
-      showToast("Save failed: " + (e?.message || String(e)), "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally {
       setSavingProduct(false);
     }
@@ -6918,7 +6952,7 @@ function AdminShop({ data, save, showToast }) {
       else await api.postage.update(postForm.id, postForm);
       save({ postageOptions: await api.postage.getAll() });
       showToast("Postage saved!"); setPostModal(null);
-    } catch (e) { showToast("Save failed: " + e.message, "red"); }
+    } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
   };
 
   const deletePostage = async (id) => {
@@ -8631,7 +8665,7 @@ function AdminStaff({ showToast }) {
       setModal(null);
       loadStaff(true); // silent refresh — no loading flash
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally { setBusy(false); }
   };
 
@@ -8964,7 +8998,7 @@ function AdminContactDepts({ showToast, save }) {
       save({ contactDepartments: updated });
       showToast("Departments saved!");
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSaving(false); }
   };
 
@@ -9094,7 +9128,7 @@ function AdminSettings({ showToast }) {
       _paypalConfigLoaded = false;
       showToast("✅ PayPal settings saved! Changes take effect on next checkout.");
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSavingPP(false); }
   };
 
@@ -9212,7 +9246,7 @@ function AdminMessages({ data, save, showToast }) {
       save({ homeMsg: val });
       showToast(val ? "Message saved!" : "Message cleared");
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSaving(false); }
   };
 
@@ -9226,7 +9260,7 @@ function AdminMessages({ data, save, showToast }) {
       save({ socialFacebook: facebook, socialInstagram: instagram });
       showToast("Social links saved!");
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSavingSocial(false); }
   };
 
@@ -9239,7 +9273,7 @@ function AdminMessages({ data, save, showToast }) {
       save({ contactAddress, contactPhone, contactEmail });
       showToast("Contact details saved!");
     } catch (e) {
-      showToast("Save failed: " + e.message, "red");
+      showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSavingContact(false); }
   };
 
@@ -9585,6 +9619,12 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "INITIAL_SESSION") return;
+      // TOKEN_REFRESHED fires when Supabase silently renews the JWT.
+      // We don't need to do anything — the client automatically uses the new token.
+      if (event === "TOKEN_REFRESHED") return;
+      // SIGNED_OUT fires when the JWT expires and can't be refreshed (e.g. after long sleep)
+      // Clear the user so they see the login prompt instead of a broken admin panel.
+      if (event === "SIGNED_OUT") { setCu(null); return; }
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
