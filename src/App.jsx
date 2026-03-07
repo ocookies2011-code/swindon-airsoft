@@ -6681,11 +6681,12 @@ function AdminOrdersInline({ showToast }) {
       if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
       showToast("Order marked as dispatched!");
       const order = orders.find(o => o.id === id);
-      if (order?.customerEmail) {
+      const toEmail = order?.customer_email || order?.customerEmail;
+      if (toEmail) {
         sendDispatchEmail({
-          toEmail: order.customerEmail,
-          toName:  order.customerName || "Customer",
-          order,
+          toEmail,
+          toName:  order.customer_name || order.customerName || "Customer",
+          order:   { ...order, customerAddress: order.customer_address || order.customerAddress || "" },
           items:   Array.isArray(order.items) ? order.items : [],
           tracking: tracking || null,
         }).catch(() => {});
@@ -6735,13 +6736,14 @@ function AdminOrdersInline({ showToast }) {
       ) : (
         <div className="card">
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {orders.length === 0 && <tr><td colSpan={7} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No orders yet</td></tr>}
+              {orders.length === 0 && <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No orders yet</td></tr>}
               {orders.map(o => {
                 const items = Array.isArray(o.items) ? o.items : [];
                 return (
                   <tr key={o.id}>
+                    <td className="mono" style={{ fontSize:10, color:"var(--muted)" }}>#{(o.id||"").slice(-8).toUpperCase()}</td>
                     <td className="mono" style={{ fontSize:11 }}>{gmtShort(o.created_at)}</td>
                     <td style={{ fontWeight:600 }}>
                       <button style={{ background:"none", border:"none", color:"var(--blue)", cursor:"pointer", fontWeight:700, fontFamily:"inherit", fontSize:13 }} onClick={() => setDetail(o)}>{o.customer_name}</button>
@@ -6768,6 +6770,7 @@ function AdminOrdersInline({ showToast }) {
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18, flexWrap:"wrap", gap:10 }}>
               <div className="modal-title" style={{ margin:0 }}>📦 Order Details</div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", marginTop:2 }}>#{(detail.id||"").slice(-8).toUpperCase()}</div>
               <button className="btn btn-ghost btn-sm" onClick={() => {
                 const addr = detail.customer_address || "No address on file";
                 const items = (Array.isArray(detail.items) ? detail.items : []).map(i => `${i.name} x${i.qty}`).join(", ");
@@ -6874,11 +6877,12 @@ function AdminOrders({ showToast }) {
       if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
       showToast("Order marked as dispatched!");
       const order = orders.find(o => o.id === id);
-      if (order?.customerEmail) {
+      const toEmail = order?.customer_email || order?.customerEmail;
+      if (toEmail) {
         sendDispatchEmail({
-          toEmail: order.customerEmail,
-          toName:  order.customerName || "Customer",
-          order,
+          toEmail,
+          toName:  order.customer_name || order.customerName || "Customer",
+          order:   { ...order, customerAddress: order.customer_address || order.customerAddress || "" },
           items:   Array.isArray(order.items) ? order.items : [],
           tracking: tracking || null,
         }).catch(() => {});
@@ -6930,13 +6934,14 @@ function AdminOrders({ showToast }) {
       ) : (
         <div className="card">
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {orders.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No orders yet</td></tr>}
+              {orders.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No orders yet</td></tr>}
               {orders.map(o => {
                 const items = Array.isArray(o.items) ? o.items : [];
                 return (
                   <tr key={o.id}>
+                    <td className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>#{(o.id||"").slice(-8).toUpperCase()}</td>
                     <td className="mono" style={{ fontSize: 11 }}>{gmtShort(o.created_at)}</td>
                     <td style={{ fontWeight: 600 }}>
                       <button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }} onClick={() => setDetail(o)}>
@@ -6966,6 +6971,7 @@ function AdminOrders({ showToast }) {
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
               <div className="modal-title" style={{ margin: 0 }}>📦 Order Details</div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", marginTop:2 }}>#{(detail.id||"").slice(-8).toUpperCase()}</div>
               <button className="btn btn-ghost btn-sm" onClick={() => {
                 const addr = detail.customer_address || "No address on file";
                 const items = (Array.isArray(detail.items) ? detail.items : []).map(i => `${i.name} x${i.qty}`).join(", ");
