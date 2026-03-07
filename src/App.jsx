@@ -2341,7 +2341,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       const extraKeyVal = extraKey(id, variantId);
       setBCart(p => {
         const next = { ...p.extras };
-        if (qty > 0) next[k] = Math.max(0, qty); else delete next[k];
+        if (qty > 0) next[extraKeyVal] = Math.max(0, qty); else delete next[extraKeyVal];
         return { ...p, extras: next };
       });
     };
