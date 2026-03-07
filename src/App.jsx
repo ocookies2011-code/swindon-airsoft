@@ -658,6 +658,18 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .admin-main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
 .admin-topbar{background:#0d0d0d;border-bottom:1px solid #1a1a1a;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
 .admin-content{padding:20px;flex:1;}
+@media(max-width:768px){
+  .admin-sidebar{transform:translateX(-100%);}
+  .admin-sidebar.open{transform:translateX(0);}
+  .admin-main{margin-left:0;}
+  .admin-overlay{display:block;}
+  .admin-overlay.open{display:block;}
+  .admin-content{padding:14px 12px;}
+}
+@media(min-width:769px){
+  .admin-sidebar{transform:none !important;}
+  .admin-overlay{display:none !important;}
+}
 .sb-logo{padding:16px 14px 14px;border-bottom:1px solid #1a1a1a;margin-bottom:6px;}
 .sb-logo-text{font-size:16px;font-weight:900;letter-spacing:.1em;font-family:'Barlow Condensed',sans-serif;color:#fff;text-transform:uppercase;}
 .sb-logo-text span{color:var(--accent);}
@@ -670,7 +682,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;border-radius:2px;}
 .sb-badge.gold{background:var(--gold);color:#000;}
 .sb-badge.blue{background:var(--blue);}
-.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:49;}
+.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:49;cursor:pointer;}
 
 /* ── BAR CHART ── */
 .bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;}
@@ -5003,11 +5015,15 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
       <div className="admin-main">
         <div className="admin-topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text)", padding: "5px 10px", borderRadius: 6, fontSize: 16 }}>☰</button>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>⚙ ADMIN</div>
+            <button onClick={() => setSidebarOpen(v => !v)} style={{ background: sidebarOpen ? "var(--accent)" : "none", border: "1px solid var(--border)", color: sidebarOpen ? "#000" : "var(--text)", padding: "6px 12px", borderRadius: 4, fontSize: 18, lineHeight: 1, cursor: "pointer", transition: "all .15s" }}>☰</button>
+            <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: "var(--muted)" }}>⚙ ADMIN</span>
+              <span style={{ color: "var(--border)" }}>·</span>
+              <span style={{ color: "var(--text)", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".06em", textTransform: "uppercase" }}>{NAV.find(n => n.id === section)?.label || section}</span>
+            </div>
           </div>
           <div className="gap-2" style={{ alignItems: "center" }}>
-            <GmtClock />
+            <span style={{ fontSize: 12, display: "var(--hide-mobile, inline)" }}><GmtClock /></span>
             <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")}>← Site</button>
           </div>
         </div>
