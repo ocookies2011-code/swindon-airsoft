@@ -6845,13 +6845,13 @@ function AdminShop({ data, save, showToast }) {
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   // Variant editor state
-  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "" });
+  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "", costPrice: "" });
 
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
-    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, image: "" };
+    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, costPrice: newVariant.costPrice !== "" ? Number(newVariant.costPrice) : null, image: "" };
     setField("variants", [...(form.variants || []), newVar]);
-    setNewVariant({ name: "", price: "", stock: "" });
+    setNewVariant({ name: "", price: "", stock: "", costPrice: "" });
   };
   const removeVariant = (id) => setField("variants", form.variants.filter(varItem => varItem.id !== id));
   const updateVariant = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
@@ -6972,7 +6972,7 @@ function AdminShop({ data, save, showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Shop</div></div>
-        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
         {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
       </div>
 
@@ -7015,15 +7015,38 @@ function AdminShop({ data, save, showToast }) {
                   <td style={{ fontWeight:600 }}>{item.name}</td>
                   <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
                   <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
-                    {item.costPrice ? `£${Number(item.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>}
+                    {item.variants?.length > 0
+                      ? item.variants.some(v => v.costPrice)
+                        ? item.variants.map(v => (
+                            <div key={v.id} style={{whiteSpace:"nowrap"}}>
+                              {v.name}: {v.costPrice ? `£${Number(v.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>}
+                            </div>
+                          ))
+                        : <span style={{color:"var(--muted)"}}>—</span>
+                      : item.costPrice ? `£${Number(item.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>
+                    }
                   </td>
                   <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
-                    {item.costPrice && item.price > 0 && !item.variants?.length ? (() => {
-                      const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
-                      const m = sell - item.costPrice;
-                      const pct = ((m / sell) * 100).toFixed(0);
-                      return <span style={{color: m > 0 ? "var(--accent)" : "var(--red)"}}>£{m.toFixed(2)} ({pct}%)</span>;
-                    })() : <span style={{color:"var(--muted)"}}>—</span>}
+                    {item.variants?.length > 0
+                      ? item.variants.some(v => v.costPrice && v.price > 0)
+                        ? item.variants.filter(v => v.costPrice && v.price > 0).map(v => {
+                            const m = v.price - v.costPrice;
+                            const pct = ((m / v.price) * 100).toFixed(0);
+                            return (
+                              <div key={v.id} style={{whiteSpace:"nowrap",color: m >= 0 ? "var(--accent)" : "var(--red)"}}>
+                                {v.name}: £{m.toFixed(2)} ({pct}%)
+                              </div>
+                            );
+                          })
+                        : <span style={{color:"var(--muted)"}}>—</span>
+                      : item.costPrice && item.price > 0 ? (() => {
+                          const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
+                          const m = sell - item.costPrice;
+                          const pct = ((m / sell) * 100).toFixed(0);
+                          return <span style={{color: m >= 0 ? "var(--accent)" : "var(--red)"}}>£{m.toFixed(2)} ({pct}%)</span>;
+                        })()
+                      : <span style={{color:"var(--muted)"}}>—</span>
+                    }
                   </td>
                   <td>
                     {item.variants?.length > 0
@@ -7046,7 +7069,7 @@ function AdminShop({ data, save, showToast }) {
                   <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
                   <td>
                     <div className="gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
                       <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
                     </div>
                   </td>
@@ -7235,13 +7258,23 @@ function AdminShop({ data, save, showToast }) {
                     }}
                     style={{marginBottom:10,background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:2,padding:"10px 12px",cursor:"grab"}}
                   >
-                    <div style={{display:"grid",gridTemplateColumns:"20px 1fr 100px 100px 36px",gap:8,alignItems:"center",marginBottom:8}}>
+                    <div style={{display:"grid",gridTemplateColumns:"20px 1fr 90px 90px 90px 36px",gap:8,alignItems:"center",marginBottom:4}}>
                       <span style={{color:"var(--muted)",fontSize:14,textAlign:"center",userSelect:"none",cursor:"grab"}}>☰</span>
                       <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
-                      <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Price £" style={{fontSize:12}} />
+                      <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Sell £" style={{fontSize:12}} />
+                      <input type="number" step="0.01" value={v.costPrice ?? ""} onChange={e => updateVariantRaw(v.id, "costPrice", e.target.value === "" ? null : Number(e.target.value))} placeholder="Cost £" style={{fontSize:12,borderColor:"#2a2a2a"}} title="Your cost price (admin only)" />
                       <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
                       <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
                     </div>
+                    {v.costPrice != null && v.costPrice > 0 && v.price > 0 && (() => {
+                      const margin = v.price - v.costPrice;
+                      const pct = ((margin / v.price) * 100).toFixed(0);
+                      return (
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:10,color: margin >= 0 ? "var(--accent)" : "var(--red)",marginBottom:6,paddingLeft:28}}>
+                          Margin: £{margin.toFixed(2)} ({pct}%) · 2× cost: £{(v.costPrice * 2).toFixed(2)}
+                        </div>
+                      );
+                    })()}
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       {v.image && <img src={v.image} style={{width:52,height:52,objectFit:"cover",border:"1px solid #333",flexShrink:0}} alt="" />}
                       <label style={{cursor:"pointer",flex:1}}>
@@ -7255,9 +7288,10 @@ function AdminShop({ data, save, showToast }) {
                   </div>
                 ))}
                 {/* Add new variant row */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px auto",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 90px 90px 90px auto",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
                   <input value={newVariant.name} onChange={e => setNewVariant(p => ({...p, name: e.target.value}))} placeholder="New variant name" style={{fontSize:12}} />
-                  <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="£" style={{fontSize:12}} />
+                  <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="Sell £" style={{fontSize:12}} />
+                  <input type="number" step="0.01" value={newVariant.costPrice} onChange={e => setNewVariant(p => ({...p, costPrice: e.target.value}))} placeholder="Cost £" style={{fontSize:12,borderColor:"#2a2a2a"}} title="Your cost price (admin only)" />
                   <input type="number" value={newVariant.stock} onChange={e => setNewVariant(p => ({...p, stock: e.target.value}))} placeholder="Stock" style={{fontSize:12}} />
                   <button className="btn btn-sm btn-primary" onClick={addVariant} style={{whiteSpace:"nowrap"}}>+ Add</button>
                 </div>
