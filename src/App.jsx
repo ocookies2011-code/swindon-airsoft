@@ -10154,9 +10154,9 @@ function AdminPurchaseOrders({ data, showToast }) {
                 <select value={newItem.productId} onChange={e => {
                   const prod = (data.shop||[]).find(p => p.id === e.target.value);
                   setNewItem(n => ({...n, productId: e.target.value, productName: prod ? prod.name : "", unitCost: prod?.costPrice ? String(prod.costPrice) : n.unitCost}));
-                }} style={{fontSize:12, padding:"5px 8px", background:"var(--card)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:2, width:"100%"}}>
-                  <option value="">— Pick shop product —</option>
-                  {(data.shop||[]).map(p => <option key={p.id} value={p.id}>{p.name}{p.stock<5?` (stock: ${p.stock})`:"" }</option>)}
+                }} style={{fontSize:12, padding:"5px 8px", background:"#1a1a1a", border:"1px solid var(--border)", color:"#fff", borderRadius:2, width:"100%"}}>
+                  <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Pick shop product —</option>
+                  {(data.shop||[]).map(p => <option key={p.id} value={p.id} style={{background:"#1a1a1a",color:"#fff"}}>{p.name}{p.stock<5?` (stock: ${p.stock})`:""}</option>)}
                 </select>
                 <div style={{fontSize:10, color:"var(--muted)", marginTop:3}}>or enter free text:</div>
                 <input value={newItem.productName} onChange={e => setNewItem(n => ({...n, productName: e.target.value, productId: ""}))}
