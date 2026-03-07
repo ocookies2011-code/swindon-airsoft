@@ -9917,7 +9917,7 @@ function AdminPurchaseOrders({ data, showToast }) {
   // New PO form state
   const blankPo = { supplierId: "", notes: "", items: [] };
   const [poForm, setPoForm] = useState(blankPo);
-  const [newItem, setNewItem] = useState({ productId: "", productName: "", qtyOrdered: 1, unitCost: "" });
+  const [newItem, setNewItem] = useState({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
 
   // Supplier form state
   const blankSup = { name: "", contact: "", email: "", phone: "", notes: "" };
@@ -9964,14 +9964,22 @@ function AdminPurchaseOrders({ data, showToast }) {
   const addPoItem = () => {
     if (!newItem.productName.trim() && !newItem.productId) { showToast("Select a product or enter a name", "red"); return; }
     const product = newItem.productId ? (data.shop || []).find(p => p.id === newItem.productId) : null;
+    const variant = product && newItem.variantId ? product.variants?.find(v => v.id === newItem.variantId) : null;
+    const hasVariants = product?.variants?.length > 0;
+    if (hasVariants && !newItem.variantId) { showToast("Please select a variant", "red"); return; }
+    const displayName = product
+      ? (variant ? product.name + " — " + variant.name : product.name)
+      : newItem.productName;
+    const costPrice = variant?.costPrice ?? variant?.price ?? product?.costPrice ?? Number(newItem.unitCost) ?? 0;
     setPoForm(prev => ({ ...prev, items: [...prev.items, {
       id: Math.random().toString(36).slice(2),
       productId: newItem.productId || null,
-      productName: product ? product.name : newItem.productName,
+      variantId: newItem.variantId || null,
+      productName: displayName,
       qtyOrdered: Number(newItem.qtyOrdered) || 1,
-      unitCost: Number(newItem.unitCost) || 0,
+      unitCost: Number(newItem.unitCost) || costPrice || 0,
     }]}));
-    setNewItem({ productId: "", productName: "", qtyOrdered: 1, unitCost: "" });
+    setNewItem({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
   };
 
   const removePoItem = (id) => setPoForm(prev => ({ ...prev, items: prev.items.filter(i => i.id !== id) }));
@@ -10153,13 +10161,32 @@ function AdminPurchaseOrders({ data, showToast }) {
                 <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>PRODUCT</div>
                 <select value={newItem.productId} onChange={e => {
                   const prod = (data.shop||[]).find(p => p.id === e.target.value);
-                  setNewItem(n => ({...n, productId: e.target.value, productName: prod ? prod.name : "", unitCost: prod?.costPrice ? String(prod.costPrice) : n.unitCost}));
+                  setNewItem(n => ({...n, productId: e.target.value, variantId: "", productName: prod ? prod.name : "", unitCost: prod?.costPrice && !prod?.variants?.length ? String(prod.costPrice) : n.unitCost}));
                 }} style={{fontSize:12, padding:"5px 8px", background:"#1a1a1a", border:"1px solid var(--border)", color:"#fff", borderRadius:2, width:"100%"}}>
                   <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Pick shop product —</option>
-                  {(data.shop||[]).map(p => <option key={p.id} value={p.id} style={{background:"#1a1a1a",color:"#fff"}}>{p.name}{p.stock<5?` (stock: ${p.stock})`:""}</option>)}
+                  {(data.shop||[]).map(p => (
+                    <option key={p.id} value={p.id} style={{background:"#1a1a1a",color:"#fff"}}>
+                      {p.name}{p.variants?.length > 0 ? " (" + p.variants.length + " variants)" : (p.stock < 5 ? " (stock: " + p.stock + ")" : "")}
+                    </option>
+                  ))}
                 </select>
+                {/* Variant selector — shown when selected product has variants */}
+                {newItem.productId && (data.shop||[]).find(p => p.id === newItem.productId)?.variants?.length > 0 && (
+                  <select value={newItem.variantId} onChange={e => {
+                    const prod = (data.shop||[]).find(p => p.id === newItem.productId);
+                    const v = prod?.variants?.find(v => v.id === e.target.value);
+                    setNewItem(n => ({...n, variantId: e.target.value, unitCost: v?.costPrice ? String(v.costPrice) : (v?.price ? String(v.price) : n.unitCost)}));
+                  }} style={{fontSize:12, padding:"5px 8px", background:"#1a1a1a", border:"1px solid var(--accent)", color:"#fff", borderRadius:2, width:"100%", marginTop:6}}>
+                    <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Select variant —</option>
+                    {(data.shop||[]).find(p => p.id === newItem.productId)?.variants?.map(v => (
+                      <option key={v.id} value={v.id} style={{background:"#1a1a1a",color:"#fff"}}>
+                        {v.name}{Number(v.stock) < 5 ? " (stock: " + v.stock + ")" : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <div style={{fontSize:10, color:"var(--muted)", marginTop:3}}>or enter free text:</div>
-                <input value={newItem.productName} onChange={e => setNewItem(n => ({...n, productName: e.target.value, productId: ""}))}
+                <input value={newItem.productName} onChange={e => setNewItem(n => ({...n, productName: e.target.value, productId: "", variantId: ""}))}
                   placeholder="Product name" style={{fontSize:12, marginTop:4}} />
               </div>
               <div style={{flex:"0 0 80px"}}>
