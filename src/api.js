@@ -254,10 +254,10 @@ export const shop = wrapWithTimeout({
     const { data, error } = await supabase
       .from('shop_products').insert(snake).select().single()
     if (error) {
-      // Retry stripping any columns that don't exist yet
-      const { variants: _v, game_extra: _g, ...snakeStripped } = snake
+      // Retry stripping columns that may not exist in DB yet
+      const { variants: _v, game_extra: _g, images: _i, category: _c, cost_price: _cp, ...snakeCore } = snake
       const { data: d2, error: e2 } = await supabase
-        .from('shop_products').insert(snakeStripped).select().single()
+        .from('shop_products').insert(snakeCore).select().single()
       if (e2) throw new Error('Product create failed: ' + e2.message)
       return normaliseProduct(d2)
     }
@@ -269,10 +269,10 @@ export const shop = wrapWithTimeout({
     const { data, error } = await supabase
       .from('shop_products').update(snake).eq('id', id).select().single()
     if (error) {
-      // Retry stripping any columns that don't exist yet (game_extra, variants if missing)
-      const { variants: _v, game_extra: _g, ...snakeStripped } = snake
+      // Retry stripping columns that may not exist in DB yet
+      const { variants: _v, game_extra: _g, images: _i, category: _c, cost_price: _cp, ...snakeCore } = snake
       const { data: d2, error: e2 } = await supabase
-        .from('shop_products').update(snakeStripped).eq('id', id).select().single()
+        .from('shop_products').update(snakeCore).eq('id', id).select().single()
       if (e2) throw new Error('Product save failed: ' + e2.message)
       if (!d2) throw new Error('Product save failed — no data returned.')
       return normaliseProduct(d2)

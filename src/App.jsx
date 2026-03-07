@@ -253,7 +253,8 @@ function useData() {
           }
 
           if (hasErrors) {
-            console.error("loadAll partial errors:", errors);
+            const errSummary = Object.entries(errors).map(([k,v]) => `${k}: ${v}`).join(" | ");
+            console.error("loadAll partial errors:", errSummary, errors);
             setLoadError(Object.values(errors)[0]);
           }
 
