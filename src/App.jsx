@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
 import { normaliseProfile } from "./api";
@@ -7131,13 +7131,30 @@ function AdminShop({ data, save, showToast }) {
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, costPrice: null, variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, costPrice: null, category: "", variants: [] };
 
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
   const dragProductIdx = useRef(null);
   // Keep shopOrder in sync when data.shop changes (after save/refresh)
   useEffect(() => { setShopOrder(data.shop); }, [data.shop]);
+
+  // Product search + category filter
+  const [productSearch, setProductSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const allCategories = useMemo(() => {
+    const cats = [...new Set(shopOrder.map(p => p.category).filter(Boolean))].sort();
+    return cats;
+  }, [shopOrder]);
+  const filteredShopOrder = useMemo(() => {
+    let list = shopOrder;
+    if (categoryFilter) list = list.filter(p => p.category === categoryFilter);
+    if (productSearch.trim()) {
+      const q = productSearch.toLowerCase();
+      list = list.filter(p => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q));
+    }
+    return list;
+  }, [shopOrder, productSearch, categoryFilter]);
 
   // Drag-to-reorder ref for variants (inside modal)
   const dragVariantIdx = useRef(null);
@@ -7284,13 +7301,37 @@ function AdminShop({ data, save, showToast }) {
 
       {tab === "products" && (
         <div className="card">
+          <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12, flexWrap:"wrap" }}>
+            <input
+              value={productSearch}
+              onChange={e => setProductSearch(e.target.value)}
+              placeholder="🔍 Search products…"
+              style={{ flex:1, minWidth:160, fontSize:13 }}
+            />
+            <select
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              style={{ fontSize:13, padding:"7px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:4, minWidth:140 }}
+            >
+              <option value="">All categories</option>
+              {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {(productSearch || categoryFilter) && (
+              <button className="btn btn-ghost btn-sm" onClick={() => { setProductSearch(""); setCategoryFilter(""); }}>✕ Clear</button>
+            )}
+            <span style={{ fontSize:11, color:"var(--muted)", whiteSpace:"nowrap" }}>
+              {filteredShopOrder.length} / {shopOrder.length}
+            </span>
+          </div>
           <p style={{fontSize:12,color:"var(--muted)",marginBottom:12}}>
-            ☰ Drag rows to reorder how products appear in the shop. Variants can also be reordered inside the edit modal.
+            ☰ Drag rows to reorder. Variants can be reordered inside the edit modal.
           </p>
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Base Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
+            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Category</th><th>Base Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
             <tbody>
-              {shopOrder.map((item, idx) => (
+              {filteredShopOrder.map((item) => {
+                const idx = shopOrder.findIndex(p => p.id === item.id);
+                return (
                 <tr key={item.id}
                   draggable
                   onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragProductIdx.current = idx; }}
@@ -7313,6 +7354,7 @@ function AdminShop({ data, save, showToast }) {
                 >
                   <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
                   <td style={{ fontWeight:600 }}>{item.name}</td>
+                  <td>{item.category ? <span className="tag tag-blue" style={{fontSize:10}}>{item.category}</span> : <span style={{color:"var(--muted)"}}>—</span>}</td>
                   <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
                   <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
                     {item.variants?.length > 0
@@ -7374,8 +7416,9 @@ function AdminShop({ data, save, showToast }) {
                     </div>
                   </td>
                 </tr>
-              ))}
-              {shopOrder.length === 0 && <tr><td colSpan={9} style={{textAlign:"center",color:"var(--muted)",padding:30}}>No products yet</td></tr>}
+              );
+              })}
+              {filteredShopOrder.length === 0 && <tr><td colSpan={12} style={{textAlign:"center",color:"var(--muted)",padding:30}}>{productSearch || categoryFilter ? "No matching products" : "No products yet"}</td></tr>}
             </tbody>
           </table></div>
         </div>
@@ -7413,6 +7456,18 @@ function AdminShop({ data, save, showToast }) {
 
             <div className="form-row">
               <div className="form-group"><label>Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} /></div>
+              <div className="form-group">
+                <label>Category <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(optional — e.g. BBs, Guns, Accessories)</span></label>
+                <input
+                  list="category-suggestions"
+                  value={form.category || ""}
+                  onChange={e => setField("category", e.target.value)}
+                  placeholder="Type or choose a category…"
+                />
+                <datalist id="category-suggestions">
+                  {allCategories.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
             </div>
 
             {/* Rich description editor */}

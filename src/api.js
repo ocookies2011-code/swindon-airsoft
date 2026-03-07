@@ -523,6 +523,7 @@ function normaliseProduct(p) {
     noPost:      p.no_post,
     gameExtra:   p.game_extra || false,
     costPrice:   p.cost_price ? Number(p.cost_price) : null,
+    category:    p.category || '',
     variants,
   }
 }
@@ -587,6 +588,7 @@ function toSnakeProduct(p) {
     no_post:     p.noPost,
     game_extra:  p.gameExtra || false,
     cost_price:  p.costPrice ?? null,
+    category:    p.category || '',
     variants:    p.variants || [],
     // Note: _descTab is a UI-only field, never saved
   }
