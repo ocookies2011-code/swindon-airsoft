@@ -377,7 +377,9 @@ export const gallery = wrapWithTimeout({
     const { error } = await supabase.storage.from('images').upload(path, file)
     if (error) throw error
     const { data } = supabase.storage.from('images').getPublicUrl(path)
-    await this.addImageUrl(albumId, data.publicUrl)
+    const { error: insertErr } = await supabase
+      .from('gallery_images').insert({ album_id: albumId, url: data.publicUrl })
+    if (insertErr) throw insertErr
     return data.publicUrl
   },
 
