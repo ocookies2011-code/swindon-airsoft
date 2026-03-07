@@ -4913,7 +4913,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","cash","settings"];
+      "contact-admin","messages","cash","purchase-orders","settings"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -4958,6 +4958,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "contact-admin", label: "Contact Depts", icon: "✉️", group: null },
     { id: "messages", label: "Site Messages", icon: "📢", group: null },
     { id: "cash", label: "Cash Sales", icon: "💵", group: "TOOLS" },
+    { id: "purchase-orders", label: "Purchase Orders", icon: "📋", group: null },
     { id: "settings", label: "Settings", icon: "⚙️", group: "SYSTEM" },
   ];
 
@@ -5025,6 +5026,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
+          {section === "purchase-orders" && <AdminPurchaseOrders data={data} showToast={showToast} />}
           {section === "settings" && <AdminSettings showToast={showToast} />}
         </div>
       </div>
@@ -5051,11 +5053,22 @@ function AdminDash({ data, setSection }) {
   });
   const maxBar = Math.max(...weekCounts, 1);
 
+  const LOW_STOCK_THRESHOLD = 5;
+  const shopProducts = data.shop || [];
+  const outOfStock = shopProducts.filter(p => p.stock < 1 && !p.variants?.length);
+  const lowStock = shopProducts.filter(p => p.stock > 0 && p.stock <= LOW_STOCK_THRESHOLD && !p.variants?.length);
+  const outOfStockVariants = shopProducts.filter(p => p.variants?.length > 0 && p.variants.every(v => Number(v.stock) < 1));
+  const lowStockVariants = shopProducts.filter(p => p.variants?.length > 0 && p.variants.some(v => Number(v.stock) > 0 && Number(v.stock) <= LOW_STOCK_THRESHOLD));
+
   const alerts = [
-    unsigned > 0 && { msg: `${unsigned} player(s) with unsigned waivers.`, section: "unsigned-waivers" },
-    pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers" },
-    data.users.filter(u => u.deleteRequest).length > 0 && { msg: `${data.users.filter(u => u.deleteRequest).length} account deletion request(s).`, section: "players" },
-    data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length > 0 && { msg: `${data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length} VIP application(s) awaiting review.`, section: "players" },
+    unsigned > 0 && { msg: `${unsigned} player(s) with unsigned waivers.`, section: "unsigned-waivers", color: "red" },
+    pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers", color: "red" },
+    data.users.filter(u => u.deleteRequest).length > 0 && { msg: `${data.users.filter(u => u.deleteRequest).length} account deletion request(s).`, section: "players", color: "red" },
+    data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length > 0 && { msg: `${data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length} VIP application(s) awaiting review.`, section: "players", color: "red" },
+    outOfStock.length > 0 && { msg: `${outOfStock.length} product(s) OUT OF STOCK: ${outOfStock.slice(0,3).map(p=>p.name).join(", ")}${outOfStock.length>3?\` +${outOfStock.length-3} more`:""}.`, section: "shop", color: "red", icon: "📦" },
+    outOfStockVariants.length > 0 && { msg: `${outOfStockVariants.length} variant product(s) fully out of stock: ${outOfStockVariants.slice(0,2).map(p=>p.name).join(", ")}${outOfStockVariants.length>2?\` +${outOfStockVariants.length-2} more`:""}.`, section: "shop", color: "red", icon: "📦" },
+    lowStock.length > 0 && { msg: `${lowStock.length} product(s) running low (≤${LOW_STOCK_THRESHOLD}): ${lowStock.slice(0,3).map(p=>\`\${p.name} (\${p.stock})\`).join(", ")}${lowStock.length>3?\` +\${lowStock.length-3} more`:""}.`, section: "shop", color: "gold", icon: "⚠️" },
+    lowStockVariants.length > 0 && { msg: `${lowStockVariants.length} variant product(s) have low stock variants.`, section: "shop", color: "gold", icon: "⚠️" },
   ].filter(Boolean);
 
   return (
@@ -5101,8 +5114,8 @@ function AdminDash({ data, setSection }) {
             <div className="alert alert-green">✓ All clear — no actions required</div>
           ) : (
             alerts.map((a, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#2d0d0d", border: "1px solid #6b2222", borderRadius: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--red)" }}>● {a.msg}</span>
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: a.color === "gold" ? "rgba(200,150,0,.08)" : "#2d0d0d", border: `1px solid ${a.color === "gold" ? "rgba(200,150,0,.4)" : "#6b2222"}`, borderRadius: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: a.color === "gold" ? "var(--gold)" : "var(--red)" }}>{a.icon || "●"} {a.msg}</span>
                 <button className="btn btn-sm btn-ghost" style={{ fontSize: 11 }} onClick={() => setSection(a.section)}>View →</button>
               </div>
             ))
@@ -9100,7 +9113,7 @@ function StaffPage({ staff = [] }) {
     1: "COMMANDING OFFICER",
     4: "SENIOR MARSHAL", 5: "MARSHAL", 7: "VOLUNTEER",
   };
-  const RANK_PIPS = { 1: 5, 4: 3, 5: 2, 7: 1 };
+  const RANK_PIPS = { 1: 5, 2: 4, 3: 3, 4: 2 };
   const getRankLabel = r => RANK_LABELS[r] || "MARSHAL";
 
   const tiers = staff.reduce((acc, member) => {
@@ -9314,12 +9327,12 @@ function AdminStaff({ showToast }) {
 
   const RANK_OPTIONS = [
     { value: 1, label: "1 — Owner" },
-    { value: 4, label: "4 — Senior Marshal" },
-    { value: 5, label: "5 — Marshal" },
-    { value: 7, label: "7 — Volunteer" },
+    { value: 2, label: "2 — Manager" },
+    { value: 3, label: "3 — Senior Marshal" },
+    { value: 4, label: "4 — Marshal" },
   ];
 
-  const blank = { name: "", jobTitle: "", bio: "", photo: "", rankOrder: 5 };
+  const blank = { name: "", jobTitle: "", bio: "", photo: "", rankOrder: 4 };
   const [form, setForm] = useState(blank);
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -9888,6 +9901,370 @@ function EmailTestCard({ showToast, sectionHead }) {
 }
 
 // ── Admin Settings ────────────────────────────────────────
+
+// ── Admin Purchase Orders ─────────────────────────────────────
+function AdminPurchaseOrders({ data, showToast }) {
+  const [tab, setTab] = useState("orders"); // "orders" | "suppliers"
+  const [orders, setOrders] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [poModal, setPoModal] = useState(null);     // null | "new" | order obj
+  const [supModal, setSupModal] = useState(null);   // null | "new" | supplier obj
+  const [detailModal, setDetailModal] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  // New PO form state
+  const blankPo = { supplierId: "", notes: "", items: [] };
+  const [poForm, setPoForm] = useState(blankPo);
+  const [newItem, setNewItem] = useState({ productId: "", productName: "", qtyOrdered: 1, unitCost: "" });
+
+  // Supplier form state
+  const blankSup = { name: "", contact: "", email: "", phone: "", notes: "" };
+  const [supForm, setSupForm] = useState(blankSup);
+
+  const STATUS_COLORS = { draft: "muted", ordered: "blue", partial: "gold", received: "green", cancelled: "red" };
+  const STATUS_LABELS = { draft: "Draft", ordered: "Ordered", partial: "Part Received", received: "Fully Received", cancelled: "Cancelled" };
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [ords, sups] = await Promise.all([api.purchaseOrders.getAll(), api.suppliers.getAll()]);
+      setOrders(ords); setSuppliers(sups);
+    } catch (e) { showToast("Load failed: " + e.message, "red"); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { loadAll(); }, []);
+
+  // ── Suppliers CRUD ──
+  const saveSup = async () => {
+    if (!supForm.name.trim()) { showToast("Supplier name required", "red"); return; }
+    setBusy(true);
+    try {
+      if (supModal === "new") {
+        await api.suppliers.create(supForm);
+        showToast("Supplier added!");
+      } else {
+        await api.suppliers.update(supModal.id, supForm);
+        showToast("Supplier updated!");
+      }
+      await loadAll();
+      setSupModal(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(false); }
+  };
+
+  const deleteSup = async (id) => {
+    if (!window.confirm("Delete this supplier?")) return;
+    try { await api.suppliers.delete(id); await loadAll(); showToast("Supplier deleted."); }
+    catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  // ── PO items builder ──
+  const addPoItem = () => {
+    if (!newItem.productName.trim() && !newItem.productId) { showToast("Select a product or enter a name", "red"); return; }
+    const product = newItem.productId ? (data.shop || []).find(p => p.id === newItem.productId) : null;
+    setPoForm(prev => ({ ...prev, items: [...prev.items, {
+      id: Math.random().toString(36).slice(2),
+      productId: newItem.productId || null,
+      productName: product ? product.name : newItem.productName,
+      qtyOrdered: Number(newItem.qtyOrdered) || 1,
+      unitCost: Number(newItem.unitCost) || 0,
+    }]}));
+    setNewItem({ productId: "", productName: "", qtyOrdered: 1, unitCost: "" });
+  };
+
+  const removePoItem = (id) => setPoForm(prev => ({ ...prev, items: prev.items.filter(i => i.id !== id) }));
+
+  const poTotal = poForm.items.reduce((s, i) => s + (Number(i.qtyOrdered) * Number(i.unitCost)), 0);
+
+  // ── Create PO ──
+  const savePo = async () => {
+    if (!poForm.items.length) { showToast("Add at least one item", "red"); return; }
+    const sup = suppliers.find(s => s.id === poForm.supplierId);
+    setBusy(true);
+    try {
+      await api.purchaseOrders.create({
+        supplierId: poForm.supplierId || null,
+        supplierName: sup ? sup.name : "",
+        notes: poForm.notes,
+        items: poForm.items,
+        total: poTotal,
+        status: "draft",
+      });
+      showToast("Purchase order created!");
+      await loadAll();
+      setPoModal(null);
+      setPoForm(blankPo);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(false); }
+  };
+
+  // ── Receive items ──
+  const [receiveQtys, setReceiveQtys] = useState({});
+  const openDetail = (order) => {
+    setDetailModal(order);
+    const qtys = {};
+    order.items.forEach(i => { qtys[i.id] = i.qty_received; });
+    setReceiveQtys(qtys);
+  };
+
+  const saveReceive = async () => {
+    setBusy(true);
+    try {
+      await Promise.all(
+        detailModal.items.map(i =>
+          api.purchaseOrders.receiveItem(i.id, Number(receiveQtys[i.id]) || 0)
+        )
+      );
+      const allReceived = detailModal.items.every(i => Number(receiveQtys[i.id]) >= i.qty_ordered);
+      const anyReceived = detailModal.items.some(i => Number(receiveQtys[i.id]) > 0);
+      const newStatus = allReceived ? "received" : anyReceived ? "partial" : detailModal.status;
+      if (newStatus !== detailModal.status) await api.purchaseOrders.updateStatus(detailModal.id, newStatus);
+      showToast("Stock receipt saved!");
+      await loadAll();
+      setDetailModal(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(false); }
+  };
+
+  const deleteOrder = async (id) => {
+    if (!window.confirm("Delete this purchase order?")) return;
+    try { await api.purchaseOrders.delete(id); await loadAll(); showToast("Purchase order deleted."); }
+    catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  const statusChange = async (id, status) => {
+    try { await api.purchaseOrders.updateStatus(id, status); await loadAll(); showToast("Status updated!"); }
+    catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Purchase Orders</div>
+          <div className="page-sub">Manage suppliers and incoming stock orders</div>
+        </div>
+        <div className="gap-2">
+          {tab === "orders" && <button className="btn btn-primary" onClick={() => { setPoForm(blankPo); setPoModal("new"); }}>+ New Purchase Order</button>}
+          {tab === "suppliers" && <button className="btn btn-primary" onClick={() => { setSupForm(blankSup); setSupModal("new"); }}>+ Add Supplier</button>}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:4, marginBottom:16 }}>
+        {[["orders","📋 Orders"],["suppliers","🏭 Suppliers"]].map(([id,label]) => (
+          <button key={id} onClick={() => setTab(id)}
+            style={{ padding:"8px 18px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".08em", textTransform:"uppercase", background: tab===id ? "var(--accent)" : "var(--card)", color: tab===id ? "#000" : "var(--muted)", border:"1px solid", borderColor: tab===id ? "var(--accent)" : "var(--border)", cursor:"pointer", borderRadius:3 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading && <div className="card" style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>Loading...</div>}
+
+      {/* ── Orders Tab ── */}
+      {!loading && tab === "orders" && (
+        <div className="card">
+          {orders.length === 0
+            ? <div style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>No purchase orders yet. Click <strong>+ New Purchase Order</strong> to get started.</div>
+            : <div className="table-wrap"><table className="data-table">
+                <thead><tr><th>PO #</th><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {orders.map(o => (
+                    <tr key={o.id}>
+                      <td className="mono" style={{fontSize:11}}>#{o.id.slice(-6).toUpperCase()}</td>
+                      <td className="mono" style={{fontSize:11}}>{gmtShort(o.created_at)}</td>
+                      <td>{o.supplier_name || <span style={{color:"var(--muted)"}}>—</span>}</td>
+                      <td style={{fontSize:12}}>{o.items.length} line{o.items.length!==1?"s":""}</td>
+                      <td className="text-green">£{Number(o.total).toFixed(2)}</td>
+                      <td>
+                        <select value={o.status} onChange={e => statusChange(o.id, e.target.value)}
+                          style={{fontSize:11, padding:"3px 6px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:2}}>
+                          {Object.entries(STATUS_LABELS).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      </td>
+                      <td><div className="gap-2">
+                        <button className="btn btn-sm btn-ghost" onClick={() => openDetail(o)}>📥 Receive</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => deleteOrder(o.id)}>✕</button>
+                      </div></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+          }
+        </div>
+      )}
+
+      {/* ── Suppliers Tab ── */}
+      {!loading && tab === "suppliers" && (
+        <div className="card">
+          {suppliers.length === 0
+            ? <div style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>No suppliers yet. Click <strong>+ Add Supplier</strong> to get started.</div>
+            : <div className="table-wrap"><table className="data-table">
+                <thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Notes</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {suppliers.map(s => (
+                    <tr key={s.id}>
+                      <td style={{fontWeight:700}}>{s.name}</td>
+                      <td>{s.contact || "—"}</td>
+                      <td style={{fontSize:12}}>{s.email || "—"}</td>
+                      <td style={{fontSize:12}}>{s.phone || "—"}</td>
+                      <td style={{fontSize:12, color:"var(--muted)", maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{s.notes || "—"}</td>
+                      <td><div className="gap-2">
+                        <button className="btn btn-sm btn-ghost" onClick={() => { setSupForm({ name:s.name, contact:s.contact||"", email:s.email||"", phone:s.phone||"", notes:s.notes||"" }); setSupModal(s); }}>Edit</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => deleteSup(s.id)}>Remove</button>
+                      </div></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+          }
+        </div>
+      )}
+
+      {/* ── New PO Modal ── */}
+      {poModal && (
+        <div className="overlay" onClick={() => setPoModal(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{maxWidth:700}}>
+            <div className="modal-title">📋 New Purchase Order</div>
+
+            <div className="grid-2 mb-2">
+              <div className="form-group">
+                <label>Supplier</label>
+                <select value={poForm.supplierId} onChange={e => setPoForm(p => ({...p, supplierId: e.target.value}))}
+                  style={{fontSize:13, padding:"6px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:3, width:"100%"}}>
+                  <option value="">— Select Supplier —</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Notes <span style={{fontWeight:400,color:"var(--muted)"}}>(optional)</span></label>
+                <input value={poForm.notes} onChange={e => setPoForm(p => ({...p, notes: e.target.value}))} placeholder="e.g. Urgent restock" />
+              </div>
+            </div>
+
+            <div style={{fontSize:12, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:10}}>ORDER ITEMS</div>
+
+            {/* Add item row */}
+            <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:12, padding:"12px", background:"var(--bg4)", borderRadius:3, border:"1px solid var(--border)"}}>
+              <div style={{flex:"2 1 160px"}}>
+                <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>PRODUCT</div>
+                <select value={newItem.productId} onChange={e => {
+                  const prod = (data.shop||[]).find(p => p.id === e.target.value);
+                  setNewItem(n => ({...n, productId: e.target.value, productName: prod ? prod.name : "", unitCost: prod?.costPrice ? String(prod.costPrice) : n.unitCost}));
+                }} style={{fontSize:12, padding:"5px 8px", background:"var(--card)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:2, width:"100%"}}>
+                  <option value="">— Pick shop product —</option>
+                  {(data.shop||[]).map(p => <option key={p.id} value={p.id}>{p.name}{p.stock<5?` (stock: ${p.stock})`:"" }</option>)}
+                </select>
+                <div style={{fontSize:10, color:"var(--muted)", marginTop:3}}>or enter free text:</div>
+                <input value={newItem.productName} onChange={e => setNewItem(n => ({...n, productName: e.target.value, productId: ""}))}
+                  placeholder="Product name" style={{fontSize:12, marginTop:4}} />
+              </div>
+              <div style={{flex:"0 0 80px"}}>
+                <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>QTY</div>
+                <input type="number" min="1" value={newItem.qtyOrdered} onChange={e => setNewItem(n => ({...n, qtyOrdered: e.target.value}))} style={{fontSize:12}} />
+              </div>
+              <div style={{flex:"0 0 100px"}}>
+                <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>UNIT COST £</div>
+                <input type="number" min="0" step="0.01" value={newItem.unitCost} onChange={e => setNewItem(n => ({...n, unitCost: e.target.value}))} style={{fontSize:12}} />
+              </div>
+              <div style={{flex:"0 0 auto", display:"flex", alignItems:"flex-end"}}>
+                <button className="btn btn-primary btn-sm" onClick={addPoItem}>+ Add</button>
+              </div>
+            </div>
+
+            {/* Items list */}
+            {poForm.items.length > 0 && (
+              <div className="table-wrap" style={{marginBottom:14}}><table className="data-table">
+                <thead><tr><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Line Total</th><th></th></tr></thead>
+                <tbody>
+                  {poForm.items.map(i => (
+                    <tr key={i.id}>
+                      <td>{i.productName}</td>
+                      <td>{i.qtyOrdered}</td>
+                      <td>£{Number(i.unitCost).toFixed(2)}</td>
+                      <td className="text-green">£{(i.qtyOrdered * i.unitCost).toFixed(2)}</td>
+                      <td><button className="btn btn-sm btn-danger" onClick={() => removePoItem(i.id)}>✕</button></td>
+                    </tr>
+                  ))}
+                  <tr style={{borderTop:"2px solid var(--border)"}}>
+                    <td colSpan={3} style={{fontWeight:900}}>TOTAL</td>
+                    <td className="text-green" style={{fontWeight:900}}>£{poTotal.toFixed(2)}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table></div>
+            )}
+
+            <div className="gap-2">
+              <button className="btn btn-primary" onClick={savePo} disabled={busy || !poForm.items.length}>{busy ? "Saving…" : "Create Purchase Order"}</button>
+              <button className="btn btn-ghost" onClick={() => setPoModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Receive Stock Modal ── */}
+      {detailModal && (
+        <div className="overlay" onClick={() => setDetailModal(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{maxWidth:640}}>
+            <div className="modal-title">📥 Receive Stock — PO #{detailModal.id.slice(-6).toUpperCase()}</div>
+            <div style={{marginBottom:14, fontSize:13, color:"var(--muted)"}}>
+              {detailModal.supplier_name && <span>Supplier: <strong style={{color:"var(--text)"}}>{detailModal.supplier_name}</strong> · </span>}
+              Created: {gmtShort(detailModal.created_at)}
+            </div>
+            <div className="table-wrap" style={{marginBottom:16}}><table className="data-table">
+              <thead><tr><th>Product</th><th>Ordered</th><th>Previously Received</th><th>Received Now</th></tr></thead>
+              <tbody>
+                {detailModal.items.map(i => (
+                  <tr key={i.id}>
+                    <td>{i.product_name}</td>
+                    <td>{i.qty_ordered}</td>
+                    <td>{i.qty_received}</td>
+                    <td><input type="number" min="0" max={i.qty_ordered}
+                      value={receiveQtys[i.id] ?? i.qty_received}
+                      onChange={e => setReceiveQtys(q => ({...q, [i.id]: e.target.value}))}
+                      style={{width:70, fontSize:13}} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+            <div className="alert" style={{background:"rgba(0,120,255,.06)", border:"1px solid rgba(0,120,255,.2)", fontSize:12, color:"#60a0ff", marginBottom:14}}>
+              ℹ️ Updating received quantities here tracks delivery progress. To update actual shop stock levels, go to Admin → Shop and edit each product.
+            </div>
+            <div className="gap-2">
+              <button className="btn btn-primary" onClick={saveReceive} disabled={busy}>{busy ? "Saving…" : "Save Receipt"}</button>
+              <button className="btn btn-ghost" onClick={() => setDetailModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Supplier Modal ── */}
+      {supModal && (
+        <div className="overlay" onClick={() => setSupModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{maxWidth:480}}>
+            <div className="modal-title">{supModal === "new" ? "🏭 Add Supplier" : `✏️ Edit — ${supModal.name}`}</div>
+            <div className="form-group"><label>Supplier Name *</label><input value={supForm.name} onChange={e => setSupForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Tactical Supplies Ltd" /></div>
+            <div className="form-group"><label>Contact Name</label><input value={supForm.contact} onChange={e => setSupForm(p=>({...p,contact:e.target.value}))} placeholder="e.g. John Smith" /></div>
+            <div className="grid-2">
+              <div className="form-group"><label>Email</label><input type="email" value={supForm.email} onChange={e => setSupForm(p=>({...p,email:e.target.value}))} /></div>
+              <div className="form-group"><label>Phone</label><input value={supForm.phone} onChange={e => setSupForm(p=>({...p,phone:e.target.value}))} /></div>
+            </div>
+            <div className="form-group"><label>Notes</label><textarea rows={2} value={supForm.notes} onChange={e => setSupForm(p=>({...p,notes:e.target.value}))} placeholder="Payment terms, lead times, etc." /></div>
+            <div className="gap-2 mt-2">
+              <button className="btn btn-primary" onClick={saveSup} disabled={busy}>{busy ? "Saving…" : supModal === "new" ? "Add Supplier" : "Save Changes"}</button>
+              <button className="btn btn-ghost" onClick={() => setSupModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminSettings({ showToast }) {
   const S = (key, def = "") => {
     const [val, setVal] = useState(def);

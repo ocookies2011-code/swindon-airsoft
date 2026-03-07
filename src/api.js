@@ -663,6 +663,95 @@ export const shopOrders = wrapWithTimeout({
   }
 })
 
+// ── Suppliers ────────────────────────────────────────────────
+export const suppliers = wrapWithTimeout({
+  async getAll() {
+    const { data, error } = await supabase
+      .from('suppliers').select('*').order('name')
+    if (error) throw error
+    return data || []
+  },
+  async create(s) {
+    const { data, error } = await supabase.from('suppliers').insert({
+      name:    s.name,
+      contact: s.contact || '',
+      email:   s.email || '',
+      phone:   s.phone || '',
+      notes:   s.notes || '',
+    }).select().single()
+    if (error) throw error
+    return data
+  },
+  async update(id, s) {
+    const { error } = await supabase.from('suppliers').update({
+      name:    s.name,
+      contact: s.contact || '',
+      email:   s.email || '',
+      phone:   s.phone || '',
+      notes:   s.notes || '',
+    }).eq('id', id)
+    if (error) throw error
+  },
+  async delete(id) {
+    const { error } = await supabase.from('suppliers').delete().eq('id', id)
+    if (error) throw error
+  },
+})
+
+// ── Purchase Orders ───────────────────────────────────────────
+export const purchaseOrders = wrapWithTimeout({
+  async getAll() {
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .select('*, purchase_order_items(*)')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data || []).map(po => ({
+      ...po,
+      items: po.purchase_order_items || [],
+    }))
+  },
+  async create(po) {
+    const { data, error } = await supabase.from('purchase_orders').insert({
+      supplier_id:   po.supplierId || null,
+      supplier_name: po.supplierName || '',
+      status:        po.status || 'draft',
+      notes:         po.notes || '',
+      total:         po.total || 0,
+    }).select().single()
+    if (error) throw error
+    // Insert items
+    if (po.items?.length) {
+      const rows = po.items.map(item => ({
+        purchase_order_id: data.id,
+        product_id:        item.productId || null,
+        product_name:      item.productName || '',
+        qty_ordered:       Number(item.qtyOrdered) || 0,
+        qty_received:      0,
+        unit_cost:         Number(item.unitCost) || 0,
+      }))
+      const { error: itemErr } = await supabase.from('purchase_order_items').insert(rows)
+      if (itemErr) throw itemErr
+    }
+    return data
+  },
+  async updateStatus(id, status) {
+    const { error } = await supabase.from('purchase_orders').update({ status }).eq('id', id)
+    if (error) throw error
+  },
+  async receiveItem(itemId, qtyReceived) {
+    const { error } = await supabase.from('purchase_order_items')
+      .update({ qty_received: qtyReceived }).eq('id', itemId)
+    if (error) throw error
+  },
+  async delete(id) {
+    const { error: itemErr } = await supabase.from('purchase_order_items').delete().eq('purchase_order_id', id)
+    if (itemErr) throw itemErr
+    const { error } = await supabase.from('purchase_orders').delete().eq('id', id)
+    if (error) throw error
+  },
+})
+
 // ── PayPal Refunds ────────────────────────────────────────
 // Calls PayPal REST API directly from the browser (admin-only action).
 // Requires Client ID + Secret stored in site_settings.
