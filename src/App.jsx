@@ -4078,7 +4078,9 @@ function PlayerOrders({ cu }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 13 }}>{items.map(i => `${i.name} ×${i.qty}`).join(", ")}</div>
-                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{gmtShort(o.created_at)}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                  {gmtShort(o.created_at)} · <span style={{ fontFamily: "'Share Tech Mono',monospace" }}>#{(o.id||"").slice(-8).toUpperCase()}</span>
+                </div>
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
@@ -4108,6 +4110,12 @@ function PlayerOrders({ cu }) {
                   <div style={{ marginTop: 10, fontSize: 12 }}>
                     <span style={{ color: "var(--muted)" }}>Shipping to: </span>
                     <span style={{ whiteSpace: "pre-line" }}>{o.customer_address}</span>
+                  </div>
+                )}
+                {o.tracking_number && (
+                  <div style={{ marginTop: 10, padding: "10px 14px", background: "#0c1009", border: "1px solid #2a3a10", borderRadius: 4 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--accent)", marginBottom: 4 }}>📮 TRACKING NUMBER</div>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{o.tracking_number}</div>
                   </div>
                 )}
               </div>
@@ -6676,7 +6684,7 @@ function AdminOrdersInline({ showToast }) {
 
   const doDispatch = async (id, tracking) => {
     try {
-      await api.shopOrders.updateStatus(id, "dispatched");
+      await api.shopOrders.updateStatus(id, "dispatched", tracking || null);
       setOrders(o => o.map(x => x.id === id ? { ...x, status: "dispatched" } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
       showToast("Order marked as dispatched!");
@@ -6872,7 +6880,7 @@ function AdminOrders({ showToast }) {
 
   const doDispatch = async (id, tracking) => {
     try {
-      await api.shopOrders.updateStatus(id, "dispatched");
+      await api.shopOrders.updateStatus(id, "dispatched", tracking || null);
       setOrders(o => o.map(x => x.id === id ? { ...x, status: "dispatched" } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
       showToast("Order marked as dispatched!");

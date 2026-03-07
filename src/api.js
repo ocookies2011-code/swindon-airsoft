@@ -619,8 +619,10 @@ export const shopOrders = wrapWithTimeout({
     return data
   },
 
-  async updateStatus(id, status) {
-    const { error } = await supabase.from('shop_orders').update({ status }).eq('id', id)
+  async updateStatus(id, status, tracking) {
+    const patch = { status }
+    if (tracking) patch.tracking_number = tracking
+    const { error } = await supabase.from('shop_orders').update(patch).eq('id', id)
     if (error) throw error
   },
 
