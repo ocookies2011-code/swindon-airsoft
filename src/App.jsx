@@ -7557,7 +7557,7 @@ function AdminVisitorStats() {
 
       {/* Tabs */}
       <div style={{ borderBottom:"1px solid #1a2808", padding:"0 24px", display:"flex", gap:0 }}>
-        {[["overview","OVERVIEW"],["pages","PAGES"],["locations","LOCATIONS"],["users","USERS"],["activity","ACTIVITY"]].map(([tabId, tabLabel]) => (
+        {[["overview","OVERVIEW"],["pages","PAGES"],["locations","LOCATIONS"],["users","USERS"]].map(([tabId, tabLabel]) => (
           <button key={tabId} onClick={() => setActiveTab(tabId)} style={{
             fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em",
             padding:"12px 16px", cursor:"pointer", background:"none", border:"none",
@@ -7693,42 +7693,6 @@ function AdminVisitorStats() {
                 );
               })}
               {userRows.length === 0 && <div style={{ padding:40, textAlign:"center", color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>NO LOGGED-IN VISITS IN RANGE</div>}
-            </div>
-          </div>
-        )}
-
-        {/* ── ACTIVITY ── */}
-        {activeTab === "activity" && (
-          <div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>
-              SHOWING {recentRows.length} MOST RECENT VISITS
-            </div>
-            <div style={{ background:"#0c1009", border:"1px solid #1a2808" }}>
-              <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"1.5fr 1fr 1fr 1.5fr 1fr", gap:8 }}>
-                {["TIME","PAGE","USER","LOCATION","SESSION"].map(colHead => (
-                  <div key={colHead} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{colHead}</div>
-                ))}
-              </div>
-              {recentRows.map((feedRow, feedIdx) => (
-                <div key={feedIdx} style={{ borderBottom:"1px solid #0a0f06", padding:"8px 16px", display:"grid", gridTemplateColumns:"1.5fr 1fr 1fr 1.5fr 1fr", gap:8, alignItems:"center" }}>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>
-                    {new Date(feedRow.created_at).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}
-                  </div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, color:"#c8ff00", textTransform:"uppercase" }}>
-                    {PAGE_ICONS[feedRow.page] || "▸"} {feedRow.page}
-                  </div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, color: feedRow.user_name ? "#b0c090" : "#2a3a10" }}>
-                    {feedRow.user_name || "anon"}
-                  </div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>
-                    {[feedRow.city, feedRow.country].filter(Boolean).join(", ") || "—"}
-                  </div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#1e2c0a", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                    {feedRow.session_id?.slice(0, 8) || "—"}
-                  </div>
-                </div>
-              ))}
-              {recentRows.length === 0 && <div style={{ padding:40, textAlign:"center", color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>NO ACTIVITY IN RANGE</div>}
             </div>
           </div>
         )}
