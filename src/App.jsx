@@ -329,10 +329,24 @@ function useData() {
 
       const hiddenMs = Date.now() - lastHiddenRef.current;
 
-      // Re-validate session if hidden for 5+ minutes
-      // This forces Supabase to refresh the JWT before any writes happen
+      // Re-validate session if hidden for 5+ minutes.
+      // Use refreshSession (not just getSession) so a stale JWT gets renewed
+      // without the user being logged out.
       if (hiddenMs > 5 * 60 * 1000) {
-        supabase.auth.getSession().catch(() => {});
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) {
+            // Session gone — try to recover via refresh_token
+            const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+            if (storageKey) {
+              try {
+                const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                if (raw?.refresh_token) {
+                  supabase.auth.refreshSession({ refresh_token: raw.refresh_token }).catch(() => {});
+                }
+              } catch {}
+            }
+          }
+        }).catch(() => {});
       }
 
       // Reload data if hidden for 30+ seconds
@@ -9656,39 +9670,52 @@ export default function App() {
 
     const loadSession = async () => {
       try {
-        // Try getSession first
+        // Try getSession first — Supabase will auto-refresh if the access token is expired
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           clearTimeout(timeout);
           try {
             const profile = await api.profiles.getById(session.user.id);
             setCu(normaliseProfile(profile));
-            // profiles are already loaded by loadAll — no need to trigger save/refresh here
-          } catch { setCu(null); }
+          } catch { /* profile fetch failed — session is still valid, user stays logged in */ }
           setAuthLoading(false);
           return;
         }
 
-        // Fallback: read raw session from localStorage directly
-        // (needed when noopLock causes getSession to return null on refresh)
+        // getSession returned null — could be a noopLock issue or the access token
+        // was cleared. Try using the refresh_token from localStorage to get a new session.
         const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
         if (storageKey) {
           try {
-            const raw = JSON.parse(localStorage.getItem(storageKey));
-            const userId = raw?.user?.id;
-            if (userId) {
-              const profile = await api.profiles.getById(userId);
-              if (profile) {
-                setCu(normaliseProfile(profile));
-                // Restore session properly
-                if (raw.access_token) {
-                  await supabase.auth.setSession({ access_token: raw.access_token, refresh_token: raw.refresh_token });
-                }
+            const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            // Try refresh_token first (most reliable — gets a brand new access token)
+            if (raw?.refresh_token) {
+              const { data: refreshed } = await supabase.auth.refreshSession({ refresh_token: raw.refresh_token });
+              if (refreshed?.session?.user) {
+                const profile = await api.profiles.getById(refreshed.session.user.id).catch(() => null);
+                if (profile) setCu(normaliseProfile(profile));
+                clearTimeout(timeout);
+                setAuthLoading(false);
+                return;
               }
             }
-          } catch { /* localStorage entry malformed, ignore */ }
+            // Fall back to setSession with stored tokens
+            if (raw?.access_token) {
+              const { data: restored } = await supabase.auth.setSession({
+                access_token: raw.access_token,
+                refresh_token: raw.refresh_token,
+              });
+              if (restored?.session?.user) {
+                const profile = await api.profiles.getById(restored.session.user.id).catch(() => null);
+                if (profile) setCu(normaliseProfile(profile));
+                clearTimeout(timeout);
+                setAuthLoading(false);
+                return;
+              }
+            }
+          } catch { /* localStorage entry malformed or tokens truly expired */ }
         }
-      } catch { /* getSession failed, stay logged out */ }
+      } catch { /* getSession threw — network error, stay with current state */ }
 
       clearTimeout(timeout);
       setAuthLoading(false);
@@ -9698,17 +9725,39 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "INITIAL_SESSION") return;
-      // TOKEN_REFRESHED fires when Supabase silently renews the JWT.
-      // We don't need to do anything — the client automatically uses the new token.
+
+      // TOKEN_REFRESHED — JWT silently renewed, nothing to do.
       if (event === "TOKEN_REFRESHED") return;
-      // SIGNED_OUT fires when the JWT expires and can't be refreshed (e.g. after long sleep)
-      // Clear the user so they see the login prompt instead of a broken admin panel.
-      if (event === "SIGNED_OUT") { setCu(null); return; }
+
+      // SIGNED_OUT fired by Supabase's own refresh logic (e.g. tab sleep, network blip).
+      // We do NOT log the user out here — only the Logout button should do that.
+      // Instead, try to recover the session from localStorage so the user stays in.
+      if (event === "SIGNED_OUT") {
+        try {
+          const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+          if (storageKey) {
+            const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            if (raw?.refresh_token) {
+              const { data: refreshed } = await supabase.auth.refreshSession({ refresh_token: raw.refresh_token });
+              if (refreshed?.session?.user) {
+                // Session recovered — keep the user logged in silently
+                return;
+              }
+            }
+          }
+        } catch { /* recovery failed — fall through, but still don't force logout */ }
+        // Only truly log out if we genuinely have no session at all
+        const { data: { session: currentSession } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        if (!currentSession) setCu(null);
+        return;
+      }
+
       if (session?.user) {
         try {
           const profile = await api.profiles.getById(session.user.id);
-          if (profile) setCu(normaliseProfile(profile));
-          else {
+          if (profile) {
+            setCu(normaliseProfile(profile));
+          } else {
             // Profile may not exist yet (new signup before confirmation) — try creating it
             try {
               const meta = session.user.user_metadata || {};
@@ -9718,15 +9767,13 @@ export default function App() {
               }).select().single();
               const profile2 = await api.profiles.getById(session.user.id);
               if (profile2) setCu(normaliseProfile(profile2));
-            } catch { setCu(null); }
+            } catch { /* profile creation failed — keep existing cu state */ }
           }
-        } catch { setCu(null); }
-        // Do NOT call refresh() here — onLogin already calls it, and a duplicate
-        // loadAll() would race the existing one and cause UI lockups
-      } else {
-        setCu(null);
-        // Do NOT call refresh() on sign-out — setCu(null) is enough to update the UI
+        } catch { /* profile fetch failed — keep existing cu state, don't log out */ }
+        // Do NOT call refresh() here — onLogin already calls it
       }
+      // NOTE: we intentionally do NOT setCu(null) when session is null here.
+      // The only place that should log the user out is the Logout button (signOut()).
     });
 
     return () => { clearTimeout(timeout); subscription.unsubscribe(); };
