@@ -3819,9 +3819,13 @@ function GalleryPage({ data }) {
                     <div key={i} style={{ aspectRatio: "4/3", overflow: "hidden", background: "#0a0c08", position: "relative", cursor: "pointer", border: "1px solid #1a2808" }}
                       onClick={() => openLightbox(img, album, i)}>
                       <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .3s, filter .3s", filter: "contrast(1.05) saturate(0.8)" }} />
+                      {/* Watermark */}
+                      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 'clamp(10px,2.5vw,14px)', letterSpacing: '.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', textShadow: '0 1px 3px rgba(0,0,0,.8)', whiteSpace: 'nowrap', transform: 'rotate(-30deg)', userSelect: 'none' }}>SWINDON AIRSOFT</div>
+                      </div>
                       {/* Corner brackets on hover */}
                       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .2s" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,.5)"; e.currentTarget.querySelector(".gal-hover-label").style.opacity = 1; e.currentTarget.previousElementSibling.style.filter = "contrast(1.1) saturate(1.1)"; }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,.5)"; e.currentTarget.querySelector(".gal-hover-label").style.opacity = 1; e.currentTarget.previousElementSibling.previousElementSibling.style.filter = "contrast(1.1) saturate(1.1)"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0)"; e.currentTarget.querySelector(".gal-hover-label").style.opacity = 0; e.currentTarget.previousElementSibling.style.filter = "contrast(1.05) saturate(0.8)"; }}>
                         <div className="gal-hover-label" style={{ opacity: 0, transition: "opacity .2s", fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#c8ff00", textAlign: "center" }}>
                           <div style={{ fontSize: 22, marginBottom: 4 }}>⊕</div>
@@ -3856,8 +3860,14 @@ function GalleryPage({ data }) {
           ))}
           <button onClick={e => { e.stopPropagation(); prevImg(); }}
             style={{ position: "absolute", left: 16, background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#c8ff00", fontSize: 24, width: 48, height: 48, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900 }}>‹</button>
-          <img src={lightbox.url} alt="" onClick={e => e.stopPropagation()}
-            style={{ maxWidth: "88vw", maxHeight: "84vh", objectFit: "contain", boxShadow: "0 0 80px rgba(0,0,0,.9), 0 0 0 1px #1a2808" }} />
+          <div style={{ position: "relative", display: "inline-block", maxWidth: "88vw", maxHeight: "84vh" }} onClick={e => e.stopPropagation()}>
+            <img src={lightbox.url} alt=""
+              style={{ maxWidth: "88vw", maxHeight: "84vh", objectFit: "contain", display: "block", boxShadow: "0 0 80px rgba(0,0,0,.9), 0 0 0 1px #1a2808" }} />
+            {/* Watermark on lightbox */}
+            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(16px,3vw,28px)", letterSpacing: ".2em", textTransform: "uppercase", color: "rgba(255,255,255,0.18)", textShadow: "0 2px 6px rgba(0,0,0,.9)", whiteSpace: "nowrap", transform: "rotate(-30deg)", userSelect: "none" }}>SWINDON AIRSOFT</div>
+            </div>
+          </div>
           <button onClick={e => { e.stopPropagation(); nextImg(); }}
             style={{ position: "absolute", right: 16, background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#c8ff00", fontSize: 24, width: 48, height: 48, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900 }}>›</button>
           <button onClick={closeLightbox}
