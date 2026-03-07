@@ -2298,8 +2298,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const totalSlots   = ev.walkOnSlots + ev.rentalSlots;
 
     // Cart totals
-    const walkOnTotal  = bCart.walkOn  * ev.walkOnPrice * (1 - vipDisc);
-    const rentalTotal  = bCart.rental  * ev.rentalPrice * (1 - vipDisc);
+    // VIP discount: 10% on 1 ticket only (cheapest first), but NOT when using credits
     const shopData = data.shop || [];
     const visibleExtras = ev.extras; // show all event extras
     // extras keyed by "extraId" (no variant) or "extraId:variantId"
@@ -2312,9 +2311,30 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       }
       return s + getExtraQty(ex.id, null) * (lp ? lp.price : ex.price);
     }, 0);
+    const availCredits = cu?.credits || 0;
+    // Determine if VIP discount can apply: only when NOT using credits
+    const vipDiscActive = vipDisc > 0 && !useCredits;
+    // VIP discount applies to 1 ticket only — cheapest ticket gets the discount
+    const walkOnUnitPrice = ev.walkOnPrice;
+    const rentalUnitPrice = ev.rentalPrice;
+    const totalTickets = bCart.walkOn + bCart.rental;
+    let vipSavings = 0;
+    let walkOnTotal = bCart.walkOn * walkOnUnitPrice;
+    let rentalTotal = bCart.rental * rentalUnitPrice;
+    if (vipDiscActive && totalTickets > 0) {
+      // Apply discount to 1 ticket — whichever type was added (walkOn first, then rental)
+      if (bCart.walkOn > 0) {
+        const saving = walkOnUnitPrice * 0.1;
+        walkOnTotal = (bCart.walkOn * walkOnUnitPrice) - saving;
+        vipSavings = saving;
+      } else if (bCart.rental > 0) {
+        const saving = rentalUnitPrice * 0.1;
+        rentalTotal = (bCart.rental * rentalUnitPrice) - saving;
+        vipSavings = saving;
+      }
+    }
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
-    const availCredits = cu?.credits || 0;
     const creditsApplied = useCredits ? Math.min(availCredits, grandTotal) : 0;
     const payTotal     = Math.max(0, grandTotal - creditsApplied);
     const setExtra = (id, qty, variantId) => {
@@ -2794,16 +2814,22 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       </div>
                     )];
                   })}
-                  {vipDisc > 0 && (
-                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6, color:"var(--gold)" }}>
-                      <span>VIP 10% discount applied</span>
+                  {vipDisc > 0 && !cartEmpty && (
+                    <div style={{ fontSize:11, color: useCredits ? "var(--muted)" : "var(--gold)", marginBottom:8, padding:"6px 10px", background: useCredits ? "rgba(255,255,255,.03)" : "rgba(200,160,0,.06)", border:"1px solid", borderColor: useCredits ? "#2a2a2a" : "rgba(200,160,0,.2)", borderRadius:3 }}>
+                      {useCredits
+                        ? "⚠️ VIP discount is not applied when using credits"
+                        : totalTickets > 1
+                          ? `★ VIP discount: 10% off 1 ticket (−£${vipSavings.toFixed(2)}). Full price applies to remaining ${totalTickets - 1} ticket${totalTickets - 1 > 1 ? "s" : ""}.`
+                          : `★ VIP 10% discount applied — saving £${vipSavings.toFixed(2)}`
+                      }
                     </div>
                   )}
                   {/* Credits toggle */}
                   {cu && availCredits > 0 && !cartEmpty && (
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 10px", background:"rgba(0,120,255,.06)", border:"1px solid rgba(0,120,255,.2)", borderRadius:3, marginTop:8, marginBottom:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 10px", background:"rgba(0,120,255,.06)", border:"1px solid rgba(0,120,255,.2)", borderRadius:3, marginTop:4, marginBottom:4 }}>
                       <div>
                         <span style={{ fontSize:12, color:"#60a0ff" }}>💳 Account Credits — £{availCredits.toFixed(2)} available</span>
+                        {vipDisc > 0 && <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>Note: using credits disables the VIP discount</div>}
                       </div>
                       <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
                         <input type="checkbox" checked={useCredits} onChange={e => setUseCredits(e.target.checked)} />
