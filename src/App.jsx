@@ -7407,7 +7407,7 @@ function AdminShop({ data, save, showToast }) {
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, costPrice: null, category: "", variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, costPrice: null, category: "", supplierCode: "", variants: [] };
 
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
@@ -7438,13 +7438,13 @@ function AdminShop({ data, save, showToast }) {
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   // Variant editor state
-  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "", costPrice: "" });
+  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "", costPrice: "", supplierCode: "" });
 
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
-    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, costPrice: newVariant.costPrice !== "" ? Number(newVariant.costPrice) : null, image: "" };
+    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, costPrice: newVariant.costPrice !== "" ? Number(newVariant.costPrice) : null, image: "", supplierCode: newVariant.supplierCode || "" };
     setField("variants", [...(form.variants || []), newVar]);
-    setNewVariant({ name: "", price: "", stock: "", costPrice: "" });
+    setNewVariant({ name: "", price: "", stock: "", costPrice: "", supplierCode: "" });
   };
   const removeVariant = (id) => setField("variants", form.variants.filter(varItem => varItem.id !== id));
   const updateVariant = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
@@ -7591,7 +7591,7 @@ function AdminShop({ data, save, showToast }) {
     <div>
       <div className="page-header">
         <div><div className="page-title">Shop</div></div>
-        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
         {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
       </div>
 
@@ -7713,7 +7713,7 @@ function AdminShop({ data, save, showToast }) {
                   <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
                   <td>
                     <div className="gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
                       <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
                     </div>
                   </td>
@@ -7770,6 +7770,10 @@ function AdminShop({ data, save, showToast }) {
                   {allCategories.map(c => <option key={c} value={c} />)}
                 </datalist>
               </div>
+            </div>
+            <div className="form-group">
+              <label>Supplier Code <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(optional — used on purchase orders)</span></label>
+              <input value={form.supplierCode || ""} onChange={e => setField("supplierCode", e.target.value)} placeholder="e.g. SKU-12345 or supplier part number" style={{fontFamily:"'Share Tech Mono',monospace"}} />
             </div>
 
             {/* Rich description editor */}
@@ -7923,6 +7927,10 @@ function AdminShop({ data, save, showToast }) {
                       <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
                       <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
                     </div>
+                    <div style={{paddingLeft:28,marginBottom:4}}>
+                      <input value={v.supplierCode || ""} onChange={e => updateVariantRaw(v.id, "supplierCode", e.target.value)}
+                        placeholder="Supplier code (optional)" style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",width:"100%",borderColor:"#1e2e0e",background:"#0a0f06",color:"var(--muted)"}} />
+                    </div>
                     {v.costPrice != null && v.costPrice > 0 && v.price > 0 && (() => {
                       const margin = v.price - v.costPrice;
                       const pct = ((margin / v.price) * 100).toFixed(0);
@@ -7951,6 +7959,10 @@ function AdminShop({ data, save, showToast }) {
                   <input type="number" step="0.01" value={newVariant.costPrice} onChange={e => setNewVariant(p => ({...p, costPrice: e.target.value}))} placeholder="Cost £" style={{fontSize:12,borderColor:"#2a2a2a"}} title="Your cost price (admin only)" />
                   <input type="number" value={newVariant.stock} onChange={e => setNewVariant(p => ({...p, stock: e.target.value}))} placeholder="Stock" style={{fontSize:12}} />
                   <button className="btn btn-sm btn-primary" onClick={addVariant} style={{whiteSpace:"nowrap"}}>+ Add</button>
+                </div>
+                <div style={{marginTop:4}}>
+                  <input value={newVariant.supplierCode} onChange={e => setNewVariant(p => ({...p, supplierCode: e.target.value}))}
+                    placeholder="Supplier code for new variant (optional)" style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",width:"100%",borderColor:"#1e2e0e",background:"#0a0f06",color:"var(--muted)"}} />
                 </div>
               </div>
             </div>
@@ -9971,11 +9983,13 @@ function AdminPurchaseOrders({ data, showToast }) {
       ? (variant ? product.name + " — " + variant.name : product.name)
       : newItem.productName;
     const costPrice = variant?.costPrice ?? variant?.price ?? product?.costPrice ?? Number(newItem.unitCost) ?? 0;
+    const supplierCode = variant?.supplierCode || product?.supplierCode || "";
     setPoForm(prev => ({ ...prev, items: [...prev.items, {
       id: Math.random().toString(36).slice(2),
       productId: newItem.productId || null,
       variantId: newItem.variantId || null,
       productName: displayName,
+      supplierCode,
       qtyOrdered: Number(newItem.qtyOrdered) || 1,
       unitCost: Number(newItem.unitCost) || costPrice || 0,
     }]}));
@@ -10166,7 +10180,7 @@ function AdminPurchaseOrders({ data, showToast }) {
                   <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Pick shop product —</option>
                   {(data.shop||[]).map(p => (
                     <option key={p.id} value={p.id} style={{background:"#1a1a1a",color:"#fff"}}>
-                      {p.name}{p.variants?.length > 0 ? " (" + p.variants.length + " variants)" : (p.stock < 5 ? " (stock: " + p.stock + ")" : "")}
+                      {p.name}{p.supplierCode ? " [" + p.supplierCode + "]" : ""}{p.variants?.length > 0 ? " (" + p.variants.length + " variants)" : (p.stock < 5 ? " (stock: " + p.stock + ")" : "")}
                     </option>
                   ))}
                 </select>
@@ -10180,7 +10194,7 @@ function AdminPurchaseOrders({ data, showToast }) {
                     <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Select variant —</option>
                     {(data.shop||[]).find(p => p.id === newItem.productId)?.variants?.map(v => (
                       <option key={v.id} value={v.id} style={{background:"#1a1a1a",color:"#fff"}}>
-                        {v.name}{Number(v.stock) < 5 ? " (stock: " + v.stock + ")" : ""}
+                        {v.name}{v.supplierCode ? " [" + v.supplierCode + "]" : ""}{Number(v.stock) < 5 ? " (stock: " + v.stock + ")" : ""}
                       </option>
                     ))}
                   </select>
@@ -10205,11 +10219,12 @@ function AdminPurchaseOrders({ data, showToast }) {
             {/* Items list */}
             {poForm.items.length > 0 && (
               <div className="table-wrap" style={{marginBottom:14}}><table className="data-table">
-                <thead><tr><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Line Total</th><th></th></tr></thead>
+                <thead><tr><th>Product</th><th>Supplier Code</th><th>Qty</th><th>Unit Cost</th><th>Line Total</th><th></th></tr></thead>
                 <tbody>
                   {poForm.items.map(i => (
                     <tr key={i.id}>
                       <td>{i.productName}</td>
+                      <td><span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--accent)"}}>{i.supplierCode || "—"}</span></td>
                       <td>{i.qtyOrdered}</td>
                       <td>£{Number(i.unitCost).toFixed(2)}</td>
                       <td className="text-green">£{(i.qtyOrdered * i.unitCost).toFixed(2)}</td>
@@ -10243,11 +10258,12 @@ function AdminPurchaseOrders({ data, showToast }) {
               Created: {gmtShort(detailModal.created_at)}
             </div>
             <div className="table-wrap" style={{marginBottom:16}}><table className="data-table">
-              <thead><tr><th>Product</th><th>Ordered</th><th>Previously Received</th><th>Received Now</th></tr></thead>
+              <thead><tr><th>Product</th><th>Supplier Code</th><th>Ordered</th><th>Prev. Received</th><th>Received Now</th></tr></thead>
               <tbody>
                 {detailModal.items.map(i => (
                   <tr key={i.id}>
                     <td>{i.product_name}</td>
+                    <td><span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--accent)"}}>{i.supplier_code || i.supplierCode || "—"}</span></td>
                     <td>{i.qty_ordered}</td>
                     <td>{i.qty_received}</td>
                     <td><input type="number" min="0" max={i.qty_ordered}

@@ -517,7 +517,7 @@ function normaliseEvent(ev) {
 }
 
 function normaliseProduct(p) {
-  const variants = Array.isArray(p.variants) ? p.variants : []
+  const variants = (Array.isArray(p.variants) ? p.variants : []).map(v => ({ ...v, supplierCode: v.supplierCode || v.supplier_code || '' }))
   // If variants exist, total stock = sum of variant stocks
   const variantStock = variants.length > 0
     ? variants.reduce((s, v) => s + (Number(v.stock) || 0), 0)
@@ -537,6 +537,7 @@ function normaliseProduct(p) {
     gameExtra:   p.game_extra || false,
     costPrice:   p.cost_price ? Number(p.cost_price) : null,
     category:    p.category || '',
+    supplierCode: p.supplier_code || '',
     variants,
   }
 }
@@ -602,8 +603,9 @@ function toSnakeProduct(p) {
     no_post:     p.noPost,
     game_extra:  p.gameExtra || false,
     cost_price:  p.costPrice ?? null,
-    category:    p.category || '',
-    variants:    p.variants || [],
+    category:     p.category || '',
+    supplier_code: p.supplierCode || '',
+    variants:    (p.variants || []).map(v => ({ ...v, supplier_code: v.supplierCode || '' })),
     // Note: _descTab is a UI-only field, never saved
   }
 }
@@ -726,6 +728,7 @@ export const purchaseOrders = wrapWithTimeout({
         purchase_order_id: data.id,
         product_id:        item.productId || null,
         product_name:      item.productName || '',
+        supplier_code:     item.supplierCode || '',
         qty_ordered:       Number(item.qtyOrdered) || 0,
         qty_received:      0,
         unit_cost:         Number(item.unitCost) || 0,
