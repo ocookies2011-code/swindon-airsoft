@@ -5065,10 +5065,10 @@ function AdminDash({ data, setSection }) {
     pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers", color: "red" },
     data.users.filter(u => u.deleteRequest).length > 0 && { msg: `${data.users.filter(u => u.deleteRequest).length} account deletion request(s).`, section: "players", color: "red" },
     data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length > 0 && { msg: `${data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length} VIP application(s) awaiting review.`, section: "players", color: "red" },
-    outOfStock.length > 0 && { msg: `${outOfStock.length} product(s) OUT OF STOCK: ${outOfStock.slice(0,3).map(p=>p.name).join(", ")}${outOfStock.length>3?\` +${outOfStock.length-3} more`:""}.`, section: "shop", color: "red", icon: "📦" },
-    outOfStockVariants.length > 0 && { msg: `${outOfStockVariants.length} variant product(s) fully out of stock: ${outOfStockVariants.slice(0,2).map(p=>p.name).join(", ")}${outOfStockVariants.length>2?\` +${outOfStockVariants.length-2} more`:""}.`, section: "shop", color: "red", icon: "📦" },
-    lowStock.length > 0 && { msg: `${lowStock.length} product(s) running low (≤${LOW_STOCK_THRESHOLD}): ${lowStock.slice(0,3).map(p=>\`\${p.name} (\${p.stock})\`).join(", ")}${lowStock.length>3?\` +\${lowStock.length-3} more`:""}.`, section: "shop", color: "gold", icon: "⚠️" },
-    lowStockVariants.length > 0 && { msg: `${lowStockVariants.length} variant product(s) have low stock variants.`, section: "shop", color: "gold", icon: "⚠️" },
+    outOfStock.length > 0 && { msg: outOfStock.length + " product(s) OUT OF STOCK: " + outOfStock.slice(0,3).map(p=>p.name).join(", ") + (outOfStock.length>3 ? " +" + (outOfStock.length-3) + " more" : "") + ".", section: "shop", color: "red", icon: "📦" },
+    outOfStockVariants.length > 0 && { msg: outOfStockVariants.length + " variant product(s) fully out of stock: " + outOfStockVariants.slice(0,2).map(p=>p.name).join(", ") + (outOfStockVariants.length>2 ? " +" + (outOfStockVariants.length-2) + " more" : "") + ".", section: "shop", color: "red", icon: "📦" },
+    lowStock.length > 0 && { msg: lowStock.length + " product(s) running low (≤" + LOW_STOCK_THRESHOLD + "): " + lowStock.slice(0,3).map(p=>p.name+" ("+p.stock+")").join(", ") + (lowStock.length>3 ? " +" + (lowStock.length-3) + " more" : "") + ".", section: "shop", color: "gold", icon: "⚠️" },
+    lowStockVariants.length > 0 && { msg: lowStockVariants.length + " variant product(s) have low stock variants.", section: "shop", color: "gold", icon: "⚠️" },
   ].filter(Boolean);
 
   return (
