@@ -6689,7 +6689,7 @@ function AdminOrdersInline({ showToast }) {
           order:   { ...order, customerAddress: order.customer_address || order.customerAddress || "" },
           items:   Array.isArray(order.items) ? order.items : [],
           tracking: tracking || null,
-        }).catch(() => {});
+        }).then(() => showToast("📧 Dispatch email sent!")).catch(e => showToast("⚠️ Email failed: " + (e?.message || e?.text || JSON.stringify(e)), "red"));
       }
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     setTrackingModal(null);
@@ -6885,7 +6885,7 @@ function AdminOrders({ showToast }) {
           order:   { ...order, customerAddress: order.customer_address || order.customerAddress || "" },
           items:   Array.isArray(order.items) ? order.items : [],
           tracking: tracking || null,
-        }).catch(() => {});
+        }).then(() => showToast("📧 Dispatch email sent!")).catch(e => showToast("⚠️ Email failed: " + (e?.message || e?.text || JSON.stringify(e)), "red"));
       }
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     setTrackingModal(null);
@@ -9399,6 +9399,83 @@ function AdminContactDepts({ showToast, save }) {
   );
 }
 
+// ── Email Test Card ────────────────────────────────────────
+function EmailTestCard({ showToast, sectionHead }) {
+  const [testEmail, setTestEmail] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [lastResult, setLastResult] = useState(null); // { ok, msg }
+
+  const runTest = async () => {
+    if (!testEmail || !testEmail.includes("@")) { showToast("Enter a valid email address", "red"); return; }
+    setTesting(true);
+    setLastResult(null);
+    try {
+      await sendEmail({
+        toEmail: testEmail.trim(),
+        toName: "Admin Test",
+        subject: "✅ Swindon Airsoft — Email Test",
+        htmlContent: `
+          <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+            <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+              <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
+              <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Email Test</div>
+            </div>
+            <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;text-align:center;">
+              <div style="font-size:40px;margin-bottom:12px;">✅</div>
+              <div style="font-size:22px;font-weight:900;color:#c8ff00;">EmailJS is working!</div>
+              <div style="font-size:13px;color:#aaa;margin-top:10px;">
+                Sent at ${new Date().toLocaleString("en-GB")}<br/>
+                Service: ${EMAILJS_SERVICE_ID} · Template: ${EMAILJS_TEMPLATE_ID}
+              </div>
+            </div>
+          </div>`,
+      });
+      setLastResult({ ok: true, msg: "Email sent successfully! Check your inbox (and spam)." });
+      showToast("📧 Test email sent!");
+    } catch (e) {
+      const msg = e?.text || e?.message || JSON.stringify(e);
+      setLastResult({ ok: false, msg: "Failed: " + msg });
+      showToast("Email failed: " + msg, "red");
+    } finally { setTesting(false); }
+  };
+
+  return (
+    <div className="card mb-2">
+      {sectionHead("📧 Email Diagnostics")}
+      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14, lineHeight: 1.7 }}>
+        Send a test email to verify EmailJS is configured correctly.<br/>
+        Service: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_SERVICE_ID}</span> ·
+        Template: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_TEMPLATE_ID}</span>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+        <input
+          type="email"
+          value={testEmail}
+          onChange={e => setTestEmail(e.target.value)}
+          placeholder="your@email.com"
+          onKeyDown={e => e.key === "Enter" && runTest()}
+          style={{ flex: 1, fontSize: 13 }}
+        />
+        <button className="btn btn-primary" onClick={runTest} disabled={testing} style={{ whiteSpace: "nowrap" }}>
+          {testing ? "Sending…" : "Send Test Email"}
+        </button>
+      </div>
+      {lastResult && (
+        <div className={`alert ${lastResult.ok ? "alert-green" : "alert-red"}`} style={{ fontSize: 12 }}>
+          {lastResult.ok ? "✅ " : "❌ "}{lastResult.msg}
+        </div>
+      )}
+      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, lineHeight: 1.7 }}>
+        <strong style={{ color: "var(--text)" }}>If the test fails, check:</strong><br/>
+        • EmailJS dashboard → your template has variables: <span className="mono">to_email</span>, <span className="mono">to_name</span>, <span className="mono">subject</span>, <span className="mono">html_content</span><br/>
+        • The service is connected and verified in EmailJS<br/>
+        • Your EmailJS free tier hasn't hit its monthly limit (200/month)<br/>
+        • The template's "To Email" field is set to <span className="mono">{"{{to_email}}"}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Admin Settings ────────────────────────────────────────
 function AdminSettings({ showToast }) {
   const S = (key, def = "") => {
@@ -9518,6 +9595,9 @@ function AdminSettings({ showToast }) {
           <div>5. Payments will now go directly into your PayPal business account.</div>
         </div>
       </div>
+
+      {/* EmailJS test */}
+      <EmailTestCard showToast={showToast} sectionHead={sectionHead} />
     </div>
   );
 }
