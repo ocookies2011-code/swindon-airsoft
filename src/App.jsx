@@ -9924,6 +9924,7 @@ function AdminPurchaseOrders({ data, save, showToast }) {
   const [poModal, setPoModal] = useState(null);     // null | "new" | order obj
   const [supModal, setSupModal] = useState(null);   // null | "new" | supplier obj
   const [detailModal, setDetailModal] = useState(null);
+  const [viewModal, setViewModal] = useState(null);
   const [busy, setBusy] = useState(false);
 
   // New PO form state
@@ -10117,6 +10118,7 @@ function AdminPurchaseOrders({ data, save, showToast }) {
                         </select>
                       </td>
                       <td><div className="gap-2">
+                        <button className="btn btn-sm btn-ghost" onClick={() => setViewModal(o)}>📄 View</button>
                         <button className="btn btn-sm btn-ghost" onClick={() => openDetail(o)}>📥 Receive</button>
                         <button className="btn btn-sm btn-danger" onClick={() => deleteOrder(o.id)}>✕</button>
                       </div></td>
@@ -10252,6 +10254,142 @@ function AdminPurchaseOrders({ data, save, showToast }) {
             <div className="gap-2">
               <button className="btn btn-primary" onClick={savePo} disabled={busy || !poForm.items.length}>{busy ? "Saving…" : "Create Purchase Order"}</button>
               <button className="btn btn-ghost" onClick={() => setPoModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View Purchase Order Modal ── */}
+      {viewModal && (
+        <div className="overlay" onClick={() => setViewModal(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{maxWidth:720, padding:0, overflow:"hidden"}}>
+
+            {/* Header bar */}
+            <div style={{background:"var(--bg4)", borderBottom:"1px solid var(--border)", padding:"16px 24px", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:11, letterSpacing:".12em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", marginBottom:2}}>PURCHASE ORDER</div>
+                <div style={{fontSize:20, fontWeight:900, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".05em"}}>PO-{viewModal.id.slice(-6).toUpperCase()}</div>
+              </div>
+              <div style={{display:"flex", gap:8, alignItems:"center"}}>
+                <span style={{padding:"4px 12px", borderRadius:2, fontSize:11, fontWeight:700, letterSpacing:".08em", fontFamily:"'Barlow Condensed',sans-serif", background:
+                  viewModal.status==="received" ? "rgba(80,200,80,.15)" :
+                  viewModal.status==="partial" ? "rgba(200,160,0,.15)" :
+                  viewModal.status==="ordered" ? "rgba(60,120,255,.15)" :
+                  viewModal.status==="cancelled" ? "rgba(200,60,60,.15)" : "rgba(120,120,120,.15)",
+                  color:
+                  viewModal.status==="received" ? "#7ccc60" :
+                  viewModal.status==="partial" ? "var(--gold)" :
+                  viewModal.status==="ordered" ? "#60a0ff" :
+                  viewModal.status==="cancelled" ? "var(--red)" : "var(--muted)"
+                }}>{STATUS_LABELS[viewModal.status] || viewModal.status}</span>
+                <button className="btn btn-sm btn-ghost" onClick={() => {
+                  const win = window.open("", "_blank");
+                  const sup = viewModal.supplier_name || "No supplier";
+                  const date = new Date(viewModal.created_at).toLocaleDateString("en-GB", {day:"2-digit",month:"long",year:"numeric"});
+                  const rows = viewModal.items.map(i =>
+                    `<tr><td>${i.product_name}</td><td style="font-family:monospace">${i.supplier_code||"—"}</td><td style="text-align:center">${i.qty_ordered}</td><td style="text-align:center">${i.qty_received}</td><td style="text-align:right">£${Number(i.unit_cost).toFixed(2)}</td><td style="text-align:right">£${(i.qty_ordered*i.unit_cost).toFixed(2)}</td></tr>`
+                  ).join("");
+                  win.document.write(`<!DOCTYPE html><html><head><title>PO-${viewModal.id.slice(-6).toUpperCase()}</title><style>
+                    body{font-family:Arial,sans-serif;margin:40px;color:#111;}
+                    h1{margin:0 0 4px;font-size:24px;}  .sub{color:#666;font-size:13px;margin-bottom:24px;}
+                    .meta{display:flex;gap:40px;margin-bottom:28px;} .meta div{font-size:13px;} .meta strong{display:block;font-size:11px;color:#888;text-transform:uppercase;margin-bottom:2px;}
+                    table{width:100%;border-collapse:collapse;font-size:13px;}
+                    th{background:#f4f4f4;padding:8px 10px;text-align:left;border-bottom:2px solid #ddd;font-size:11px;text-transform:uppercase;}
+                    td{padding:8px 10px;border-bottom:1px solid #eee;}
+                    tfoot td{font-weight:bold;border-top:2px solid #ddd;background:#f9f9f9;}
+                    .status{display:inline-block;padding:3px 10px;border-radius:3px;font-size:11px;font-weight:bold;background:#e8f5e9;color:#2e7d32;}
+                    @media print{body{margin:20px;}}
+                  </style></head><body>
+                    <h1>Purchase Order</h1>
+                    <div class="sub">PO-${viewModal.id.slice(-6).toUpperCase()} &nbsp;·&nbsp; <span class="status">${STATUS_LABELS[viewModal.status]||viewModal.status}</span></div>
+                    <div class="meta">
+                      <div><strong>Supplier</strong>${sup}</div>
+                      <div><strong>Date Raised</strong>${date}</div>
+                      ${viewModal.notes ? `<div><strong>Notes</strong>${viewModal.notes}</div>` : ""}
+                    </div>
+                    <table><thead><tr><th>Product</th><th>Supplier Code</th><th style="text-align:center">Qty Ordered</th><th style="text-align:center">Qty Received</th><th style="text-align:right">Unit Cost</th><th style="text-align:right">Line Total</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot><tr><td colspan="5">TOTAL</td><td style="text-align:right">£${Number(viewModal.total).toFixed(2)}</td></tr></tfoot>
+                    </table>
+                  </body></html>`);
+                  win.document.close();
+                  win.print();
+                }}>🖨 Print</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => setViewModal(null)}>✕ Close</button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{padding:"24px"}}>
+
+              {/* Meta row */}
+              <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:20}}>
+                {[
+                  { label:"Supplier", val: viewModal.supplier_name || "—" },
+                  { label:"Date Raised", val: new Date(viewModal.created_at).toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"}) },
+                  { label:"Order Total", val: "£" + Number(viewModal.total).toFixed(2), accent:true },
+                ].map(({label,val,accent}) => (
+                  <div key={label} style={{background:"var(--bg4)", border:"1px solid var(--border)", borderRadius:3, padding:"10px 14px"}}>
+                    <div style={{fontSize:10, letterSpacing:".1em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", marginBottom:4}}>{label.toUpperCase()}</div>
+                    <div style={{fontSize:14, fontWeight:700, color: accent ? "var(--accent)" : "var(--text)"}}>{val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {viewModal.notes && (
+                <div style={{marginBottom:16, padding:"10px 14px", background:"rgba(255,255,255,.03)", border:"1px solid var(--border)", borderRadius:3, fontSize:13, color:"var(--muted)"}}>
+                  <span style={{fontSize:10, letterSpacing:".1em", fontFamily:"'Barlow Condensed',sans-serif", marginRight:8}}>NOTES:</span>{viewModal.notes}
+                </div>
+              )}
+
+              {/* Items table */}
+              <div className="table-wrap"><table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Supplier Code</th>
+                    <th style={{textAlign:"center"}}>Qty Ordered</th>
+                    <th style={{textAlign:"center"}}>Qty Received</th>
+                    <th style={{textAlign:"right"}}>Unit Cost</th>
+                    <th style={{textAlign:"right"}}>Line Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewModal.items.map(i => {
+                    const pct = i.qty_ordered > 0 ? Math.round((i.qty_received / i.qty_ordered) * 100) : 0;
+                    return (
+                      <tr key={i.id}>
+                        <td style={{fontWeight:600}}>{i.product_name}</td>
+                        <td><span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--accent)"}}>{i.supplier_code || "—"}</span></td>
+                        <td style={{textAlign:"center"}}>{i.qty_ordered}</td>
+                        <td style={{textAlign:"center"}}>
+                          <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8}}>
+                            <span style={{color: i.qty_received >= i.qty_ordered ? "var(--accent)" : i.qty_received > 0 ? "var(--gold)" : "var(--muted)"}}>{i.qty_received}</span>
+                            {i.qty_ordered > 0 && (
+                              <div style={{width:40, height:4, background:"var(--bg4)", borderRadius:2, overflow:"hidden"}}>
+                                <div style={{width:pct+"%", height:"100%", background: pct>=100 ? "var(--accent)" : pct>0 ? "var(--gold)" : "var(--muted)", borderRadius:2}} />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{textAlign:"right", fontFamily:"'Share Tech Mono',monospace", fontSize:12}}>£{Number(i.unit_cost).toFixed(2)}</td>
+                        <td style={{textAlign:"right", fontFamily:"'Share Tech Mono',monospace", fontSize:12, fontWeight:700, color:"var(--accent)"}}>£{(i.qty_ordered * i.unit_cost).toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{borderTop:"2px solid var(--border)"}}>
+                    <td colSpan={5} style={{fontWeight:900, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", fontSize:13}}>ORDER TOTAL</td>
+                    <td style={{textAlign:"right", fontWeight:900, fontFamily:"'Share Tech Mono',monospace", color:"var(--accent)", fontSize:14}}>£{Number(viewModal.total).toFixed(2)}</td>
+                  </tr>
+                </tfoot>
+              </table></div>
+
+              <div style={{marginTop:16, display:"flex", gap:8, justifyContent:"flex-end"}}>
+                <button className="btn btn-ghost" onClick={() => { setViewModal(null); openDetail(viewModal); }}>📥 Receive Stock</button>
+                <button className="btn btn-ghost" onClick={() => setViewModal(null)}>Close</button>
+              </div>
             </div>
           </div>
         </div>
