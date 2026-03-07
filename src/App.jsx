@@ -7373,7 +7373,7 @@ function AdminOrders({ showToast }) {
             <div className="gap-2">
               <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
                 onClick={doRefund} disabled={refunding}>
-                {refunding ? "⏳ Processing…" : \`✓ Confirm Refund · £\${parseFloat(refundAmt||0).toFixed(2)}\`}
+                {refunding ? "⏳ Processing…" : `✓ Confirm Refund · £${parseFloat(refundAmt||0).toFixed(2)}`}
               </button>
               <button className="btn btn-ghost" onClick={() => setRefundModal(null)} disabled={refunding}>Cancel</button>
             </div>
