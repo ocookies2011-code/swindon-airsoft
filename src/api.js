@@ -640,6 +640,17 @@ export const shopOrders = wrapWithTimeout({
     if (error) throw error
   },
 
+  async saveRefund(id, amount, note) {
+    const patch = {
+      refund_amount: amount,
+      refund_note:   note || null,
+      refunded_at:   new Date().toISOString(),
+      status:        'refunded',
+    }
+    const { error } = await supabase.from('shop_orders').update(patch).eq('id', id)
+    if (error) throw error
+  },
+
   async getByUserId(userId) {
     const { data, error } = await supabase
       .from('shop_orders').select('*')
@@ -649,6 +660,57 @@ export const shopOrders = wrapWithTimeout({
     return data
   }
 })
+
+// ── PayPal Refunds ────────────────────────────────────────
+// Calls PayPal REST API directly from the browser (admin-only action).
+// Requires Client ID + Secret stored in site_settings.
+export async function paypalRefund({ paypalOrderId, amount, clientId, secret, mode }) {
+  const base = mode === 'live'
+    ? 'https://api-m.paypal.com'
+    : 'https://api-m.sandbox.paypal.com'
+
+  // 1. Get access token
+  const tokenRes = await fetch(`${base}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + btoa(`${clientId}:${secret}`),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  })
+  const tokenData = await tokenRes.json()
+  if (!tokenRes.ok) throw new Error('PayPal auth failed: ' + (tokenData.error_description || tokenData.error || tokenRes.status))
+  const accessToken = tokenData.access_token
+
+  // 2. Get order details to find the capture ID
+  const orderRes = await fetch(`${base}/v2/checkout/orders/${paypalOrderId}`, {
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+  })
+  const orderData = await orderRes.json()
+  if (!orderRes.ok) throw new Error('Could not fetch PayPal order: ' + (orderData.message || orderRes.status))
+
+  // Extract capture ID from purchase units
+  const captures = orderData?.purchase_units?.[0]?.payments?.captures
+  if (!captures?.length) throw new Error('No completed capture found on this PayPal order. It may not have been paid, or was already fully refunded.')
+  const captureId = captures[0].id
+
+  // 3. Issue refund
+  const refundBody = { note_to_payer: 'Refund from Swindon Airsoft' }
+  if (amount) refundBody.amount = { value: Number(amount).toFixed(2), currency_code: 'GBP' }
+
+  const refundRes = await fetch(`${base}/v2/payments/captures/${captureId}/refund`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'PayPal-Request-Id': `refund-${captureId}-${Date.now()}`,
+    },
+    body: JSON.stringify(refundBody),
+  })
+  const refundData = await refundRes.json()
+  if (!refundRes.ok) throw new Error('PayPal refund failed: ' + (refundData.message || refundData.details?.[0]?.description || refundRes.status))
+  return refundData
+}
 
 // ── Staff ─────────────────────────────────────────────────
 export const staff = wrapWithTimeout({

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
-import { normaliseProfile } from "./api";
+import { normaliseProfile, paypalRefund } from "./api";
 // jsQR is loaded via CDN in the QRScanner component — no import needed
 
 // ── Mock Payment Button ───────────────────────────────────────────────
@@ -6794,9 +6794,48 @@ function AdminOrdersInline({ showToast }) {
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
+  const [refundModal, setRefundModal] = useState(null); // { order }
+  const [refundAmt, setRefundAmt] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [refunding, setRefunding] = useState(false);
+
+  const openRefund = (order) => {
+    setRefundModal({ order });
+    setRefundAmt(Number(order.total || 0).toFixed(2));
+    setRefundNote("");
+  };
+
+  const doRefund = async () => {
+    if (!refundModal) return;
+    const { order } = refundModal;
+    const amt = parseFloat(refundAmt);
+    if (isNaN(amt) || amt <= 0) { showToast("Enter a valid refund amount", "red"); return; }
+    if (amt > Number(order.total)) { showToast("Refund amount exceeds order total", "red"); return; }
+    setRefunding(true);
+    try {
+      // Load PayPal credentials from settings
+      const [clientId, secret, mode] = await Promise.all([
+        api.settings.get("paypal_client_id"),
+        api.settings.get("paypal_client_secret"),
+        api.settings.get("paypal_mode"),
+      ]);
+      if (!clientId || !secret) throw new Error("PayPal Client ID and Secret must be saved in Admin → Settings before issuing refunds.");
+      if (!order.paypal_order_id) throw new Error("No PayPal Order ID on this order — cannot issue automatic refund. Refund manually in your PayPal dashboard.");
+      // Full refund passes no amount (PayPal refunds full capture), partial passes amount
+      const isFullRefund = Math.abs(amt - Number(order.total)) < 0.01;
+      await paypalRefund({ paypalOrderId: order.paypal_order_id, amount: isFullRefund ? null : amt, clientId, secret, mode: mode || "sandbox" });
+      await api.shopOrders.saveRefund(order.id, amt, refundNote || null);
+      setOrders(o => o.map(x => x.id === order.id ? { ...x, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() } : x));
+      if (detail?.id === order.id) setDetail(d => ({ ...d, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() }));
+      showToast("✅ Refund of £" + amt.toFixed(2) + " issued via PayPal!");
+      setRefundModal(null);
+    } catch (e) {
+      showToast("❌ Refund failed: " + (e.message || String(e)), "red");
+    } finally { setRefunding(false); }
+  };
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
   const [statusTab, setStatusTab] = useState("pending");
-  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all"];
+  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all","refunded"];
   const visibleOrders = statusTab === "all" ? orders : orders.filter(o => o.status === statusTab);
 
   return (
@@ -6915,7 +6954,24 @@ function AdminOrdersInline({ showToast }) {
                 <tr><td colSpan={3} style={{ fontWeight:900, fontSize:15 }}>TOTAL</td><td className="text-green" style={{ fontWeight:900, fontSize:15 }}>£{Number(detail.total).toFixed(2)}</td></tr>
               </tbody>
             </table></div>
-            <button className="btn btn-ghost mt-2" onClick={() => setDetail(null)}>Close</button>
+              {/* Refund section */}
+              {detail.refund_amount && (
+                <div style={{ background:"rgba(255,60,60,.05)", border:"1px solid rgba(255,60,60,.2)", borderRadius:3, padding:"10px 14px", marginTop:12 }}>
+                  <div style={{ fontSize:11, color:"var(--red)", fontWeight:700, letterSpacing:".08em", marginBottom:4 }}>💸 REFUNDED</div>
+                  <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+                    <div><span style={{ fontSize:11, color:"var(--muted)" }}>Amount: </span><span style={{ fontWeight:700, color:"var(--red)" }}>£{Number(detail.refund_amount).toFixed(2)}</span></div>
+                    {detail.refunded_at && <div><span style={{ fontSize:11, color:"var(--muted)" }}>Date: </span><span style={{ fontSize:12 }}>{gmtShort(detail.refunded_at)}</span></div>}
+                    {detail.refund_note && <div><span style={{ fontSize:11, color:"var(--muted)" }}>Note: </span><span style={{ fontSize:12 }}>{detail.refund_note}</span></div>}
+                  </div>
+                </div>
+              )}
+                        <div className="gap-2 mt-2">
+              {!detail.refund_amount && detail.paypal_order_id && (
+                <button className="btn btn-sm" style={{ background:"rgba(255,60,60,.12)", border:"1px solid rgba(255,60,60,.35)", color:"var(--red)" }}
+                  onClick={() => openRefund(detail)}>💸 Refund Order</button>
+              )}
+              <button className="btn btn-ghost" onClick={() => setDetail(null)}>Close</button>
+            </div>
           </div>
         </div>
       )}
@@ -6942,6 +6998,42 @@ function AdminOrdersInline({ showToast }) {
                 ✓ Confirm Dispatch &amp; Send Email
               </button>
               <button className="btn btn-ghost" onClick={() => setTrackingModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {refundModal && (
+        <div className="overlay" onClick={() => !refunding && setRefundModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title" style={{ color:"var(--red)" }}>💸 Refund Order</div>
+            <div style={{ background:"var(--bg4)", border:"1px solid var(--border)", borderRadius:3, padding:"10px 14px", marginBottom:16, fontSize:12 }}>
+              <div style={{ fontWeight:700 }}>{refundModal.order.customer_name}</div>
+              <div style={{ color:"var(--muted)", marginTop:2 }}>Order #{(refundModal.order.id||"").slice(-8).toUpperCase()} · Total: £{Number(refundModal.order.total).toFixed(2)}</div>
+              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>PayPal ref: {refundModal.order.paypal_order_id}</div>
+            </div>
+            <div className="form-group">
+              <label>Refund Amount (£)</label>
+              <input type="number" step="0.01" min="0.01" max={refundModal.order.total}
+                value={refundAmt} onChange={e => setRefundAmt(e.target.value)} autoFocus />
+              <div style={{ fontSize:11, color:"var(--muted)", marginTop:4, display:"flex", gap:8 }}>
+                <button style={{ background:"none", border:"none", color:"var(--accent)", cursor:"pointer", fontSize:11, padding:0 }}
+                  onClick={() => setRefundAmt(Number(refundModal.order.total).toFixed(2))}>Full refund</button>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Internal Note <span style={{ fontWeight:400, color:"var(--muted)" }}>(optional)</span></label>
+              <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Item out of stock, customer request" />
+            </div>
+            <div className="alert" style={{ background:"rgba(255,60,60,.06)", border:"1px solid rgba(255,60,60,.2)", fontSize:11, color:"var(--red)", marginBottom:14 }}>
+              ⚠️ This will immediately issue a refund via PayPal. This cannot be undone.
+            </div>
+            <div className="gap-2">
+              <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
+                onClick={doRefund} disabled={refunding}>
+                {refunding ? "⏳ Processing…" : `✓ Confirm Refund · £${parseFloat(refundAmt||0).toFixed(2)}`}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setRefundModal(null)} disabled={refunding}>Cancel</button>
             </div>
           </div>
         </div>
@@ -7009,10 +7101,47 @@ function AdminOrders({ showToast }) {
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
+  const [refundModal, setRefundModal] = useState(null); // { order }
+  const [refundAmt, setRefundAmt] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [refunding, setRefunding] = useState(false);
+
+  const openRefund = (order) => {
+    setRefundModal({ order });
+    setRefundAmt(Number(order.total || 0).toFixed(2));
+    setRefundNote("");
+  };
+
+  const doRefund = async () => {
+    if (!refundModal) return;
+    const { order } = refundModal;
+    const amt = parseFloat(refundAmt);
+    if (isNaN(amt) || amt <= 0) { showToast("Enter a valid refund amount", "red"); return; }
+    if (amt > Number(order.total)) { showToast("Refund amount exceeds order total", "red"); return; }
+    setRefunding(true);
+    try {
+      const [clientId, secret, mode] = await Promise.all([
+        api.settings.get("paypal_client_id"),
+        api.settings.get("paypal_client_secret"),
+        api.settings.get("paypal_mode"),
+      ]);
+      if (!clientId || !secret) throw new Error("PayPal Client ID and Secret must be saved in Admin → Settings before issuing refunds.");
+      if (!order.paypal_order_id) throw new Error("No PayPal Order ID on this order — cannot issue automatic refund. Refund manually in your PayPal dashboard.");
+      const isFullRefund = Math.abs(amt - Number(order.total)) < 0.01;
+      await paypalRefund({ paypalOrderId: order.paypal_order_id, amount: isFullRefund ? null : amt, clientId, secret, mode: mode || "sandbox" });
+      await api.shopOrders.saveRefund(order.id, amt, refundNote || null);
+      setOrders(o => o.map(x => x.id === order.id ? { ...x, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() } : x));
+      if (detail?.id === order.id) setDetail(d => ({ ...d, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() }));
+      showToast("✅ Refund of £" + amt.toFixed(2) + " issued via PayPal!");
+      setRefundModal(null);
+    } catch (e) {
+      showToast("❌ Refund failed: " + (e.message || String(e)), "red");
+    } finally { setRefunding(false); }
+  };
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
   const pending = orders.filter(o => o.status === "pending").length;
   const [statusTab, setStatusTab] = useState("pending");
-  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all"];
+  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all","refunded"];
   const visibleOrders = statusTab === "all" ? orders : orders.filter(o => o.status === statusTab);
 
   return (
@@ -7167,7 +7296,24 @@ function AdminOrders({ showToast }) {
                 </tr>
               </tbody>
             </table></div>
-            <button className="btn btn-ghost mt-2" onClick={() => setDetail(null)}>Close</button>
+              {/* Refund section */}
+              {detail.refund_amount && (
+                <div style={{ background:"rgba(255,60,60,.05)", border:"1px solid rgba(255,60,60,.2)", borderRadius:3, padding:"10px 14px", marginTop:12 }}>
+                  <div style={{ fontSize:11, color:"var(--red)", fontWeight:700, letterSpacing:".08em", marginBottom:4 }}>💸 REFUNDED</div>
+                  <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+                    <div><span style={{ fontSize:11, color:"var(--muted)" }}>Amount: </span><span style={{ fontWeight:700, color:"var(--red)" }}>£{Number(detail.refund_amount).toFixed(2)}</span></div>
+                    {detail.refunded_at && <div><span style={{ fontSize:11, color:"var(--muted)" }}>Date: </span><span style={{ fontSize:12 }}>{gmtShort(detail.refunded_at)}</span></div>}
+                    {detail.refund_note && <div><span style={{ fontSize:11, color:"var(--muted)" }}>Note: </span><span style={{ fontSize:12 }}>{detail.refund_note}</span></div>}
+                  </div>
+                </div>
+              )}
+            <div className="gap-2 mt-2">
+              {!detail.refund_amount && detail.paypal_order_id && (
+                <button className="btn btn-sm" style={{ background:"rgba(255,60,60,.12)", border:"1px solid rgba(255,60,60,.35)", color:"var(--red)" }}
+                  onClick={() => openRefund(detail)}>💸 Refund Order</button>
+              )}
+              <button className="btn btn-ghost" onClick={() => setDetail(null)}>Close</button>
+            </div>
           </div>
         </div>
       )}
@@ -7194,6 +7340,42 @@ function AdminOrders({ showToast }) {
                 ✓ Confirm Dispatch &amp; Send Email
               </button>
               <button className="btn btn-ghost" onClick={() => setTrackingModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {refundModal && (
+        <div className="overlay" onClick={() => !refunding && setRefundModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title" style={{ color:"var(--red)" }}>💸 Refund Order</div>
+            <div style={{ background:"var(--bg4)", border:"1px solid var(--border)", borderRadius:3, padding:"10px 14px", marginBottom:16, fontSize:12 }}>
+              <div style={{ fontWeight:700 }}>{refundModal.order.customer_name}</div>
+              <div style={{ color:"var(--muted)", marginTop:2 }}>Order #{(refundModal.order.id||"").slice(-8).toUpperCase()} · Total: £{Number(refundModal.order.total).toFixed(2)}</div>
+              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>PayPal ref: {refundModal.order.paypal_order_id}</div>
+            </div>
+            <div className="form-group">
+              <label>Refund Amount (£)</label>
+              <input type="number" step="0.01" min="0.01" max={refundModal.order.total}
+                value={refundAmt} onChange={e => setRefundAmt(e.target.value)} autoFocus />
+              <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
+                <button style={{ background:"none", border:"none", color:"var(--accent)", cursor:"pointer", fontSize:11, padding:0 }}
+                  onClick={() => setRefundAmt(Number(refundModal.order.total).toFixed(2))}>Full refund (£{Number(refundModal.order.total).toFixed(2)})</button>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Internal Note <span style={{ fontWeight:400, color:"var(--muted)" }}>(optional)</span></label>
+              <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Item out of stock, customer request" />
+            </div>
+            <div className="alert" style={{ background:"rgba(255,60,60,.06)", border:"1px solid rgba(255,60,60,.2)", fontSize:11, color:"var(--red)", marginBottom:14 }}>
+              ⚠️ This will immediately issue a refund via PayPal. This cannot be undone.
+            </div>
+            <div className="gap-2">
+              <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
+                onClick={doRefund} disabled={refunding}>
+                {refunding ? "⏳ Processing…" : \`✓ Confirm Refund · £\${parseFloat(refundAmt||0).toFixed(2)}\`}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setRefundModal(null)} disabled={refunding}>Cancel</button>
             </div>
           </div>
         </div>
@@ -9717,14 +9899,17 @@ function AdminSettings({ showToast }) {
   };
 
   const [paypalClientId, setPaypalClientId] = S("paypal_client_id");
+  const [paypalClientSecret, setPaypalClientSecret] = S("paypal_client_secret");
   const [paypalMode, setPaypalMode, ppLoaded] = S("paypal_mode", "sandbox");
   const [savingPP, setSavingPP] = useState(false);
   const [showClientId, setShowClientId] = useState(false);
+  const [showClientSecret, setShowClientSecret] = useState(false);
 
   const savePaypal = async () => {
     setSavingPP(true);
     try {
       await api.settings.set("paypal_client_id", paypalClientId.trim());
+      await api.settings.set("paypal_client_secret", paypalClientSecret.trim());
       await api.settings.set("paypal_mode", paypalMode);
       // Reset cached config so next checkout reloads it
       _paypalConfigLoaded = false;
@@ -9794,6 +9979,26 @@ function AdminSettings({ showToast }) {
               developer.paypal.com → My Apps &amp; Credentials
             </a>
             . Use the <strong>Live</strong> Client ID for real payments.
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>PayPal Client Secret {paypalMode === "live" ? "(Live)" : "(Sandbox)"} <span style={{ color: "var(--red)", fontSize: 10 }}>Required for refunds</span></label>
+          <div style={{ position: "relative" }}>
+            <input
+              type={showClientSecret ? "text" : "password"}
+              value={paypalClientSecret}
+              onChange={e => setPaypalClientSecret(e.target.value)}
+              placeholder="Secret from PayPal Developer Dashboard"
+              style={{ paddingRight: 80 }}
+            />
+            <button onClick={() => setShowClientSecret(v => !v)}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>
+              {showClientSecret ? "Hide" : "Show"}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
+            In your PayPal app, click <strong style={{ color: "var(--text)" }}>Show Secret</strong> next to Client Secret. This is stored securely and only used server-side for refund API calls.
           </div>
         </div>
 
