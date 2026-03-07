@@ -985,7 +985,23 @@ function QRScanner({ onScan, onClose }) {
 function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [busy, setBusy] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
+
+  const sendReset = async () => {
+    if (!form.email || !form.email.includes("@")) { showToast("Enter your email address first", "red"); return; }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
+        redirectTo: window.location.origin + window.location.pathname,
+      });
+      if (error) throw error;
+      setResetSent(true);
+    } catch (e) {
+      showToast(e.message || "Failed to send reset email", "red");
+    } finally { setBusy(false); }
+  };
 
   const login = async () => {
     if (!form.email || !form.password) { showToast("Email and password required", "red"); return; }
@@ -1027,29 +1043,62 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
-        <div className="modal-title">{mode === "login" ? "🔐 Sign In" : "🎯 Create Account"}</div>
-        {mode === "register" && (
-          <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} placeholder="John Smith" /></div>
+        {resetMode ? (
+          <>
+            <div className="modal-title">🔑 Reset Password</div>
+            {resetSent ? (
+              <>
+                <div className="alert alert-green" style={{ marginBottom: 16 }}>
+                  ✅ Check your email — a reset link has been sent to <strong>{form.email}</strong>.
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>Click the link in the email to set a new password. Check your spam folder if it doesn't arrive within a minute.</div>
+                <button className="btn btn-ghost" onClick={() => { setResetMode(false); setResetSent(false); }}>← Back to Login</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>Enter your email address and we'll send you a link to reset your password.</div>
+                <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} onKeyDown={e => e.key === "Enter" && sendReset()} autoFocus /></div>
+                <div className="gap-2 mt-2">
+                  <button className="btn btn-primary" disabled={busy} onClick={sendReset}>{busy ? "Sending…" : "Send Reset Link"}</button>
+                  <button className="btn btn-ghost" onClick={() => setResetMode(false)}>← Back</button>
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="modal-title">{mode === "login" ? "🔐 Sign In" : "🎯 Create Account"}</div>
+            {mode === "register" && (
+              <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} placeholder="John Smith" /></div>
+            )}
+            <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} /></div>
+            <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setField("password", e.target.value)} onKeyDown={e => e.key === "Enter" && (mode === "login" ? login() : register())} /></div>
+            {mode === "register" && (
+              <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="07700..." /></div>
+            )}
+            {mode === "register" && (
+              <div className="alert alert-blue" style={{ marginBottom: 12 }}>
+                📧 You'll receive a confirmation email — click the link to activate your account.
+              </div>
+            )}
+            <div className="gap-2 mt-2">
+              <button className="btn btn-primary" disabled={busy} onClick={mode === "login" ? login : register}>
+                {busy ? "Please wait…" : mode === "login" ? "Login" : "Register"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+                {mode === "login" ? "New? Register →" : "Have account? Login →"}
+              </button>
+              <button className="btn btn-ghost" style={{ marginLeft: "auto" }} onClick={onClose}>Cancel</button>
+            </div>
+            {mode === "login" && (
+              <div style={{ marginTop: 12, textAlign: "right" }}>
+                <button className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 8px", color: "var(--muted)" }} onClick={() => setResetMode(true)}>
+                  Forgot password?
+                </button>
+              </div>
+            )}
+          </>
         )}
-        <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} /></div>
-        <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setField("password", e.target.value)} onKeyDown={e => e.key === "Enter" && (mode === "login" ? login() : register())} /></div>
-        {mode === "register" && (
-          <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="07700..." /></div>
-        )}
-        {mode === "register" && (
-          <div className="alert alert-blue" style={{ marginBottom: 12 }}>
-            📧 You'll receive a confirmation email — click the link to activate your account.
-          </div>
-        )}
-        <div className="gap-2 mt-2">
-          <button className="btn btn-primary" disabled={busy} onClick={mode === "login" ? login : register}>
-            {busy ? "Please wait…" : mode === "login" ? "Login" : "Register"}
-          </button>
-          <button className="btn btn-ghost" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-            {mode === "login" ? "New? Register →" : "Have account? Login →"}
-          </button>
-          <button className="btn btn-ghost" style={{ marginLeft: "auto" }} onClick={onClose}>Cancel</button>
-        </div>
       </div>
     </div>
   );
@@ -2031,6 +2080,53 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
     toEmail,
     toName:      cu.name || "Customer",
     subject:     `✅ Order Confirmed #${(order.id||"").slice(0,8).toUpperCase()}`,
+    htmlContent,
+  });
+}
+
+// ── Send Order Dispatch Email ─────────────────────────────────
+async function sendDispatchEmail({ toEmail, toName, order, items }) {
+  const itemRows = (items || []).map(i => `
+    <tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#ddd;">${i.name}${i.variant ? ` — ${i.variant}` : ""}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#aaa;text-align:center;">${i.qty}</td>
+    </tr>`).join("");
+
+  const htmlContent = `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Order Dispatched</div>
+    </div>
+    <div style="background:#1a2808;border:1px solid #2a3a10;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">📦</div>
+      <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.08em;text-transform:uppercase;">Your order is on its way!</div>
+      <div style="font-size:13px;color:#8aaa60;margin-top:8px;">Order #${(order.id||"").slice(0,8).toUpperCase()}</div>
+    </div>
+    ${itemRows ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:12px;">ITEMS DISPATCHED</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Item</th>
+          <th style="text-align:center;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Qty</th>
+        </tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+    </div>` : ""}
+    ${order.customerAddress ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">SHIPPING TO</div>
+      <div style="font-size:13px;color:#ccc;white-space:pre-line;">${order.customerAddress}</div>
+    </div>` : ""}
+    <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
+      Allow 3–5 working days for delivery. If you have any questions reply to this email or contact us through the website.
+    </div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft</div>
+  </div>`;
+
+  await sendEmail({
+    toEmail,
+    toName:      toName || "Customer",
+    subject:     `📦 Your Order Has Been Dispatched — #${(order.id||"").slice(0,8).toUpperCase()}`,
     htmlContent,
   });
 }
@@ -5972,6 +6068,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/players/" + t; };
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
+  const [playerSearch, setPlayerSearch] = useState("");
 
   const loadUsers = () =>
     api.profiles.getAll()
@@ -5995,6 +6092,15 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const allUsers = localUsers ?? data.users;
   const players = allUsers.filter(u => u.role !== "admin");
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
+  const filteredPlayers = playerSearch.trim()
+    ? players.filter(u => {
+        const q = playerSearch.toLowerCase();
+        return u.name?.toLowerCase().includes(q) ||
+               u.email?.toLowerCase().includes(q) ||
+               u.phone?.toLowerCase().includes(q) ||
+               u.ukara?.toLowerCase().includes(q);
+      })
+    : players;
 
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -6123,10 +6229,24 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       {tab === "all" && (
         <div className="card">
           {localUsers === null && <div style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Loading players…</div>}
+          <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              value={playerSearch}
+              onChange={e => setPlayerSearch(e.target.value)}
+              placeholder="Search by name, email, phone or UKARA…"
+              style={{ flex: 1, fontSize: 13 }}
+            />
+            {playerSearch && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setPlayerSearch("")}>✕ Clear</button>
+            )}
+            <span style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>
+              {filteredPlayers.length} / {players.length}
+            </span>
+          </div>
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th></th></tr></thead>
             <tbody>
-              {players.map(u => (
+              {filteredPlayers.map(u => (
                 <tr key={u.id}>
                   <td style={{ fontWeight: 600 }}>{u.name}</td>
                   <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
@@ -6544,6 +6664,18 @@ function AdminOrdersInline({ showToast }) {
       setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status }));
       showToast("Status updated!");
+      // Send dispatch email when status changes to "dispatched"
+      if (status === "dispatched") {
+        const order = orders.find(o => o.id === id);
+        if (order?.customerEmail) {
+          sendDispatchEmail({
+            toEmail: order.customerEmail,
+            toName:  order.customerName || "Customer",
+            order,
+            items:   Array.isArray(order.items) ? order.items : [],
+          }).catch(() => {});
+        }
+      }
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
@@ -6688,6 +6820,18 @@ function AdminOrders({ showToast }) {
       setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status }));
       showToast("Status updated!");
+      // Send dispatch email when status changes to "dispatched"
+      if (status === "dispatched") {
+        const order = orders.find(o => o.id === id);
+        if (order?.customerEmail) {
+          sendDispatchEmail({
+            toEmail: order.customerEmail,
+            toName:  order.customerName || "Customer",
+            order,
+            items:   Array.isArray(order.items) ? order.items : [],
+          }).catch(() => {});
+        }
+      }
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
