@@ -303,6 +303,16 @@ export const shop = wrapWithTimeout({
     const { data } = supabase.storage.from('images').getPublicUrl(path)
     await supabase.from('shop_products').update({ image: data.publicUrl }).eq('id', productId)
     return data.publicUrl
+  },
+
+  async uploadProductImage(productId, file) {
+    const ext = file.name.split('.').pop()
+    const uniqueId = Date.now() + '_' + Math.random().toString(36).slice(2,7)
+    const path = `shop/${productId}/${uniqueId}.${ext}`
+    const { error } = await supabase.storage.from('images').upload(path, file, { upsert: false })
+    if (error) throw error
+    const { data } = supabase.storage.from('images').getPublicUrl(path)
+    return data.publicUrl
   }
 })
 
@@ -518,6 +528,7 @@ function normaliseProduct(p) {
     salePrice:   p.sale_price ? Number(p.sale_price) : null,
     onSale:      p.on_sale,
     image:       p.image,
+    images:      Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []),
     stock:       variantStock !== null ? variantStock : p.stock,
     baseStock:   p.stock, // raw DB stock (only used when no variants)
     noPost:      p.no_post,
@@ -583,7 +594,8 @@ function toSnakeProduct(p) {
     price:       p.price,
     sale_price:  p.salePrice,
     on_sale:     p.onSale,
-    image:       p.image,
+    image:       p.images && p.images.length > 0 ? p.images[0] : (p.image || null),
+    images:      p.images || [],
     stock:       p.variants && p.variants.length > 0 ? 0 : p.stock,
     no_post:     p.noPost,
     game_extra:  p.gameExtra || false,

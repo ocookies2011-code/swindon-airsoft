@@ -3270,16 +3270,19 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
                 {/* Image */}
                 <div style={{ height:170, background:"#080a06", overflow:"hidden", position:"relative" }}>
-                  {item.image
-                    ? <img src={item.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.8)", transition:"transform .3s" }}
+                  {(() => { const cardImg = (item.images && item.images.length > 0) ? item.images[0] : item.image; return cardImg
+                    ? <img src={cardImg} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.8)", transition:"transform .3s" }}
                         onMouseOver={e => e.currentTarget.style.transform="scale(1.05)"}
                         onMouseOut={e => e.currentTarget.style.transform=""} />
                     : <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
                         <div style={{ fontSize:40, opacity:.08 }}>🎯</div>
                         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".15em", color:"#1e2c0a" }}>NO IMAGERY</div>
-                      </div>
-                  }
+                      </div>;
+                  })()}
                   <div style={{ position:"absolute", bottom:0, left:0, right:0, height:40, background:"linear-gradient(to top,rgba(12,16,9,1),transparent)", zIndex:2 }} />
+                  {(item.images && item.images.length > 1) && (
+                    <div style={{ position:"absolute", bottom:6, right:8, zIndex:3, fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"rgba(200,255,0,.7)", letterSpacing:".1em" }}>📷 {item.images.length}</div>
+                  )}
                   {!inStock && !hasV && (
                     <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3 }}>
                       <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, letterSpacing:".2em", color:"#ef4444", border:"2px solid #ef4444", padding:"4px 14px", transform:"rotate(-3deg)" }}>OUT OF STOCK</span>
@@ -3416,6 +3419,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
   const isMobile = useMobile(700);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
+  const [activeImgIdx, setActiveImgIdx] = useState(0);
 
   const hasVariants = item.variants?.length > 0;
   const effectivePrice = selectedVariant
@@ -3465,10 +3469,27 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
             <div style={{ position:"absolute", bottom:10, left:10, width:18, height:18, borderBottom:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
             <div style={{ position:"absolute", bottom:10, right:10, width:18, height:18, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
             {(() => {
-              const displayImg = (selectedVariant?.image) || item.image;
-              return displayImg
-                ? <img src={displayImg} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#0a0a0a", transition:"opacity .15s" }} />
-                : <div style={{ aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", fontSize:80, color:"#333" }}>🎯</div>;
+              const variantImg = selectedVariant?.image;
+              const allImgs = variantImg ? [variantImg, ...(item.images||[]).filter(x => x !== variantImg)] : (item.images && item.images.length > 0 ? item.images : (item.image ? [item.image] : []));
+              const displayImg = allImgs[activeImgIdx] || allImgs[0] || null;
+              return (
+                <>
+                  {displayImg
+                    ? <img src={displayImg} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#0a0a0a", transition:"opacity .2s" }} />
+                    : <div style={{ aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", fontSize:80, color:"#333" }}>🎯</div>
+                  }
+                  {allImgs.length > 1 && (
+                    <div style={{ display:"flex", gap:4, padding:"8px 8px 4px", background:"#080a06", flexWrap:"wrap" }}>
+                      {allImgs.map((img, i) => (
+                        <div key={i} onClick={() => setActiveImgIdx(i)}
+                          style={{ width:52, height:52, border: i === activeImgIdx ? "2px solid var(--accent)" : "1px solid #1a2808", cursor:"pointer", overflow:"hidden", flexShrink:0, opacity: i === activeImgIdx ? 1 : 0.55, transition:"all .15s" }}>
+                          <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
             })()}
             {!item.stock && (
               <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -7164,7 +7185,7 @@ function AdminShop({ data, save, showToast }) {
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", stock: 0, noPost: false, gameExtra: false, costPrice: null, category: "", variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, costPrice: null, category: "", variants: [] };
 
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
@@ -7234,8 +7255,7 @@ function AdminShop({ data, save, showToast }) {
   const [postForm, setPostForm] = useState(blankPost);
   const pf = (k, v) => setPostForm(p => ({ ...p, [k]: v }));
 
-  const handleImg = (e) => {
-    const file = e.target.files[0]; if (!file) return;
+  const compressImage = (file) => new Promise(resolve => {
     const img2 = new Image();
     const reader2 = new FileReader();
     reader2.onload = ev => {
@@ -7246,11 +7266,38 @@ function AdminShop({ data, save, showToast }) {
         canvas2.width  = Math.round(img2.width  * scale2);
         canvas2.height = Math.round(img2.height * scale2);
         canvas2.getContext("2d").drawImage(img2, 0, 0, canvas2.width, canvas2.height);
-        setField("image", canvas2.toDataURL("image/jpeg", 0.75));
+        resolve(canvas2.toDataURL("image/jpeg", 0.75));
       };
       img2.src = ev.target.result;
     };
     reader2.readAsDataURL(file);
+  });
+
+  const handleImg = (e) => {
+    const files = Array.from(e.target.files); if (!files.length) return;
+    Promise.all(files.map(compressImage)).then(newImgs => {
+      setForm(prev => {
+        const merged = [...(prev.images || []), ...newImgs];
+        return { ...prev, images: merged, image: merged[0] || prev.image };
+      });
+    });
+    e.target.value = ""; // allow re-selecting same file
+  };
+
+  const removeProductImage = (idx) => {
+    setForm(prev => {
+      const next = prev.images.filter((_, i) => i !== idx);
+      return { ...prev, images: next, image: next[0] || "" };
+    });
+  };
+
+  const moveProductImage = (from, to) => {
+    setForm(prev => {
+      const next = [...prev.images];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return { ...prev, images: next, image: next[0] || "" };
+    });
   };
 
   const [delProductConfirm, setDelProductConfirm] = useState(null);
@@ -7686,8 +7733,28 @@ function AdminShop({ data, save, showToast }) {
               </div>
             </div>
 
-            <div className="form-group"><label>Product Image</label><input type="file" accept="image/*" onChange={handleImg} /></div>
-            {form.image && <img src={form.image} style={{width:"100%",maxHeight:110,objectFit:"cover",marginBottom:10}} alt="" />}
+            <div className="form-group">
+              <label>Product Images <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(first image shown on shop card — drag to reorder)</span></label>
+              {(form.images || []).length > 0 && (
+                <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+                  {(form.images || []).map((img, i) => (
+                    <div key={i} style={{ position:"relative", width:90, height:90, border: i===0 ? "2px solid var(--accent)" : "1px solid var(--border)", borderRadius:3, overflow:"hidden", flexShrink:0 }}>
+                      <img src={img} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
+                      {i === 0 && <div style={{ position:"absolute", top:2, left:2, background:"var(--accent)", color:"#000", fontSize:7, fontWeight:900, padding:"1px 4px", letterSpacing:".05em" }}>MAIN</div>}
+                      <button onClick={() => removeProductImage(i)} title="Remove" style={{ position:"absolute", top:2, right:2, background:"rgba(0,0,0,.75)", border:"none", color:"#fff", width:18, height:18, cursor:"pointer", fontSize:10, borderRadius:2, lineHeight:1, padding:0, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+                      <div style={{ position:"absolute", bottom:2, left:0, right:0, display:"flex", justifyContent:"center", gap:3 }}>
+                        {i > 0 && <button onClick={() => moveProductImage(i, i-1)} title="Move left" style={{ background:"rgba(0,0,0,.75)", border:"none", color:"#fff", width:16, height:16, cursor:"pointer", fontSize:9, borderRadius:2, padding:0, display:"flex", alignItems:"center", justifyContent:"center" }}>◀</button>}
+                        {i < (form.images||[]).length-1 && <button onClick={() => moveProductImage(i, i+1)} title="Move right" style={{ background:"rgba(0,0,0,.75)", border:"none", color:"#fff", width:16, height:16, cursor:"pointer", fontSize:9, borderRadius:2, padding:0, display:"flex", alignItems:"center", justifyContent:"center" }}>▶</button>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label style={{ display:"inline-flex", alignItems:"center", gap:6, cursor:"pointer", background:"var(--bg4)", border:"1px dashed var(--border)", padding:"8px 14px", borderRadius:3, fontSize:12, color:"var(--muted)" }}>
+                📷 {(form.images||[]).length === 0 ? "Upload images" : "Add more images"}
+                <input type="file" accept="image/*" multiple onChange={handleImg} style={{ display:"none" }} />
+              </label>
+            </div>
 
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveItem} disabled={savingProduct}>{savingProduct ? "Saving…" : "Save Product"}</button>
