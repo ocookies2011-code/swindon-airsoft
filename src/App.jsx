@@ -2085,7 +2085,7 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
 }
 
 // ── Send Order Dispatch Email ─────────────────────────────────
-async function sendDispatchEmail({ toEmail, toName, order, items }) {
+async function sendDispatchEmail({ toEmail, toName, order, items, tracking }) {
   const itemRows = (items || []).map(i => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#ddd;">${i.name}${i.variant ? ` — ${i.variant}` : ""}</td>
@@ -2116,6 +2116,10 @@ async function sendDispatchEmail({ toEmail, toName, order, items }) {
     ${order.customerAddress ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
       <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">SHIPPING TO</div>
       <div style="font-size:13px;color:#ccc;white-space:pre-line;">${order.customerAddress}</div>
+    </div>` : ""}
+    ${tracking ? `<div style="background:#1a2808;border:1px solid #2a3a10;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">📮 TRACKING NUMBER</div>
+      <div style="font-size:18px;font-weight:900;color:#fff;font-family:monospace;letter-spacing:.08em;">${tracking}</div>
     </div>` : ""}
     <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
       Allow 3–5 working days for delivery. If you have any questions reply to this email or contact us through the website.
@@ -4835,6 +4839,17 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
   const pendingWaivers = data.users.filter(u => u.waiverPending).length;
   const pendingVip = data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length;  const deleteReqs = data.users.filter(u => u.deleteRequest).length;
+  const [pendingOrders, setPendingOrders] = useState(0);
+  useEffect(() => {
+    const fetchPending = () =>
+      api.shopOrders.getAll()
+        .then(orders => setPendingOrders(orders.filter(o => o.status === "pending").length))
+        .catch(() => {});
+    fetchPending();
+    // Refresh every 2 minutes so badge stays current
+    const interval = setInterval(fetchPending, 120000);
+    return () => clearInterval(interval);
+  }, []);
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
   const upcomingEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
   const totalBookings = data.events.flatMap(e => e.bookings).length;
@@ -4844,7 +4859,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "dashboard", label: "Dashboard", icon: "📊", group: "OPERATIONS" },
     { id: "events", label: "Events & Bookings", icon: "📅", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
-    { id: "shop", label: "Shop", icon: "🛒", group: null },
+    { id: "shop", label: "Shop", icon: "🛒", badge: pendingOrders, badgeColor: "red", group: null },
     { id: "leaderboard-admin", label: "Leaderboard", icon: "🏆", group: null },
     { id: "revenue", label: "Revenue", icon: "💰", group: "ANALYTICS" },
     { id: "visitor-stats", label: "Visitor Stats", icon: "📈", group: null },
@@ -6647,6 +6662,7 @@ function AdminOrdersInline({ showToast }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [trackingModal, setTrackingModal] = useState(null); // { id, tracking }
   const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
 
   const fetchOrders = async () => {
@@ -6658,24 +6674,33 @@ function AdminOrdersInline({ showToast }) {
 
   useEffect(() => { const ordersTimeout = setTimeout(fetchOrders, 400); return () => clearTimeout(ordersTimeout); }, []);
 
+  const doDispatch = async (id, tracking) => {
+    try {
+      await api.shopOrders.updateStatus(id, "dispatched");
+      setOrders(o => o.map(x => x.id === id ? { ...x, status: "dispatched" } : x));
+      if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
+      showToast("Order marked as dispatched!");
+      const order = orders.find(o => o.id === id);
+      if (order?.customerEmail) {
+        sendDispatchEmail({
+          toEmail: order.customerEmail,
+          toName:  order.customerName || "Customer",
+          order,
+          items:   Array.isArray(order.items) ? order.items : [],
+          tracking: tracking || null,
+        }).catch(() => {});
+      }
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    setTrackingModal(null);
+  };
+
   const setStatus = async (id, status) => {
+    if (status === "dispatched") { setTrackingModal({ id, tracking: "" }); return; }
     try {
       await api.shopOrders.updateStatus(id, status);
       setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status }));
       showToast("Status updated!");
-      // Send dispatch email when status changes to "dispatched"
-      if (status === "dispatched") {
-        const order = orders.find(o => o.id === id);
-        if (order?.customerEmail) {
-          sendDispatchEmail({
-            toEmail: order.customerEmail,
-            toName:  order.customerName || "Customer",
-            order,
-            items:   Array.isArray(order.items) ? order.items : [],
-          }).catch(() => {});
-        }
-      }
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
@@ -6783,6 +6808,33 @@ function AdminOrdersInline({ showToast }) {
           </div>
         </div>
       )}
+
+      {trackingModal && (
+        <div className="overlay" onClick={() => setTrackingModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">📦 Mark as Dispatched</div>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 16px" }}>
+              Optionally enter a tracking number — it will be included in the dispatch email to the customer.
+            </p>
+            <div className="form-group">
+              <label>Tracking Number <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
+              <input
+                value={trackingModal.tracking}
+                onChange={e => setTrackingModal(m => ({ ...m, tracking: e.target.value }))}
+                placeholder="e.g. JD000000000000000000"
+                onKeyDown={e => e.key === "Enter" && doDispatch(trackingModal.id, trackingModal.tracking)}
+                autoFocus
+              />
+            </div>
+            <div className="gap-2 mt-2">
+              <button className="btn btn-primary" onClick={() => doDispatch(trackingModal.id, trackingModal.tracking)}>
+                ✓ Confirm Dispatch &amp; Send Email
+              </button>
+              <button className="btn btn-ghost" onClick={() => setTrackingModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -6793,6 +6845,7 @@ function AdminOrders({ showToast }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [trackingModal, setTrackingModal] = useState(null); // { id, tracking }
   const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
 
   const fetchOrders = async () => {
@@ -6814,24 +6867,33 @@ function AdminOrders({ showToast }) {
     return () => clearTimeout(ordersTimer);
   }, []);
 
+  const doDispatch = async (id, tracking) => {
+    try {
+      await api.shopOrders.updateStatus(id, "dispatched");
+      setOrders(o => o.map(x => x.id === id ? { ...x, status: "dispatched" } : x));
+      if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
+      showToast("Order marked as dispatched!");
+      const order = orders.find(o => o.id === id);
+      if (order?.customerEmail) {
+        sendDispatchEmail({
+          toEmail: order.customerEmail,
+          toName:  order.customerName || "Customer",
+          order,
+          items:   Array.isArray(order.items) ? order.items : [],
+          tracking: tracking || null,
+        }).catch(() => {});
+      }
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    setTrackingModal(null);
+  };
+
   const setStatus = async (id, status) => {
+    if (status === "dispatched") { setTrackingModal({ id, tracking: "" }); return; }
     try {
       await api.shopOrders.updateStatus(id, status);
       setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status }));
       showToast("Status updated!");
-      // Send dispatch email when status changes to "dispatched"
-      if (status === "dispatched") {
-        const order = orders.find(o => o.id === id);
-        if (order?.customerEmail) {
-          sendDispatchEmail({
-            toEmail: order.customerEmail,
-            toName:  order.customerName || "Customer",
-            order,
-            items:   Array.isArray(order.items) ? order.items : [],
-          }).catch(() => {});
-        }
-      }
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
@@ -6972,6 +7034,33 @@ function AdminOrders({ showToast }) {
               </tbody>
             </table></div>
             <button className="btn btn-ghost mt-2" onClick={() => setDetail(null)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {trackingModal && (
+        <div className="overlay" onClick={() => setTrackingModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">📦 Mark as Dispatched</div>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 16px" }}>
+              Optionally enter a tracking number — it will be included in the dispatch email to the customer.
+            </p>
+            <div className="form-group">
+              <label>Tracking Number <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
+              <input
+                value={trackingModal.tracking}
+                onChange={e => setTrackingModal(m => ({ ...m, tracking: e.target.value }))}
+                placeholder="e.g. JD000000000000000000"
+                onKeyDown={e => e.key === "Enter" && doDispatch(trackingModal.id, trackingModal.tracking)}
+                autoFocus
+              />
+            </div>
+            <div className="gap-2 mt-2">
+              <button className="btn btn-primary" onClick={() => doDispatch(trackingModal.id, trackingModal.tracking)}>
+                ✓ Confirm Dispatch &amp; Send Email
+              </button>
+              <button className="btn btn-ghost" onClick={() => setTrackingModal(null)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
