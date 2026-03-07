@@ -742,10 +742,37 @@ export const purchaseOrders = wrapWithTimeout({
     const { error } = await supabase.from('purchase_orders').update({ status }).eq('id', id)
     if (error) throw error
   },
-  async receiveItem(itemId, qtyReceived) {
+  async receiveItem(itemId, qtyReceived, productId, variantId, qtyPreviouslyReceived) {
+    // 1. Update the PO item received qty
     const { error } = await supabase.from('purchase_order_items')
       .update({ qty_received: qtyReceived }).eq('id', itemId)
     if (error) throw error
+
+    // 2. Work out how many NEW units are being added this time
+    const delta = qtyReceived - (qtyPreviouslyReceived || 0)
+    if (delta <= 0 || !productId) return
+
+    // 3. Add to shop stock
+    if (variantId) {
+      // Variant product — fetch current variants JSON, bump the matching variant's stock
+      const { data: prod, error: fetchErr } = await supabase
+        .from('shop_products').select('variants').eq('id', productId).single()
+      if (fetchErr) throw fetchErr
+      const variants = (prod.variants || []).map(v =>
+        v.id === variantId ? { ...v, stock: (Number(v.stock) || 0) + delta } : v
+      )
+      const { error: updErr } = await supabase
+        .from('shop_products').update({ variants }).eq('id', productId)
+      if (updErr) throw updErr
+    } else {
+      // Simple product — use rpc increment or plain update with addition
+      const { data: prod, error: fetchErr } = await supabase
+        .from('shop_products').select('stock').eq('id', productId).single()
+      if (fetchErr) throw fetchErr
+      const { error: updErr } = await supabase
+        .from('shop_products').update({ stock: (Number(prod.stock) || 0) + delta }).eq('id', productId)
+      if (updErr) throw updErr
+    }
   },
   async delete(id) {
     const { error: itemErr } = await supabase.from('purchase_order_items').delete().eq('purchase_order_id', id)

@@ -5026,7 +5026,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
-          {section === "purchase-orders" && <AdminPurchaseOrders data={data} showToast={showToast} />}
+          {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} />}
           {section === "settings" && <AdminSettings showToast={showToast} />}
         </div>
       </div>
@@ -9915,7 +9915,7 @@ function EmailTestCard({ showToast, sectionHead }) {
 // ── Admin Settings ────────────────────────────────────────
 
 // ── Admin Purchase Orders ─────────────────────────────────────
-function AdminPurchaseOrders({ data, showToast }) {
+function AdminPurchaseOrders({ data, save, showToast }) {
   const [tab, setTab] = useState("orders"); // "orders" | "suppliers"
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -10036,14 +10036,23 @@ function AdminPurchaseOrders({ data, showToast }) {
     try {
       await Promise.all(
         detailModal.items.map(i =>
-          api.purchaseOrders.receiveItem(i.id, Number(receiveQtys[i.id]) || 0)
+          api.purchaseOrders.receiveItem(
+            i.id,
+            Number(receiveQtys[i.id]) || 0,
+            i.product_id || null,
+            i.variant_id || null,
+            i.qty_received   // previously received — delta is calculated in api
+          )
         )
       );
       const allReceived = detailModal.items.every(i => Number(receiveQtys[i.id]) >= i.qty_ordered);
       const anyReceived = detailModal.items.some(i => Number(receiveQtys[i.id]) > 0);
       const newStatus = allReceived ? "received" : anyReceived ? "partial" : detailModal.status;
       if (newStatus !== detailModal.status) await api.purchaseOrders.updateStatus(detailModal.id, newStatus);
-      showToast("Stock receipt saved!");
+      // Refresh shop data so dashboard stock alerts update immediately
+      const freshShop = await api.shop.getAll();
+      save({ shop: freshShop });
+      showToast("✅ Stock received & shop updated!");
       await loadAll();
       setDetailModal(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
@@ -10258,24 +10267,39 @@ function AdminPurchaseOrders({ data, showToast }) {
               Created: {gmtShort(detailModal.created_at)}
             </div>
             <div className="table-wrap" style={{marginBottom:16}}><table className="data-table">
-              <thead><tr><th>Product</th><th>Supplier Code</th><th>Ordered</th><th>Prev. Received</th><th>Received Now</th></tr></thead>
+              <thead><tr><th>Product</th><th>Supplier Code</th><th>Ordered</th><th>Prev. Rcvd</th><th>Receive Now</th><th>Adding to Stock</th></tr></thead>
               <tbody>
-                {detailModal.items.map(i => (
-                  <tr key={i.id}>
-                    <td>{i.product_name}</td>
-                    <td><span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--accent)"}}>{i.supplier_code || i.supplierCode || "—"}</span></td>
-                    <td>{i.qty_ordered}</td>
-                    <td>{i.qty_received}</td>
-                    <td><input type="number" min="0" max={i.qty_ordered}
-                      value={receiveQtys[i.id] ?? i.qty_received}
-                      onChange={e => setReceiveQtys(q => ({...q, [i.id]: e.target.value}))}
-                      style={{width:70, fontSize:13}} /></td>
-                  </tr>
-                ))}
+                {detailModal.items.map(i => {
+                  const nowVal = Number(receiveQtys[i.id] ?? i.qty_received) || 0;
+                  const delta = nowVal - (i.qty_received || 0);
+                  return (
+                    <tr key={i.id}>
+                      <td>{i.product_name}</td>
+                      <td><span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:"var(--accent)"}}>{i.supplier_code || i.supplierCode || "—"}</span></td>
+                      <td>{i.qty_ordered}</td>
+                      <td>{i.qty_received}</td>
+                      <td><input type="number" min="0" max={i.qty_ordered}
+                        value={receiveQtys[i.id] ?? i.qty_received}
+                        onChange={e => setReceiveQtys(q => ({...q, [i.id]: e.target.value}))}
+                        style={{width:70, fontSize:13}} /></td>
+                      <td>
+                        {!i.product_id ? (
+                          <span style={{fontSize:11,color:"var(--muted)"}}>—</span>
+                        ) : delta > 0 ? (
+                          <span style={{fontSize:12,color:"var(--accent)",fontWeight:700}}>+{delta}</span>
+                        ) : delta < 0 ? (
+                          <span style={{fontSize:12,color:"var(--red)",fontWeight:700}}>{delta}</span>
+                        ) : (
+                          <span style={{fontSize:11,color:"var(--muted)"}}>no change</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table></div>
-            <div className="alert" style={{background:"rgba(0,120,255,.06)", border:"1px solid rgba(0,120,255,.2)", fontSize:12, color:"#60a0ff", marginBottom:14}}>
-              ℹ️ Updating received quantities here tracks delivery progress. To update actual shop stock levels, go to Admin → Shop and edit each product.
+            <div className="alert" style={{background:"rgba(80,180,60,.06)", border:"1px solid rgba(80,180,60,.25)", fontSize:12, color:"#7ccc60", marginBottom:14}}>
+              ✅ Saving will automatically update shop stock levels. The <strong>Adding to Stock</strong> column shows the net change.
             </div>
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveReceive} disabled={busy}>{busy ? "Saving…" : "Save Receipt"}</button>
