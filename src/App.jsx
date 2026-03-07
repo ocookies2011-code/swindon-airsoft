@@ -6714,6 +6714,9 @@ function AdminOrdersInline({ showToast }) {
   };
 
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
+  const [statusTab, setStatusTab] = useState("pending");
+  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all"];
+  const visibleOrders = statusTab === "all" ? orders : orders.filter(o => o.status === statusTab);
 
   return (
     <div>
@@ -6734,6 +6737,16 @@ function AdminOrdersInline({ showToast }) {
           </div>
         ))}
       </div>
+      <div className="nav-tabs" style={{ marginBottom:12 }}>
+        {STATUS_TABS.map(t => {
+          const cnt = t === "all" ? orders.length : orders.filter(o => o.status === t).length;
+          return (
+            <button key={t} className={`nav-tab${statusTab === t ? " active" : ""}`} onClick={() => setStatusTab(t)} style={{ textTransform:"capitalize" }}>
+              {t}{cnt > 0 && <span style={{ marginLeft:5, background: statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
+            </button>
+          );
+        })}
+      </div>
       {loading ? (
         <div className="card" style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>Loading orders…</div>
       ) : error ? (
@@ -6746,8 +6759,8 @@ function AdminOrdersInline({ showToast }) {
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {orders.length === 0 && <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No orders yet</td></tr>}
-              {orders.map(o => {
+              {visibleOrders.length === 0 && <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No {statusTab === "all" ? "" : statusTab + " "}orders yet</td></tr>}
+              {visibleOrders.map(o => {
                 const items = Array.isArray(o.items) ? o.items : [];
                 return (
                   <tr key={o.id}>
@@ -6794,6 +6807,12 @@ function AdminOrdersInline({ showToast }) {
                 <div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>SHIPPING ADDRESS</div>
                 <div style={{ fontSize:13, whiteSpace:"pre-line", background:"var(--bg4)", padding:"10px 12px", borderRadius:3, border:"1px solid var(--border)" }}>{detail.customer_address || <span style={{ color:"var(--muted)" }}>No address on file</span>}</div>
               </div>
+              {detail.tracking_number && (
+                <div style={{ gridColumn:"1 / -1" }}>
+                  <div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>📮 TRACKING NUMBER</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:14, fontWeight:700, background:"#0c1009", padding:"8px 12px", borderRadius:3, border:"1px solid var(--accent)", color:"var(--accent)" }}>{detail.tracking_number}</div>
+                </div>
+              )}
               <div><div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>STATUS</div>
                 <select value={detail.status} onChange={e => setStatus(detail.id, e.target.value)}
                   style={{ fontSize:12, padding:"6px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:3, width:"100%" }}>
@@ -6911,6 +6930,9 @@ function AdminOrders({ showToast }) {
 
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
   const pending = orders.filter(o => o.status === "pending").length;
+  const [statusTab, setStatusTab] = useState("pending");
+  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all"];
+  const visibleOrders = statusTab === "all" ? orders : orders.filter(o => o.status === statusTab);
 
   return (
     <div>
@@ -6932,6 +6954,17 @@ function AdminOrders({ showToast }) {
         ))}
       </div>
 
+      <div className="nav-tabs" style={{ marginBottom:12 }}>
+        {STATUS_TABS.map(t => {
+          const cnt = t === "all" ? orders.length : orders.filter(o => o.status === t).length;
+          return (
+            <button key={t} className={`nav-tab${statusTab === t ? " active" : ""}`} onClick={() => setStatusTab(t)} style={{ textTransform:"capitalize" }}>
+              {t}{cnt > 0 && <span style={{ marginLeft:5, background: statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
+            </button>
+          );
+        })}
+      </div>
+
       {loading ? (
         <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading orders…</div>
       ) : error ? (
@@ -6944,8 +6977,8 @@ function AdminOrders({ showToast }) {
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {orders.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No orders yet</td></tr>}
-              {orders.map(o => {
+              {visibleOrders.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No {statusTab === "all" ? "" : statusTab + " "}orders yet</td></tr>}
+              {visibleOrders.map(o => {
                 const items = Array.isArray(o.items) ? o.items : [];
                 return (
                   <tr key={o.id}>
@@ -7018,6 +7051,12 @@ function AdminOrders({ showToast }) {
               </div>
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>PAYPAL REF</div><div className="mono" style={{ fontSize: 11, color: detail.paypal_order_id ? "var(--text)" : "var(--muted)" }}>{detail.paypal_order_id || "—"}</div></div>
+              {detail.tracking_number && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>📮 TRACKING NUMBER</div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 14, fontWeight: 700, background: "#0c1009", padding: "8px 12px", borderRadius: 3, border: "1px solid var(--accent)", color: "var(--accent)" }}>{detail.tracking_number}</div>
+                </div>
+              )}
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>STATUS</div>
                 <select value={detail.status} onChange={e => setStatus(detail.id, e.target.value)}
                   style={{ fontSize: 12, padding: "6px 10px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 3, width: "100%" }}>
