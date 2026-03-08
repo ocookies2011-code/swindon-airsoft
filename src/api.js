@@ -932,3 +932,56 @@ export const visits = wrapWithTimeout({
     return data || [];
   },
 })
+
+// ── Event Waitlist ────────────────────────────────────────
+export const waitlistApi = {
+  join: async ({ eventId, userId, userName, userEmail, ticketType }) => {
+    // Prevent duplicate entries
+    const { data: existing } = await supabase
+      .from('event_waitlist')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .eq('ticket_type', ticketType)
+      .maybeSingle();
+    if (existing) return existing;
+    const { data, error } = await supabase
+      .from('event_waitlist')
+      .insert({ event_id: eventId, user_id: userId, user_name: userName, user_email: userEmail, ticket_type: ticketType })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+  leave: async ({ eventId, userId, ticketType }) => {
+    const { error } = await supabase
+      .from('event_waitlist')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .eq('ticket_type', ticketType);
+    if (error) throw new Error(error.message);
+  },
+  getByEvent: async (eventId) => {
+    const { data, error } = await supabase
+      .from('event_waitlist')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+  getByUser: async (userId) => {
+    const { data, error } = await supabase
+      .from('event_waitlist')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+  removeEntry: async (id) => {
+    const { error } = await supabase.from('event_waitlist').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+};

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
-import { normaliseProfile, paypalRefund } from "./api";
+import { normaliseProfile, paypalRefund, waitlistApi } from "./api";
 // jsQR is loaded via CDN in the QRScanner component — no import needed
 
 // ── Mock Payment Button ───────────────────────────────────────────────
@@ -2148,6 +2148,40 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
   return { sent, failed };
 }
 
+// ── Waitlist Slot Available Email ────────────────────────────
+async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
+  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const typeLabel = ticketType === "walkOn" ? "Walk-On" : "Rental Package";
+  const htmlContent = `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#e0e0e0;">
+    <div style="height:3px;background:#c8ff00;"></div>
+    <div style="background:#0d0d0d;padding:24px 32px;text-align:center;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;">
+      <div style="font-size:10px;letter-spacing:.3em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">🎯 SLOT AVAILABLE — ACT FAST</div>
+      <div style="font-size:28px;font-weight:900;letter-spacing:.08em;color:#fff;line-height:1;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+    </div>
+    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+      <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin-bottom:20px;">Good news, ${toName}! A <strong style="color:#c8ff00;">${typeLabel}</strong> slot has just opened up for the event you were waitlisted for:</p>
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:16px 20px;margin-bottom:20px;">
+        <div style="font-size:22px;font-weight:900;color:#e8f0d8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${ev.title}</div>
+        <div style="font-size:13px;color:#8aaa60;">${dateStr}</div>
+        <div style="font-size:13px;color:#4fc3f7;margin-top:4px;">${ev.time ? ev.time + " GMT" : ""}</div>
+        <div style="font-size:13px;color:#ce93d8;margin-top:4px;">${ev.location || "Swindon Airsoft Field"}</div>
+      </div>
+      <div style="background:rgba(200,150,0,.1);border:1px solid rgba(200,150,0,.3);padding:14px 20px;margin-bottom:24px;">
+        <div style="font-size:12px;color:var(--gold,#d4a017);font-weight:700;">⚠ Slots fill fast — book now before it's gone again.</div>
+        <div style="font-size:11px;color:#8aaa60;margin-top:4px;">You will not be notified again if this slot fills up.</div>
+      </div>
+      <div style="text-align:center;">
+        <a href="https://swindonairsoft.co.uk/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK NOW →</a>
+      </div>
+    </div>
+    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:14px 32px;font-size:11px;color:#2a2a2a;text-align:center;">
+      You received this because you joined the waitlist for this event. · Swindon Airsoft
+    </div>
+  </div>`;
+  await sendEmail({ toEmail, toName, subject: `🎯 A slot just opened — ${ev.title}`, htmlContent });
+}
+
 async function sendWelcomeEmail({ name, email }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
@@ -2430,6 +2464,41 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const ev = detail ? data.events.find(e => e.id === detail) : null;
 
   const resetCart = () => { setBCart({ walkOn: 0, rental: 0, extras: {} }); setUseCredits(false); };
+
+  // Waitlist state
+  const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
+  const [waitlistBusy, setWaitlistBusy] = useState(false);
+
+  const loadWaitlist = (eventId) => {
+    waitlistApi.getByEvent(eventId).then(list => {
+      setWaitlistMap(prev => ({ ...prev, [eventId]: list }));
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (detail) loadWaitlist(detail);
+  }, [detail]);
+
+  const joinWaitlist = async (eventId, ticketType) => {
+    if (!cu) { showToast("Please log in to join the waitlist", "red"); return; }
+    setWaitlistBusy(true);
+    try {
+      await waitlistApi.join({ eventId, userId: cu.id, userName: cu.name, userEmail: cu.email, ticketType });
+      loadWaitlist(eventId);
+      showToast("You're on the waitlist! We'll email you if a slot opens.");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setWaitlistBusy(false); }
+  };
+
+  const leaveWaitlist = async (eventId, ticketType) => {
+    setWaitlistBusy(true);
+    try {
+      await waitlistApi.leave({ eventId, userId: cu.id, ticketType });
+      loadWaitlist(eventId);
+      showToast("Removed from waitlist.");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setWaitlistBusy(false); }
+  };
 
   if (ev) {
     const vipDisc   = cu?.vipStatus === "active" ? 0.1 : 0;
@@ -2830,34 +2899,92 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <button className="btn btn-primary" style={{ marginTop:14, padding:"9px 24px" }} onClick={() => setPage("vip")}>Become a VIP →</button>
                   </div>
                 )}
-                {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #2a3a10", background:"rgba(200,255,0,.02)" }}>
-                  <div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
-                    <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                      £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft} slots left
+                {(!ev.vipOnly || cu?.vipStatus === "active") && (() => {
+                  const wlEntries = waitlistMap[ev.id] || [];
+                  const onWalkOnWl = cu && wlEntries.some(w => w.user_id === cu.id && w.ticket_type === "walkOn");
+                  return (
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #2a3a10", background:"rgba(200,255,0,.02)" }}>
+                      <div>
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
+                        <div style={{ fontSize:11, color: walkOnLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
+                          £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft === 0 ? "FULL" : walkOnLeft + " slots left"}
+                        </div>
+                        {walkOnLeft === 0 && wlEntries.filter(w => w.ticket_type === "walkOn").length > 0 && (
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", marginTop:2 }}>
+                            {wlEntries.filter(w => w.ticket_type === "walkOn").length} on waitlist
+                          </div>
+                        )}
+                      </div>
+                      {walkOnLeft === 0 ? (
+                        cu ? (
+                          onWalkOnWl ? (
+                            <button className="btn btn-sm" onClick={() => leaveWaitlist(ev.id, "walkOn")} disabled={waitlistBusy}
+                              style={{ fontSize:10, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.4)", color:"var(--gold)", letterSpacing:".1em" }}>
+                              ✓ ON WAITLIST — LEAVE
+                            </button>
+                          ) : (
+                            <button className="btn btn-sm btn-primary" onClick={() => joinWaitlist(ev.id, "walkOn")} disabled={waitlistBusy}
+                              style={{ fontSize:10, letterSpacing:".1em" }}>
+                              🔔 NOTIFY ME
+                            </button>
+                          )
+                        ) : (
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)" }}>Log in to join waitlist</span>
+                        )
+                      ) : (
+                        <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
+                          <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
+                          <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
+                          <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
-                    <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
-                    <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
-                    <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
-                  </div>
-                </div>}
+                  );
+                })()}
 
                 {/* Rental row */}
-                {(!ev.vipOnly || cu?.vipStatus === "active") && <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none" }}>
-                  <div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
-                    <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                      £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft} slots left
+                {(!ev.vipOnly || cu?.vipStatus === "active") && (() => {
+                  const wlEntries = waitlistMap[ev.id] || [];
+                  const onRentalWl = cu && wlEntries.some(w => w.user_id === cu.id && w.ticket_type === "rental");
+                  return (
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none" }}>
+                      <div>
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
+                        <div style={{ fontSize:11, color: rentalLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
+                          £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft === 0 ? "FULL" : rentalLeft + " slots left"}
+                        </div>
+                        {rentalLeft === 0 && wlEntries.filter(w => w.ticket_type === "rental").length > 0 && (
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", marginTop:2 }}>
+                            {wlEntries.filter(w => w.ticket_type === "rental").length} on waitlist
+                          </div>
+                        )}
+                      </div>
+                      {rentalLeft === 0 ? (
+                        cu ? (
+                          onRentalWl ? (
+                            <button className="btn btn-sm" onClick={() => leaveWaitlist(ev.id, "rental")} disabled={waitlistBusy}
+                              style={{ fontSize:10, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.4)", color:"var(--gold)", letterSpacing:".1em" }}>
+                              ✓ ON WAITLIST — LEAVE
+                            </button>
+                          ) : (
+                            <button className="btn btn-sm btn-primary" onClick={() => joinWaitlist(ev.id, "rental")} disabled={waitlistBusy}
+                              style={{ fontSize:10, letterSpacing:".1em" }}>
+                              🔔 NOTIFY ME
+                            </button>
+                          )
+                        ) : (
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)" }}>Log in to join waitlist</span>
+                        )
+                      ) : (
+                        <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
+                          <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
+                          <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
+                          <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
-                    <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
-                    <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                    <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
-                  </div>
-                </div>}
+                  );
+                })()}
 
                 {/* Extras */}
                 {ev.extras.length > 0 && (
@@ -3222,9 +3349,15 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
                     </div>
                   </div>
-                  <button className="btn btn-primary" style={{ padding:"8px 20px", fontSize:11, letterSpacing:".18em", borderRadius:0 }}>
-                    ▸ DEPLOY
-                  </button>
+                  {isFull ? (
+                    <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.5)", color:"var(--gold)" }}>
+                      🔔 WAITLIST
+                    </button>
+                  ) : (
+                    <button className="btn btn-primary" style={{ padding:"8px 20px", fontSize:11, letterSpacing:".18em", borderRadius:0 }}>
+                      ▸ DEPLOY
+                    </button>
+                  )}
                 </div>
 
                 {/* Barcode strip */}
@@ -4575,7 +4708,7 @@ function PlayerOrders({ cu }) {
 function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
-    return p[0]==="profile" && ["profile","waiver","bookings","orders","vip"].includes(p[1]) ? p[1] : "profile";
+    return p[0]==="profile" && ["profile","waiver","bookings","orders","waitlist","vip"].includes(p[1]) ? p[1] : "profile";
   };
   const [tab, setTabState] = useState(getInitTab);
   const setTab = (t) => { setTabState(t); window.location.hash = "profile/" + t; };
@@ -4682,6 +4815,16 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       await api.bookings.delete(b.id);
       save({ events: data.events.map(ev => ({ ...ev, bookings: ev.bookings.filter(bk => bk.id !== b.id) })) });
 
+      // Notify first person on waitlist for this ticket type (fire & forget)
+      try {
+        const freedType = b.type;
+        const wl = await waitlistApi.getByEvent(b.eventObj.id);
+        const first = wl.find(w => w.ticket_type === freedType);
+        if (first?.user_email) {
+          sendWaitlistNotifyEmail({ toEmail: first.user_email, toName: first.user_name, ev: b.eventObj, ticketType: freedType }).catch(() => {});
+        }
+      } catch { /* non-fatal */ }
+
       const isCredits = within48 || !b.paypalOrderId;
       showToast(
         isRental && within48
@@ -4751,7 +4894,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       </div>
 
       <div className="nav-tabs profile-tabs">
-        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],["orders","📦 Orders"],["vip","⭐ VIP"]].map(([t, label]) => (
+        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],["orders","📦 Orders"],["waitlist","🔔 Waitlist"],["vip","⭐ VIP"]].map(([t, label]) => (
           <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{label}</button>
         ))}
       </div>
@@ -5343,6 +5486,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       })()}
 
       {tab === "orders" && <PlayerOrders cu={cu} />}
+      {tab === "waitlist" && <PlayerWaitlist cu={cu} showToast={showToast} />}
 
       {tab === "vip" && (() => {
         const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
@@ -5940,6 +6084,31 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
 }
 
 function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast }) {
+  const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+
+  const openWaitlist = async (ev) => {
+    setWaitlistLoading(true);
+    try {
+      const entries = await waitlistApi.getByEvent(ev.id);
+      setWaitlistView({ ev, entries });
+    } catch (e) { showToast("Failed to load waitlist: " + e.message, "red"); }
+    finally { setWaitlistLoading(false); }
+  };
+
+  const emailWaitlist = async (ev, entries) => {
+    if (!entries.length) return;
+    showToast("Emailing waitlist…", "gold");
+    let sent = 0, failed = 0;
+    for (const w of entries) {
+      if (!w.user_email) { failed++; continue; }
+      try {
+        await sendWaitlistNotifyEmail({ toEmail: w.user_email, toName: w.user_name, ev, ticketType: w.ticket_type });
+        sent++;
+      } catch { failed++; }
+    }
+    showToast(`📧 Waitlist emailed: ${sent} sent${failed > 0 ? `, ${failed} failed` : ""}`);
+  };
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="events" && ["events","bookings","checkin"].includes(p[2]) ? p[2] : "events";
@@ -6296,6 +6465,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                             } catch(e) { showToast("Failed: " + e.message, "red"); }
                           }}>📧 Remind</button>
                       )}
+                      <button className="btn btn-sm btn-ghost" style={{ fontSize:10 }}
+                        onClick={() => openWaitlist(ev)} disabled={waitlistLoading} title="View waitlist">
+                        🔔{ev.waitlistCount > 0 ? ` ${ev.waitlistCount}` : ""}
+                      </button>
                       <button className="btn btn-sm btn-danger" onClick={() => setDelEventConfirm(ev)}>Delete</button>
                     </div>
                   </td>
@@ -6619,6 +6792,55 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       )}
 
       {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
+
+      {/* ── Waitlist View Modal ── */}
+      {waitlistView && (
+        <div className="overlay" onClick={() => setWaitlistView(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🔔 Waitlist — {waitlistView.ev.title}</div>
+            {waitlistView.entries.length === 0 ? (
+              <div style={{ textAlign:"center", color:"var(--muted)", padding:"24px 0", fontSize:13 }}>No one on the waitlist for this event.</div>
+            ) : (
+              <>
+                <div style={{ fontSize:12, color:"var(--muted)", marginBottom:12 }}>
+                  {waitlistView.entries.length} player(s) waiting · First in line gets notified when a slot opens.
+                </div>
+                <div className="table-wrap"><table className="data-table">
+                  <thead><tr><th>#</th><th>Player</th><th>Email</th><th>Type</th><th>Joined</th><th></th></tr></thead>
+                  <tbody>
+                    {waitlistView.entries.map((w, i) => (
+                      <tr key={w.id}>
+                        <td style={{ color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{i + 1}</td>
+                        <td style={{ fontWeight:600 }}>{w.user_name}</td>
+                        <td style={{ fontSize:11 }}>{w.user_email}</td>
+                        <td>{w.ticket_type === "walkOn" ? "🎯 Walk-On" : "🪖 Rental"}</td>
+                        <td style={{ fontSize:11, fontFamily:"'Share Tech Mono',monospace" }}>{new Date(w.created_at).toLocaleDateString("en-GB")}</td>
+                        <td>
+                          <button className="btn btn-sm btn-ghost" style={{ color:"var(--red)", fontSize:11 }}
+                            onClick={async () => {
+                              try {
+                                await waitlistApi.removeEntry(w.id);
+                                setWaitlistView(prev => ({ ...prev, entries: prev.entries.filter(e => e.id !== w.id) }));
+                                showToast("Removed from waitlist.");
+                              } catch(e) { showToast("Failed: " + e.message, "red"); }
+                            }}>Remove</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>
+                <div className="gap-2" style={{ marginTop:16 }}>
+                  <button className="btn btn-primary" style={{ fontSize:11 }}
+                    onClick={() => emailWaitlist(waitlistView.ev, waitlistView.entries)}>
+                    📧 Email All Waitlisted Players
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setWaitlistView(null)}>Close</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Add Booking Modal ── */}
       {addBookingModal && (() => {
@@ -12125,6 +12347,69 @@ function AdminCash({ data, cu, showToast }) {
 // ═══════════════════════════════════════════════════════
 // ROOT APP
 
+
+// ── Player Waitlist ──────────────────────────────────────
+function PlayerWaitlist({ cu, showToast }) {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(null); // id being removed
+
+  const load = () => {
+    setLoading(true);
+    waitlistApi.getByUser(cu.id)
+      .then(setEntries)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [cu.id]);
+
+  const leave = async (entry) => {
+    setBusy(entry.id);
+    try {
+      await waitlistApi.leave({ eventId: entry.event_id, userId: cu.id, ticketType: entry.ticket_type });
+      setEntries(prev => prev.filter(e => e.id !== entry.id));
+      showToast("Removed from waitlist.");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(null); }
+  };
+
+  if (loading) return (
+    <div style={{ textAlign:"center", padding:60, fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--muted)" }}>Loading waitlist…</div>
+  );
+
+  if (entries.length === 0) return (
+    <div style={{ textAlign:"center", padding:60 }}>
+      <div style={{ fontSize:40, marginBottom:16 }}>🔔</div>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>No Waitlist Entries</div>
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#2a3a10", marginTop:8 }}>When an event is full, click "Notify Me" to join the waitlist</div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{ fontSize:11, color:"var(--muted)", marginBottom:16, fontFamily:"'Share Tech Mono',monospace" }}>
+        You will be emailed automatically when a slot opens for any event below.
+      </div>
+      {entries.map(e => (
+        <div key={e.id} className="card mb-1" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+          <div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".06em", marginBottom:2 }}>
+              {e.event_title || "Event"}
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)" }}>
+              {e.ticket_type === "walkOn" ? "🎯 Walk-On" : "🪖 Rental"} · Added {new Date(e.created_at).toLocaleDateString("en-GB")}
+            </div>
+          </div>
+          <button className="btn btn-sm btn-ghost" style={{ color:"var(--red)", borderColor:"rgba(220,50,50,.3)", fontSize:11 }}
+            onClick={() => leave(e)} disabled={busy === e.id}>
+            {busy === e.id ? "Removing…" : "✕ Leave Waitlist"}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Terms & Privacy Page ──────────────────────────────────
 function TermsPage({ setPage }) {
