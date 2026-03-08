@@ -202,7 +202,7 @@ export const bookings = wrapWithTimeout({
       qty:            booking.qty,
       extras:         booking.extras,
       total:          booking.total,
-      paypal_order_id: booking.paypalOrderId || null,
+      square_order_id: booking.squareOrderId || null,
     }).select().single()
     if (error) throw error
     return data
@@ -632,7 +632,7 @@ export const shopOrders = wrapWithTimeout({
       total:            order.total,
       postage_name:     order.postageName || '',
       status:           'pending',
-      paypal_order_id:  order.paypalOrderId || null,
+      square_order_id:  order.squareOrderId || null,
     }).select().single()
     if (error) throw error
     return data
@@ -783,55 +783,24 @@ export const purchaseOrders = wrapWithTimeout({
   },
 })
 
-// ── PayPal Refunds ────────────────────────────────────────
-// Calls PayPal REST API directly from the browser (admin-only action).
-// Requires Client ID + Secret stored in site_settings.
-export async function paypalRefund({ paypalOrderId, amount, clientId, secret, mode }) {
-  const base = mode === 'live'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com'
-
-  // 1. Get access token
-  const tokenRes = await fetch(`${base}/v1/oauth2/token`, {
+// ── Square Refunds ────────────────────────────────────────
+// Calls the /api/square-refund Supabase Edge Function (server-side).
+// The Edge Function holds the Square Access Token securely.
+// amount = number in GBP (e.g. 12.50), null = full refund.
+export async function squareRefund({ squarePaymentId, amount, locationId }) {
+  const res = await fetch('/api/square-refund', {
     method: 'POST',
-    headers: {
-      'Authorization': 'Basic ' + btoa(`${clientId}:${secret}`),
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      paymentId: squarePaymentId,
+      amount: amount ? Math.round(Number(amount) * 100) : null, // pence
+      locationId,
+      reason: 'Refund from Swindon Airsoft',
+    }),
   })
-  const tokenData = await tokenRes.json()
-  if (!tokenRes.ok) throw new Error('PayPal auth failed: ' + (tokenData.error_description || tokenData.error || tokenRes.status))
-  const accessToken = tokenData.access_token
-
-  // 2. Get order details to find the capture ID
-  const orderRes = await fetch(`${base}/v2/checkout/orders/${paypalOrderId}`, {
-    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-  })
-  const orderData = await orderRes.json()
-  if (!orderRes.ok) throw new Error('Could not fetch PayPal order: ' + (orderData.message || orderRes.status))
-
-  // Extract capture ID from purchase units
-  const captures = orderData?.purchase_units?.[0]?.payments?.captures
-  if (!captures?.length) throw new Error('No completed capture found on this PayPal order. It may not have been paid, or was already fully refunded.')
-  const captureId = captures[0].id
-
-  // 3. Issue refund
-  const refundBody = { note_to_payer: 'Refund from Swindon Airsoft' }
-  if (amount) refundBody.amount = { value: Number(amount).toFixed(2), currency_code: 'GBP' }
-
-  const refundRes = await fetch(`${base}/v2/payments/captures/${captureId}/refund`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      'PayPal-Request-Id': `refund-${captureId}-${Date.now()}`,
-    },
-    body: JSON.stringify(refundBody),
-  })
-  const refundData = await refundRes.json()
-  if (!refundRes.ok) throw new Error('PayPal refund failed: ' + (refundData.message || refundData.details?.[0]?.description || refundRes.status))
-  return refundData
+  const data = await res.json()
+  if (!res.ok || data.error) throw new Error(data.error || 'Square refund failed: ' + res.status)
+  return data
 }
 
 // ── Staff ─────────────────────────────────────────────────

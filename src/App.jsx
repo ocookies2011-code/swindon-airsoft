@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
-import { normaliseProfile, paypalRefund, waitlistApi } from "./api";
+import { normaliseProfile, squareRefund, waitlistApi } from "./api";
 // jsQR is loaded via CDN in the QRScanner component — no import needed
 
 // ── Mock Payment Button ───────────────────────────────────────────────
-// Replace PayPalCheckoutButton with real payment provider when ready.
+// Square Web Payments SDK is loaded dynamically via CDN.
 // Set VITE_PAYMENT_MODE=live in .env to hide the mock button.
 // ── Markdown renderer ─────────────────────────────────────────
 function renderMd(md) {
@@ -47,75 +47,111 @@ function fmtErr(e) {
   return msg;
 }
 
-// ── PayPal config — loaded dynamically from Supabase site_settings ──
-// Fallback to env vars so local dev still works without DB rows.
-let _paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
-let _paypalMode = "sandbox"; // "live" | "sandbox"
-let _paypalConfigLoaded = false;
+// ── Square config — loaded dynamically from Supabase site_settings ──
+let _squareAppId = "";
+let _squareLocationId = "";
+let _squareEnv = "sandbox"; // "sandbox" | "production"
+let _squareConfigLoaded = false;
 
-async function loadPaypalConfig() {
-  if (_paypalConfigLoaded) return;
+async function loadSquareConfig() {
+  if (_squareConfigLoaded) return;
   try {
-    const [clientId, mode] = await Promise.all([
-      api.settings.get("paypal_client_id"),
-      api.settings.get("paypal_mode"),
+    const [appId, locationId, env] = await Promise.all([
+      api.settings.get("square_app_id"),
+      api.settings.get("square_location_id"),
+      api.settings.get("square_env"),
     ]);
-    if (clientId) _paypalClientId = clientId;
-    if (mode === "live" || mode === "sandbox") _paypalMode = mode;
+    if (appId) _squareAppId = appId;
+    if (locationId) _squareLocationId = locationId;
+    if (env === "production" || env === "sandbox") _squareEnv = env;
   } catch {}
-  _paypalConfigLoaded = true;
+  _squareConfigLoaded = true;
 }
 
-function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
-  const [ppReady, setPpReady] = useState(false);
-  const [ppError, setPpError] = useState(null);
+function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
+  const [sqReady, setSqReady] = useState(false);
+  const [sqError, setSqError] = useState(null);
   const [isLive, setIsLive] = useState(false);
-  const [clientId, setClientId] = useState("");
   const [configLoaded, setConfigLoaded] = useState(false);
-  const containerRef = useRef(null);
-  const rendered = useRef(false);
+  const [paying, setPaying] = useState(false);
+  const cardRef = useRef(null);
+  const cardInstance = useRef(null);
+  const paymentsRef = useRef(null);
 
   // Load config from Supabase on mount
   useEffect(() => {
-    loadPaypalConfig().then(() => {
-      setClientId(_paypalClientId);
-      setIsLive(_paypalMode === "live");
+    loadSquareConfig().then(() => {
+      setIsLive(_squareEnv === "production");
       setConfigLoaded(true);
     });
   }, []);
 
-  // Load PayPal SDK once config is ready and mode is live
+  // Load Square Web Payments SDK and mount card field
   useEffect(() => {
-    if (!configLoaded || !isLive || !clientId) return;
-    if (window.paypal) { setPpReady(true); return; }
-    // Remove any old PayPal script to avoid double-loading
-    const old = document.getElementById("paypal-sdk");
-    if (old) old.remove();
-    rendered.current = false;
-    const script = document.createElement("script");
-    script.id = "paypal-sdk";
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=GBP`;
-    script.onload = () => setPpReady(true);
-    script.onerror = () => setPpError("PayPal failed to load. Check your Client ID in Admin → Settings.");
-    document.head.appendChild(script);
-  }, [configLoaded, isLive, clientId]);
+    if (!configLoaded || !isLive || !_squareAppId || !_squareLocationId) return;
+    let cancelled = false;
 
-  // Render PayPal buttons
-  useEffect(() => {
-    if (!isLive || !ppReady || !containerRef.current || rendered.current || disabled) return;
-    rendered.current = true;
-    window.paypal.Buttons({
-      style: { layout: "vertical", color: "black", shape: "rect", label: "pay" },
-      createOrder: (data, actions) => actions.order.create({
-        purchase_units: [{ amount: { value: Number(amount).toFixed(2), currency_code: "GBP" }, description }]
-      }),
-      onApprove: async (data, actions) => {
-        const order = await actions.order.capture();
-        onSuccess({ id: order.id, status: order.status });
-      },
-      onError: () => setPpError("Payment failed. Please try again."),
-    }).render(containerRef.current);
-  }, [ppReady, disabled, amount, isLive]);
+    const initSquare = async () => {
+      try {
+        // Load SDK if not already present
+        if (!window.Square) {
+          await new Promise((resolve, reject) => {
+            const old = document.getElementById("square-sdk");
+            if (old) old.remove();
+            const s = document.createElement("script");
+            s.id = "square-sdk";
+            s.src = "https://web.squarecdn.com/v1/square.js";
+            s.onload = resolve;
+            s.onerror = () => reject(new Error("Square SDK failed to load."));
+            document.head.appendChild(s);
+          });
+        }
+        if (cancelled) return;
+        const payments = window.Square.payments(_squareAppId, _squareLocationId);
+        paymentsRef.current = payments;
+        const card = await payments.card();
+        if (cancelled) return;
+        cardInstance.current = card;
+        if (cardRef.current) await card.attach(cardRef.current);
+        if (!cancelled) setSqReady(true);
+      } catch (e) {
+        if (!cancelled) setSqError(e.message || "Square failed to initialise.");
+      }
+    };
+
+    initSquare();
+    return () => {
+      cancelled = true;
+      if (cardInstance.current) { try { cardInstance.current.destroy(); } catch {} }
+    };
+  }, [configLoaded, isLive]);
+
+  const handlePay = async () => {
+    if (!cardInstance.current || !paymentsRef.current) return;
+    setPaying(true); setSqError(null);
+    try {
+      // 1. Tokenise the card
+      const result = await cardInstance.current.tokenize();
+      if (result.status !== "OK") {
+        setSqError(result.errors?.map(e => e.message).join(", ") || "Card tokenisation failed.");
+        setPaying(false); return;
+      }
+      const sourceId = result.token;
+
+      // 2. Create payment via Square Payments API proxy (Supabase Edge Function)
+      const amountPence = Math.round(Number(amount) * 100);
+      const res = await fetch("/api/square-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId, amount: amountPence, currency: "GBP", note: description }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Payment failed.");
+      onSuccess({ id: data.paymentId, status: "COMPLETED" });
+    } catch (e) {
+      setSqError(e.message || "Payment failed. Please try again.");
+    } finally { setPaying(false); }
+  };
 
   if (!configLoaded) {
     return <div style={{ color: "var(--muted)", fontSize: 12, padding: 8, marginTop: 12 }}>Loading payment options...</div>;
@@ -126,7 +162,7 @@ function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
       <div style={{ marginTop: 12 }}>
         <div style={{ background: "#0d1a0d", border: "1px solid #1e3a1e", padding: "8px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
-          <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken. Set PayPal to Live in Admin → Settings.</span>
+          <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken. Set Square to Production in Admin → Settings.</span>
         </div>
         <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
           <span>{description}</span>
@@ -142,9 +178,22 @@ function PayPalCheckoutButton({ amount, description, onSuccess, disabled }) {
 
   return (
     <div style={{ marginTop: 12 }}>
-      {ppError && <div className="alert alert-red" style={{ marginBottom: 8 }}>{ppError}</div>}
-      {!ppReady && <div style={{ color: "var(--muted)", fontSize: 12, padding: 8 }}>Loading PayPal...</div>}
-      <div ref={containerRef} style={{ opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? "none" : "auto" }} />
+      {sqError && <div className="alert alert-red" style={{ marginBottom: 8 }}>{sqError}</div>}
+      <div style={{ background: "#0a0f05", border: "1px solid #2a3a10", padding: "14px 16px", marginBottom: 10 }}>
+        <div style={{ fontSize: 10, letterSpacing: ".15em", color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", marginBottom: 10, textTransform: "uppercase" }}>Card Details</div>
+        <div ref={cardRef} style={{ minHeight: 48 }} />
+      </div>
+      <div style={{ background: "#111", border: "1px solid #1a1a1a", padding: "10px 14px", marginBottom: 10, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
+        <span>{description}</span>
+        <span style={{ color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
+      </div>
+      {!sqReady && !sqError && <div style={{ color: "var(--muted)", fontSize: 12, padding: 8 }}>Loading card form…</div>}
+      {sqReady && (
+        <button className="btn btn-primary" style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: (disabled || paying) ? .6 : 1 }}
+          disabled={disabled || paying} onClick={handlePay}>
+          {paying ? "⏳ Processing…" : `PAY · £${Number(amount).toFixed(2)}`}
+        </button>
+      )}
     </div>
   );
 }
@@ -2454,7 +2503,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   };
   const [waiverModal, setWaiverModal] = useState(false);
   const [tab, setTab] = useState("info");
-  const [paypalError, setPaypalError] = useState(null);
+  const [squareError, setSquareError] = useState(null);
   const [bookingBusy, setBookingBusy] = useState(false);
   const [useCredits, setUseCredits] = useState(false);
 
@@ -2566,9 +2615,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, rentalLeft)) }));
 
 
-    const confirmBookingAfterPayment = async (paypalOrder) => {
+    const confirmBookingAfterPayment = async (squarePayment) => {
       setBookingBusy(true);
-      setPaypalError(null);
+      setSquareError(null);
       const safety = setTimeout(() => setBookingBusy(false), 30000);
       try {
         const extrasSnapshot = Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0));
@@ -2606,7 +2655,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               const name = extra?.name || "an item";
               clearTimeout(safety);
               setBookingBusy(false);
-              setPaypalError(`Sorry — ${name}${variantId ? " (selected variant)" : ""} just sold out while you were paying. Your payment has been taken — please contact us immediately with your PayPal reference (${paypalOrder.id}) and we will refund or substitute.`);
+              setSquareError(`Sorry — ${name}${variantId ? " (selected variant)" : ""} just sold out while you were paying. Your payment has been taken — please contact us immediately with your Square payment reference (${squarePayment.id}) and we will refund or substitute.`);
               return;
             }
           }
@@ -2620,7 +2669,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             type: "walkOn", qty: bCart.walkOn,
             extras: extrasSnapshot,
             total: walkOnTotal + extrasTotal,
-            paypalOrderId: paypalOrder.id,
+            squareOrderId: squarePayment.id,
           }));
         }
         if (bCart.rental > 0) {
@@ -2629,7 +2678,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             type: "rental", qty: bCart.rental,
             extras: bCart.walkOn > 0 ? {} : extrasSnapshot,
             total: rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal),
-            paypalOrderId: paypalOrder.id,
+            squareOrderId: squarePayment.id,
           }));
         }
         await Promise.all(bookingPromises);
@@ -2683,7 +2732,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         ]);
 
       } catch (e) {
-        setPaypalError("Payment taken but booking failed — please contact us. Error: " + (e.message || String(e)));
+        setSquareError("Payment taken but booking failed — please contact us. Error: " + (e.message || String(e)));
       } finally {
         clearTimeout(safety);
         setBookingBusy(false);
@@ -3133,7 +3182,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               )}
 
-              {paypalError && <div className="alert alert-red mt-1">⚠️ {paypalError}</div>}
+              {squareError && <div className="alert alert-red mt-1">⚠️ {squareError}</div>}
               {bookingBusy && <div className="alert alert-blue mt-1">⏳ Confirming your booking…</div>}
 
               {!cu && (
@@ -3147,7 +3196,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </button>
               )}
               {!bookingBlocked && payTotal > 0 && (
-                <PayPalCheckoutButton
+                <SquareCheckoutButton
                   amount={payTotal}
                   description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
                   onSuccess={confirmBookingAfterPayment}
@@ -3383,7 +3432,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 // ── Shop ──────────────────────────────────────────────────
 function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen }) {
   const [placing, setPlacing] = useState(false);
-  const [shopPaypalError, setShopPaypalError] = useState(null);
+  const [shopSquareError, setShopSquareError] = useState(null);
 
   const postageOptions = data.postageOptions || [];
   const [postageId, setPostageId] = useState(() => postageOptions[0]?.id || "");
@@ -3421,9 +3470,9 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const postageTotal = hasNoPost ? 0 : (postage?.price || 0);
   const grandTotal = subTotal + postageTotal;
 
-  const placeOrderAfterPayment = async (paypalOrder) => {
+  const placeOrderAfterPayment = async (squarePayment) => {
     if (!cu || cart.length === 0) return;
-    setPlacing(true); setShopPaypalError(null);
+    setPlacing(true); setShopSquareError(null);
     const safety = setTimeout(() => setPlacing(false), 30000);
     try {
       await api.shopOrders.create({
@@ -3432,14 +3481,14 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         items: cart.map(i => ({ id: i.id, variantId: i.variantId, name: i.name, price: i.price, qty: i.qty })),
         subtotal: subTotal, postage: postageTotal,
         postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
-        total: grandTotal, paypalOrderId: paypalOrder.id,
+        total: grandTotal, squareOrderId: squarePayment.id,
       });
       showToast("✅ Order confirmed! Thank you.");
       try {
         const cartSnapshot = [...cart];
         sendOrderEmail({
           cu,
-          order: { id: paypalOrder.id, postage: postageTotal, total: grandTotal, customerAddress: cu.address || "" },
+          order: { id: squarePayment.id, postage: postageTotal, total: grandTotal, customerAddress: cu.address || "" },
           items: cartSnapshot.map(i => ({ name: i.name, variant: i.variantName || "", price: i.price, qty: i.qty })),
           postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         }).catch(() => {});
@@ -3455,7 +3504,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         api.shop.getAll().then(freshShop => save({ shop: freshShop })).catch(() => {}),
       ]);
     } catch (e) {
-      setShopPaypalError("Order failed — please contact us. Error: " + (e.message || String(e)));
+      setShopSquareError("Order failed — please contact us. Error: " + (e.message || String(e)));
     } finally {
       clearTimeout(safety);
       setPlacing(false);
@@ -3737,10 +3786,10 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 )}
 
                 {!cu && <div className="alert alert-red mt-2" style={{ borderRadius:0 }}>LOG IN TO COMPLETE REQUISITION</div>}
-                {shopPaypalError && <div className="alert alert-red mt-1" style={{ borderRadius:0 }}>⚠ {shopPaypalError}</div>}
+                {shopSquareError && <div className="alert alert-red mt-1" style={{ borderRadius:0 }}>⚠ {shopSquareError}</div>}
                 {placing && <div className="alert alert-blue mt-1" style={{ borderRadius:0 }}>⏳ PROCESSING REQUISITION…</div>}
                 {cu && grandTotal > 0 && (
-                  <PayPalCheckoutButton
+                  <SquareCheckoutButton
                     amount={grandTotal}
                     description={`Swindon Airsoft Armoury — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
                     onSuccess={placeOrderAfterPayment}
@@ -4251,7 +4300,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   const isExpired = cu?.vipStatus === "expired";
   const hasPending = cu?.vipApplied && !isVip;
 
-  const handleVipPaymentSuccess = async (paypalOrder) => {
+  const handleVipPaymentSuccess = async (squarePayment) => {
     setApplying(true);
     setVipPayError(null);
     try {
@@ -4259,7 +4308,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
       setShowPayment(false);
       showToast("🎉 Payment received! VIP application submitted — admin will activate your status shortly.");
     } catch (e) {
-      setVipPayError("Payment succeeded but application failed — please contact us. Ref: " + paypalOrder.id);
+      setVipPayError("Payment succeeded but application failed — please contact us. Ref: " + squarePayment.id);
     } finally {
       setApplying(false);
     }
@@ -4395,7 +4444,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
                 {vipPayError && (
                   <div className="alert alert-red" style={{ marginBottom:10 }}>{vipPayError}</div>
                 )}
-                <PayPalCheckoutButton
+                <SquareCheckoutButton
                   amount={30}
                   description={`Swindon Airsoft — VIP Membership (Annual${isExpired ? " Renewal" : ""})`}
                   disabled={applying}
@@ -4658,7 +4707,7 @@ function PlayerOrders({ cu }) {
               <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "12px 18px", marginBottom: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: "#4fc3f7", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>💳 Refund Issued</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)" }}>
-                  £{Number(selected.refund_amount).toFixed(2)} refunded to your PayPal
+                  £{Number(selected.refund_amount).toFixed(2)} refunded to your original payment method
                   {selected.refund_note ? ` — ${selected.refund_note}` : ""}
                 </div>
               </div>
@@ -4777,35 +4826,23 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       refundAmount = Math.round(refundAmount * 100) / 100;
 
       if (within48) {
-        // Credits only — no PayPal refund
+        // Within 48h — always give credits
         const newCredits = (Number(cu.credits) || 0) + refundAmount;
         await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
         updateUser(cu.id, { credits: newCredits });
-      } else if (b.paypalOrderId) {
-        // Outside 48h — try PayPal refund
-        const [clientId, secret, mode] = await Promise.all([
-          api.settings.get("paypal_client_id"),
-          api.settings.get("paypal_client_secret"),
-          api.settings.get("paypal_mode"),
-        ]);
-        if (clientId && secret) {
-          try {
-            const isFullRefund = Math.abs(refundAmount - Number(b.total)) < 0.01;
-            await paypalRefund({ paypalOrderId: b.paypalOrderId, amount: isFullRefund ? null : refundAmount, clientId, secret, mode: mode || "sandbox" });
-          } catch {
-            // PayPal refund failed — fall back to credits
-            const newCredits = (Number(cu.credits) || 0) + refundAmount;
-            await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
-            updateUser(cu.id, { credits: newCredits });
-          }
-        } else {
-          // No PayPal creds — give credits
+      } else if (b.squareOrderId) {
+        // Outside 48h — try Square refund via edge function
+        try {
+          const locationId = await api.settings.get("square_location_id");
+          await squareRefund({ squarePaymentId: b.squareOrderId, amount: refundAmount, locationId });
+        } catch {
+          // Square refund failed — fall back to credits
           const newCredits = (Number(cu.credits) || 0) + refundAmount;
           await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
           updateUser(cu.id, { credits: newCredits });
         }
       } else {
-        // No PayPal order (manual/cash booking) — give credits
+        // No Square payment ID (manual/admin booking) — give credits
         const newCredits = (Number(cu.credits) || 0) + refundAmount;
         await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
         updateUser(cu.id, { credits: newCredits });
@@ -4825,7 +4862,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         }
       } catch { /* non-fatal */ }
 
-      const isCredits = within48 || !b.paypalOrderId;
+      const isCredits = within48 || !b.squareOrderId;
       showToast(
         isRental && within48
           ? `Booking cancelled. £${refundAmount.toFixed(2)} game credits added (10% rental fee applied, within 48h).`
@@ -5470,7 +5507,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                 <div style={{ fontSize:11, color: within48 ? "var(--gold)" : "var(--muted)", marginTop:4 }}>
                   {within48
                     ? "⏱ Within 48h of event — refund will be added as game credits"
-                    : "✓ Outside 48h — refund via original payment method (or game credits if PayPal unavailable)"}
+                    : "✓ Outside 48h — refund via original payment method (or game credits if Square unavailable)"}
                 </div>
               </div>
 
@@ -5691,7 +5728,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 // ── Admin Dashboard ───────────────────────────────────────
 function AdminDash({ data, setSection }) {
   const allBookings = data.events.flatMap(e => e.bookings);
-  const revenue = allBookings.filter(b => !b.paypalOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
+  const revenue = allBookings.filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
   const checkins = allBookings.filter(b => b.checkedIn).length;
   const players = data.users.filter(u => u.role === "player").length;
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
@@ -6334,7 +6371,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
         qty: addBookingForm.qty,
         extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)),
         total: 0, // Manual bookings don't count toward revenue
-        paypalOrderId: "ADMIN-MANUAL-" + Date.now(),
+        squareOrderId: "ADMIN-MANUAL-" + Date.now(),
       });
       const evList = await api.events.getAll();
       save({ events: evList });
@@ -7669,21 +7706,14 @@ function AdminOrdersInline({ showToast }) {
     if (amt > Number(order.total)) { showToast("Refund amount exceeds order total", "red"); return; }
     setRefunding(true);
     try {
-      // Load PayPal credentials from settings
-      const [clientId, secret, mode] = await Promise.all([
-        api.settings.get("paypal_client_id"),
-        api.settings.get("paypal_client_secret"),
-        api.settings.get("paypal_mode"),
-      ]);
-      if (!clientId || !secret) throw new Error("PayPal Client ID and Secret must be saved in Admin → Settings before issuing refunds.");
-      if (!order.paypal_order_id) throw new Error("No PayPal Order ID on this order — cannot issue automatic refund. Refund manually in your PayPal dashboard.");
-      // Full refund passes no amount (PayPal refunds full capture), partial passes amount
+      if (!order.paypal_order_id && !order.square_order_id) throw new Error("No payment ID on this order — cannot issue automatic refund. Refund manually in your Square Dashboard.");
+      const locationId = await api.settings.get("square_location_id");
       const isFullRefund = Math.abs(amt - Number(order.total)) < 0.01;
-      await paypalRefund({ paypalOrderId: order.paypal_order_id, amount: isFullRefund ? null : amt, clientId, secret, mode: mode || "sandbox" });
+      await squareRefund({ squarePaymentId: order.square_order_id || order.paypal_order_id, amount: isFullRefund ? null : amt, locationId });
       await api.shopOrders.saveRefund(order.id, amt, refundNote || null);
       setOrders(o => o.map(x => x.id === order.id ? { ...x, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() } : x));
       if (detail?.id === order.id) setDetail(d => ({ ...d, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() }));
-      showToast("✅ Refund of £" + amt.toFixed(2) + " issued via PayPal!");
+      showToast("✅ Refund of £" + amt.toFixed(2) + " issued via Square!");
       setRefundModal(null);
     } catch (e) {
       showToast("❌ Refund failed: " + (e.message || String(e)), "red");
@@ -7866,7 +7896,7 @@ function AdminOrdersInline({ showToast }) {
             <div style={{ background:"var(--bg4)", border:"1px solid var(--border)", borderRadius:3, padding:"10px 14px", marginBottom:16, fontSize:12 }}>
               <div style={{ fontWeight:700 }}>{refundModal.order.customer_name}</div>
               <div style={{ color:"var(--muted)", marginTop:2 }}>Order #{(refundModal.order.id||"").slice(-8).toUpperCase()} · Total: £{Number(refundModal.order.total).toFixed(2)}</div>
-              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>PayPal ref: {refundModal.order.paypal_order_id}</div>
+              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>Square ref: {refundModal.order.square_order_id || refundModal.order.paypal_order_id || "—"}</div>
             </div>
             <div className="form-group">
               <label>Refund Amount (£)</label>
@@ -7882,7 +7912,7 @@ function AdminOrdersInline({ showToast }) {
               <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Item out of stock, customer request" />
             </div>
             <div className="alert" style={{ background:"rgba(255,60,60,.06)", border:"1px solid rgba(255,60,60,.2)", fontSize:11, color:"var(--red)", marginBottom:14 }}>
-              ⚠️ This will immediately issue a refund via PayPal. This cannot be undone.
+              ⚠️ This will immediately issue a refund via Square. This cannot be undone.
             </div>
             <div className="gap-2">
               <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
@@ -7976,19 +8006,14 @@ function AdminOrders({ showToast }) {
     if (amt > Number(order.total)) { showToast("Refund amount exceeds order total", "red"); return; }
     setRefunding(true);
     try {
-      const [clientId, secret, mode] = await Promise.all([
-        api.settings.get("paypal_client_id"),
-        api.settings.get("paypal_client_secret"),
-        api.settings.get("paypal_mode"),
-      ]);
-      if (!clientId || !secret) throw new Error("PayPal Client ID and Secret must be saved in Admin → Settings before issuing refunds.");
-      if (!order.paypal_order_id) throw new Error("No PayPal Order ID on this order — cannot issue automatic refund. Refund manually in your PayPal dashboard.");
+      if (!order.paypal_order_id && !order.square_order_id) throw new Error("No payment ID on this order — cannot issue automatic refund. Refund manually in your Square Dashboard.");
+      const locationId = await api.settings.get("square_location_id");
       const isFullRefund = Math.abs(amt - Number(order.total)) < 0.01;
-      await paypalRefund({ paypalOrderId: order.paypal_order_id, amount: isFullRefund ? null : amt, clientId, secret, mode: mode || "sandbox" });
+      await squareRefund({ squarePaymentId: order.square_order_id || order.paypal_order_id, amount: isFullRefund ? null : amt, locationId });
       await api.shopOrders.saveRefund(order.id, amt, refundNote || null);
       setOrders(o => o.map(x => x.id === order.id ? { ...x, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() } : x));
       if (detail?.id === order.id) setDetail(d => ({ ...d, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() }));
-      showToast("✅ Refund of £" + amt.toFixed(2) + " issued via PayPal!");
+      showToast("✅ Refund of £" + amt.toFixed(2) + " issued via Square!");
       setRefundModal(null);
     } catch (e) {
       showToast("❌ Refund failed: " + (e.message || String(e)), "red");
@@ -8116,7 +8141,7 @@ function AdminOrders({ showToast }) {
                 </div>
               </div>
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>PAYPAL REF</div><div className="mono" style={{ fontSize: 11, color: detail.paypal_order_id ? "var(--text)" : "var(--muted)" }}>{detail.paypal_order_id || "—"}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>SQUARE REF</div><div className="mono" style={{ fontSize: 11, color: (detail.square_order_id || detail.paypal_order_id) ? "var(--text)" : "var(--muted)" }}>{detail.square_order_id || detail.paypal_order_id || "—"}</div></div>
               {detail.tracking_number && (
                 <div style={{ gridColumn: "1 / -1" }}>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>📮 TRACKING NUMBER</div>
@@ -8208,7 +8233,7 @@ function AdminOrders({ showToast }) {
             <div style={{ background:"var(--bg4)", border:"1px solid var(--border)", borderRadius:3, padding:"10px 14px", marginBottom:16, fontSize:12 }}>
               <div style={{ fontWeight:700 }}>{refundModal.order.customer_name}</div>
               <div style={{ color:"var(--muted)", marginTop:2 }}>Order #{(refundModal.order.id||"").slice(-8).toUpperCase()} · Total: £{Number(refundModal.order.total).toFixed(2)}</div>
-              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>PayPal ref: {refundModal.order.paypal_order_id}</div>
+              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>Square ref: {refundModal.order.square_order_id || refundModal.order.paypal_order_id || "—"}</div>
             </div>
             <div className="form-group">
               <label>Refund Amount (£)</label>
@@ -8224,7 +8249,7 @@ function AdminOrders({ showToast }) {
               <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Item out of stock, customer request" />
             </div>
             <div className="alert" style={{ background:"rgba(255,60,60,.06)", border:"1px solid rgba(255,60,60,.2)", fontSize:11, color:"var(--red)", marginBottom:14 }}>
-              ⚠️ This will immediately issue a refund via PayPal. This cannot be undone.
+              ⚠️ This will immediately issue a refund via Square. This cannot be undone.
             </div>
             <div className="gap-2">
               <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
@@ -11401,7 +11426,7 @@ function AdminBookkeeping({ data, showToast }) {
   // ── Income sources ──
   const bookingIncome = data.events.flatMap(ev =>
     ev.bookings
-      .filter(b => !b.paypalOrderId?.startsWith("ADMIN-MANUAL-") && inTaxYear(b.date || b.created_at))
+      .filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-") && inTaxYear(b.date || b.created_at))
       .map(b => ({
         date: b.date || b.created_at,
         desc: `Booking — ${ev.title} (${b.type === "walkOn" ? "Walk-on" : "Rental"} ×${b.qty})`,
@@ -11932,25 +11957,27 @@ function AdminSettings({ showToast }) {
     return [val, setVal, loaded];
   };
 
-  const [paypalClientId, setPaypalClientId] = S("paypal_client_id");
-  const [paypalClientSecret, setPaypalClientSecret] = S("paypal_client_secret");
-  const [paypalMode, setPaypalMode, ppLoaded] = S("paypal_mode", "sandbox");
-  const [savingPP, setSavingPP] = useState(false);
-  const [showClientId, setShowClientId] = useState(false);
-  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [squareAppId, setSquareAppId] = S("square_app_id");
+  const [squareLocationId, setSquareLocationId] = S("square_location_id");
+  const [squareAccessToken, setSquareAccessToken] = S("square_access_token");
+  const [squareEnv, setSquareEnv, sqLoaded] = S("square_env", "sandbox");
+  const [savingSQ, setSavingSQ] = useState(false);
+  const [showAppId, setShowAppId] = useState(false);
+  const [showToken, setShowToken] = useState(false);
 
-  const savePaypal = async () => {
-    setSavingPP(true);
+  const saveSquare = async () => {
+    setSavingSQ(true);
     try {
-      await api.settings.set("paypal_client_id", paypalClientId.trim());
-      await api.settings.set("paypal_client_secret", paypalClientSecret.trim());
-      await api.settings.set("paypal_mode", paypalMode);
+      await api.settings.set("square_app_id", squareAppId.trim());
+      await api.settings.set("square_location_id", squareLocationId.trim());
+      await api.settings.set("square_access_token", squareAccessToken.trim());
+      await api.settings.set("square_env", squareEnv);
       // Reset cached config so next checkout reloads it
-      _paypalConfigLoaded = false;
-      showToast("✅ PayPal settings saved! Changes take effect on next checkout.");
+      _squareConfigLoaded = false;
+      showToast("✅ Square settings saved! Changes take effect on next checkout.");
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
-    } finally { setSavingPP(false); }
+    } finally { setSavingSQ(false); }
   };
 
   const sectionHead = (label) => (
@@ -11966,101 +11993,110 @@ function AdminSettings({ showToast }) {
         </div>
       </div>
 
-      {/* PayPal */}
+      {/* Square */}
       <div className="card mb-2">
-        {sectionHead("💳 PayPal Payments")}
+        {sectionHead("💳 Square Payments")}
 
         <div className="form-group">
-          <label>Mode</label>
+          <label>Environment</label>
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            {["sandbox", "live"].map(m => (
-              <button key={m} onClick={() => setPaypalMode(m)}
+            {["sandbox", "production"].map(m => (
+              <button key={m} onClick={() => setSquareEnv(m)}
                 style={{
                   padding: "8px 22px", borderRadius: 4, border: "1px solid",
                   fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer",
-                  background: paypalMode === m ? (m === "live" ? "var(--accent)" : "#2d7a2d") : "var(--card)",
-                  color: paypalMode === m ? "#000" : "var(--muted)",
-                  borderColor: paypalMode === m ? (m === "live" ? "var(--accent)" : "#2d7a2d") : "var(--border)",
+                  background: squareEnv === m ? (m === "production" ? "var(--accent)" : "#2d7a2d") : "var(--card)",
+                  color: squareEnv === m ? "#000" : "var(--muted)",
+                  borderColor: squareEnv === m ? (m === "production" ? "var(--accent)" : "#2d7a2d") : "var(--border)",
                 }}>
-                {m === "live" ? "🟠 Live" : "🟢 Sandbox / Test"}
+                {m === "production" ? "🟠 Production" : "🟢 Sandbox / Test"}
               </button>
             ))}
           </div>
-          {paypalMode === "live"
-            ? <div className="alert alert-red mt-2" style={{ fontSize: 12 }}>⚠️ LIVE mode — real payments will be charged to customers.</div>
+          {squareEnv === "production"
+            ? <div className="alert alert-red mt-2" style={{ fontSize: 12 }}>⚠️ PRODUCTION mode — real payments will be charged to customers.</div>
             : <div className="alert alert-green mt-2" style={{ fontSize: 12 }}>Sandbox mode — test payments only, no real money taken.</div>
           }
         </div>
 
         <div className="form-group">
-          <label>PayPal Client ID {paypalMode === "live" ? "(Live)" : "(Sandbox)"}</label>
+          <label>Application ID {squareEnv === "production" ? "(Production)" : "(Sandbox)"}</label>
           <div style={{ position: "relative" }}>
             <input
-              type={showClientId ? "text" : "password"}
-              value={paypalClientId}
-              onChange={e => setPaypalClientId(e.target.value)}
-              placeholder={paypalMode === "live" ? "AaBbCc... (Live Client ID from PayPal Developer Dashboard)" : "AaBbCc... (Sandbox Client ID)"}
+              type={showAppId ? "text" : "password"}
+              value={squareAppId}
+              onChange={e => setSquareAppId(e.target.value)}
+              placeholder={squareEnv === "production" ? "sq0idp-... (Production Application ID)" : "sandbox-sq0idb-... (Sandbox Application ID)"}
               style={{ paddingRight: 80 }}
             />
-            <button onClick={() => setShowClientId(v => !v)}
+            <button onClick={() => setShowAppId(v => !v)}
               style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>
-              {showClientId ? "Hide" : "Show"}
+              {showAppId ? "Hide" : "Show"}
             </button>
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
-            Get your Client ID from{" "}
-            <a href="https://developer.paypal.com/developer/applications" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
-              developer.paypal.com → My Apps &amp; Credentials
-            </a>
-            . Use the <strong>Live</strong> Client ID for real payments.
+            Found in your <a href="https://developer.squareup.com/apps" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>Square Developer Dashboard</a> under your application's Credentials tab.
           </div>
         </div>
 
         <div className="form-group">
-          <label>PayPal Client Secret {paypalMode === "live" ? "(Live)" : "(Sandbox)"} <span style={{ color: "var(--red)", fontSize: 10 }}>Required for refunds</span></label>
-          <div style={{ position: "relative" }}>
-            <input
-              type={showClientSecret ? "text" : "password"}
-              value={paypalClientSecret}
-              onChange={e => setPaypalClientSecret(e.target.value)}
-              placeholder="Secret from PayPal Developer Dashboard"
-              style={{ paddingRight: 80 }}
-            />
-            <button onClick={() => setShowClientSecret(v => !v)}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>
-              {showClientSecret ? "Hide" : "Show"}
-            </button>
-          </div>
-          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
-            In your PayPal app, click <strong style={{ color: "var(--text)" }}>Show Secret</strong> next to Client Secret. This is stored securely and only used server-side for refund API calls.
+          <label>Location ID</label>
+          <input
+            value={squareLocationId}
+            onChange={e => setSquareLocationId(e.target.value)}
+            placeholder="L... (from Square Dashboard → Locations)"
+          />
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>
+            Found in Square Dashboard → <strong style={{ color: "var(--text)" }}>Locations</strong>. Each business location has a unique ID.
           </div>
         </div>
 
-        <button className="btn btn-primary" onClick={savePaypal} disabled={savingPP || !ppLoaded}>
-          {savingPP ? "Saving..." : "Save PayPal Settings"}
+        <div className="form-group">
+          <label>Access Token <span style={{ color: "var(--red)", fontSize: 10 }}>Required for refunds</span></label>
+          <div style={{ position: "relative" }}>
+            <input
+              type={showToken ? "text" : "password"}
+              value={squareAccessToken}
+              onChange={e => setSquareAccessToken(e.target.value)}
+              placeholder={squareEnv === "production" ? "EAAAl... (Production Access Token)" : "EAAAl... (Sandbox Access Token)"}
+              style={{ paddingRight: 80 }}
+            />
+            <button onClick={() => setShowToken(v => !v)}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>
+              {showToken ? "Hide" : "Show"}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
+            Found in Square Developer Dashboard → your app → Credentials. Used server-side for refunds only — never exposed to customers.
+          </div>
+        </div>
+
+        <button className="btn btn-primary" onClick={saveSquare} disabled={savingSQ || !sqLoaded}>
+          {savingSQ ? "Saving..." : "Save Square Settings"}
         </button>
 
-        {paypalMode === "live" && paypalClientId && (
+        {squareEnv === "production" && squareAppId && squareLocationId && (
           <div className="alert alert-green mt-2" style={{ fontSize: 12 }}>
-            ✅ Live PayPal is configured. Customers will see the real PayPal button at checkout.
+            ✅ Production Square is configured. Customers will see the card payment form at checkout.
           </div>
         )}
-        {paypalMode === "live" && !paypalClientId && (
+        {squareEnv === "production" && (!squareAppId || !squareLocationId) && (
           <div className="alert alert-red mt-2" style={{ fontSize: 12 }}>
-            ⚠️ Mode is set to Live but no Client ID is saved — checkouts will show an error.
+            ⚠️ Environment is Production but Application ID or Location ID is missing — checkouts will show an error.
           </div>
         )}
       </div>
 
-      {/* How to get PayPal keys guide */}
+      {/* How to get Square keys guide */}
       <div className="card mb-2" style={{ background: "#0a140a", border: "1px solid #1a2e1a" }}>
-        {sectionHead("📋 PayPal Setup Guide")}
+        {sectionHead("📋 Square Setup Guide")}
         <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 2 }}>
-          <div>1. Go to <a href="https://developer.paypal.com" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>developer.paypal.com</a> and log in with your PayPal business account.</div>
-          <div>2. Click <strong style={{ color: "var(--text)" }}>Apps &amp; Credentials</strong> → switch to <strong style={{ color: "var(--text)" }}>Live</strong> tab.</div>
-          <div>3. Click your app (or create one) → copy the <strong style={{ color: "var(--text)" }}>Client ID</strong>.</div>
-          <div>4. Paste it above, set Mode to <strong style={{ color: "var(--accent)" }}>Live</strong>, and click Save.</div>
-          <div>5. Payments will now go directly into your PayPal business account.</div>
+          <div>1. Go to <a href="https://developer.squareup.com" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>developer.squareup.com</a> and log in with your Square account.</div>
+          <div>2. Create an application (or open an existing one) → go to <strong style={{ color: "var(--text)" }}>Credentials</strong>.</div>
+          <div>3. Switch to the <strong style={{ color: "var(--text)" }}>Production</strong> tab → copy your <strong style={{ color: "var(--text)" }}>Application ID</strong> and <strong style={{ color: "var(--text)" }}>Access Token</strong>.</div>
+          <div>4. Go to your <a href="https://squareup.com/dashboard/locations" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>Square Dashboard → Locations</a> → copy your <strong style={{ color: "var(--text)" }}>Location ID</strong>.</div>
+          <div>5. Paste all three above, set Environment to <strong style={{ color: "var(--accent)" }}>Production</strong>, and click Save.</div>
+          <div>6. Deploy the <strong style={{ color: "var(--text)" }}>square-payment</strong> Supabase Edge Function (see README) to handle server-side payment creation and refunds.</div>
         </div>
       </div>
 
@@ -12592,7 +12628,7 @@ function TermsPage({ setPage }) {
         {activeSection === "bookings" && (
           <div>
             <SectionTitle id="booking-1">1. Booking Policy</SectionTitle>
-            <Para>All event bookings are made through this platform and are confirmed upon receipt of full payment via PayPal. Booking confirmation and a Field Pass will be sent to your registered email address. Please bring your Field Pass (printed or on your phone) to the event.</Para>
+            <Para>All event bookings are made through this platform and are confirmed upon receipt of full payment via Square. Booking confirmation and a Field Pass will be sent to your registered email address. Please bring your Field Pass (printed or on your phone) to the event.</Para>
             <BulletList items={[
               "Bookings are personal and non-transferable.",
               "Arrival at least 15 minutes before the stated event start time is required for check-in and safety briefing.",
@@ -12606,7 +12642,7 @@ function TermsPage({ setPage }) {
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
               {[
-                { title:"More than 48 hours before event", icon:"✅", color:"#c8ff00", bg:"rgba(200,255,0,.05)", border:"rgba(200,255,0,.2)", items:["Walk-on bookings: full refund to original payment method", "Rental bookings: 90% refund (10% rental processing fee retained)", "Refund issued to original PayPal payment within 3–5 business days"] },
+                { title:"More than 48 hours before event", icon:"✅", color:"#c8ff00", bg:"rgba(200,255,0,.05)", border:"rgba(200,255,0,.2)", items:["Walk-on bookings: full refund to original payment method", "Rental bookings: 90% refund (10% rental processing fee retained)", "Refund issued to original payment method within 3–5 business days"] },
                 { title:"Within 48 hours of event", icon:"⏱", color:"var(--gold)", bg:"rgba(200,150,0,.06)", border:"rgba(200,150,0,.25)", items:["Walk-on bookings: full amount issued as Game Day Credits", "Rental bookings: 90% issued as Game Day Credits (10% fee retained)", "Credits are added to your account instantly and can be used on future bookings"] },
               ].map(box => (
                 <div key={box.title} style={{ background:box.bg, border:"1px solid " + box.border, padding:16 }}>
@@ -12645,7 +12681,7 @@ function TermsPage({ setPage }) {
         {activeSection === "shop" && (
           <div>
             <SectionTitle id="shop-1">1. Shop Terms</SectionTitle>
-            <Para>All shop purchases are processed via PayPal. Prices displayed include VAT where applicable. Swindon Airsoft reserves the right to amend prices without notice. All orders are subject to availability.</Para>
+            <Para>All shop purchases are processed securely via Square. Prices displayed include VAT where applicable. Swindon Airsoft reserves the right to amend prices without notice. All orders are subject to availability.</Para>
 
             <SectionTitle id="shop-2">2. Delivery & Postage</SectionTitle>
             <BulletList items={[
@@ -12662,7 +12698,7 @@ function TermsPage({ setPage }) {
               "Faulty or incorrect items will be replaced or refunded in full, including postage costs.",
               "Change-of-mind returns are accepted within 14 days if items are unopened and in original condition.",
               "BBs, gas canisters, and consumable items are non-returnable once opened for hygiene and safety reasons.",
-              "Refunds are issued via PayPal to the original payment method within 5–10 business days of the return being received and inspected.",
+              "Refunds are issued to the original payment method within 5–10 business days of the return being received and inspected.",
               "Return postage costs are the responsibility of the customer unless the item is faulty or incorrect.",
             ]} />
 
@@ -12711,7 +12747,7 @@ function TermsPage({ setPage }) {
               "Name, email address, and phone number provided during registration.",
               "Address details provided for shop order delivery.",
               "Date of birth (where provided) for age verification purposes.",
-              "Payment references — we do not store full card details; payments are processed by PayPal.",
+              "Payment references — we do not store full card details; payments are processed securely by Square.",
               "Booking history, event attendance records, and check-in data.",
               "Liability waiver data including signature, date, and confirmation of agreement.",
               "UKARA registration number (if applicable, for VIP members).",
@@ -12733,7 +12769,7 @@ function TermsPage({ setPage }) {
             <SectionTitle id="privacy-3">3. Who We Share Data With</SectionTitle>
             <Para>We do not sell your personal data to third parties. We share data only where necessary:</Para>
             <BulletList items={[
-              "PayPal — payment processing. PayPal's own privacy policy applies to payment transactions.",
+              "Square — payment processing. Square's own privacy policy applies to payment transactions.",
               "Supabase — our secure cloud database provider, hosting data within the EU/UK.",
               "Email service providers — for sending transactional emails (booking confirmations etc.).",
               "Legal authorities — if required by law or to prevent fraud or harm.",
