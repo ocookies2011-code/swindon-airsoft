@@ -110,7 +110,24 @@ export const profiles = wrapWithTimeout({
     const { data } = supabase.storage.from('images').getPublicUrl(path)
     await supabase.from('profiles').update({ profile_pic: data.publicUrl }).eq('id', userId)
     return data.publicUrl
-  }
+  },
+
+  async uploadVipId(userId, file, slot) {
+    // slot: 0 or 1  (up to 2 government ID images per player)
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const path = `vip-id/${userId}/id_${slot}_${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('images').upload(path, file, { upsert: false })
+    if (error) throw new Error(error.message)
+    const { data } = supabase.storage.from('images').getPublicUrl(path)
+    return data.publicUrl
+  },
+
+  async saveVipIdImages(userId, urls) {
+    const { error } = await supabase.from('profiles')
+      .update({ vip_id_images: urls })
+      .eq('id', userId)
+    if (error) throw new Error(error.message)
+  },
 })
 
 // ── Events ────────────────────────────────────────────────────
@@ -567,6 +584,7 @@ export function normaliseProfile(p) {
     permissions:        p.permissions,
     joinDate:           p.join_date,
     adminNotes:         p.admin_notes || '',
+    vipIdImages:        p.vip_id_images || [],
   }
 }
 

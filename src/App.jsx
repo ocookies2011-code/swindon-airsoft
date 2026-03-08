@@ -1878,7 +1878,7 @@ function HomePage({ data, setPage }) {
 
       {/* FEATURE STRIP */}
       <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:16, padding: isMobile ? "24px 16px" : "40px 24px", maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:16, padding: isMobile ? "24px 16px" : "40px 24px", maxWidth:1200, margin:"0 auto" }}>
           {[
             { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
             { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
@@ -4290,6 +4290,11 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   const [showPayment, setShowPayment] = useState(false);
   const [vipPayError, setVipPayError] = useState(null);
 
+  // ID upload state — up to 2 images, required before payment
+  const [idImages, setIdImages] = useState([]); // [{ file, preview, url, uploading, error }]
+  const [idStep, setIdStep] = useState(false); // true = show ID upload panel
+  const [idUploading, setIdUploading] = useState(false);
+
   const myBookings = cu ? data.events.flatMap(ev =>
     ev.bookings.filter(b => b.userId === cu.id && b.checkedIn).map(b => b)
   ) : [];
@@ -4299,6 +4304,49 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   const isVip = cu?.vipStatus === "active";
   const isExpired = cu?.vipStatus === "expired";
   const hasPending = cu?.vipApplied && !isVip;
+
+  // Handle photo ID file selection (up to 2)
+  const handleIdFileSelect = (e, slot) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showToast("Please select an image file.", "red"); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast("File too large — max 10MB.", "red"); return; }
+    const preview = URL.createObjectURL(file);
+    setIdImages(prev => {
+      const next = [...prev];
+      next[slot] = { file, preview, url: null, uploading: false, error: null };
+      return next;
+    });
+  };
+
+  const removeIdImage = (slot) => {
+    setIdImages(prev => {
+      const next = [...prev];
+      next[slot] = undefined;
+      return next.filter((_, i) => i === 0 || i === 1); // keep slots 0,1
+    });
+  };
+
+  // Upload all selected ID images to Supabase and save URLs to profile
+  const uploadAndProceed = async () => {
+    const toUpload = idImages.filter(Boolean);
+    if (toUpload.length === 0) { showToast("Please add at least one photo ID.", "red"); return; }
+    setIdUploading(true);
+    try {
+      const urls = [];
+      for (let i = 0; i < toUpload.length; i++) {
+        const item = toUpload[i];
+        const url = await api.profiles.uploadVipId(cu.id, item.file, i);
+        urls.push(url);
+      }
+      await api.profiles.saveVipIdImages(cu.id, urls);
+      setIdStep(false);
+      setShowPayment(true);
+      setVipPayError(null);
+    } catch (e) {
+      showToast("Upload failed: " + (e.message || String(e)), "red");
+    } finally { setIdUploading(false); }
+  };
 
   const handleVipPaymentSuccess = async (squarePayment) => {
     setApplying(true);
@@ -4430,16 +4478,74 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             {cu && hasPending && (
               <div className="alert alert-blue" style={{ textAlign:"center" }}>⏳ Payment received — application under review. Admin will activate your status shortly.</div>
             )}
-            {cu && canApply && !showPayment && (
+
+            {/* Step 1 — trigger: APPLY button */}
+            {cu && canApply && !idStep && !showPayment && (
               <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }}
-                onClick={() => { setShowPayment(true); setVipPayError(null); }}>
+                onClick={() => { setIdStep(true); setVipPayError(null); setIdImages([]); }}>
                 {isExpired ? "RENEW VIP — £30/YEAR" : "APPLY & PAY — £30/YEAR"}
               </button>
             )}
+
+            {/* Step 2 — ID upload */}
+            {cu && canApply && idStep && !showPayment && (
+              <div>
+                <div style={{ background:"#0d1a0d", border:"1px solid #1e3a1e", padding:"12px 14px", marginBottom:14, fontSize:12, color:"#8aaa60", lineHeight:1.7 }}>
+                  🪪 <strong style={{ color:"#fff" }}>Government-issued photo ID required</strong><br />
+                  Please upload a clear photo of your ID (passport, driving licence, or national ID card).<br />
+                  You may upload up to 2 images — e.g. front and back. This is stored securely and reviewed by admin only.
+                </div>
+
+                {/* Image slot grid */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+                  {[0, 1].map(slot => {
+                    const img = idImages[slot];
+                    return (
+                      <div key={slot} style={{ border:`2px dashed ${img ? "#2a3a10" : "#1a1a1a"}`, background:"#0a0a0a", borderRadius:3, overflow:"hidden", position:"relative", aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:6 }}>
+                        {img ? (
+                          <>
+                            <img src={img.preview} alt={`ID ${slot+1}`} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
+                            <button onClick={() => removeIdImage(slot)}
+                              style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,.75)", border:"none", color:"#fff", borderRadius:2, cursor:"pointer", fontSize:12, padding:"2px 7px", zIndex:2 }}>✕</button>
+                            <div style={{ position:"absolute", bottom:4, left:4, background:"rgba(0,0,0,.7)", color:"#c8ff00", fontSize:9, fontFamily:"'Share Tech Mono',monospace", padding:"2px 6px", letterSpacing:".1em" }}>ID {slot+1}</div>
+                          </>
+                        ) : (
+                          <>
+                            <label style={{ cursor:"pointer", textAlign:"center", width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4 }}>
+                              <span style={{ fontSize:22, opacity:.3 }}>🪪</span>
+                              <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".08em" }}>{slot === 0 ? "FRONT / MAIN" : "BACK / OPTIONAL"}</span>
+                              <span style={{ fontSize:9, color:"#2a3a10", marginTop:2 }}>tap to add photo</span>
+                              <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => handleIdFileSelect(e, slot)} />
+                            </label>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ fontSize:10, color:"var(--muted)", marginBottom:12, textAlign:"center", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".06em" }}>
+                  ACCEPTED: PASSPORT · DRIVING LICENCE · NATIONAL ID CARD
+                </div>
+
+                <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:13, letterSpacing:".1em", opacity: (idUploading || !idImages.filter(Boolean).length) ? .5 : 1 }}
+                  disabled={idUploading || !idImages.filter(Boolean).length}
+                  onClick={uploadAndProceed}>
+                  {idUploading ? "⏳ Uploading ID…" : "CONTINUE TO PAYMENT →"}
+                </button>
+                <button className="btn btn-ghost" style={{ width:"100%", marginTop:8, fontSize:12 }}
+                  disabled={idUploading} onClick={() => setIdStep(false)}>← Back</button>
+              </div>
+            )}
+
+            {/* Step 3 — payment */}
             {cu && canApply && showPayment && (
               <div>
                 <div style={{ background:"#0d1a0d", border:"1px solid #1e3a1e", padding:"10px 14px", marginBottom:12, fontSize:12, color:"#8aaa60" }}>
                   💳 {isExpired ? "Pay now to renew your VIP membership for another year." : "Pay now to submit your VIP application. Your status will be activated by admin after payment is confirmed."}
+                </div>
+                <div style={{ background:"rgba(200,255,0,.04)", border:"1px solid #1a2808", padding:"8px 12px", marginBottom:12, fontSize:11, color:"var(--accent)", display:"flex", alignItems:"center", gap:8 }}>
+                  <span>✓</span> <span>Photo ID uploaded successfully</span>
                 </div>
                 {vipPayError && (
                   <div className="alert alert-red" style={{ marginBottom:10 }}>{vipPayError}</div>
@@ -4451,9 +4557,10 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
                   onSuccess={handleVipPaymentSuccess}
                 />
                 <button className="btn btn-ghost" style={{ width:"100%", marginTop:10, fontSize:12 }}
-                  onClick={() => setShowPayment(false)}>Cancel</button>
+                  onClick={() => { setShowPayment(false); setIdStep(true); }}>← Change ID photos</button>
               </div>
             )}
+
             {cu && !isVip && !hasPending && !canApply && (
               <div>
                 <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14, opacity:.5, cursor:"not-allowed" }} disabled>
@@ -4466,7 +4573,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             )}
 
             <div style={{ marginTop:16, fontSize:11, color:"var(--muted)", lineHeight:1.6, textAlign:"center" }}>
-              Pay the £30 annual fee now. Admin will review and activate your VIP status — usually within 24 hours.
+              Pay the £30 annual fee now. Admin will review your ID and activate your VIP status — usually within 24 hours.
             </div>
           </div>
         </div>
@@ -4477,8 +4584,9 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
           <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:16 }}>
             {[
               { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
-              { num:"02", title:"PAY & APPLY", desc:"Once eligible, pay the £30 annual fee directly on this page. Your application is submitted automatically on payment." },
-              { num:"03", title:"ADMIN ACTIVATES", desc:"Admin reviews your application and activates your VIP status — usually within 24 hours of payment." },
+              { num:"02", title:"UPLOAD ID", desc:"Upload a clear photo of your government-issued ID (passport, driving licence, or national ID card). Up to 2 images accepted." },
+              { num:"03", title:"PAY & APPLY", desc:"Pay the £30 annual fee. Your application and ID are submitted instantly for admin review." },
+              { num:"04", title:"ADMIN ACTIVATES", desc:"Admin reviews your ID and activates your VIP status — usually within 24 hours of payment." },
             ].map(step => (
               <div key={step.num} style={{ padding:16, background:"#0d0d0d", border:"1px solid #1a1a1a" }}>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:36, color:"var(--accent)", opacity:.4, lineHeight:1, marginBottom:8 }}>{step.num}</div>
@@ -7264,7 +7372,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No pending VIP applications.</div>
           ) : (
             <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Payment</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Payment</th><th>Photo ID</th><th>Actions</th></tr></thead>
               <tbody>
                 {vipApps.map(u => (
                   <tr key={u.id}>
@@ -7274,6 +7382,20 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
                     <td>
                       <span className="tag tag-green" style={{ fontSize:11 }}>✓ £30 paid</span>
+                    </td>
+                    <td>
+                      {u.vipIdImages?.length > 0 ? (
+                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                          {u.vipIdImages.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer">
+                              <img src={url} alt={`ID ${i+1}`} style={{ width:48, height:36, objectFit:"cover", border:"1px solid var(--accent)", borderRadius:2, cursor:"pointer" }} title="Click to view full size" />
+                            </a>
+                          ))}
+                          <span className="tag tag-green" style={{ fontSize:10, alignSelf:"center" }}>✓ {u.vipIdImages.length}</span>
+                        </div>
+                      ) : (
+                        <span className="tag tag-red" style={{ fontSize:10 }}>✗ None</span>
+                      )}
                     </td>
                     <td>
                       <div className="gap-2">
@@ -7430,9 +7552,32 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 
       {vipApproveModal && (
         <div className="overlay" onClick={() => !vipApproveBusy && setVipApproveModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div className="modal-title">⭐ Approve VIP — {vipApproveModal.name}</div>
-            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 16px" }}>
+
+            {/* Photo ID review */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:".1em", color:"var(--muted)", textTransform:"uppercase", marginBottom:10 }}>🪪 Government Photo ID</div>
+              {vipApproveModal.vipIdImages?.length > 0 ? (
+                <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                  {vipApproveModal.vipIdImages.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noreferrer" title="Open full size in new tab"
+                      style={{ display:"block", border:"1px solid var(--accent)", borderRadius:3, overflow:"hidden", flexShrink:0 }}>
+                      <img src={url} alt={`ID photo ${i+1}`} style={{ width:160, height:110, objectFit:"cover", display:"block" }} />
+                      <div style={{ background:"#0a0f05", padding:"3px 8px", fontSize:9, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em", textAlign:"center" }}>
+                        ID PHOTO {i+1} — CLICK TO ENLARGE
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="alert alert-red" style={{ fontSize:12 }}>
+                  ⚠️ No ID photos uploaded by this player. Consider requesting ID before approving.
+                </div>
+              )}
+            </div>
+
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 16px" }}>
               Set the UKARA ID for this player. A unique ID has been pre-generated — edit it if needed.
             </p>
             <div className="form-group">
