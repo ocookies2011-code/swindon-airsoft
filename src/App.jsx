@@ -1393,10 +1393,10 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
 function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = React.useRef(null);
+  const dropdownRef = useRef(null);
 
   // Close dropdown on outside click
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
@@ -4492,7 +4492,7 @@ function PlayerOrders({ cu }) {
                     const done = meta.step >= s.step;
                     const current = meta.step === s.step;
                     return (
-                      <React.Fragment key={s.step}>
+                      <div key={s.step} style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, gap:0 }}>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
                           <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? "#c8ff00" : "#1a1a1a", border: `2px solid ${done ? "#c8ff00" : current ? "rgba(200,255,0,.4)" : "#2a2a2a"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: done ? "#000" : "var(--muted)", fontWeight: 900, boxShadow: current ? "0 0 12px rgba(200,255,0,.4)" : "none", transition: "all .3s" }}>
                             {done ? "✓" : s.step}
@@ -4502,7 +4502,7 @@ function PlayerOrders({ cu }) {
                         {i < STEPS.length - 1 && (
                           <div style={{ flex: 2, height: 2, background: meta.step > s.step ? "#c8ff00" : "#1a1a1a", transition: "background .3s", marginBottom: 20 }} />
                         )}
-                      </React.Fragment>
+                      </div>
                     );
                   })}
                 </div>
