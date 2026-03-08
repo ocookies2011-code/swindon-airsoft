@@ -566,6 +566,7 @@ export function normaliseProfile(p) {
     deleteRequest:      p.delete_request,
     permissions:        p.permissions,
     joinDate:           p.join_date,
+    adminNotes:         p.admin_notes || '',
   }
 }
 

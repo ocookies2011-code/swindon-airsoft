@@ -475,7 +475,7 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 
 /* ── NAV ── */
 .pub-nav{background:#000;border-bottom:1px solid #1f1f1f;position:sticky;top:0;z-index:100;}
-.pub-nav-inner{max-width:1280px;margin:0 auto;padding:0 16px;height:var(--nav-h);display:flex;align-items:center;gap:0;position:relative;overflow:hidden;}
+.pub-nav-inner{max-width:1280px;margin:0 auto;padding:0 16px;height:var(--nav-h);display:flex;align-items:center;gap:0;position:relative;overflow:visible;}
 .pub-nav-logo{display:flex;align-items:center;gap:12px;cursor:pointer;margin-right:32px;flex-shrink:0;min-width:0;}
 .pub-nav-logo-box{background:var(--accent);width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:#000;letter-spacing:.05em;border-radius:2px;flex-shrink:0;}
 .pub-nav-logo-text{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:.12em;color:#fff;text-transform:uppercase;white-space:nowrap;}
@@ -1392,6 +1392,19 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
 // ── Public Nav ────────────────────────────────────────────
 function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = React.useRef(null);
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
   const links = [
     { id: "home", label: "Home", icon: "🏠" },
     { id: "events", label: "Events", icon: "📅" },
@@ -1439,17 +1452,21 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
           <div className="pub-nav-links">
             {links.map(l => (
               l.children ? (
-                <div key={l.id} className="pub-nav-link-wrap">
-                  <button className={`pub-nav-link ${aboutPages.includes(page) ? "active" : ""}`} onClick={() => go(l.id)}>
-                    {l.label} <span style={{ fontSize:9, opacity:.6, marginLeft:2 }}>▾</span>
+                <div key={l.id} className="pub-nav-link-wrap" ref={dropdownRef}>
+                  <button className={`pub-nav-link ${aboutPages.includes(page) ? "active" : ""}`}
+                    onClick={() => setDropdownOpen(v => !v)}>
+                    {l.label} <span style={{ fontSize:9, opacity:.6, marginLeft:2 }}>{dropdownOpen ? "▴" : "▾"}</span>
                   </button>
-                  <div className="pub-nav-dropdown">
-                    {l.children.map(c => (
-                      <button key={c.id} className={`pub-nav-dropdown-item ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)}>
-                        {c.icon} {c.label}
-                      </button>
-                    ))}
-                  </div>
+                  {dropdownOpen && (
+                    <div className="pub-nav-dropdown">
+                      {l.children.map(c => (
+                        <button key={c.id} className={`pub-nav-dropdown-item ${page === c.id ? "active" : ""}`}
+                          onClick={() => { go(c.id); setDropdownOpen(false); }}>
+                          {c.icon} {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button key={l.id} className={`pub-nav-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
@@ -6858,6 +6875,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         credits:        Number(edit.credits) || 0,
         address:        edit.address || '',
         delete_request: edit.deleteRequest || false,
+        admin_notes:    edit.adminNotes || '',
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
       // Refresh from DB and update global state
@@ -6964,7 +6982,12 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   </td>
                   <td>{u.waiverSigned === true && u.waiverYear === new Date().getFullYear() ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
                   <td>{u.credits > 0 ? <span className="text-gold">£{u.credits}</span> : "—"}</td>
-                  <td><button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button></td>
+                  <td>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      {u.adminNotes && <span title={u.adminNotes} style={{ fontSize:12, cursor:"help" }}>🔒</span>}
+                      <button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -7100,6 +7123,19 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   </>
                 );
               })()}
+            </div>
+            {/* Admin Notes — internal only, never visible to player */}
+            <div style={{ background: "rgba(200,150,0,.06)", border: "1px solid rgba(200,150,0,.25)", padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                🔒 Admin Notes <span style={{ fontWeight: 400, color: "var(--muted)", textTransform: "none", letterSpacing: "normal", fontSize: 10 }}>— internal only, never shown to player</span>
+              </div>
+              <textarea
+                value={edit.adminNotes || ""}
+                onChange={e => setEdit(p => ({ ...p, adminNotes: e.target.value }))}
+                placeholder="Add private notes about this player (bans, incidents, equipment issues, flags, etc.)"
+                rows={3}
+                style={{ width: "100%", resize: "vertical", fontFamily: "'Share Tech Mono',monospace", fontSize: 12, background: "rgba(0,0,0,.3)", border: "1px solid rgba(200,150,0,.2)", color: "var(--text)", padding: "8px 10px", boxSizing: "border-box" }}
+              />
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
               <input type="checkbox" checked={edit.deleteRequest || false} onChange={e => setEdit(p => ({ ...p, deleteRequest: e.target.checked }))} />
