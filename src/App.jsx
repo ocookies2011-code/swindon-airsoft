@@ -2053,6 +2053,84 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
 
 
 // ── Send Welcome/Registration Email ──────────────────────────
+// ── Send Event Reminder Email ────────────────────────────────
+async function sendEventReminderEmail({ ev, bookedUsers }) {
+  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
+  });
+  const timeStr = ev.endTime ? `${ev.time}–${ev.endTime} GMT` : ev.time ? `${ev.time} GMT` : "TBC";
+  const hoursUntil = Math.round((new Date(ev.date + "T" + (ev.time || "09:00")) - new Date()) / 3600000);
+  const urgency = hoursUntil <= 24 ? "TOMORROW" : hoursUntil <= 48 ? "IN 48 HOURS" : `IN ${Math.round(hoursUntil/24)} DAYS`;
+
+  let sent = 0, failed = 0;
+
+  for (const user of bookedUsers) {
+    if (!user.email) { failed++; continue; }
+    const htmlContent = `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:0;font-family:Arial,sans-serif;color:#e0e0e0;">
+    <div style="height:3px;background:#c8ff00;"></div>
+    <div style="background:#0d0d0d;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;padding:24px 32px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:.3em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⚠ MISSION REMINDER — ${urgency}</div>
+      <div style="font-size:30px;font-weight:900;letter-spacing:.08em;color:#fff;line-height:1;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+    </div>
+    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+      <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:8px;font-weight:700;">YOUR UPCOMING GAME</div>
+      <div style="font-size:28px;font-weight:900;color:#e8f0d8;text-transform:uppercase;letter-spacing:.05em;line-height:1.1;margin-bottom:20px;">${ev.title}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">DATE</div>
+            <div style="font-size:14px;font-weight:700;color:#c8ff00;">${dateStr}</div>
+          </td>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;border-left:none;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">TIME</div>
+            <div style="font-size:14px;font-weight:700;color:#4fc3f7;">${timeStr}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;border-top:none;vertical-align:top;" colspan="2">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">LOCATION</div>
+            <div style="font-size:14px;font-weight:700;color:#ce93d8;">${ev.location || "Swindon Airsoft Field"}</div>
+          </td>
+        </tr>
+      </table>
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:16px 20px;margin-bottom:20px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:10px;font-weight:700;">PRE-GAME CHECKLIST</div>
+        <table style="width:100%;border-collapse:collapse;">
+          ${[
+            ["Bring your QR code ticket (check your booking confirmation email)", "#c8ff00"],
+            ["Arrive at least 15 minutes before start time for sign-in", "#8aaa60"],
+            ["Full-seal eye protection is mandatory — available to hire if needed", "#8aaa60"],
+            ["Wear appropriate clothing for the weather and terrain", "#8aaa60"],
+            ["All personal RIFs will be chronographed before play", "#8aaa60"],
+          ].map(([item, col]) => `
+          <tr>
+            <td style="padding:5px 0;font-size:12px;color:${col};line-height:1.6;">▸ ${item}</td>
+          </tr>`).join("")}
+        </table>
+      </div>
+      ${user.bookingType === "rental" ? `
+      <div style="background:#0a0f06;border:1px solid rgba(200,150,0,.3);padding:14px 20px;margin-bottom:20px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#7a5010;text-transform:uppercase;margin-bottom:6px;font-weight:700;">🪖 YOUR RENTAL PACKAGE</div>
+        <div style="font-size:12px;color:#8a7040;line-height:1.7;">Your rental kit will be prepared and waiting. Please collect from the marshal station on arrival. Do not modify or disassemble any equipment.</div>
+      </div>` : ""}
+      <div style="text-align:center;margin-top:8px;">
+        <a href="https://swindonairsoft.co.uk/#profile/bookings" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:12px 32px;text-decoration:none;">VIEW MY BOOKING →</a>
+      </div>
+    </div>
+    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:16px 32px;font-size:11px;color:#2a2a2a;text-align:center;">
+      Need to cancel? Log in and visit Profile → Bookings. Cancellations within 48h receive game credits. · Swindon Airsoft
+    </div>
+    <div style="height:1px;background:#1a1a1a;"></div>
+  </div>`;
+    try {
+      await sendEmail({ toEmail: user.email, toName: user.name || "Player", subject: `⚠ Reminder: ${ev.title} is ${urgency.toLowerCase()}`, htmlContent });
+      sent++;
+    } catch { failed++; }
+  }
+  return { sent, failed };
+}
+
 async function sendWelcomeEmail({ name, email }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
@@ -4279,77 +4357,200 @@ function QAPage({ data }) {
 function PlayerOrders({ cu }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [detail, setDetail] = useState(null);
+  const [activeOrder, setActiveOrder] = useState(null);
 
   useEffect(() => {
     supabase.from('shop_orders').select('*')
       .eq('user_id', cu.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
-        if (!error) setOrders(data || []);
+        if (!error) {
+          const loaded = data || [];
+          setOrders(loaded);
+          // Auto-open most recent active order
+          const active = loaded.find(o => !["completed","cancelled"].includes(o.status));
+          if (active) setActiveOrder(active.id);
+          else if (loaded.length > 0) setActiveOrder(loaded[0].id);
+        }
         setLoading(false);
       });
   }, [cu.id]);
 
-  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
+  const STATUS_META = {
+    pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: "⏳", label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
+    processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",   icon: "⚙️", label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
+    dispatched: { color: "#c8ff00", bg: "rgba(200,255,0,.08)",    border: "rgba(200,255,0,.25)",  icon: "📦", label: "Dispatched",        step: 3, desc: "Your order is on its way. Check your tracking number below." },
+    completed:  { color: "#4caf50", bg: "rgba(76,175,80,.1)",     border: "rgba(76,175,80,.3)",   icon: "✅", label: "Delivered",         step: 4, desc: "Order complete. Enjoy your kit!" },
+    cancelled:  { color: "var(--red)", bg: "rgba(220,50,50,.08)", border: "rgba(220,50,50,.25)",  icon: "✗",  label: "Cancelled",         step: 0, desc: "This order has been cancelled." },
+  };
 
-  if (loading) return <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading orders…</div>;
-  if (orders.length === 0) return <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No orders yet.</div>;
+  const STEPS = [
+    { step: 1, label: "Order Placed" },
+    { step: 2, label: "Processing" },
+    { step: 3, label: "Dispatched" },
+    { step: 4, label: "Delivered" },
+  ];
+
+  if (loading) return (
+    <div style={{ textAlign: "center", padding: 60, fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", letterSpacing: ".1em" }}>
+      LOADING ORDERS…
+    </div>
+  );
+
+  if (orders.length === 0) return (
+    <div style={{ textAlign: "center", padding: 60 }}>
+      <div style={{ fontSize: 40, marginBottom: 16 }}>📦</div>
+      <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 18, letterSpacing: ".15em", color: "var(--muted)", textTransform: "uppercase" }}>No Orders Yet</div>
+      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#2a3a10", marginTop: 8 }}>Head to the shop to browse our gear</div>
+    </div>
+  );
+
+  const selected = orders.find(o => o.id === activeOrder);
 
   return (
-    <div>
-      {orders.map(o => {
-        const items = Array.isArray(o.items) ? o.items : [];
-        return (
-          <div key={o.id} className="card mb-1" style={{ cursor: "pointer" }} onClick={() => setDetail(detail?.id === o.id ? null : o)}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{items.map(i => `${i.name} ×${i.qty}`).join(", ")}</div>
-                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                  {gmtShort(o.created_at)} · <span style={{ fontFamily: "'Share Tech Mono',monospace" }}>#{(o.id||"").slice(-8).toUpperCase()}</span>
+    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, alignItems: "start" }}>
+
+      {/* ── Order list sidebar ── */}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".2em", color: "var(--muted)", marginBottom: 10, textTransform: "uppercase" }}>Your Orders</div>
+        {orders.map(o => {
+          const meta = STATUS_META[o.status] || STATUS_META.pending;
+          const items = Array.isArray(o.items) ? o.items : [];
+          const isActive = o.id === activeOrder;
+          return (
+            <div key={o.id} onClick={() => setActiveOrder(o.id)}
+              style={{ padding: "12px 14px", marginBottom: 6, cursor: "pointer", border: `1px solid ${isActive ? meta.border : "var(--border)"}`, background: isActive ? meta.bg : "#0d0d0d", transition: "all .15s" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+                  #{(o.id||"").slice(-6).toUpperCase()}
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: meta.color, fontFamily: "'Share Tech Mono',monospace" }}>
+                  {meta.icon} {meta.label.toUpperCase()}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
-                <span style={{ fontWeight: 800, color: "var(--accent)" }}>£{Number(o.total).toFixed(2)}</span>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: isActive ? "#fff" : "var(--muted)", letterSpacing: ".05em", lineHeight: 1.3, marginBottom: 3 }}>
+                {items.slice(0,2).map(i => i.name).join(", ")}{items.length > 2 ? ` +${items.length-2}` : ""}
+              </div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a3a3a", display: "flex", justifyContent: "space-between" }}>
+                <span>{new Date(o.created_at).toLocaleDateString("en-GB", { day:"numeric", month:"short" })}</span>
+                <span style={{ color: isActive ? meta.color : "var(--muted)", fontWeight: 700 }}>£{Number(o.total).toFixed(2)}</span>
               </div>
             </div>
-            {detail?.id === o.id && (
-              <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", letterSpacing: ".1em", marginBottom: 8 }}>ORDER DETAILS</div>
-                <div className="table-wrap"><table className="data-table">
-                  <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
-                  <tbody>
-                    {items.map((i, idx) => (
-                      <tr key={idx}><td>{i.name}</td><td>{i.qty}</td><td>£{Number(i.price).toFixed(2)}</td><td className="text-green">£{(Number(i.price) * i.qty).toFixed(2)}</td></tr>
-                    ))}
-                    <tr style={{ borderTop: "2px solid var(--border)" }}>
-                      <td colSpan={3}>Postage ({o.postage_name || "—"})</td>
-                      <td>£{Number(o.postage || 0).toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={3} style={{ fontWeight: 900 }}>TOTAL</td>
-                      <td className="text-green" style={{ fontWeight: 900 }}>£{Number(o.total).toFixed(2)}</td>
-                    </tr>
-                  </tbody>
-                </table></div>
-                {o.customer_address && (
-                  <div style={{ marginTop: 10, fontSize: 12 }}>
-                    <span style={{ color: "var(--muted)" }}>Shipping to: </span>
-                    <span style={{ whiteSpace: "pre-line" }}>{o.customer_address}</span>
+          );
+        })}
+      </div>
+
+      {/* ── Order detail ── */}
+      {selected && (() => {
+        const items = Array.isArray(selected.items) ? selected.items : [];
+        const meta = STATUS_META[selected.status] || STATUS_META.pending;
+        const isCancelled = selected.status === "cancelled";
+
+        return (
+          <div>
+            {/* Status header */}
+            <div style={{ background: meta.bg, border: `1px solid ${meta.border}`, padding: "18px 22px", marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                <div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", letterSpacing: ".15em", marginBottom: 4 }}>
+                    ORDER #{(selected.id||"").slice(-8).toUpperCase()}
                   </div>
-                )}
-                {o.tracking_number && (
-                  <div style={{ marginTop: 10, padding: "10px 14px", background: "#0c1009", border: "1px solid #2a3a10", borderRadius: 4 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--accent)", marginBottom: 4 }}>📮 TRACKING NUMBER</div>
-                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{o.tracking_number}</div>
+                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", color: meta.color, textTransform: "uppercase" }}>
+                    {meta.icon} {meta.label}
                   </div>
-                )}
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 5 }}>{meta.desc}</div>
+                </div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: "var(--accent)" }}>
+                  £{Number(selected.total).toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            {/* Progress tracker (skip for cancelled) */}
+            {!isCancelled && (
+              <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "16px 22px", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>Order Progress</div>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  {STEPS.map((s, i) => {
+                    const done = meta.step >= s.step;
+                    const current = meta.step === s.step;
+                    return (
+                      <React.Fragment key={s.step}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? "#c8ff00" : "#1a1a1a", border: `2px solid ${done ? "#c8ff00" : current ? "rgba(200,255,0,.4)" : "#2a2a2a"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: done ? "#000" : "var(--muted)", fontWeight: 900, boxShadow: current ? "0 0 12px rgba(200,255,0,.4)" : "none", transition: "all .3s" }}>
+                            {done ? "✓" : s.step}
+                          </div>
+                          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: done ? "#c8ff00" : "var(--muted)", marginTop: 6, textAlign: "center", letterSpacing: ".08em", textTransform: "uppercase" }}>{s.label}</div>
+                        </div>
+                        {i < STEPS.length - 1 && (
+                          <div style={{ flex: 2, height: 2, background: meta.step > s.step ? "#c8ff00" : "#1a1a1a", transition: "background .3s", marginBottom: 20 }} />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tracking number */}
+            {selected.tracking_number && (
+              <div style={{ background: "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.25)", padding: "14px 22px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "#c8ff00", marginBottom: 4, textTransform: "uppercase" }}>📮 Tracking Number</div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 700, color: "#fff" }}>{selected.tracking_number}</div>
+                </div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)" }}>Use this to track your parcel with the courier</div>
+              </div>
+            )}
+
+            {/* Refund notice */}
+            {selected.refund_amount > 0 && (
+              <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "12px 18px", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#4fc3f7", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>💳 Refund Issued</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)" }}>
+                  £{Number(selected.refund_amount).toFixed(2)} refunded to your PayPal
+                  {selected.refund_note ? ` — ${selected.refund_note}` : ""}
+                </div>
+              </div>
+            )}
+
+            {/* Items table */}
+            <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", marginBottom: 14 }}>
+              <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", textTransform: "uppercase" }}>
+                Items
+              </div>
+              {items.map((item, idx) => (
+                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderBottom: idx < items.length - 1 ? "1px solid var(--border)" : "none" }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{item.name}</div>
+                    {item.variant && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{item.variant}</div>}
+                  </div>
+                  <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)" }}>×{item.qty}</div>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--text)", minWidth: 60, textAlign: "right" }}>£{(Number(item.price) * item.qty).toFixed(2)}</div>
+                  </div>
+                </div>
+              ))}
+              <div style={{ padding: "10px 16px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Postage ({selected.postage_name || "Standard"})</span>
+                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>£{Number(selected.postage || 0).toFixed(2)}</span>
+              </div>
+              <div style={{ padding: "12px 16px", borderTop: "2px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
+                <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: ".08em", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase" }}>Total Paid</span>
+                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 900, color: "var(--accent)" }}>£{Number(selected.total).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Delivery address */}
+            {selected.customer_address && (
+              <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "14px 18px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 8, textTransform: "uppercase" }}>📍 Shipping Address</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--text)", whiteSpace: "pre-line", lineHeight: 1.8 }}>{selected.customer_address}</div>
               </div>
             )}
           </div>
         );
-      })}
+      })()}
     </div>
   );
 }
@@ -5363,12 +5564,90 @@ function AdminDash({ data, setSection }) {
     lowStockVariants.length > 0 && { msg: lowStockVariants.length + " variant product(s) have low stock variants.", section: "shop", color: "gold", icon: "⚠️" },
   ].filter(Boolean);
 
+  // Quick action state
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderResult, setReminderResult] = useState(null);
+
+  // Find next upcoming event (for quick reminder)
+  const nextEvent = data.events
+    .filter(e => e.published && new Date(e.date) >= new Date())
+    .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+  const sendRemindersNow = async () => {
+    if (!nextEvent) return;
+    setReminderBusy(true);
+    setReminderResult(null);
+    try {
+      const bookedUsers = nextEvent.bookings.map(b => {
+        const u = data.users.find(u => u.id === b.userId);
+        return u ? { ...u, bookingType: b.type, bookingTotal: b.total } : null;
+      }).filter(Boolean);
+      if (bookedUsers.length === 0) { setReminderResult({ sent: 0, failed: 0 }); return; }
+      const results = await sendEventReminderEmail({ ev: nextEvent, bookedUsers });
+      setReminderResult(results);
+    } catch (e) {
+      setReminderResult({ error: e.message });
+    } finally { setReminderBusy(false); }
+  };
+
   return (
     <div>
       <div className="page-header">
         <div><div className="page-title">Dashboard</div><div className="page-sub">Operations overview · All times GMT</div></div>
         <GmtClock />
       </div>
+
+      {/* ── QUICK ACTIONS ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", color: "var(--muted)", marginBottom: 12, textTransform: "uppercase" }}>⚡ Quick Actions</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {[
+            { icon: "📅", label: "New Event", sub: "Create & publish", action: () => setSection("events"), color: "var(--accent)", textColor: "#000" },
+            { icon: "👥", label: "Players", sub: `${data.users.filter(u=>u.role==="player").length} registered`, action: () => setSection("players"), color: "rgba(79,195,247,.12)", textColor: "#4fc3f7", border: "rgba(79,195,247,.3)" },
+            { icon: "🛒", label: "Shop Orders", sub: "Manage orders", action: () => setSection("shop"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
+            { icon: "📋", label: "Waivers", sub: unsigned > 0 ? `${unsigned} unsigned` : "All signed", action: () => setSection("unsigned-waivers"), color: unsigned > 0 ? "rgba(220,50,50,.12)" : "rgba(100,180,50,.08)", textColor: unsigned > 0 ? "var(--red)" : "var(--accent)", border: unsigned > 0 ? "rgba(220,50,50,.3)" : "rgba(100,180,50,.2)" },
+            { icon: "⭐", label: "VIP Queue", sub: data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length > 0 ? `${data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length} pending` : "No pending", action: () => setSection("players"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
+            { icon: "💰", label: "Revenue", sub: "View report", action: () => setSection("revenue"), color: "rgba(100,180,50,.08)", textColor: "var(--accent)", border: "rgba(100,180,50,.2)" },
+            { icon: "⚙️", label: "Settings", sub: "Site config", action: () => setSection("settings"), color: "rgba(150,150,150,.08)", textColor: "var(--muted)", border: "rgba(150,150,150,.2)" },
+          ].map(qa => (
+            <button key={qa.label} onClick={qa.action}
+              style={{ background: qa.color, border: `1px solid ${qa.border || "rgba(200,255,0,.25)"}`, padding: "12px 18px", cursor: "pointer", minWidth: 120, textAlign: "left", transition: "opacity .15s" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = ".75"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+            >
+              <div style={{ fontSize: 20, marginBottom: 4 }}>{qa.icon}</div>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".1em", color: qa.textColor, textTransform: "uppercase" }}>{qa.label}</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{qa.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── EVENT REMINDER QUICK SEND ── */}
+      {nextEvent && (
+        <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".12em", color: "#c8ff00", textTransform: "uppercase" }}>📅 Next Event: {nextEvent.title}</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
+              {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {nextEvent.bookings.length} player(s) booked
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {reminderResult && !reminderResult.error && (
+              <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--accent)" }}>
+                ✓ {reminderResult.sent} sent{reminderResult.failed > 0 ? `, ${reminderResult.failed} failed` : ""}
+              </span>
+            )}
+            {reminderResult?.error && (
+              <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--red)" }}>✗ {reminderResult.error}</span>
+            )}
+            <button className="btn btn-sm btn-primary" onClick={sendRemindersNow} disabled={reminderBusy || nextEvent.bookings.length === 0}
+              style={{ fontSize: 11, letterSpacing: ".1em" }}>
+              {reminderBusy ? "Sending…" : "📧 Send Reminders"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid-6 mb-2">
         {[
@@ -5986,6 +6265,20 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <div className="gap-2">
                       <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...ev }); setModal(ev.id); }}>Edit</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => clone(ev)}>Clone</button>
+                      {ev.published && new Date(ev.date) >= new Date() && ev.bookings.length > 0 && (
+                        <button className="btn btn-sm btn-ghost" style={{ color: "var(--accent)", borderColor: "rgba(200,255,0,.3)" }}
+                          onClick={async () => {
+                            showToast("Sending reminders…", "gold");
+                            try {
+                              const bookedUsers = ev.bookings.map(b => {
+                                const u = data.users.find(u => u.id === b.userId);
+                                return u ? { ...u, bookingType: b.type } : null;
+                              }).filter(Boolean);
+                              const r = await sendEventReminderEmail({ ev, bookedUsers });
+                              showToast(`📧 Reminders: ${r.sent} sent${r.failed > 0 ? `, ${r.failed} failed` : ""}`, r.failed > 0 ? "gold" : "");
+                            } catch(e) { showToast("Failed: " + e.message, "red"); }
+                          }}>📧 Remind</button>
+                      )}
                       <button className="btn btn-sm btn-danger" onClick={() => setDelEventConfirm(ev)}>Delete</button>
                     </div>
                   </td>
