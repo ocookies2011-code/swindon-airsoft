@@ -3433,12 +3433,18 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen }) {
   const [placing, setPlacing] = useState(false);
   const [shopSquareError, setShopSquareError] = useState(null);
+  const [validDefence, setValidDefence] = useState("");
 
   const postageOptions = data.postageOptions || [];
   const [postageId, setPostageId] = useState(() => postageOptions[0]?.id || "");
   useEffect(() => {
     if (!postageId && postageOptions.length > 0) setPostageId(postageOptions[0].id);
   }, [postageOptions.length]);
+
+  // Pre-fill valid defence from player's UKARA ID when cart opens
+  useEffect(() => {
+    if (cartOpen && cu?.ukara && !validDefence) setValidDefence(cu.ukara);
+  }, [cartOpen]);
 
   const postage = postageOptions.find(p => p.id === postageId) || postageOptions[0] || { name: "Collection", price: 0 };
   const hasNoPost = cart.some(i => i.noPost);
@@ -3482,6 +3488,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         subtotal: subTotal, postage: postageTotal,
         postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         total: grandTotal, squareOrderId: squarePayment.id,
+        validDefence: validDefence.trim() || null,
       });
       showToast("✅ Order confirmed! Thank you.");
       try {
@@ -3774,6 +3781,25 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 )}
                 {hasNoPost && <div className="alert alert-gold mt-1" style={{ borderRadius:0 }}>⚠ COLLECTION-ONLY ITEMS — NO POSTING</div>}
                 {cu?.vipStatus === "active" && <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"8px 12px", marginTop:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".12em", color:"#c8a000" }}>★ VIP 10% DISCOUNT APPLIED</div>}
+
+                {/* ── Valid Defence ── */}
+                <div style={{ marginTop:14, background:"#080a06", border:"1px solid #1a2808", padding:"12px 14px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", textTransform:"uppercase" }}>🪪 VALID DEFENCE</div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em" }}>— OPTIONAL</div>
+                  </div>
+                  <input
+                    value={validDefence}
+                    onChange={e => setValidDefence(e.target.value)}
+                    placeholder="e.g. UKARA-2025-042 or site membership no."
+                    style={{ width:"100%", boxSizing:"border-box", background:"#0c1009", border:"1px solid #2a3a10", borderRadius:0, color:"#b0c090", fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 10px", outline:"none" }}
+                    onFocus={e => e.target.style.borderColor="#c8ff00"}
+                    onBlur={e  => e.target.style.borderColor="#2a3a10"}
+                  />
+                  <div style={{ marginTop:6, fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#2a3a10", lineHeight:1.7 }}>
+                    Enter your UKARA ID, site membership number, or other valid defence for purchasing RIFs. Leave blank if not purchasing RIF items.
+                  </div>
+                </div>
 
                 <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:24, marginTop:16, paddingTop:12, borderTop:"1px solid #2a3a10", color:"#e8f0d8" }}>
                   <span>TOTAL</span>
@@ -7958,6 +7984,12 @@ function AdminOrdersInline({ showToast }) {
                 <div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>SHIPPING ADDRESS</div>
                 <div style={{ fontSize:13, whiteSpace:"pre-line", background:"var(--bg4)", padding:"10px 12px", borderRadius:3, border:"1px solid var(--border)" }}>{detail.customer_address || <span style={{ color:"var(--muted)" }}>No address on file</span>}</div>
               </div>
+              {detail.valid_defence && (
+                <div style={{ gridColumn:"1 / -1" }}>
+                  <div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>🪪 VALID DEFENCE</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, fontWeight:700, background:"rgba(200,255,0,.04)", padding:"8px 12px", borderRadius:3, border:"1px solid rgba(200,255,0,.18)", color:"var(--accent)" }}>{detail.valid_defence}</div>
+                </div>
+              )}
               {detail.tracking_number && (
                 <div style={{ gridColumn:"1 / -1" }}>
                   <div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>📮 TRACKING NUMBER</div>
@@ -8287,6 +8319,12 @@ function AdminOrders({ showToast }) {
               </div>
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
               <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>SQUARE REF</div><div className="mono" style={{ fontSize: 11, color: (detail.square_order_id || detail.paypal_order_id) ? "var(--text)" : "var(--muted)" }}>{detail.square_order_id || detail.paypal_order_id || "—"}</div></div>
+              {detail.valid_defence && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>🪪 VALID DEFENCE</div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 13, fontWeight: 700, background: "rgba(200,255,0,.04)", padding: "8px 12px", borderRadius: 3, border: "1px solid rgba(200,255,0,.18)", color: "var(--accent)" }}>{detail.valid_defence}</div>
+                </div>
+              )}
               {detail.tracking_number && (
                 <div style={{ gridColumn: "1 / -1" }}>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>📮 TRACKING NUMBER</div>

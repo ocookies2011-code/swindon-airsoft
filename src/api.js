@@ -651,6 +651,7 @@ export const shopOrders = wrapWithTimeout({
       postage_name:     order.postageName || '',
       status:           'pending',
       square_order_id:  order.squareOrderId || null,
+      valid_defence:    order.validDefence  || null,
     }).select().single()
     if (error) throw error
     return data
