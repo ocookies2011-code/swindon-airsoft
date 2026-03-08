@@ -484,6 +484,12 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 .pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:0 16px;height:var(--nav-h);cursor:pointer;white-space:nowrap;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:color .15s;}
 .pub-nav-link:hover{color:#fff;}
 .pub-nav-link.active{color:#fff;}
+.pub-nav-link-wrap{position:relative;display:flex;align-items:center;}
+.pub-nav-link-wrap:hover .pub-nav-dropdown{display:block;}
+.pub-nav-dropdown{display:none;position:absolute;top:100%;left:0;background:#0d0d0d;border:1px solid #1a1a1a;border-top:2px solid var(--accent);min-width:160px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.7);}
+.pub-nav-dropdown-item{display:block;width:100%;background:none;border:none;color:var(--muted);font-size:11px;font-weight:700;padding:11px 18px;cursor:pointer;text-align:left;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:all .1s;white-space:nowrap;border-left:2px solid transparent;}
+.pub-nav-dropdown-item:hover{background:#1a1a1a;color:#fff;border-left-color:var(--accent);}
+.pub-nav-dropdown-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,255,0,.04);}
 .pub-nav-actions{display:flex;gap:10px;align-items:center;margin-left:auto;flex-shrink:0;}
 .pub-nav-hamburger{display:none;background:none;border:1px solid #333;color:var(--text);padding:6px 10px;font-size:18px;cursor:pointer;flex-shrink:0;margin-left:auto;}
 
@@ -1392,11 +1398,18 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     { id: "shop", label: "Shop", icon: "🛒" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
     { id: "gallery", label: "Gallery", icon: "🖼" },
-    { id: "qa", label: "Q&A", icon: "❓" },
-    { id: "about", label: "About", icon: "ℹ️" },
-    { id: "staff", label: "Staff", icon: "🪖" },
-    { id: "contact", label: "Contact", icon: "✉️" },
+    {
+      id: "about", label: "About", icon: "ℹ️",
+      children: [
+        { id: "about", label: "About Us", icon: "ℹ️" },
+        { id: "qa", label: "Q&A / Rules", icon: "❓" },
+        { id: "staff", label: "Staff", icon: "🪖" },
+        { id: "contact", label: "Contact", icon: "✉️" },
+        { id: "terms", label: "Terms & Privacy", icon: "📄" },
+      ]
+    },
   ];
+  const aboutPages = ["about","qa","staff","contact","terms"];
   const go = (id) => {
     // Guard: admin page requires admin role — never navigate there otherwise
     if (id === "admin" && cu?.role !== "admin") return;
@@ -1425,9 +1438,24 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
           {/* Desktop links */}
           <div className="pub-nav-links">
             {links.map(l => (
-              <button key={l.id} className={`pub-nav-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
-                {l.label}
-              </button>
+              l.children ? (
+                <div key={l.id} className="pub-nav-link-wrap">
+                  <button className={`pub-nav-link ${aboutPages.includes(page) ? "active" : ""}`} onClick={() => go(l.id)}>
+                    {l.label} <span style={{ fontSize:9, opacity:.6, marginLeft:2 }}>▾</span>
+                  </button>
+                  <div className="pub-nav-dropdown">
+                    {l.children.map(c => (
+                      <button key={c.id} className={`pub-nav-dropdown-item ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)}>
+                        {c.icon} {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <button key={l.id} className={`pub-nav-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
+                  {l.label}
+                </button>
+              )
             ))}
           </div>
           {/* Desktop actions */}
@@ -1459,9 +1487,20 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
             SWINDON <span style={{ color: "var(--accent)" }}>AIRSOFT</span>
           </div>
           {links.map(l => (
-            <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
-              <span style={{ fontSize: 20 }}>{l.icon}</span> {l.label}
-            </button>
+            l.children ? (
+              <div key={l.id}>
+                <div style={{ padding:"10px 20px 4px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase" }}>◈ ABOUT</div>
+                {l.children.map(c => (
+                  <button key={c.id} className={`pub-nav-drawer-link ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)} style={{ paddingLeft:32 }}>
+                    <span style={{ fontSize:18 }}>{c.icon}</span> {c.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
+                <span style={{ fontSize: 20 }}>{l.icon}</span> {l.label}
+              </button>
+            )
           ))}
           <hr className="pub-nav-drawer-divider" />
           {cu ? (
@@ -11850,20 +11889,21 @@ function TermsPage({ setPage }) {
         {/* ══ TERMS OF USE ══ */}
         {activeSection === "terms" && (
           <div>
-            <SectionTitle id="terms-general">General Terms of Use</SectionTitle>
-            <Para>By accessing and using the Swindon Airsoft website and booking platform, you agree to be bound by these Terms of Use. These terms apply to all visitors, registered players, and anyone who makes a booking or purchase through this platform.</Para>
-            <Para>Swindon Airsoft reserves the right to update these terms at any time. Continued use of the platform following any changes constitutes acceptance of the revised terms.</Para>
+            <SectionTitle id="terms-1">1. Introduction</SectionTitle>
+            <Para>By accessing and using the Swindon Airsoft website and booking platform, you agree to be bound by these Terms and Conditions. These terms apply to all visitors, registered players, and anyone who makes a booking or purchase through this platform.</Para>
+            <InfoBox type="important">Swindon Airsoft reserves the right to amend these terms and conditions at any time. Updated terms will be posted on this website and communicated to players as necessary. Continued use of the platform following any changes constitutes acceptance of the revised terms.</InfoBox>
 
-            <SectionTitle id="terms-eligibility">Eligibility & Age Requirements</SectionTitle>
-            <InfoBox type="important">All players must be 18 years of age or older to participate unaccompanied. Players aged 16–17 may attend only when accompanied by a parent or legal guardian who has signed the liability waiver on their behalf.</InfoBox>
+            <SectionTitle id="terms-2">2. Age Requirements</SectionTitle>
+            <InfoBox type="warning">Players must be at least 12 years old to participate.</InfoBox>
             <BulletList items={[
-              "Valid photo ID may be required on arrival to verify age.",
-              "Swindon Airsoft reserves the right to refuse entry if age cannot be verified.",
-              "Booking on behalf of a minor constitutes confirmation that a responsible adult will be present throughout the event.",
-              "Players under 16 are not permitted on site under any circumstances.",
+              "Players aged 12–13 must have a parent or guardian present and playing with them on the day.",
+              "Players aged 14–17 must have written parental or guardian consent before attending.",
+              "Players 18 and over may attend and book independently.",
+              "Valid ID or consent documentation may be requested on arrival.",
+              "Swindon Airsoft reserves the right to refuse entry if age requirements cannot be verified.",
             ]} />
 
-            <SectionTitle id="terms-conduct">Code of Conduct</SectionTitle>
+            <SectionTitle id="terms-3">3. Code of Conduct</SectionTitle>
             <Para>All players are expected to behave in a safe, respectful, and sportsmanlike manner at all times. Failure to comply may result in removal from the field without refund.</Para>
             <BulletList items={[
               "Follow all marshal instructions immediately and without question.",
@@ -11871,22 +11911,65 @@ function TermsPage({ setPage }) {
               "Aggressive behaviour, abuse, or threatening conduct toward other players or staff will result in immediate removal and a permanent ban.",
               "Alcohol and illegal substances are strictly prohibited on site.",
               "All weapons must remain holstered or slung when not in the active play area.",
-              "Minimum engagement distances must be observed at all times — marshals will brief these before each game.",
               "Eye protection must be worn at all times in the game zone, no exceptions.",
             ]} />
 
-            <SectionTitle id="terms-equipment">Equipment Rules</SectionTitle>
+            <SectionTitle id="terms-4">4. FPS Limits & Chronographing</SectionTitle>
+            <Para>All guns must meet Swindon Airsoft's FPS (Feet Per Second) limits. Every weapon will be chronographed before the game begins. Weapons exceeding the limits below will not be permitted on the field.</Para>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:10, marginBottom:20 }}>
+              {[
+                { type:"Full Auto Rifle", fps:"350fps", weight:"0.20g", med:"No MED" },
+                { type:"DMR", fps:"450fps", weight:"0.20g", med:"30m MED" },
+                { type:"Bolt-Action Sniper", fps:"500fps", weight:"0.20g", med:"30m MED" },
+              ].map(g => (
+                <div key={g.type} style={{ background:"rgba(200,255,0,.04)", border:"1px solid #2a3a10", padding:"14px 16px" }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".1em", color:"#c8ff00", textTransform:"uppercase", marginBottom:8 }}>{g.type}</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:2 }}>
+                    <div>Limit: <span style={{ color:"#c8e878" }}>{g.fps} ({g.weight})</span></div>
+                    <div>MED: <span style={{ color:"#c8e878" }}>{g.med}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <SectionTitle id="terms-5">5. Engagement Distances</SectionTitle>
+            <Para>Minimum engagement distances (MED) must be observed at all times. If a target is within the MED, players must shout "BANG KILL" rather than shooting. Marshals will brief these rules before each game.</Para>
             <BulletList items={[
-              "All RIFs (Realistic Imitation Firearms) must be chronographed on the day. Weapons exceeding site limits will not be permitted.",
-              "Only biodegradable BBs are permitted on site.",
-              "Swindon Airsoft accepts no liability for loss or damage to personal equipment brought on site.",
-              "Rental equipment remains the property of Swindon Airsoft and must be returned in good working order.",
-              "Damage to rental equipment caused by misuse or negligence may be charged to the player.",
+              "Full Auto Rifle (350fps): No minimum engagement distance.",
+              "DMR (450fps): 30 metre minimum engagement distance.",
+              "Bolt-Action Sniper (500fps): 30 metre minimum engagement distance.",
             ]} />
 
-            <SectionTitle id="terms-vip">VIP Membership</SectionTitle>
+            <SectionTitle id="terms-6">6. Personal Equipment Rules</SectionTitle>
+            <BulletList items={[
+              "All RIFs (Realistic Imitation Firearms) must be chronographed before play. Any weapon exceeding site FPS limits will be banned from the field for that session.",
+              "Swindon Airsoft accepts no liability for loss or damage to personal equipment brought on site.",
+              "All personal equipment is used entirely at the owner's risk.",
+            ]} />
+
+            <SectionTitle id="terms-7">7. Rental Equipment</SectionTitle>
+            <Para>Rental equipment remains the property of Swindon Airsoft and must be returned in good working order at the end of the session. Players are responsible for rental equipment while it is in their possession.</Para>
+            <InfoBox type="warning">Players must not disassemble, modify, or tamper with rented equipment in any way — this includes removing batteries.</InfoBox>
+            <Para>Players will be charged for any damage or loss of rental equipment at the following rates:</Para>
+            <div style={{ background:"#0a0c08", border:"1px solid #1a2808", overflow:"hidden", marginBottom:16 }}>
+              {[
+                ["Rifle", "£153 — replacement rifle, or cost of parts required for repair"],
+                ["Goggles / Mask", "£23 — full mask replacement · £13 — visor replacement only"],
+                ["Chest Rig", "£20 — repair charge for any damage"],
+                ["Speedloader", "£5 — replacement"],
+                ["Magazine", "£16 per replacement magazine"],
+              ].map(([item, cost], i) => (
+                <div key={item} style={{ display:"flex", alignItems:"flex-start", gap:16, padding:"10px 16px", background: i % 2 === 0 ? "transparent" : "rgba(200,255,0,.02)", borderBottom:"1px solid #1a2808" }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".08em", color:"#c8e878", minWidth:120, flexShrink:0, textTransform:"uppercase" }}>{item}</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.7 }}>{cost}</div>
+                </div>
+              ))}
+            </div>
+
+            <SectionTitle id="terms-8">8. VIP Membership</SectionTitle>
             <Para>VIP membership is an annual subscription providing discounts and benefits as described on the VIP page. Membership fees are non-refundable once activated. Membership is personal and non-transferable. Swindon Airsoft reserves the right to revoke VIP status for breach of these terms without refund of the membership fee.</Para>
 
+            <SectionTitle id="terms-9">9. Governing Law</SectionTitle>
             <InfoBox type="info">These terms are governed by the laws of England and Wales. Any disputes shall be subject to the exclusive jurisdiction of the courts of England and Wales.</InfoBox>
           </div>
         )}
@@ -11894,7 +11977,7 @@ function TermsPage({ setPage }) {
         {/* ══ BOOKINGS & CANCELLATIONS ══ */}
         {activeSection === "bookings" && (
           <div>
-            <SectionTitle id="booking-policy">Booking Policy</SectionTitle>
+            <SectionTitle id="booking-1">1. Booking Policy</SectionTitle>
             <Para>All event bookings are made through this platform and are confirmed upon receipt of full payment via PayPal. Booking confirmation and a Field Pass will be sent to your registered email address. Please bring your Field Pass (printed or on your phone) to the event.</Para>
             <BulletList items={[
               "Bookings are personal and non-transferable.",
@@ -11904,7 +11987,7 @@ function TermsPage({ setPage }) {
               "In the event of a cancellation by Swindon Airsoft, a full refund or credit will be issued.",
             ]} />
 
-            <SectionTitle id="cancellation-policy">Cancellation Policy</SectionTitle>
+            <SectionTitle id="booking-2">2. Cancellation Policy</SectionTitle>
             <InfoBox type="important">Cancellations are managed through your Profile → Bookings tab. You can cancel any upcoming booking that has not yet been checked in.</InfoBox>
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
@@ -11925,10 +12008,10 @@ function TermsPage({ setPage }) {
               ))}
             </div>
 
-            <SectionTitle id="rental-fee">Rental Booking Fee</SectionTitle>
+            <SectionTitle id="booking-3">3. Rental Booking Fee</SectionTitle>
             <Para>A 10% processing fee is retained on all rental booking cancellations, regardless of the notice given. This covers the cost of reserving and preparing rental equipment. This fee applies to the base rental cost only and does not apply to walk-on ticket cancellations.</Para>
 
-            <SectionTitle id="credits">Game Day Credits</SectionTitle>
+            <SectionTitle id="booking-4">4. Game Day Credits</SectionTitle>
             <Para>Game Day Credits are issued as a goodwill gesture for late cancellations and in certain other circumstances at Swindon Airsoft's discretion. Credits are:</Para>
             <BulletList items={[
               "Valid for use on future Swindon Airsoft event bookings only.",
@@ -11938,7 +12021,7 @@ function TermsPage({ setPage }) {
               "Valid for 12 months from the date of issue — please contact us if credits are nearing expiry.",
             ]} />
 
-            <SectionTitle id="event-cancellations">Event Cancellations by Swindon Airsoft</SectionTitle>
+            <SectionTitle id="booking-5">5. Event Cancellations by Swindon Airsoft</SectionTitle>
             <Para>In the unlikely event that Swindon Airsoft must cancel an event, all players with confirmed bookings will be notified by email as soon as possible. You will be offered either a full refund to your original payment method or the option to transfer your booking to the next available event date.</Para>
             <InfoBox type="warning">Swindon Airsoft cannot be held responsible for travel costs, accommodation, or other expenses incurred by players in connection with an event that is subsequently cancelled or rescheduled.</InfoBox>
           </div>
@@ -11947,10 +12030,10 @@ function TermsPage({ setPage }) {
         {/* ══ SHOP & ORDERS ══ */}
         {activeSection === "shop" && (
           <div>
-            <SectionTitle id="shop-general">Shop Terms</SectionTitle>
+            <SectionTitle id="shop-1">1. Shop Terms</SectionTitle>
             <Para>All shop purchases are processed via PayPal. Prices displayed include VAT where applicable. Swindon Airsoft reserves the right to amend prices without notice. All orders are subject to availability.</Para>
 
-            <SectionTitle id="shop-delivery">Delivery & Postage</SectionTitle>
+            <SectionTitle id="shop-2">2. Delivery & Postage</SectionTitle>
             <BulletList items={[
               "Standard UK postage is available on most items. Postage costs are displayed at checkout.",
               "Some items are marked 'Collection Only' and must be collected at a game day — these cannot be posted.",
@@ -11959,7 +12042,7 @@ function TermsPage({ setPage }) {
               "International orders are not currently available.",
             ]} />
 
-            <SectionTitle id="shop-returns">Returns & Refunds</SectionTitle>
+            <SectionTitle id="shop-3">3. Returns & Refunds</SectionTitle>
             <Para>We want you to be happy with your purchase. If you have any issue with an order, please contact us within 14 days of receipt.</Para>
             <BulletList items={[
               "Faulty or incorrect items will be replaced or refunded in full, including postage costs.",
@@ -11969,7 +12052,7 @@ function TermsPage({ setPage }) {
               "Return postage costs are the responsibility of the customer unless the item is faulty or incorrect.",
             ]} />
 
-            <SectionTitle id="shop-vip">VIP Discounts in the Shop</SectionTitle>
+            <SectionTitle id="shop-4">4. VIP Discounts in the Shop</SectionTitle>
             <Para>Active VIP members receive a 10% discount on all eligible shop purchases. This discount is applied automatically at checkout when you are logged in with an active VIP membership. The discount applies to the item price only and does not reduce postage costs.</Para>
 
             <InfoBox type="info">If you experience any issues with an order, please use the Contact page to get in touch. Include your order reference number for the fastest resolution.</InfoBox>
@@ -11981,7 +12064,7 @@ function TermsPage({ setPage }) {
           <div>
             <InfoBox type="warning">The liability waiver must be completed once per calendar year before your first booking. It is completed digitally through your Profile page after registering an account.</InfoBox>
 
-            <SectionTitle id="waiver-summary">Waiver Summary</SectionTitle>
+            <SectionTitle id="waiver-1">1. Waiver Summary</SectionTitle>
             <Para>By completing the liability waiver, you acknowledge and agree to the following key points. The full waiver text is presented during the digital signing process.</Para>
 
             <BulletList items={[
@@ -11993,10 +12076,10 @@ function TermsPage({ setPage }) {
               "The waiver must be re-signed at the start of each new calendar year.",
             ]} />
 
-            <SectionTitle id="waiver-minors">Waiver for Minors</SectionTitle>
+            <SectionTitle id="waiver-2">2. Waiver for Minors</SectionTitle>
             <Para>Players aged 16–17 may participate only with a parent or legal guardian present who has completed the waiver on their behalf and accepts full responsibility for the minor throughout the event. Players under 16 are not permitted on site.</Para>
 
-            <SectionTitle id="waiver-medical">Medical Information</SectionTitle>
+            <SectionTitle id="waiver-3">3. Medical Information</SectionTitle>
             <Para>If you have any medical conditions, disabilities, or are taking medication that may affect your ability to participate safely, you must inform a marshal before the event begins. Swindon Airsoft will make reasonable efforts to accommodate participants but reserves the right to refuse participation on safety grounds.</Para>
 
             <InfoBox type="info">To sign or review your waiver, go to your <button onClick={() => setPage("profile")} style={{ background:"none", border:"none", color:"#c8ff00", cursor:"pointer", padding:0, fontFamily:"'Share Tech Mono',monospace", fontSize:12, textDecoration:"underline" }}>Profile → Waiver tab</button>.</InfoBox>
@@ -12008,7 +12091,7 @@ function TermsPage({ setPage }) {
           <div>
             <InfoBox type="info">Swindon Airsoft is committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018.</InfoBox>
 
-            <SectionTitle id="privacy-data">What Data We Collect</SectionTitle>
+            <SectionTitle id="privacy-1">1. What Data We Collect</SectionTitle>
             <Para>We collect the following personal data when you register and use this platform:</Para>
             <BulletList items={[
               "Name, email address, and phone number provided during registration.",
@@ -12022,7 +12105,7 @@ function TermsPage({ setPage }) {
               "Communication records — contact form messages sent through this platform.",
             ]} />
 
-            <SectionTitle id="privacy-use">How We Use Your Data</SectionTitle>
+            <SectionTitle id="privacy-2">2. How We Use Your Data</SectionTitle>
             <BulletList items={[
               "To process and manage your event bookings and shop orders.",
               "To send booking confirmations, dispatch notifications, and event reminders by email.",
@@ -12033,7 +12116,7 @@ function TermsPage({ setPage }) {
               "To improve the platform and our services through anonymised analytics.",
             ]} />
 
-            <SectionTitle id="privacy-sharing">Who We Share Data With</SectionTitle>
+            <SectionTitle id="privacy-3">3. Who We Share Data With</SectionTitle>
             <Para>We do not sell your personal data to third parties. We share data only where necessary:</Para>
             <BulletList items={[
               "PayPal — payment processing. PayPal's own privacy policy applies to payment transactions.",
@@ -12042,7 +12125,7 @@ function TermsPage({ setPage }) {
               "Legal authorities — if required by law or to prevent fraud or harm.",
             ]} />
 
-            <SectionTitle id="privacy-retention">How Long We Keep Your Data</SectionTitle>
+            <SectionTitle id="privacy-4">4. How Long We Keep Your Data</SectionTitle>
             <BulletList items={[
               "Account and profile data is retained for as long as your account is active.",
               "Booking and payment records are retained for 7 years for accounting and legal compliance.",
@@ -12050,7 +12133,7 @@ function TermsPage({ setPage }) {
               "Contact form messages are retained for 12 months.",
             ]} />
 
-            <SectionTitle id="privacy-rights">Your Rights</SectionTitle>
+            <SectionTitle id="privacy-5">5. Your Rights</SectionTitle>
             <Para>Under UK GDPR you have the following rights regarding your personal data:</Para>
             <BulletList items={[
               "Right of access — you can request a copy of the data we hold about you.",
@@ -12061,10 +12144,10 @@ function TermsPage({ setPage }) {
             ]} />
             <Para>To exercise any of these rights, or if you have a complaint about how we handle your data, please use the Contact page. You also have the right to lodge a complaint with the Information Commissioner's Office (ICO) at ico.org.uk.</Para>
 
-            <SectionTitle id="privacy-cookies">Cookies & Analytics</SectionTitle>
+            <SectionTitle id="privacy-6">6. Cookies & Analytics</SectionTitle>
             <Para>This platform uses browser session storage for functional purposes only (e.g. keeping you logged in). We do not use advertising cookies or third-party tracking. Basic anonymised analytics may be collected by our hosting provider (Vercel) — please refer to Vercel's privacy policy for details.</Para>
 
-            <SectionTitle id="privacy-contact">Data Controller Contact</SectionTitle>
+            <SectionTitle id="privacy-7">7. Data Controller Contact</SectionTitle>
             <InfoBox type="important">
               For any data protection queries, contact us via the <button onClick={() => setPage("contact")} style={{ background:"none", border:"none", color:"#c8ff00", cursor:"pointer", padding:0, fontFamily:"'Share Tech Mono',monospace", fontSize:12, textDecoration:"underline" }}>Contact page</button> and mark your message as "Data Protection Enquiry". We will respond within 30 days.
             </InfoBox>
