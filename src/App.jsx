@@ -3198,11 +3198,20 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   const [shopCatFilter, setShopCatFilter] = useState("");
+  const [shopSearch, setShopSearch] = useState("");
   const allShopCategories = useMemo(() => {
     const cats = [...new Set((data.shop || []).map(p => p.category).filter(Boolean))].sort();
     return cats;
   }, [data.shop]);
-  const filteredShop = shopCatFilter ? (data.shop || []).filter(p => p.category === shopCatFilter) : (data.shop || []);
+  const filteredShop = useMemo(() => {
+    let list = data.shop || [];
+    if (shopCatFilter) list = list.filter(p => p.category === shopCatFilter);
+    if (shopSearch.trim()) {
+      const q = shopSearch.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q) || (p.category || "").toLowerCase().includes(q));
+    }
+    return list;
+  }, [data.shop, shopCatFilter, shopSearch]);
 
   return (
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
@@ -3249,8 +3258,23 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>ARMOURY IS EMPTY — AWAITING RESUPPLY</div>
         )}
 
+        {/* Search bar */}
+        <div style={{ marginBottom:16, position:"relative" }}>
+          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#3a5010", fontSize:14, pointerEvents:"none" }}>🔍</span>
+          <input
+            value={shopSearch}
+            onChange={e => setShopSearch(e.target.value)}
+            placeholder="SEARCH ARMOURY…"
+            style={{ width:"100%", background:"#0c1009", border:"1px solid #1a2808", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", padding:"10px 36px 10px 36px", outline:"none", boxSizing:"border-box", textTransform:"uppercase" }}
+          />
+          {shopSearch && (
+            <button onClick={() => setShopSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#5a7a30", cursor:"pointer", fontSize:16, lineHeight:1 }}>✕</button>
+          )}
+        </div>
+
+        {/* Category filter tabs */}
         {allShopCategories.length > 0 && (
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:24, alignItems:"center" }}>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom: (shopSearch || shopCatFilter) ? 10 : 24, alignItems:"center" }}>
             <button
               onClick={() => setShopCatFilter("")}
               style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", textTransform:"uppercase",
@@ -3272,6 +3296,22 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           </div>
         )}
 
+        {/* Results count */}
+        {(shopSearch || shopCatFilter) && filteredShop.length > 0 && (
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".18em", marginBottom:16 }}>
+            ▸ {filteredShop.length} ITEM{filteredShop.length !== 1 ? "S" : ""} FOUND
+            {shopSearch && <span> — "{shopSearch.toUpperCase()}"</span>}
+          </div>
+        )}
+
+        {filteredShop.length === 0 && (shopSearch || shopCatFilter) && (
+          <div style={{ maxWidth:1100, margin:"0 auto", padding:"60px 16px", textAlign:"center" }}>
+            <div style={{ fontSize:40, marginBottom:16, opacity:.2 }}>🎯</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".2em", color:"#2a3a10", textTransform:"uppercase" }}>NO ITEMS FOUND</div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#1a2808", letterSpacing:".15em", marginTop:8 }}>TRY A DIFFERENT SEARCH OR CLEAR FILTERS</div>
+            <button onClick={() => { setShopSearch(""); setShopCatFilter(""); }} style={{ marginTop:16, background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"6px 18px", cursor:"pointer" }}>CLEAR FILTERS</button>
+          </div>
+        )}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
           {filteredShop.map((item, idx) => {
             const hasV = item.variants?.length > 0;
@@ -3459,6 +3499,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
   const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const [imgLightbox, setImgLightbox] = useState(null); // url string when open
 
   const hasVariants = item.variants?.length > 0;
   const effectivePrice = selectedVariant
@@ -3514,7 +3555,12 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
               return (
                 <>
                   {displayImg
-                    ? <img src={displayImg} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#0a0a0a", transition:"opacity .2s" }} />
+                    ? (
+                      <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setImgLightbox(displayImg)}>
+                        <img src={displayImg} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#0a0a0a", transition:"opacity .2s" }} />
+                        <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,.7)", border:"1px solid rgba(200,255,0,.3)", color:"rgba(200,255,0,.8)", fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".15em", padding:"3px 8px", pointerEvents:"none" }}>⊕ ENLARGE</div>
+                      </div>
+                    )
                     : <div style={{ aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", fontSize:80, color:"#333" }}>🎯</div>
                   }
                   {allImgs.length > 1 && (
@@ -3649,6 +3695,44 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
       </div>
       </div>
     </div>
+
+      {/* Image lightbox */}
+      {imgLightbox && (
+        <div onClick={() => setImgLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.96)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+          {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+            <div key={v+h} style={{ position:"absolute", width:32, height:32, zIndex:501,
+              top:v==="top"?12:"auto", bottom:v==="bottom"?12:"auto",
+              left:h==="left"?12:"auto", right:h==="right"?12:"auto",
+              borderTop:v==="top"?"2px solid rgba(200,255,0,.4)":"none",
+              borderBottom:v==="bottom"?"2px solid rgba(200,255,0,.4)":"none",
+              borderLeft:h==="left"?"2px solid rgba(200,255,0,.4)":"none",
+              borderRight:h==="right"?"2px solid rgba(200,255,0,.4)":"none",
+            }} />
+          ))}
+          <img src={imgLightbox} alt="" onClick={e => e.stopPropagation()}
+            style={{ maxWidth:"90vw", maxHeight:"88vh", objectFit:"contain", boxShadow:"0 0 80px rgba(0,0,0,.9), 0 0 0 1px #1a2808", cursor:"default" }} />
+          <button onClick={() => setImgLightbox(null)}
+            style={{ position:"absolute", top:16, right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:14, width:36, height:36, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, letterSpacing:".1em", zIndex:502 }}>✕</button>
+          {/* Navigate between images */}
+          {(() => {
+            const variantImg = selectedVariant?.image;
+            const allImgs = variantImg ? [variantImg, ...(item.images||[]).filter(x => x !== variantImg)] : (item.images && item.images.length > 0 ? item.images : (item.image ? [item.image] : []));
+            const curIdx = allImgs.indexOf(imgLightbox);
+            if (allImgs.length < 2) return null;
+            return (
+              <>
+                <button onClick={e => { e.stopPropagation(); const i = (curIdx - 1 + allImgs.length) % allImgs.length; setImgLightbox(allImgs[i]); setActiveImgIdx(i); }}
+                  style={{ position:"absolute", left:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>‹</button>
+                <button onClick={e => { e.stopPropagation(); const i = (curIdx + 1) % allImgs.length; setImgLightbox(allImgs[i]); setActiveImgIdx(i); }}
+                  style={{ position:"absolute", right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>›</button>
+                <div style={{ position:"absolute", bottom:16, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"rgba(200,255,0,.4)", letterSpacing:".2em" }}>
+                  {String(curIdx+1).padStart(2,"0")} / {String(allImgs.length).padStart(2,"0")}
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
   );
 }
 
@@ -4277,10 +4361,84 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
   const waiverValid = (cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin";
-  const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date })));
+  const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev })));
 
   // Count actual checked-in games from booking records — source of truth
   const actualGamesAttended = myBookings.filter(b => b.checkedIn).length;
+
+  // ── Booking cancellation ──
+  const [cancelModal, setCancelModal] = useState(null); // booking object
+  const [cancelling, setCancelling] = useState(false);
+
+  const doCancel = async () => {
+    if (!cancelModal) return;
+    setCancelling(true);
+    try {
+      const b = cancelModal;
+      const eventDate = new Date(b.eventDate);
+      const hoursUntil = (eventDate - new Date()) / 36e5;
+      const isRental = b.type === "rental";
+      const within48 = hoursUntil < 48;
+
+      // Calculate refund
+      let refundAmount = Number(b.total);
+      if (isRental) refundAmount = refundAmount * 0.9; // 10% charge on rentals
+      refundAmount = Math.round(refundAmount * 100) / 100;
+
+      if (within48) {
+        // Credits only — no PayPal refund
+        const newCredits = (Number(cu.credits) || 0) + refundAmount;
+        await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
+        updateUser(cu.id, { credits: newCredits });
+      } else if (b.paypalOrderId) {
+        // Outside 48h — try PayPal refund
+        const [clientId, secret, mode] = await Promise.all([
+          api.settings.get("paypal_client_id"),
+          api.settings.get("paypal_client_secret"),
+          api.settings.get("paypal_mode"),
+        ]);
+        if (clientId && secret) {
+          try {
+            const isFullRefund = Math.abs(refundAmount - Number(b.total)) < 0.01;
+            await paypalRefund({ paypalOrderId: b.paypalOrderId, amount: isFullRefund ? null : refundAmount, clientId, secret, mode: mode || "sandbox" });
+          } catch {
+            // PayPal refund failed — fall back to credits
+            const newCredits = (Number(cu.credits) || 0) + refundAmount;
+            await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
+            updateUser(cu.id, { credits: newCredits });
+          }
+        } else {
+          // No PayPal creds — give credits
+          const newCredits = (Number(cu.credits) || 0) + refundAmount;
+          await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
+          updateUser(cu.id, { credits: newCredits });
+        }
+      } else {
+        // No PayPal order (manual/cash booking) — give credits
+        const newCredits = (Number(cu.credits) || 0) + refundAmount;
+        await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
+        updateUser(cu.id, { credits: newCredits });
+      }
+
+      // Delete booking
+      await api.bookings.delete(b.id);
+      save({ events: data.events.map(ev => ({ ...ev, bookings: ev.bookings.filter(bk => bk.id !== b.id) })) });
+
+      const isCredits = within48 || !b.paypalOrderId;
+      showToast(
+        isRental && within48
+          ? `Booking cancelled. £${refundAmount.toFixed(2)} game credits added (10% rental fee applied, within 48h).`
+          : isRental
+          ? `Booking cancelled. £${refundAmount.toFixed(2)} refunded (10% rental fee applied).`
+          : within48
+          ? `Booking cancelled. £${refundAmount.toFixed(2)} added as game credits (within 48h of event).`
+          : `Booking cancelled. £${refundAmount.toFixed(2)} refunded.`
+      );
+      setCancelModal(null);
+    } catch (e) {
+      showToast("Cancellation failed: " + (e.message || String(e)), "red");
+    } finally { setCancelling(false); }
+  };
   // Use the higher of stored count vs actual (in case bookings haven't all loaded)
   const gamesAttended = Math.max(cu.gamesAttended || 0, actualGamesAttended);
   const canApplyVip = gamesAttended >= 3 && cu.vipStatus === "none" && !cu.vipApplied;
@@ -4853,12 +5011,78 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                       ))}
                     </div>
                   </div>
+                  {/* Cancel button */}
+                  {!b.checkedIn && (() => {
+                    const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
+                    const canCancel = hoursUntil > 0;
+                    if (!canCancel) return null;
+                    const within48 = hoursUntil < 48;
+                    return (
+                      <div style={{ padding:"8px 22px 10px", borderTop:"1px solid #1a2808", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+                        <div style={{ fontSize:10, color:"#5a7a30", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".08em" }}>
+                          {within48
+                            ? "⚠ Within 48h — refund as credits only" + (b.type === "rental" ? " · 10% rental fee applies" : "")
+                            : b.type === "rental" ? "Rental — 10% fee applies on cancellation" : "Full refund available"}
+                        </div>
+                        <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".15em", padding:"4px 14px", cursor:"pointer", textTransform:"uppercase" }}>
+                          ✕ CANCEL BOOKING
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })
           )}
         </div>
       )}
+
+      {/* Cancel booking modal */}
+      {cancelModal && (() => {
+        const b = cancelModal;
+        const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
+        const within48 = hoursUntil < 48;
+        const isRental = b.type === "rental";
+        const originalTotal = Number(b.total);
+        const refundAmount = Math.round(originalTotal * (isRental ? 0.9 : 1) * 100) / 100;
+        const rentalFee = Math.round((originalTotal - refundAmount) * 100) / 100;
+        return (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+            <div style={{ background:"#0d0d0d", border:"1px solid #6b2222", maxWidth:440, width:"100%", padding:28 }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".12em", color:"#ef4444", textTransform:"uppercase", marginBottom:6 }}>⚠ CANCEL BOOKING</div>
+              <div style={{ fontWeight:700, fontSize:15, color:"var(--text)", marginBottom:16 }}>{b.eventTitle} — {b.eventDate}</div>
+
+              <div style={{ background:"#1a0a0a", border:"1px solid #3a1515", padding:16, marginBottom:20, display:"flex", flexDirection:"column", gap:8 }}>
+                {[
+                  ["Booking total", `£${originalTotal.toFixed(2)}`],
+                  isRental && ["Rental fee (10%)", `-£${rentalFee.toFixed(2)}`],
+                  ["You will receive", null],
+                ].filter(Boolean).map(([label, val]) => val ? (
+                  <div key={label} style={{ display:"flex", justifyContent:"space-between", fontSize:13, color: label.includes("fee") ? "var(--red)" : "var(--muted)" }}>
+                    <span>{label}</span><span style={{ color: label.includes("fee") ? "var(--red)" : "var(--text)", fontFamily:"'Share Tech Mono',monospace" }}>{val}</span>
+                  </div>
+                ) : null)}
+                <div style={{ borderTop:"1px solid #3a1515", paddingTop:8, display:"flex", justifyContent:"space-between", fontSize:16, fontWeight:800 }}>
+                  <span style={{ color:"var(--muted)" }}>Refund</span>
+                  <span style={{ color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>£{refundAmount.toFixed(2)}</span>
+                </div>
+                <div style={{ fontSize:11, color: within48 ? "var(--gold)" : "var(--muted)", marginTop:4 }}>
+                  {within48
+                    ? "⏱ Within 48h of event — refund will be added as game credits"
+                    : "✓ Outside 48h — refund via original payment method (or game credits if PayPal unavailable)"}
+                </div>
+              </div>
+
+              <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+                <button onClick={() => setCancelModal(null)} disabled={cancelling} className="btn btn-ghost">Keep Booking</button>
+                <button onClick={doCancel} disabled={cancelling} style={{ background:"#6b2222", border:"1px solid #ef4444", color:"#fca5a5", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".1em", padding:"8px 20px", cursor:cancelling?"wait":"pointer", textTransform:"uppercase" }}>
+                  {cancelling ? "Cancelling…" : "Confirm Cancellation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {tab === "orders" && <PlayerOrders cu={cu} />}
 
