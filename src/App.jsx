@@ -1484,11 +1484,9 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     // (noopLock can cause signOut to silently fail)
     try { await supabase.auth.signOut(); } catch {}
     Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    // Update state synchronously first, then clean URL without triggering hashchange
     setCu(null);
     setDrawerOpen(false);
-    setPageState("home");
-    history.replaceState(null, "", window.location.pathname);
+    setPage("home");
   };
 
   return (
