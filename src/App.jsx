@@ -5909,7 +5909,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
-          {section === "revenue" && <AdminRevenue data={data} />}
+          {section === "revenue" && <AdminRevenue data={data} save={save} showToast={showToast} />}
           {section === "visitor-stats" && <AdminVisitorStats />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} />}
@@ -9736,14 +9736,38 @@ function AdminVisitorStats() {
 }
 
 // ── Admin Revenue ─────────────────────────────────────────
-function AdminRevenue({ data }) {
+function AdminRevenue({ data, save, showToast }) {
   const [cashSales, setCashSales] = useState([]);
   const [selected, setSelected] = useState(null); // selected transaction for detail modal
   const [monthDetail, setMonthDetail] = useState(null);
+  const [delConfirm, setDelConfirm] = useState(null); // { t: transaction, busy: false }
+  const [delBusy, setDelBusy] = useState(false);
 
-  useEffect(() => {
-    api.cashSales.getAll().then(setCashSales).catch(console.error);
-  }, []);
+  const reloadCash = () => api.cashSales.getAll().then(setCashSales).catch(console.error);
+
+  useEffect(() => { reloadCash(); }, []);
+
+  const deleteTransaction = async (t) => {
+    setDelBusy(true);
+    try {
+      if (t.source === "cash") {
+        await api.cashSales.delete(t.id);
+        await reloadCash();
+      } else {
+        // Online booking — delete from bookings table then refresh events
+        await api.bookings.delete(t.id);
+        const freshEvents = await api.events.getAll();
+        save({ events: freshEvents });
+      }
+      showToast("Transaction deleted.");
+      setDelConfirm(null);
+      setSelected(null);
+    } catch (e) {
+      showToast("Delete failed: " + e.message, "red");
+    } finally {
+      setDelBusy(false);
+    }
+  };
 
   // Full GMT timestamp: "12/04/2026, 14:35:22"
   const gmtFull = (d) => new Date(d).toLocaleString("en-GB", {
@@ -9889,7 +9913,10 @@ function AdminRevenue({ data }) {
                 </td>
                 <td><span className={`tag ${t.source === "cash" ? "tag-gold" : "tag-blue"}`}>{t.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
                 <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
-                <td><button className="btn btn-sm btn-ghost">Detail →</button></td>
+                <td onClick={e => e.stopPropagation()} style={{ display:"flex", gap:6, alignItems:"center" }}>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setSelected(t)}>Detail →</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>
+                </td>
               </tr>
             ))}
             {all.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No transactions yet</td></tr>}
@@ -9935,9 +9962,40 @@ function AdminRevenue({ data }) {
               </tbody>
             </table></div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16 }}>
-              <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
-              <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button className="btn btn-danger btn-sm" onClick={() => { setDelConfirm(selected); }}>🗑 Delete Transaction</button>
+              <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
+                <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Delete confirmation modal ─── */}
+      {delConfirm && (
+        <div className="overlay" onClick={() => !delBusy && setDelConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🗑 Delete Transaction?</div>
+            <div style={{ background:"var(--bg3)", border:"1px solid var(--border)", padding:"12px 14px", borderRadius:4, marginBottom:16 }}>
+              <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>{delConfirm.userName}</div>
+              <div style={{ fontSize:12, color:"var(--muted)" }}>
+                {delConfirm.source === "cash"
+                  ? `Cash Sale — ${delConfirm.items?.length || 0} item(s)`
+                  : `${delConfirm.eventTitle} — ${delConfirm.ticketType} ×${delConfirm.qty}`
+                }
+              </div>
+              <div style={{ fontSize:14, fontWeight:900, color:"var(--accent)", marginTop:6 }}>£{delConfirm.total.toFixed(2)}</div>
+            </div>
+            <p style={{ fontSize:13, color:"var(--red)", marginBottom:20 }}>
+              ⚠️ This will permanently remove this transaction from the system. Revenue totals will update immediately. This cannot be undone.
+            </p>
+            <div className="gap-2">
+              <button className="btn btn-danger" disabled={delBusy} onClick={() => deleteTransaction(delConfirm)}>
+                {delBusy ? "Deleting…" : "Yes, Delete"}
+              </button>
+              <button className="btn btn-ghost" disabled={delBusy} onClick={() => setDelConfirm(null)}>Cancel</button>
             </div>
           </div>
         </div>

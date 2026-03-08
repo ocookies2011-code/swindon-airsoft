@@ -490,6 +490,11 @@ export const cashSales = wrapWithTimeout({
     }).select().single()
     if (error) throw error
     return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('cash_sales').delete().eq('id', id)
+    if (error) throw error
   }
 })
 function normaliseEvent(ev) {
