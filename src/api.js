@@ -585,6 +585,9 @@ export function normaliseProfile(p) {
     joinDate:           p.join_date,
     adminNotes:         p.admin_notes || '',
     vipIdImages:        p.vip_id_images || [],
+    cardStatus:         p.card_status    || 'none',
+    cardReason:         p.card_reason    || '',
+    cardIssuedAt:       p.card_issued_at || null,
   }
 }
 

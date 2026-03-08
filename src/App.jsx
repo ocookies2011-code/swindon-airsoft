@@ -1629,7 +1629,7 @@ function HomePage({ data, setPage }) {
 
   const totalPlayers  = data.users.filter(u => u.role === "player").length;
   const totalEvents   = data.events.filter(e => e.published).length;
-  const totalBookings = data.events.flatMap(e => e.bookings).length;
+  const totalBookings = data.events.flatMap(e => e.bookings).reduce((s, b) => s + (b.qty || 1), 0);
 
   return (
     <div>
@@ -2169,7 +2169,7 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
           ${[
             ["Bring your QR code ticket (check your booking confirmation email)", "#c8ff00"],
             ["Arrive at least 15 minutes before start time for sign-in", "#8aaa60"],
-            ["Full-seal eye protection is mandatory — available to hire if needed", "#8aaa60"],
+            ["Approved full-seal eye protection is mandatory at all times", "#8aaa60"],
             ["Wear appropriate clothing for the weather and terrain", "#8aaa60"],
             ["All personal RIFs will be chronographed before play", "#8aaa60"],
           ].map(([item, col]) => `
@@ -2728,8 +2728,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             const extra = visibleExtras.find(e => e.id === extraId);
             if (!extra?.productId) return Promise.resolve();
             return variantId
-              ? supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: variantId, qty }).catch(() => {})
-              : supabase.rpc("deduct_stock", { product_id: extra.productId, qty }).catch(() => {});
+              ? Promise.resolve(supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: variantId, qty })).catch(() => {})
+              : Promise.resolve(supabase.rpc("deduct_stock", { product_id: extra.productId, qty })).catch(() => {});
           });
 
         // Refresh data in background
@@ -2747,7 +2747,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       }
     };
 
-    const bookingBlocked = !cu || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active");
+    const isCardBanned = cu && (cu.cardStatus === "red" || cu.cardStatus === "black");
+    const bookingBlocked = !cu || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
 
     return (
       <div className="page-content">
@@ -3193,6 +3194,24 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               {squareError && <div className="alert alert-red mt-1">⚠️ {squareError}</div>}
               {bookingBusy && <div className="alert alert-blue mt-1">⏳ Confirming your booking…</div>}
 
+              {cu && cu.cardStatus === "yellow" && (
+                <div style={{ background:"rgba(200,160,0,.1)", border:"1px solid rgba(200,160,0,.4)", padding:"12px 14px", marginBottom:10, borderRadius:3 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, color:"var(--gold)", marginBottom:4 }}>🟡 YELLOW CARD — FORMAL WARNING</div>
+                  <div style={{ fontSize:12, color:"#c8a030", lineHeight:1.6 }}>You have received a formal warning from staff. Please review the site rules. Further violations may result in a Red Card ban.{cu.cardReason && <><br/><em>Reason: {cu.cardReason}</em></>}</div>
+                </div>
+              )}
+              {cu && isCardBanned && (
+                <div style={{ background:"rgba(220,30,30,.1)", border:"1px solid rgba(220,30,30,.4)", padding:"12px 14px", marginBottom:10, borderRadius:3 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, color:"var(--red)", marginBottom:4 }}>
+                    {cu.cardStatus === "red" ? "🔴 RED CARD — TEMPORARY BAN" : "⚫ BLACK CARD — ACCOUNT SUSPENDED"}
+                  </div>
+                  <div style={{ fontSize:12, color:"#ff8080", lineHeight:1.6 }}>
+                    {cu.cardStatus === "red" ? "You are banned for 1 game day. Booking is currently disabled." : "Your account is suspended pending review by the site owner."}
+                    {cu.cardReason && <><br/><em>Reason: {cu.cardReason}</em></>}
+                  </div>
+                </div>
+              )}
+
               {!cu && (
                 <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14, letterSpacing:".1em" }} onClick={() => setAuthModal("login")}>
                   LOG IN TO BOOK
@@ -3513,8 +3532,8 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
       Promise.all([
         ...cartSnapshot.map(ci => (
           ci.variantId
-            ? supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty }).catch(() => {})
-            : supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty }).catch(() => {})
+            ? Promise.resolve(supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty })).catch(() => {})
+            : Promise.resolve(supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty })).catch(() => {})
         )),
         api.shop.getAll().then(freshShop => save({ shop: freshShop })).catch(() => {}),
       ]);
@@ -3750,15 +3769,15 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
       {/* CART MODAL */}
       {cartOpen && (
         <div className="overlay" onClick={() => setCartOpen(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background:"#0c1009", border:"1px solid #2a3a10", borderRadius:0 }}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", borderRadius:0 }}>
             {/* Modal header */}
             <div style={{ borderBottom:"1px solid #2a3a10", paddingBottom:16, marginBottom:16 }}>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".25em", color:"#3a5010", marginBottom:4 }}>◈ — QUARTERMASTER</div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".25em", color:"var(--muted)", marginBottom:4 }}>◈ — QUARTERMASTER</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>LOADOUT REVIEW</div>
             </div>
 
             {cart.length === 0
-              ? <div style={{ textAlign:"center", padding:"32px 0", fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#2a3a10", letterSpacing:".15em" }}>LOADOUT IS EMPTY</div>
+              ? <div style={{ textAlign:"center", padding:"32px 0", fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", letterSpacing:".15em" }}>LOADOUT IS EMPTY</div>
               : (
               <>
                 {cart.map(item => (
@@ -5132,6 +5151,24 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
           <div className="gap-2">
             <button className="btn btn-primary" onClick={saveProfile}>Save</button>
+            <button className="btn btn-ghost" style={{ fontSize:12 }} onClick={() => {
+              const myBookings = (data.events || []).flatMap(ev =>
+                (ev.bookings || []).filter(b => b.userId === cu.id).map(b => ({
+                  event: ev.title, date: ev.date, type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn
+                }))
+              ).sort((a,b) => new Date(b.date) - new Date(a.date));
+              const payload = {
+                exportDate: new Date().toISOString(),
+                exportType: "GDPR Data Portability Export",
+                notice: "This file contains all personal data held about you on the Swindon Airsoft platform.",
+                profile: { name: cu.name, email: cu.email, phone: cu.phone||"", address: cu.address||"", joinDate: cu.joinDate||"", gamesAttended: cu.gamesAttended, vipStatus: cu.vipStatus, ukara: cu.ukara||"", credits: cu.credits },
+                bookings: myBookings,
+              };
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" }));
+              a.download = `swindon-airsoft-my-data-${Date.now()}.json`;
+              a.click();
+            }}>⬇ Download My Data (GDPR)</button>
             <button className="btn btn-danger" onClick={() => setDelConfirm(true)}>Request Account Deletion</button>
           </div>
           {delConfirm && (
@@ -5715,6 +5752,28 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               </button>
             </div>
           )}
+          {/* Player-visible card status */}
+          {cu.cardStatus && cu.cardStatus !== "none" && (
+            <div style={{
+              background: `rgba(${cu.cardStatus==="yellow"?"200,160,0":cu.cardStatus==="red"?"220,30,30":"80,80,80"},.1)`,
+              border: `1px solid rgba(${cu.cardStatus==="yellow"?"200,160,0":cu.cardStatus==="red"?"220,30,30":"80,80,80"},.35)`,
+              padding:"14px 16px", marginTop:10, marginBottom:4, borderRadius:4
+            }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, marginBottom:6,
+                color: cu.cardStatus==="yellow" ? "var(--gold)" : cu.cardStatus==="red" ? "var(--red)" : "#bbb" }}>
+                {cu.cardStatus === "yellow" && "🟡 Yellow Card — Formal Warning"}
+                {cu.cardStatus === "red"    && "🔴 Red Card — Temporary Ban"}
+                {cu.cardStatus === "black"  && "⚫ Black Card — Account Suspended"}
+              </div>
+              <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
+                {cu.cardStatus === "yellow" && "You have received a formal warning. Please review site rules — further violations may result in a game day ban."}
+                {cu.cardStatus === "red"    && "You are temporarily banned for 1 game day. Event booking has been disabled. Contact us to resolve this."}
+                {cu.cardStatus === "black"  && "Your account is suspended pending review by the site owner. Please contact us directly."}
+                {cu.cardReason && <div style={{ marginTop:6, fontStyle:"italic" }}>Reason: {cu.cardReason}</div>}
+              </div>
+            </div>
+          )}
+
           {canApplyVip && cu.vipStatus !== "expired" && (
             <button className="btn btn-gold mt-2" style={{ width:"100%" }} onClick={() => setPage("vip")}>
               Apply &amp; Pay for VIP Membership — £30/year →
@@ -6346,9 +6405,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
     setScanning(false);
     for (const evObj of data.events) {
       const scannedBooking = evObj.bookings.find(x => x.id === code);
-      if (b) {
+      if (scannedBooking) {
         if (scannedBooking.checkedIn) { showToast(`${scannedBooking.userName} already checked in`, "gold"); return; }
-        doCheckin(b, evObj); return;
+        doCheckin(scannedBooking, evObj); return;
       }
     }
     showToast("QR code not recognised", "red");
@@ -6357,7 +6416,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const downloadList = () => {
     if (!ev) return;
     const rows = ["Name,Type,Qty,Total,Checked In",
-      ...ev.bookings.map(b => `${scannedBooking.userName},${b.type},${b.qty},${b.total.toFixed(2)},${scannedBooking.checkedIn}`)
+      ...ev.bookings.map(b => `${b.userName},${b.type},${b.qty},${b.total.toFixed(2)},${b.checkedIn}`)
     ].join("\n");
     const downloadLink = document.createElement("a");
     downloadLink.href = "data:text/csv," + encodeURIComponent(rows);
@@ -6767,7 +6826,20 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <td>{b.userName}</td>
                     <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                     <td>{b.qty}</td>
-                    <td style={{fontSize:11,color:"var(--muted)"}}>{b.extras ? Object.entries(b.extras).filter(([,v])=>v).map(([k,v])=>`${k}${typeof v==='number'?` x${v}`:''}`).join(', ') : '—'}</td>
+                    <td style={{fontSize:11}}>
+                      {(() => {
+                        const entries = b.extras ? Object.entries(b.extras).filter(([,v])=>v>0) : [];
+                        if (!entries.length) return <span style={{color:"var(--muted)"}}>—</span>;
+                        return entries.map(([k,v]) => {
+                          const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
+                          const exDef = viewEv.extras?.find(e => e.id === xId);
+                          const shopP = exDef ? (data.shop||[]).find(p => p.id === exDef.productId) : null;
+                          const varDef = vId && shopP ? (shopP.variants||[]).find(vv => vv.id === vId) : null;
+                          const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : k;
+                          return <div key={k} style={{color:"var(--accent)",whiteSpace:"nowrap"}}>{label} ×{v}</div>;
+                        });
+                      })()}
+                    </td>
                     <td className="text-green">£{b.total.toFixed(2)}</td>
                     <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
                   </tr>
@@ -7184,6 +7256,11 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
   };
   const [edit, setEdit] = useState(null);
+  const [viewPlayer, setViewPlayer] = useState(null);
+  const [contactPlayer, setContactPlayer] = useState(null);
+  const [contactSubject, setContactSubject] = useState("");
+  const [contactMsg, setContactMsg] = useState("");
+  const [contactSending, setContactSending] = useState(false);
   const [tab, setTabState] = useState(getInitTab);
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/players/" + t; };
   const [recalcBusy, setRecalcBusy] = useState(false);
@@ -7277,6 +7354,9 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         address:        edit.address || '',
         delete_request: edit.deleteRequest || false,
         admin_notes:    edit.adminNotes || '',
+        card_status:    edit.cardStatus  || 'none',
+        card_reason:    edit.cardReason  || null,
+        card_issued_at: (edit.cardStatus && edit.cardStatus !== 'none') ? (edit.cardIssuedAt || new Date().toISOString()) : null,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
       // Refresh from DB and update global state
@@ -7365,7 +7445,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             </span>
           </div>
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {filteredPlayers.map(u => (
                 <tr key={u.id}>
@@ -7384,8 +7464,15 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                   <td>{u.waiverSigned === true && u.waiverYear === new Date().getFullYear() ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
                   <td>{u.credits > 0 ? <span className="text-gold">£{u.credits}</span> : "—"}</td>
                   <td>
+                    {(!u.cardStatus || u.cardStatus === "none") && <span className="tag tag-green" style={{fontSize:10}}>✓ Clear</span>}
+                    {u.cardStatus === "yellow" && <span className="tag" style={{background:"rgba(200,160,0,.15)",color:"var(--gold)",border:"1px solid rgba(200,160,0,.35)",fontSize:10}}>🟡 Warned</span>}
+                    {u.cardStatus === "red"    && <span className="tag" style={{background:"rgba(220,30,30,.15)",color:"var(--red)",border:"1px solid rgba(220,30,30,.35)",fontSize:10}}>🔴 Banned</span>}
+                    {u.cardStatus === "black"  && <span className="tag" style={{background:"rgba(60,60,60,.3)",color:"#bbb",border:"1px solid #555",fontSize:10}}>⚫ Susp.</span>}
+                  </td>
+                  <td>
                     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                       {u.adminNotes && <span title={u.adminNotes} style={{ fontSize:12, cursor:"help" }}>🔒</span>}
+                      <button className="btn btn-sm btn-ghost" onClick={() => setViewPlayer(u)}>View</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button>
                     </div>
                   </td>
@@ -7516,6 +7603,32 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div className="form-row">
               <div className="form-group"><label>Credits (£)</label><input type="number" value={edit.credits || 0} onChange={e => setEdit(p => ({ ...p, credits: +e.target.value }))} /></div>
             </div>
+
+            {/* ── Disciplinary Card ── */}
+            <div style={{ background:"rgba(220,100,0,.06)", border:"1px solid rgba(220,100,0,.25)", padding:"14px 16px", marginBottom:14, borderRadius:3 }}>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:".18em", color:"#e08030", textTransform:"uppercase", marginBottom:12, display:"flex", alignItems:"center", gap:8 }}>
+                ⚠️ Disciplinary Card <span style={{ fontWeight:400, color:"var(--muted)", textTransform:"none", letterSpacing:"normal", fontSize:10 }}>— visible reason is shown to player</span>
+              </div>
+              <div className="form-row" style={{ marginBottom:0 }}>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label>Card Status</label>
+                  <select value={edit.cardStatus || "none"} onChange={e => setEdit(p => ({ ...p, cardStatus: e.target.value }))}>
+                    <option value="none">✅ None — No active card</option>
+                    <option value="yellow">🟡 Yellow Card — Formal warning</option>
+                    <option value="red">🔴 Red Card — 1 game day ban (blocks booking)</option>
+                    <option value="black">⚫ Black Card — Suspended until owner review (blocks booking)</option>
+                  </select>
+                  {(edit.cardStatus === "red" || edit.cardStatus === "black") && (
+                    <div style={{ fontSize:11, color:"var(--red)", marginTop:4 }}>⚠ Player will be blocked from booking events.</div>
+                  )}
+                </div>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label>Reason <span style={{ fontWeight:400, color:"var(--muted)", fontSize:10 }}>(shown to player)</span></label>
+                  <input value={edit.cardReason || ""} onChange={e => setEdit(p => ({ ...p, cardReason: e.target.value }))} placeholder="e.g. Unsafe play, hit not called, aggressive behaviour…" />
+                </div>
+              </div>
+            </div>
+
             <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>Delivery Address</div>
             <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 2, padding: "12px 14px", marginBottom: 14 }}>
               {(() => {
@@ -7666,6 +7779,192 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
           </div>
         </div>
       )}
+
+      {/* ─────────── VIEW PLAYER MODAL ─────────── */}
+      {viewPlayer && (() => {
+        const u = viewPlayer;
+        const cardColors = { yellow:"var(--gold)", red:"var(--red)", black:"#bbb" };
+        const cardLabels = { yellow:"🟡 Yellow Card — Formal Warning", red:"🔴 Red Card — Temporary Ban (1 game day)", black:"⚫ Black Card — Suspended" };
+
+        const playerBookings = (data.events || []).flatMap(ev =>
+          (ev.bookings || []).filter(b => b.userId === u.id).map(b => ({
+            eventTitle: ev.title, date: ev.date, type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn
+          }))
+        ).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        const downloadFOI = () => {
+          const payload = {
+            exportDate:  new Date().toISOString(),
+            exportType:  "Freedom of Information / GDPR Data Portability Request",
+            notice:      "This file contains all personal data held about this player on the Swindon Airsoft platform.",
+            profile: {
+              id: u.id, name: u.name, email: u.email, phone: u.phone || "",
+              address: u.address || "", joinDate: u.joinDate || "",
+              gamesAttended: u.gamesAttended, vipStatus: u.vipStatus,
+              ukara: u.ukara || "", credits: u.credits,
+              waiverSigned: u.waiverSigned, cardStatus: u.cardStatus || "none",
+              cardReason: u.cardReason || "",
+            },
+            bookings: playerBookings,
+          };
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" }));
+          a.download = `swindon-airsoft-data-${(u.name||"player").replace(/\s+/g,"-").toLowerCase()}-${Date.now()}.json`;
+          a.click();
+        };
+
+        return (
+          <div className="overlay" onClick={() => setViewPlayer(null)}>
+            <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{ maxWidth:700, maxHeight:"90vh", overflowY:"auto" }}>
+              {/* Header */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20, gap:12, flexWrap:"wrap" }}>
+                <div>
+                  <div className="modal-title" style={{ margin:0 }}>👤 {u.name}</div>
+                  <div style={{ fontSize:12, color:"var(--muted)", marginTop:3 }}>{u.email}</div>
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <button className="btn btn-sm btn-ghost" onClick={() => { setContactPlayer(u); setContactSubject(""); setContactMsg(""); setViewPlayer(null); }}>📧 Email Player</button>
+                  <button className="btn btn-sm btn-ghost" onClick={downloadFOI} title="Download all data for GDPR/FOI request">⬇ Data Export</button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => { setEdit({ ...u }); setViewPlayer(null); }}>✏️ Edit</button>
+                </div>
+              </div>
+
+              {/* Card status banner */}
+              {u.cardStatus && u.cardStatus !== "none" && (
+                <div style={{
+                  background: `rgba(${u.cardStatus==="yellow"?"200,160,0":u.cardStatus==="red"?"220,30,30":"80,80,80"},.1)`,
+                  border: `1px solid rgba(${u.cardStatus==="yellow"?"200,160,0":u.cardStatus==="red"?"220,30,30":"80,80,80"},.35)`,
+                  padding:"12px 14px", borderRadius:3, marginBottom:16
+                }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:cardColors[u.cardStatus], marginBottom:4 }}>{cardLabels[u.cardStatus]}</div>
+                  {u.cardReason && <div style={{ fontSize:12, color:"var(--muted)" }}>Reason: {u.cardReason}</div>}
+                  {u.cardIssuedAt && <div style={{ fontSize:11, color:"var(--muted)", marginTop:3, fontFamily:"'Share Tech Mono',monospace" }}>Issued: {new Date(u.cardIssuedAt).toLocaleDateString("en-GB")}</div>}
+                </div>
+              )}
+
+              {/* Info grid */}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10, marginBottom:16 }}>
+                {[
+                  ["Phone",          u.phone || "—"],
+                  ["Games Attended", u.gamesAttended],
+                  ["VIP Status",     u.vipStatus === "active" ? "⭐ Active" : u.vipApplied ? "⏳ Pending" : u.vipStatus === "expired" ? "✗ Expired" : "None"],
+                  ["UKARA ID",       u.ukara || "—"],
+                  ["Credits",        u.credits > 0 ? `£${Number(u.credits).toFixed(2)}` : "£0"],
+                  ["Joined",         u.joinDate || "—"],
+                  ["Waiver",         u.waiverSigned && u.waiverYear === new Date().getFullYear() ? "✓ Signed" : "✗ Not signed"],
+                  ["Account Status", u.cardStatus && u.cardStatus !== "none" ? cardLabels[u.cardStatus] : "✅ Clear"],
+                ].map(([label, val]) => (
+                  <div key={label} style={{ background:"var(--bg4)", padding:"10px 12px", borderRadius:3 }}>
+                    <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:4 }}>{label}</div>
+                    <div style={{ fontSize:13, fontWeight:600 }}>{String(val)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Address */}
+              {u.address && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:6 }}>Delivery Address</div>
+                  <div style={{ fontSize:12, whiteSpace:"pre-line", background:"var(--bg4)", padding:"10px 12px", borderRadius:3, fontFamily:"'Share Tech Mono',monospace" }}>{u.address}</div>
+                </div>
+              )}
+
+              {/* VIP ID photos */}
+              {u.vipIdImages?.length > 0 && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:8 }}>🪪 Government Photo ID</div>
+                  <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                    {u.vipIdImages.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noreferrer"
+                        style={{ display:"block", border:"1px solid var(--accent)", borderRadius:3, overflow:"hidden", flexShrink:0 }}>
+                        <img src={url} alt={`ID ${i+1}`} style={{ width:150, height:100, objectFit:"cover", display:"block" }} />
+                        <div style={{ fontSize:9, color:"var(--accent)", textAlign:"center", padding:"2px 0", background:"#0a0f05", fontFamily:"'Share Tech Mono',monospace" }}>
+                          ID {i+1} — CLICK TO ENLARGE
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Booking history */}
+              <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:8 }}>Booking History ({playerBookings.length})</div>
+              {playerBookings.length === 0
+                ? <div style={{ color:"var(--muted)", fontSize:13, marginBottom:12 }}>No bookings on record.</div>
+                : (
+                  <div className="table-wrap" style={{ marginBottom:16 }}>
+                    <table className="data-table">
+                      <thead><tr><th>Event</th><th>Date</th><th>Type</th><th>Qty</th><th>Total</th><th>Status</th></tr></thead>
+                      <tbody>
+                        {playerBookings.map((b, i) => (
+                          <tr key={i}>
+                            <td style={{ fontSize:12 }}>{b.eventTitle}</td>
+                            <td className="mono" style={{ fontSize:11 }}>{b.date}</td>
+                            <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+                            <td>{b.qty}</td>
+                            <td className="text-green">£{b.total.toFixed(2)}</td>
+                            <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              }
+              <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, display:"flex", justifyContent:"flex-end" }}>
+                <button className="btn btn-ghost" onClick={() => setViewPlayer(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─────────── CONTACT PLAYER MODAL ─────────── */}
+      {contactPlayer && (
+        <div className="overlay" onClick={() => !contactSending && setContactPlayer(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">📧 Email — {contactPlayer.name}</div>
+            <p style={{ fontSize:12, color:"var(--muted)", marginBottom:16 }}>
+              Sending to <strong style={{ color:"var(--text)" }}>{contactPlayer.email}</strong>
+            </p>
+            <div className="form-group">
+              <label>Subject</label>
+              <input value={contactSubject} onChange={e => setContactSubject(e.target.value)} placeholder="Message subject…" disabled={contactSending} />
+            </div>
+            <div className="form-group">
+              <label>Message</label>
+              <textarea rows={7} value={contactMsg} onChange={e => setContactMsg(e.target.value)}
+                placeholder="Write your message here…" disabled={contactSending}
+                style={{ width:"100%", resize:"vertical", fontFamily:"inherit", fontSize:13, background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", padding:"8px 10px", boxSizing:"border-box", borderRadius:3 }} />
+            </div>
+            <div className="gap-2 mt-1">
+              <button className="btn btn-primary" disabled={contactSending || !contactSubject.trim() || !contactMsg.trim()} onClick={async () => {
+                setContactSending(true);
+                try {
+                  const htmlContent = `<div style="font-family:Arial,sans-serif;background:#0a0a0a;color:#e0e0e0;padding:32px 24px;max-width:600px;margin:0 auto">
+                    <div style="font-size:24px;font-weight:900;color:#c8ff00;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">SWINDON AIRSOFT</div>
+                    <div style="height:2px;background:#1a2808;margin-bottom:24px"></div>
+                    <div style="font-size:14px;margin-bottom:16px">Hi ${contactPlayer.name},</div>
+                    <div style="font-size:14px;line-height:1.8;white-space:pre-wrap">${contactMsg.trim()}</div>
+                    <div style="margin-top:32px;padding-top:16px;border-top:1px solid #1a2808;font-size:11px;color:#555">
+                      Swindon Airsoft — This message was sent by our admin team. Please do not reply to this address.
+                    </div>
+                  </div>`;
+                  await sendEmail({ toEmail: contactPlayer.email, toName: contactPlayer.name, subject: contactSubject.trim(), htmlContent });
+                  showToast(`✅ Email sent to ${contactPlayer.name}`);
+                  setContactPlayer(null);
+                } catch(e) {
+                  showToast("Failed to send email: " + (e.message || String(e)), "red");
+                } finally { setContactSending(false); }
+              }}>
+                {contactSending ? "⏳ Sending…" : "📧 Send Email"}
+              </button>
+              <button className="btn btn-ghost" disabled={contactSending} onClick={() => setContactPlayer(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -12810,7 +13109,23 @@ function TermsPage({ setPage }) {
             <SectionTitle id="terms-8">8. VIP Membership</SectionTitle>
             <Para>VIP membership is an annual subscription providing discounts and benefits as described on the VIP page. Membership fees are non-refundable once activated. Membership is personal and non-transferable. Swindon Airsoft reserves the right to revoke VIP status for breach of these terms without refund of the membership fee.</Para>
 
-            <SectionTitle id="terms-9">9. Governing Law</SectionTitle>
+            <SectionTitle id="terms-card">9. Disciplinary Card System</SectionTitle>
+            <Para>Swindon Airsoft operates a three-tier disciplinary card system to maintain a safe and fair playing environment for all participants. Cards may be issued by staff on game days or by admins for conduct off the field.</Para>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:12, marginBottom:20 }}>
+              {[
+                { color:"rgba(200,160,0,.15)", border:"rgba(200,160,0,.4)", titleColor:"var(--gold)", icon:"🟡", title:"Yellow Card — Warning", desc:"A formal warning that the player must improve their conduct. The reason is communicated directly to the player. Continued violations after a Yellow Card may result in a Red Card ban. Yellow Cards do not restrict booking." },
+                { color:"rgba(220,30,30,.12)", border:"rgba(220,30,30,.4)", titleColor:"var(--red)", icon:"🔴", title:"Red Card — 1 Game Day Ban", desc:"Issued for serious rule violations or repeated misconduct after a Yellow Card. The player is banned for one game day and cannot book future events until the ban is lifted by an admin. The reason will be provided." },
+                { color:"rgba(60,60,60,.25)", border:"#555", titleColor:"#ccc", icon:"⚫", title:"Black Card — Suspension", desc:"Issued for severe or repeated misconduct. The player is suspended indefinitely. Booking is disabled. Reinstatement requires a direct review and approval by the site owner. The reason will be provided." },
+              ].map(c => (
+                <div key={c.title} style={{ background:c.color, border:`1px solid ${c.border}`, padding:"16px", borderRadius:4 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:c.titleColor, marginBottom:8 }}>{c.icon} {c.title}</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.8 }}>{c.desc}</div>
+                </div>
+              ))}
+            </div>
+            <InfoBox type="important">Players who have been issued a Red Card or Black Card will be unable to make event bookings. The reason for any card issued will always be communicated to the player. To appeal a card, please contact us directly.</InfoBox>
+
+            <SectionTitle id="terms-9">10. Governing Law</SectionTitle>
             <InfoBox type="info">These terms are governed by the laws of England and Wales. Any disputes shall be subject to the exclusive jurisdiction of the courts of England and Wales.</InfoBox>
           </div>
         )}
