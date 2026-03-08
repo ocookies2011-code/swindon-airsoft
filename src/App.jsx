@@ -5106,31 +5106,43 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
       {tab === "profile" && (
         <div className="card">
-          {/* Card status banner — shown prominently if active */}
-          {cu.cardStatus && cu.cardStatus !== "none" && (
-            <div style={{
-              background: cu.cardStatus === "yellow" ? "rgba(200,160,0,.1)" : cu.cardStatus === "red" ? "rgba(220,30,30,.1)" : "rgba(60,60,60,.2)",
-              border: `1px solid ${cu.cardStatus === "yellow" ? "rgba(200,160,0,.45)" : cu.cardStatus === "red" ? "rgba(220,30,30,.45)" : "#555"}`,
-              padding: "14px 16px", marginBottom: 20, borderRadius: 4
-            }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, letterSpacing: ".06em", marginBottom: 6,
-                color: cu.cardStatus === "yellow" ? "var(--gold)" : cu.cardStatus === "red" ? "var(--red)" : "#ccc" }}>
-                {cu.cardStatus === "yellow" && "🟡 Yellow Card — Formal Warning"}
-                {cu.cardStatus === "red"    && "🔴 Red Card — Temporary Ban"}
-                {cu.cardStatus === "black"  && "⚫ Black Card — Account Suspended"}
-              </div>
-              <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.7 }}>
-                {cu.cardStatus === "yellow" && "You have received a formal warning from staff. Please review site rules — continued violations may result in a Red Card ban."}
-                {cu.cardStatus === "red"    && "You have been issued a 1 game day ban. Event booking is currently disabled. Please contact us to resolve this."}
-                {cu.cardStatus === "black"  && "Your account has been suspended. Please contact the site owner directly to discuss reinstatement."}
-                {cu.cardReason && (
-                  <div style={{ marginTop: 6, padding: "6px 10px", background: "rgba(0,0,0,.25)", borderRadius: 3, fontStyle: "italic" }}>
-                    Reason: {cu.cardReason}
+          {/* Card status — always visible */}
+          {(() => {
+            const cs = cu.cardStatus || "none";
+            const isGreen = cs === "none";
+            return (
+              <div style={{
+                background: isGreen ? "rgba(200,255,0,.07)" : cs === "yellow" ? "rgba(200,160,0,.1)" : cs === "red" ? "rgba(220,30,30,.1)" : "rgba(60,60,60,.2)",
+                border: `1px solid ${isGreen ? "rgba(200,255,0,.25)" : cs === "yellow" ? "rgba(200,160,0,.45)" : cs === "red" ? "rgba(220,30,30,.45)" : "#555"}`,
+                padding: "14px 16px", marginBottom: 20, borderRadius: 4,
+                display: "flex", alignItems: "flex-start", gap: 12
+              }}>
+                <div style={{ fontSize: 22, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
+                  {isGreen ? "🟢" : cs === "yellow" ? "🟡" : cs === "red" ? "🔴" : "⚫"}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, letterSpacing: ".06em", marginBottom: 4,
+                    color: isGreen ? "var(--accent)" : cs === "yellow" ? "var(--gold)" : cs === "red" ? "var(--red)" : "#ccc" }}>
+                    {isGreen       && "Green Card — All Clear"}
+                    {cs === "yellow" && "Yellow Card — Formal Warning"}
+                    {cs === "red"    && "Red Card — Temporary Ban"}
+                    {cs === "black"  && "Black Card — Account Suspended"}
                   </div>
-                )}
+                  <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+                    {isGreen       && "Your account is in good standing. You are welcome to book events."}
+                    {cs === "yellow" && "You have received a formal warning from staff. Please review site rules — continued violations may result in a Red Card ban."}
+                    {cs === "red"    && "You have been issued a 1 game day ban. Event booking is currently disabled. Please contact us to resolve this."}
+                    {cs === "black"  && "Your account has been suspended. Please contact the site owner directly to discuss reinstatement."}
+                    {!isGreen && cu.cardReason && (
+                      <div style={{ marginTop: 6, padding: "6px 10px", background: "rgba(0,0,0,.25)", borderRadius: 3, fontStyle: "italic" }}>
+                        Reason: {cu.cardReason}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
           <div className="form-row">
             <div className="form-group"><label>Full Name</label><input value={edit.name} onChange={e => setEdit(p => ({ ...p, name: e.target.value }))} /></div>
             <div className="form-group"><label>Phone</label><input value={edit.phone} onChange={e => setEdit(p => ({ ...p, phone: e.target.value }))} placeholder="07700 000000" /></div>
