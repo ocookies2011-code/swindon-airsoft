@@ -8654,6 +8654,8 @@ function AdminRevenue({ data }) {
 // ── Admin Gallery ─────────────────────────────────────────
 function AdminGallery({ data, save, showToast }) {
   const [urlInput, setUrlInput] = useState({});
+  const [uploading, setUploading] = useState({}); // { albumId: { done, total } }
+
   const addAlbum = async () => {
     const name = prompt("Album name:"); if (!name) return;
     try {
@@ -8662,50 +8664,83 @@ function AdminGallery({ data, save, showToast }) {
       showToast("Album created!");
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
+
   const addImg = async (albumId, url) => {
     try {
       await api.gallery.addImageUrl(albumId, url);
       save({ albums: await api.gallery.getAll() });
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
-  const handleFile = async (albumId, e) => {
-    const file = e.target.files[0]; if (!file) return;
-    try {
-      await api.gallery.uploadImage(albumId, file);
-      save({ albums: await api.gallery.getAll() });
-      showToast("Image added!");
-    } catch (e) { showToast("Upload failed: " + e.message, "red"); }
+
+  const handleFiles = async (albumId, e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    e.target.value = ""; // reset so same files can be re-selected
+    setUploading(prev => ({ ...prev, [albumId]: { done: 0, total: files.length, errors: 0 } }));
+    let done = 0, errors = 0;
+    for (const file of files) {
+      try {
+        await api.gallery.uploadImage(albumId, file);
+        done++;
+      } catch {
+        errors++;
+      }
+      setUploading(prev => ({ ...prev, [albumId]: { done, total: files.length, errors } }));
+    }
+    save({ albums: await api.gallery.getAll() });
+    setUploading(prev => { const n = { ...prev }; delete n[albumId]; return n; });
+    if (errors === 0) showToast(`✅ ${done} image${done !== 1 ? "s" : ""} uploaded!`);
+    else showToast(`Uploaded ${done}, ${errors} failed.`, "red");
   };
+
   const removeImg = async (albumId, url) => {
     try {
       await api.gallery.removeImage(albumId, url);
       save({ albums: await api.gallery.getAll() });
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
+
   return (
     <div>
       <div className="page-header"><div><div className="page-title">Gallery</div></div><button className="btn btn-primary" onClick={addAlbum}>+ New Album</button></div>
-      {data.albums.map(album => (
-        <div key={album.id} className="card mb-2">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={{ fontWeight: 700 }}>{album.title} <span className="text-muted" style={{ fontSize: 12 }}>({album.images.length} photos)</span></div>
-            <label className="btn btn-sm btn-ghost" style={{ cursor: "pointer" }}>+ Upload<input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(album.id, e)} /></label>
-          </div>
-          <div className="gap-2 mb-2">
-            <input value={urlInput[album.id] || ""} onChange={e => setUrlInput(p => ({ ...p, [album.id]: e.target.value }))} placeholder="Or paste image URL" style={{ flex: 1 }} />
-            <button className="btn btn-sm btn-ghost" onClick={() => { if (urlInput[album.id]) { addImg(album.id, urlInput[album.id]); setUrlInput(p => ({ ...p, [album.id]: "" })); } }}>Add</button>
-          </div>
-          <div className="photo-grid">
-            {album.images.map((img, i) => (
-              <div key={i} className="photo-cell">
-                <img src={img} alt="" />
-                <button style={{ position: "absolute", top: 4, right: 4, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}
-                  onClick={() => removeImg(album.id, img)}>✕</button>
+      {data.albums.map(album => {
+        const upState = uploading[album.id];
+        return (
+          <div key={album.id} className="card mb-2">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontWeight: 700 }}>{album.title} <span className="text-muted" style={{ fontSize: 12 }}>({album.images.length} photos)</span></div>
+              <label className="btn btn-sm btn-primary" style={{ cursor: upState ? "default" : "pointer", opacity: upState ? .7 : 1 }}>
+                {upState ? `Uploading ${upState.done}/${upState.total}…` : "📷 Upload Images"}
+                <input type="file" accept="image/*" multiple style={{ display: "none" }} disabled={!!upState} onChange={e => handleFiles(album.id, e)} />
+              </label>
+            </div>
+
+            {/* Progress bar */}
+            {upState && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ height: 4, background: "var(--bg4)", borderRadius: 2, overflow: "hidden", marginBottom: 4 }}>
+                  <div style={{ height: "100%", width: (upState.done / upState.total * 100) + "%", background: "var(--accent)", borderRadius: 2, transition: "width .2s" }} />
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>{upState.done} of {upState.total} uploaded{upState.errors > 0 ? ` · ${upState.errors} failed` : ""}</div>
               </div>
-            ))}
+            )}
+
+            <div className="gap-2 mb-2">
+              <input value={urlInput[album.id] || ""} onChange={e => setUrlInput(p => ({ ...p, [album.id]: e.target.value }))} placeholder="Or paste image URL" style={{ flex: 1 }} />
+              <button className="btn btn-sm btn-ghost" onClick={() => { if (urlInput[album.id]) { addImg(album.id, urlInput[album.id]); setUrlInput(p => ({ ...p, [album.id]: "" })); } }}>Add URL</button>
+            </div>
+            <div className="photo-grid">
+              {album.images.map((img, i) => (
+                <div key={i} className="photo-cell">
+                  <img src={img} alt="" />
+                  <button style={{ position: "absolute", top: 4, right: 4, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    onClick={() => removeImg(album.id, img)}>✕</button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
