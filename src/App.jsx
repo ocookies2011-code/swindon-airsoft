@@ -3519,6 +3519,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
   };
 
   return (
+    <>
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
       {/* Breadcrumb bar */}
       <div style={{ background:"#0c1009", borderBottom:"1px solid #1a2808", padding:"12px 24px" }}>
@@ -3695,10 +3696,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
       </div>
       </div>
     </div>
-
-      {/* Image lightbox */}
-      {imgLightbox && (
-        <div onClick={() => setImgLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.96)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+    {/* Image lightbox */}
+    {imgLightbox && (
+      <div onClick={() => setImgLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.96)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
           {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
             <div key={v+h} style={{ position:"absolute", width:32, height:32, zIndex:501,
               top:v==="top"?12:"auto", bottom:v==="bottom"?12:"auto",
@@ -3731,8 +3731,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
               </>
             );
           })()}
-        </div>
-      )}
+      </div>
+    )}
+    </>
   );
 }
 
