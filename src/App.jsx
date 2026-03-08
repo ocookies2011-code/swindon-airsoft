@@ -1486,6 +1486,9 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
     setCu(null);
     setDrawerOpen(false);
+    // Navigate to home immediately so protected pages re-render as logged-out
+    setPage("home");
+    window.location.hash = "";
   };
 
   return (
@@ -2695,17 +2698,22 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
 
         // Send ticket email with real booking IDs
+        // Retry up to 3 times with 600ms delays — DB write may not be immediately readable
         try {
-          const { data: freshBookings } = await supabase
-            .from('bookings').select('id, type, qty, total')
-            .eq('user_id', cu.id).eq('event_id', ev.id)
-            .order('created_at', { ascending: false }).limit(2);
-          const emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: b.total }));
+          let emailBookings = [];
+          for (let attempt = 0; attempt < 3 && emailBookings.length === 0; attempt++) {
+            if (attempt > 0) await new Promise(r => setTimeout(r, 600));
+            const { data: freshBookings } = await supabase
+              .from('bookings').select('id, type, qty, total')
+              .eq('user_id', cu.id).eq('event_id', ev.id)
+              .order('created_at', { ascending: false }).limit(2);
+            emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: b.total }));
+          }
           if (emailBookings.length > 0) {
             await sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
             showToast("📧 Confirmation email sent!");
           } else {
-            console.warn("No bookings found for email");
+            console.warn("No bookings found for email after retries");
           }
         } catch (emailErr) {
           console.error("Ticket email failed:", emailErr);
