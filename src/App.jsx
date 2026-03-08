@@ -1480,13 +1480,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
   };
 
   const signOut = async () => {
-    // Force-clear the session from localStorage regardless of Supabase's response
-    // (noopLock can cause signOut to silently fail)
     try { await supabase.auth.signOut(); } catch {}
     Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    setCu(null);
-    setDrawerOpen(false);
-    setPage("home");
+    // Hard reload to home — the only reliable way to clear all auth state
+    // given the session-recovery logic in the auth listener
+    window.location.href = window.location.pathname;
   };
 
   return (
