@@ -12077,7 +12077,7 @@ function TermsPage({ setPage }) {
             ]} />
 
             <SectionTitle id="waiver-2">2. Waiver for Minors</SectionTitle>
-            <Para>Players aged 16–17 may participate only with a parent or legal guardian present who has completed the waiver on their behalf and accepts full responsibility for the minor throughout the event. Players under 16 are not permitted on site.</Para>
+            <Para>Players must be at least 12 years old to participate. Players under 14 must have a parent or guardian present and playing with them, and a waiver must be completed on their behalf. Players aged 14–17 must have a parent or guardian's written consent before attending, and a waiver must be completed on their behalf. In all cases, the parent or guardian accepts full responsibility for the minor throughout the event.</Para>
 
             <SectionTitle id="waiver-3">3. Medical Information</SectionTitle>
             <Para>If you have any medical conditions, disabilities, or are taking medication that may affect your ability to participate safely, you must inform a marshal before the event begins. Swindon Airsoft will make reasonable efforts to accommodate participants but reserves the right to refuse participation on safety grounds.</Para>
