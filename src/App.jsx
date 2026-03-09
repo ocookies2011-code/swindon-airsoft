@@ -2868,28 +2868,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
     const isCardBanned = cu && (cu.cardStatus === "red" || cu.cardStatus === "black");
   
-  // ── Geo-block screen ──────────────────────────────────────
-  if (geoStatus === "checking") {
-    return (
-      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, background:"#0d1117" }}>
-        <div style={{ width:48, height:48, background:"#c8ff00", borderRadius:2, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#000", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>SA</div>
-        <div style={{ color:"#555", fontSize:13, letterSpacing:".15em" }}>LOADING...</div>
-      </div>
-    );
-  }
-
-  if (geoStatus === "blocked" && cu?.role !== "admin") {
-    return (
-      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:20, background:"#0d1117", padding:24, textAlign:"center" }}>
-        <div style={{ width:56, height:56, background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:2, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#c8ff00", fontSize:20, fontFamily:"'Barlow Condensed',sans-serif" }}>SA</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:28, fontWeight:900, letterSpacing:".1em", color:"#fff" }}>NOT AVAILABLE IN YOUR REGION</div>
-        <div style={{ fontSize:14, color:"#555", maxWidth:340, lineHeight:1.7 }}>
-          Swindon Airsoft is only available to visitors in the UK, Ireland, and EU member states.
-        </div>
-      </div>
-    );
-  }
-
   const isAdmin = cu?.role === "admin";
     const bookingBlocked = !cu || isAdmin || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
 
@@ -13598,7 +13576,6 @@ export default function App() {
     }
   }, [updateUser, cu, refreshCu]);
 
-
   const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
 
   useEffect(() => {
@@ -13611,7 +13588,7 @@ export default function App() {
         const code = (g.country_code || "").toUpperCase();
         if (!cancelled) setGeoStatus(ALLOWED_COUNTRY_CODES.has(code) ? "allowed" : "blocked");
       } catch {
-        // If geo check fails (network error, timeout), allow through — don't block real users
+        // If geo check fails, fail open — don't lock out real users
         if (!cancelled) setGeoStatus("allowed");
       }
     };
@@ -13642,6 +13619,28 @@ export default function App() {
           </div>
         )}
         <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
+      </div>
+    );
+  }
+
+  // ── Geo-block screens ─────────────────────────────────────
+  if (geoStatus === "checking") {
+    return (
+      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, background:"#0d1117" }}>
+        <div style={{ width:48, height:48, background:"#c8ff00", borderRadius:2, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#000", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>SA</div>
+        <div style={{ color:"#555", fontSize:13, letterSpacing:".15em" }}>LOADING...</div>
+      </div>
+    );
+  }
+
+  if (geoStatus === "blocked" && cu?.role !== "admin") {
+    return (
+      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:20, background:"#0d1117", padding:24, textAlign:"center" }}>
+        <div style={{ width:56, height:56, background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:2, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#c8ff00", fontSize:20, fontFamily:"'Barlow Condensed',sans-serif" }}>SA</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:28, fontWeight:900, letterSpacing:".1em", color:"#fff" }}>NOT AVAILABLE IN YOUR REGION</div>
+        <div style={{ fontSize:14, color:"#555", maxWidth:340, lineHeight:1.7 }}>
+          Swindon Airsoft is only available to visitors in the UK, Ireland, and EU member states.
+        </div>
       </div>
     );
   }
