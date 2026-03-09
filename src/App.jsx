@@ -5827,12 +5827,283 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 // ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
+// ── AdminDiscountCodes ─────────────────────────────────────────
+function AdminDiscountCodes({ data, showToast }) {
+  const EMPTY = { code: '', type: 'percent', value: '', maxUses: '', expiresAt: '', assignedUserIds: [], active: true };
+  const [codes, setCodes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState(EMPTY);
+  const [editId, setEditId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+
+  const allUsers = data?.users || [];
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const d = await api.discountCodes.getAll();
+      setCodes(d);
+    } catch (e) { showToast(fmtErr(e), 'error'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const resetForm = () => { setForm(EMPTY); setEditId(null); setUserSearch(''); setShowForm(false); };
+
+  const startEdit = (c) => {
+    setForm({
+      code: c.code,
+      type: c.type,
+      value: String(c.value),
+      maxUses: c.max_uses != null ? String(c.max_uses) : '',
+      expiresAt: c.expires_at ? c.expires_at.slice(0, 10) : '',
+      assignedUserIds: c.assigned_user_ids || [],
+      active: c.active,
+    });
+    setEditId(c.id);
+    setUserSearch('');
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.code.trim()) return showToast('Code is required.', 'error');
+    if (!form.value || isNaN(Number(form.value))) return showToast('Value is required.', 'error');
+    if (form.type === 'percent' && (Number(form.value) <= 0 || Number(form.value) > 100))
+      return showToast('Percent must be 1–100.', 'error');
+    setSaving(true);
+    try {
+      if (editId) {
+        await api.discountCodes.update(editId, form);
+        showToast('Discount code updated.', 'success');
+      } else {
+        await api.discountCodes.create(form);
+        showToast('Discount code created.', 'success');
+      }
+      resetForm();
+      load();
+    } catch (e) { showToast(fmtErr(e), 'error'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this discount code?')) return;
+    setDeleting(id);
+    try {
+      await api.discountCodes.delete(id);
+      showToast('Deleted.', 'success');
+      load();
+    } catch (e) { showToast(fmtErr(e), 'error'); }
+    finally { setDeleting(null); }
+  };
+
+  const toggleUser = (uid) => {
+    setForm(f => ({
+      ...f,
+      assignedUserIds: f.assignedUserIds.includes(uid)
+        ? f.assignedUserIds.filter(x => x !== uid)
+        : [...f.assignedUserIds, uid],
+    }));
+  };
+
+  const filteredUsers = allUsers.filter(u =>
+    !userSearch || u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.email?.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const assignedUsers = allUsers.filter(u => form.assignedUserIds.includes(u.id));
+
+  const isExpired = (c) => c.expires_at && new Date(c.expires_at) < new Date();
+  const isExhausted = (c) => c.max_uses != null && c.uses >= c.max_uses;
+
+  const statusBadge = (c) => {
+    if (!c.active) return { label: 'Inactive', color: 'var(--muted)' };
+    if (isExpired(c)) return { label: 'Expired', color: 'var(--red)' };
+    if (isExhausted(c)) return { label: 'Used up', color: 'var(--red)' };
+    return { label: 'Active', color: 'var(--accent)' };
+  };
+
+  const cs = { fontFamily: "'Barlow Condensed',sans-serif" };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+        <h2 style={{ ...cs, fontSize: 26, fontWeight: 900, letterSpacing: '.06em', margin: 0 }}>🏷️ DISCOUNT CODES</h2>
+        <button className="btn btn-accent" onClick={() => { resetForm(); setShowForm(true); }}>+ New Code</button>
+      </div>
+
+      {/* ── Form ── */}
+      {showForm && (
+        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, padding: 20, marginBottom: 24 }}>
+          <h3 style={{ ...cs, fontSize: 18, fontWeight: 800, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+            {editId ? '✏️ Edit Code' : '➕ New Code'}
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12, marginBottom: 16 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Code *
+              <input className="input" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="e.g. SUMMER20" style={{ textTransform: 'uppercase' }} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Type *
+              <select className="input" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                <option value="percent">Percentage (%)</option>
+                <option value="fixed">Fixed Amount (£)</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Value * {form.type === 'percent' ? '(%)' : '(£)'}
+              <input className="input" type="number" min="0" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+                placeholder={form.type === 'percent' ? '10' : '5.00'} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Max Uses (optional)
+              <input className="input" type="number" min="1" value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))}
+                placeholder="Unlimited" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Expires (optional)
+              <input className="input" type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', justifyContent: 'center' }}>
+              Status
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <input type="checkbox" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, textTransform: 'none' }}>{form.active ? 'Active' : 'Inactive'}</span>
+              </div>
+            </label>
+          </div>
+
+          {/* User assignment */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+              Restrict to Specific Users (leave empty = anyone can use)
+            </div>
+            {assignedUsers.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {assignedUsers.map(u => (
+                  <span key={u.id} style={{ background: 'var(--accent)', color: '#000', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {u.name}
+                    <span style={{ cursor: 'pointer', fontWeight: 900 }} onClick={() => toggleUser(u.id)}>×</span>
+                  </span>
+                ))}
+              </div>
+            )}
+            <input className="input" placeholder="Search players to assign..." value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+              style={{ marginBottom: 8, maxWidth: 320 }} />
+            {userSearch && (
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, maxHeight: 200, overflowY: 'auto' }}>
+                {filteredUsers.slice(0, 20).map(u => (
+                  <div key={u.id} onClick={() => toggleUser(u.id)}
+                    style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                      background: form.assignedUserIds.includes(u.id) ? 'rgba(200,255,0,.1)' : 'transparent',
+                      borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 16 }}>{form.assignedUserIds.includes(u.id) ? '✅' : '⬜'}</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{u.email}</div>
+                    </div>
+                  </div>
+                ))}
+                {filteredUsers.length === 0 && <div style={{ padding: 12, color: 'var(--muted)', fontSize: 13 }}>No players found.</div>}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editId ? 'Save Changes' : 'Create Code'}</button>
+            <button className="btn btn-ghost" onClick={resetForm}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Table ── */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>Loading…</div>
+      ) : codes.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>No discount codes yet. Create one above.</div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                {['Code','Type','Value','Uses','Limit','Expires','Assigned To','Status',''].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '8px 10px', ...cs, fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: 'var(--muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {codes.map(c => {
+                const badge = statusBadge(c);
+                const assigned = allUsers.filter(u => (c.assigned_user_ids || []).includes(u.id));
+                return (
+                  <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '10px', fontWeight: 800, ...cs, fontSize: 16, letterSpacing: '.05em', color: 'var(--accent)' }}>{c.code}</td>
+                    <td style={{ padding: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontSize: 11, fontWeight: 700 }}>{c.type}</td>
+                    <td style={{ padding: '10px', fontWeight: 700 }}>{c.type === 'percent' ? `${c.value}%` : `£${Number(c.value).toFixed(2)}`}</td>
+                    <td style={{ padding: '10px' }}>{c.uses}</td>
+                    <td style={{ padding: '10px', color: 'var(--muted)' }}>{c.max_uses != null ? c.max_uses : '∞'}</td>
+                    <td style={{ padding: '10px', color: 'var(--muted)', fontSize: 12 }}>{c.expires_at ? new Date(c.expires_at).toLocaleDateString('en-GB') : '—'}</td>
+                    <td style={{ padding: '10px', maxWidth: 180 }}>
+                      {assigned.length === 0
+                        ? <span style={{ color: 'var(--muted)', fontSize: 12 }}>Anyone</span>
+                        : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {assigned.map(u => (
+                              <span key={u.id} style={{ background: 'rgba(200,255,0,.15)', color: 'var(--accent)', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{u.name}</span>
+                            ))}
+                          </div>
+                      }
+                    </td>
+                    <td style={{ padding: '10px' }}>
+                      <span style={{ background: badge.color + '22', color: badge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em' }}>{badge.label}</span>
+                    </td>
+                    <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-sm btn-ghost" onClick={() => startEdit(c)} style={{ marginRight: 6 }}>Edit</button>
+                      <button className="btn btn-sm" onClick={() => handleDelete(c.id)} disabled={deleting === c.id}
+                        style={{ background: 'var(--red)', color: '#fff', border: 'none', opacity: deleting === c.id ? .5 : 1 }}>
+                        {deleting === c.id ? '…' : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div style={{ marginTop: 24, padding: 16, background: 'rgba(200,255,0,.06)', border: '1px solid rgba(200,255,0,.15)', borderRadius: 8, fontSize: 12, color: 'var(--muted)' }}>
+        <strong style={{ color: 'var(--accent)' }}>SQL to create the table:</strong><br />
+        <code style={{ display: 'block', marginTop: 8, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 11 }}>{`CREATE TABLE discount_codes (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code             text UNIQUE NOT NULL,
+  type             text NOT NULL CHECK (type IN ('percent','fixed')),
+  value            numeric NOT NULL,
+  max_uses         int,
+  uses             int NOT NULL DEFAULT 0,
+  expires_at       timestamptz,
+  assigned_user_ids uuid[] NOT NULL DEFAULT '{}',
+  active           bool NOT NULL DEFAULT true,
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE discount_codes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admin full access" ON discount_codes USING (true) WITH CHECK (true);`}
+        </code>
+      </div>
+    </div>
+  );
+}
+
 function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
   const getInitialSection = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","cash","purchase-orders","bookkeeping","settings"];
+      "contact-admin","messages","cash","purchase-orders","bookkeeping","discount-codes","settings"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -5879,6 +6150,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "cash", label: "Cash Sales", icon: "💵", group: "TOOLS" },
     { id: "purchase-orders", label: "Purchase Orders", icon: "📋", group: null },
     { id: "bookkeeping", label: "Bookkeeping / HMRC", icon: "📊", group: null },
+    { id: "discount-codes", label: "Discount Codes", icon: "🏷️", group: "TOOLS" },
     { id: "settings", label: "Settings", icon: "⚙️", group: "SYSTEM" },
   ];
 
@@ -5952,6 +6224,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} />}
           {section === "bookkeeping" && <AdminBookkeeping data={data} showToast={showToast} />}
+          {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} />}
           {section === "settings" && <AdminSettings showToast={showToast} />}
         </div>
       </div>

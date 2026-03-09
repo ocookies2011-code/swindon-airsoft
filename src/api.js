@@ -929,6 +929,99 @@ export const visits = wrapWithTimeout({
   },
 })
 
+// ── Discount Codes ────────────────────────────────────────
+// Supabase table: discount_codes
+// Columns: id, code (text unique), type ('percent'|'fixed'), value (numeric),
+//          max_uses (int nullable), uses (int default 0),
+//          expires_at (timestamptz nullable),
+//          assigned_user_ids (uuid[] default '{}'),
+//          active (bool default true), created_at
+export const discountCodes = wrapWithTimeout({
+  async getAll() {
+    const { data, error } = await supabase
+      .from('discount_codes')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  async create(code) {
+    const { data, error } = await supabase
+      .from('discount_codes')
+      .insert({
+        code:               code.code.toUpperCase().trim(),
+        type:               code.type,           // 'percent' | 'fixed'
+        value:              Number(code.value),
+        max_uses:           code.maxUses ? Number(code.maxUses) : null,
+        uses:               0,
+        expires_at:         code.expiresAt || null,
+        assigned_user_ids:  code.assignedUserIds || [],
+        active:             code.active ?? true,
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async update(id, patch) {
+    const { error } = await supabase
+      .from('discount_codes')
+      .update({
+        code:              patch.code?.toUpperCase().trim(),
+        type:              patch.type,
+        value:             Number(patch.value),
+        max_uses:          patch.maxUses ? Number(patch.maxUses) : null,
+        expires_at:        patch.expiresAt || null,
+        assigned_user_ids: patch.assignedUserIds || [],
+        active:            patch.active,
+      })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('discount_codes').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  // Called at checkout — validates and increments use count
+  // Returns the discount object or throws a descriptive error
+  async redeem(code, userId) {
+    const { data, error } = await supabase
+      .from('discount_codes')
+      .select('*')
+      .eq('code', code.toUpperCase().trim())
+      .eq('active', true)
+      .single()
+    if (error || !data) throw new Error('Invalid or inactive discount code.')
+
+    // Check expiry
+    if (data.expires_at && new Date(data.expires_at) < new Date())
+      throw new Error('This discount code has expired.')
+
+    // Check use limit
+    if (data.max_uses !== null && data.uses >= data.max_uses)
+      throw new Error('This discount code has reached its usage limit.')
+
+    // Check user assignment (if restricted)
+    if (data.assigned_user_ids?.length > 0) {
+      if (!userId || !data.assigned_user_ids.includes(userId))
+        throw new Error('This discount code is not valid for your account.')
+    }
+
+    // Increment use count
+    const { error: incErr } = await supabase
+      .from('discount_codes')
+      .update({ uses: data.uses + 1 })
+      .eq('id', data.id)
+    if (incErr) throw incErr
+
+    return data
+  },
+})
+
 // ── Event Waitlist ────────────────────────────────────────
 export const waitlistApi = {
   join: async ({ eventId, userId, userName, userEmail, ticketType }) => {
