@@ -13123,7 +13123,7 @@ function TermsPage({ setPage }) {
             </div>
 
             <SectionTitle id="terms-5">5. Engagement Distances</SectionTitle>
-            <Para>Minimum engagement distances (MED) must be observed at all times. If a target is within the MED, players must shout "BANG KILL" rather than shooting. Marshals will brief these rules before each game.</Para>
+            <Para>Minimum engagement distances (MED) must be observed at all times. Players operating a DMR or bolt-action sniper rifle must carry a sidearm and switch to it when inside the MED. Marshals will brief these rules before each game.</Para>
             <BulletList items={[
               "Full Auto Rifle (350fps): No minimum engagement distance.",
               "DMR (450fps): 30 metre minimum engagement distance.",
