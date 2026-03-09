@@ -444,6 +444,7 @@ function useData() {
     const snakePatch = {};
     const map = {
       name: "name", email: "email", phone: "phone", address: "address", role: "role",
+      callsign: "callsign",
       gamesAttended: "games_attended", waiverSigned: "waiver_signed",
       waiverYear: "waiver_year", waiverData: "waiver_data", extraWaivers: "extra_waivers",
       waiverPending: "waiver_pending", vipStatus: "vip_status",
@@ -2000,6 +2001,43 @@ function HomePage({ data, setPage }) {
             After 3 game days, unlock VIP membership for just £30/year. Get 10% off everything, access exclusive events, and UKARA registration support.
           </p>
           <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => setPage("vip")}>LEARN MORE</button>
+        </div>
+      </div>
+
+      {/* PARTNER SHOP BANNER */}
+      <div style={{ background:"#0a0d08", borderTop:"1px solid #1a2808", borderBottom:"1px solid #1a2808", padding:"36px 20px" }}>
+        <div style={{ maxWidth:860, margin:"0 auto", display:"flex", flexWrap:"wrap", alignItems:"center", gap:24, justifyContent:"center" }}>
+          {/* Icon + label */}
+          <div style={{ display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+            <div style={{ width:48, height:48, border:"2px solid rgba(200,255,0,.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>🤝</div>
+            <div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", textTransform:"uppercase", marginBottom:4 }}>OFFICIAL PARTNER</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, letterSpacing:".12em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
+                AIRSOFT <span style={{ color:"#c8ff00" }}>ARMOURY UK</span>
+              </div>
+            </div>
+          </div>
+          {/* Divider */}
+          <div style={{ width:1, height:48, background:"#1e2c0a", flexShrink:0, display:"flex" }} />
+          {/* Text */}
+          <div style={{ flex:1, minWidth:220 }}>
+            <p style={{ fontSize:13, color:"#7a9a50", lineHeight:1.8, margin:0 }}>
+              Browse and purchase quality airsoft equipment from our partner store. Order online and collect at game day using code{" "}
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".12em", color:"#c8ff00" }}>COLLECTION</span>
+              {" "}at checkout — we'll bring your gear to the field.
+            </p>
+          </div>
+          {/* CTA */}
+          <a
+            href="https://www.airsoftarmoury.uk"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ flexShrink:0, display:"inline-flex", alignItems:"center", gap:8, background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".15em", padding:"11px 24px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s, color .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background="#c8ff00"; e.currentTarget.style.color="#000"; }}
+            onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#c8ff00"; }}
+          >
+            🛒 VISIT STORE
+          </a>
         </div>
       </div>
 
@@ -4539,12 +4577,12 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
               </div>
               {/* Avatar */}
               <div style={{ width: 38, height: 38, background: "#0a0c08", border: `1px solid ${isMe ? "rgba(200,255,0,.5)" : medalColor || "#1a2808"}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, overflow: "hidden", flexShrink: 0, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif" }}>
-                {player.profilePic ? <img src={player.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : player.name[0]}
+                {player.profilePic ? <img src={player.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : (player.callsign || player.name)[0]}
               </div>
               {/* Name + rank */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".08em", color: isMe ? "#e8f0d8" : isTop3 ? (medalColor || "#e8f0d8") : "#b0c090", textTransform: "uppercase", lineHeight: 1.1 }}>
-                  {player.name}
+                  {player.callsign || player.name}
                 </div>
                 {isMe && (
                   <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".15em", color: "var(--accent)", marginTop: 2, display: "inline-block", background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.3)", padding: "1px 5px", whiteSpace: "nowrap" }}>← YOU</div>
@@ -5300,6 +5338,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
   const [edit, setEdit] = useState({
     name: cu.name,
+    callsign: cu.callsign || "",
     email: cu.email || "",
     phone: cu.phone || "",
     ...parseAddress(cu.address),
@@ -5419,9 +5458,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const saveProfile = async () => {
     try {
       await updateUser(cu.id, {
-        name:    edit.name,
-        phone:   edit.phone,
-        address: composeAddress(edit),
+        name:     edit.name,
+        callsign: edit.callsign,
+        phone:    edit.phone,
+        address:  composeAddress(edit),
       });
       showToast("Profile updated!");
     } catch(e) {
@@ -5512,6 +5552,17 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           <div className="form-row">
             <div className="form-group"><label>Full Name</label><input value={edit.name} onChange={e => setEdit(p => ({ ...p, name: e.target.value }))} /></div>
             <div className="form-group"><label>Phone</label><input value={edit.phone} onChange={e => setEdit(p => ({ ...p, phone: e.target.value }))} placeholder="07700 000000" /></div>
+          </div>
+          <div className="form-group">
+            <label>Player Callsign <span style={{ color:"var(--muted)", fontWeight:400, letterSpacing:0, textTransform:"none" }}>(shown on leaderboard instead of your real name)</span></label>
+            <input
+              value={edit.callsign}
+              onChange={e => setEdit(p => ({ ...p, callsign: e.target.value }))}
+              placeholder="e.g. Ghost, Viper, Sgt. Chaos…"
+              maxLength={30}
+              style={{ maxWidth:320 }}
+            />
+            <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to use your real name on the leaderboard.</div>
           </div>
           <div className="form-group">
             <label>Email Address</label>

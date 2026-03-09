@@ -568,6 +568,7 @@ export function normaliseProfile(p) {
   return {
     id:                 p.id,
     name:               p.name,
+    callsign:           p.callsign || "",
     email:              p.email,
     phone:              p.phone,
     address:            p.address,
