@@ -1215,11 +1215,11 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     }
     return [blankForm({
       name: existingData.name || cu?.name || "", dob: existingData.dob || "",
-      addr1: e.addr1 || "", addr2: e.addr2 || "",
-      city: e.city || "", county: e.county || "",
-      postcode: e.postcode || "", country: e.country || "United Kingdom",
-      emergencyName: e.emergencyName || "", emergencyPhone: e.emergencyPhone || "",
-      medical: e.medical || "", isChild: e.isChild || false, guardian: e.guardian || "",
+      addr1: existingData.addr1 || "", addr2: existingData.addr2 || "",
+      city: existingData.city || "", county: existingData.county || "",
+      postcode: existingData.postcode || "", country: existingData.country || "United Kingdom",
+      emergencyName: existingData.emergencyName || "", emergencyPhone: existingData.emergencyPhone || "",
+      medical: existingData.medical || "", isChild: existingData.isChild || false, guardian: existingData.guardian || "",
     })];
   };
   const [waivers, setWaivers] = useState(buildInitialWaivers);
@@ -1252,12 +1252,12 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
   const getPos = (ev, canvas) => {
     const canvasRect = canvas.getBoundingClientRect();
     const src = ev.touches ? ev.touches[0] : ev;
-    const scaleX = canvas.width / r.width;
-    const scaleY = canvas.height / r.height;
+    const scaleX = canvas.width / canvasRect.width;
+    const scaleY = canvas.height / canvasRect.height;
     return { x: (src.clientX - canvasRect.left) * scaleX, y: (src.clientY - canvasRect.top) * scaleY };
   };
-  const startDraw = (ev) => { ev.preventDefault(); const canvasEl = canvasRef.current; const ctx = canvasEl.getContext("2d"); const canvasPos = getPos(ev, c); ctx.beginPath(); ctx.moveTo(canvasPos.x, canvasPos.y); setDrawing(true); };
-  const draw = (ev) => { if (!drawing) return; ev.preventDefault(); const canvasEl = canvasRef.current; const ctx = canvasEl.getContext("2d"); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#c8ff00"; const canvasPos = getPos(ev, c); ctx.lineTo(canvasPos.x, canvasPos.y); ctx.stroke(); };
+  const startDraw = (ev) => { ev.preventDefault(); const canvasEl = canvasRef.current; const ctx = canvasEl.getContext("2d"); const canvasPos = getPos(ev, canvasEl); ctx.beginPath(); ctx.moveTo(canvasPos.x, canvasPos.y); setDrawing(true); };
+  const draw = (ev) => { if (!drawing) return; ev.preventDefault(); const canvasEl = canvasRef.current; const ctx = canvasEl.getContext("2d"); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#c8ff00"; const canvasPos = getPos(ev, canvasEl); ctx.lineTo(canvasPos.x, canvasPos.y); ctx.stroke(); };
   const endDraw = () => { if (!drawing) return; setDrawing(false); fw("sigData", canvasRef.current.toDataURL()); };
   const clearSig = () => { canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); fw("sigData", ""); };
 
@@ -1265,14 +1265,14 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
 
   const submit = async () => {
     for (let waiverIdx = 0; waiverIdx < waivers.length; waiverIdx++) {
-      const waiverItem = waivers[i];
-      if (!waiverItem.name)  { showToast(`Waiver ${i+1}: Full name required`, "red"); setActiveIdx(i); return; }
-      if (!waiverItem.dob)   { showToast(`Waiver ${i+1}: Date of birth required`, "red"); setActiveIdx(i); return; }
-      if (!w.addr1 || !w.city || !w.postcode) { showToast(`Waiver ${i+1}: Address required`, "red"); setActiveIdx(i); return; }
-      if (!w.emergencyName || !w.emergencyPhone) { showToast(`Waiver ${i+1}: Emergency contact required`, "red"); setActiveIdx(i); return; }
-      if (!w.sigData) { showToast(`Waiver ${i+1}: Signature required`, "red"); setActiveIdx(i); return; }
-      if (!w.agreed) { showToast(`Waiver ${i+1}: Please agree to the terms`, "red"); setActiveIdx(i); return; }
-      if (w.isChild && !w.guardian) { showToast(`Waiver ${i+1}: Guardian name required`, "red"); setActiveIdx(i); return; }
+      const waiverItem = waivers[waiverIdx];
+      if (!waiverItem.name)  { showToast(`Waiver ${waiverIdx+1}: Full name required`, "red"); setActiveIdx(waiverIdx); return; }
+      if (!waiverItem.dob)   { showToast(`Waiver ${waiverIdx+1}: Date of birth required`, "red"); setActiveIdx(waiverIdx); return; }
+      if (!waiverItem.addr1 || !waiverItem.city || !waiverItem.postcode) { showToast(`Waiver ${waiverIdx+1}: Address required`, "red"); setActiveIdx(waiverIdx); return; }
+      if (!waiverItem.emergencyName || !waiverItem.emergencyPhone) { showToast(`Waiver ${waiverIdx+1}: Emergency contact required`, "red"); setActiveIdx(waiverIdx); return; }
+      if (!waiverItem.sigData) { showToast(`Waiver ${waiverIdx+1}: Signature required`, "red"); setActiveIdx(waiverIdx); return; }
+      if (!waiverItem.agreed) { showToast(`Waiver ${waiverIdx+1}: Please agree to the terms`, "red"); setActiveIdx(waiverIdx); return; }
+      if (waiverItem.isChild && !waiverItem.guardian) { showToast(`Waiver ${waiverIdx+1}: Guardian name required`, "red"); setActiveIdx(waiverIdx); return; }
     }
     const primary = { ...waivers[0], signed: true, date: new Date().toISOString() };
     const extras = waivers.slice(1).map(w => ({ ...w, signed: true, date: new Date().toISOString() }));
