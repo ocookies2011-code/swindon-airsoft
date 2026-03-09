@@ -11415,10 +11415,11 @@ function AboutPage({ setPage }) {
 // ── Staff Page (public) ──────────────────────────────────
 function StaffPage({ staff = [] }) {
   const RANK_LABELS = {
-    1: "COMMANDING OFFICER",
-    4: "SENIOR MARSHAL", 5: "MARSHAL", 7: "VOLUNTEER",
+    1: "OWNER",
+    2: "SENIOR MARSHAL",
+    3: "MARSHAL",
   };
-  const RANK_PIPS = { 1: 5, 2: 4, 3: 3, 4: 2 };
+  const RANK_PIPS = { 1: 5, 2: 4, 3: 3 };
   const getRankLabel = r => RANK_LABELS[r] || "MARSHAL";
 
   const tiers = staff.reduce((acc, member) => {
@@ -11488,8 +11489,8 @@ function StaffPage({ staff = [] }) {
                 fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11,
                 letterSpacing:".3em", textTransform:"uppercase",
                 padding:"5px 22px", margin:"0 12px",
-                color: tier.rank===1 ? "#c8a000" : tier.rank===4 ? "#c8ff00" : "#3a5010",
-                border:`1px solid ${tier.rank===1 ? "rgba(200,160,0,.4)" : tier.rank===4 ? "rgba(200,255,0,.2)" : "#1a2808"}`,
+                color: tier.rank===1 ? "#c8a000" : tier.rank===2 ? "#c8ff00" : "#3a5010",
+                border:`1px solid ${tier.rank===1 ? "rgba(200,160,0,.4)" : tier.rank===2 ? "rgba(200,255,0,.2)" : "#1a2808"}`,
                 background: tier.rank===1 ? "rgba(200,160,0,.06)" : "rgba(200,255,0,.02)",
                 whiteSpace:"nowrap", position:"relative",
               }}>
@@ -11516,7 +11517,7 @@ function StaffPage({ staff = [] }) {
 
 function StaffCard({ member, rank, pips }) {
   const isOwner   = rank === 1;
-  const isCommand = rank === 4;
+  const isCommand = rank === 2;  // Senior Marshal
   const gold   = "#c8a000";
   const green  = "#c8ff00";
   const accent = isOwner ? gold : isCommand ? green : "#4a6820";
@@ -11632,12 +11633,11 @@ function AdminStaff({ showToast }) {
 
   const RANK_OPTIONS = [
     { value: 1, label: "1 — Owner" },
-    { value: 2, label: "2 — Manager" },
-    { value: 3, label: "3 — Senior Marshal" },
-    { value: 4, label: "4 — Marshal" },
+    { value: 2, label: "2 — Senior Marshal" },
+    { value: 3, label: "3 — Marshal" },
   ];
 
-  const blank = { name: "", jobTitle: "", bio: "", photo: "", rankOrder: 4 };
+  const blank = { name: "", jobTitle: "", bio: "", photo: "", rankOrder: 3 };
   const [form, setForm] = useState(blank);
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
