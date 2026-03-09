@@ -2525,6 +2525,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     setDiscountError('');
   };
 
+  // Clear discount code when cart is emptied
+  useEffect(() => {
+    const cartIsEmpty = bCart.walkOn === 0 && bCart.rental === 0 && Object.keys(bCart.extras).length === 0;
+    if (cartIsEmpty && appliedDiscount) {
+      setAppliedDiscount(null);
+      setDiscountInput('');
+      setDiscountError('');
+    }
+  }, [bCart, appliedDiscount]);
+
   // Waitlist state
   const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
   const [waitlistBusy, setWaitlistBusy] = useState(false);
@@ -2611,13 +2621,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     }
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
-
-    // Clear discount if cart is emptied
-    if (cartEmpty && appliedDiscount) {
-      setAppliedDiscount(null);
-      setDiscountInput('');
-      setDiscountError('');
-    }
 
     // ── Discount code savings (applied after VIP, before credits)
     let discountSaving = 0;
@@ -8884,6 +8887,12 @@ function AdminOrdersInline({ showToast }) {
                 {(Array.isArray(detail.items) ? detail.items : []).map((i, idx) => (
                   <tr key={idx}><td>{i.name}</td><td>{i.qty}</td><td>£{Number(i.price).toFixed(2)}</td><td className="text-green">£{(Number(i.price)*i.qty).toFixed(2)}</td></tr>
                 ))}
+                {detail.discount_code && (
+                  <tr style={{ color: "var(--accent)" }}>
+                    <td colSpan={3} style={{ fontWeight: 700 }}>🏷️ Discount Code ({detail.discount_code})</td>
+                    <td style={{ fontWeight: 700 }}>−£{Number(detail.discount_saving || 0).toFixed(2)}</td>
+                  </tr>
+                )}
                 <tr style={{ borderTop:"2px solid var(--border)" }}>
                   <td colSpan={3} style={{ fontWeight:700 }}>Postage ({detail.postage_name})</td>
                   <td>£{Number(detail.postage).toFixed(2)}</td>
@@ -8903,7 +8912,7 @@ function AdminOrdersInline({ showToast }) {
                 </div>
               )}
                         <div className="gap-2 mt-2">
-              {!detail.refund_amount && detail.paypal_order_id && (
+              {!detail.refund_amount && (detail.paypal_order_id || detail.square_order_id) && (
                 <button className="btn btn-sm" style={{ background:"rgba(255,60,60,.12)", border:"1px solid rgba(255,60,60,.35)", color:"var(--red)" }}
                   onClick={() => openRefund(detail)}>💸 Refund Order</button>
               )}
@@ -9246,7 +9255,7 @@ function AdminOrders({ showToast }) {
                 </div>
               )}
             <div className="gap-2 mt-2">
-              {!detail.refund_amount && detail.paypal_order_id && (
+              {!detail.refund_amount && (detail.paypal_order_id || detail.square_order_id) && (
                 <button className="btn btn-sm" style={{ background:"rgba(255,60,60,.12)", border:"1px solid rgba(255,60,60,.35)", color:"var(--red)" }}
                   onClick={() => openRefund(detail)}>💸 Refund Order</button>
               )}
@@ -10621,13 +10630,19 @@ function AdminRevenue({ data, save, showToast }) {
                     <td>
                   {t.source === "cash"
                     ? `Cash Sale (${t.items?.length || 0} items)`
+                    : t.source === "shop"
+                    ? `Shop Order (${t.items?.length || 0} item${t.items?.length !== 1 ? "s" : ""})`
                     : (() => {
                         const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
                         return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
                       })()
                   }
                 </td>
-                    <td><span className={`tag ${t.source === "cash" ? "tag-gold" : "tag-blue"}`}>{t.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
+                    <td>
+                      <span className={`tag ${t.source === "cash" ? "tag-gold" : t.source === "shop" ? "tag-teal" : "tag-blue"}`}>
+                        {t.source === "cash" ? "💵 Cash" : t.source === "shop" ? "🛒 Shop" : "🌐 Online"}
+                      </span>
+                    </td>
                     <td className="text-green">£{t.total.toFixed(2)}</td>
                   </tr>
                 ))}
@@ -13418,10 +13433,6 @@ export default function App() {
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
   const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","leaderboard","profile","about","staff","contact","terms"];
-  const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
-    "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-    "contact-admin","messages","cash","settings"];
-
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
