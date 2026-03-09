@@ -3222,36 +3222,44 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   {/* Discount code input */}
                   {cu && !cartEmpty && !isAdmin && (
                     <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--muted)', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount Code</div>
                       {!appliedDiscount ? (
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 0 }}>
                           <input
                             value={discountInput}
                             onChange={e => { setDiscountInput(e.target.value.toUpperCase()); setDiscountError(''); }}
                             onKeyDown={e => e.key === 'Enter' && applyDiscountCode()}
-                            placeholder="DISCOUNT CODE"
-                            style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', color: '#c8e878', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.12em', padding: '7px 10px', outline: 'none', textTransform: 'uppercase' }}
+                            placeholder="ENTER CODE"
+                            style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', borderRight: 'none', color: '#c8e878', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.12em', padding: '8px 10px', outline: 'none', textTransform: 'uppercase' }}
+                            onFocus={e => e.target.style.borderColor = '#4a6820'}
+                            onBlur={e => e.target.style.borderColor = '#2a3a10'}
                           />
                           <button onClick={applyDiscountCode} disabled={discountChecking || !discountInput.trim()}
-                            style={{ background: 'rgba(200,255,0,.1)', border: '1px solid #2a3a10', color: '#c8ff00', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: '.1em', padding: '7px 14px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: discountChecking || !discountInput.trim() ? .5 : 1 }}>
-                            {discountChecking ? '…' : 'APPLY'}
+                            style={{ background: discountInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: discountInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: '.1em', padding: '8px 14px', cursor: discountInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
+                            {discountChecking ? '⏳' : 'APPLY'}
                           </button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', background: 'rgba(200,255,0,.07)', border: '1px solid rgba(200,255,0,.25)' }}>
-                          <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: '#c8ff00', letterSpacing: '.08em' }}>
-                            🏷️ {appliedDiscount.code} — {appliedDiscount.type === 'percent' ? `${appliedDiscount.value}% OFF` : `£${Number(appliedDiscount.value).toFixed(2)} OFF`}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(200,255,0,.08)', border: '1px solid rgba(200,255,0,.3)', borderLeft: '3px solid #c8ff00' }}>
+                          <div>
+                            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: '#c8ff00', letterSpacing: '.08em' }}>
+                              ✓ {appliedDiscount.code}
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>
+                              {appliedDiscount.type === 'percent' ? `${appliedDiscount.value}% off` : `£${Number(appliedDiscount.value).toFixed(2)} off`} applied
+                            </div>
+                          </div>
                           <button onClick={() => { setAppliedDiscount(null); setDiscountInput(''); setDiscountError(''); }}
-                            style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+                            style={{ background: 'none', border: '1px solid #2a3a10', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '4px 8px', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}>REMOVE</button>
                         </div>
                       )}
-                      {discountError && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>⚠ {discountError}</div>}
+                      {discountError && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>⚠ {discountError}</div>}
                     </div>
                   )}
                   {appliedDiscount && discountSaving > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4, color: '#c8ff00' }}>
-                      <span>🏷️ Discount ({appliedDiscount.code})</span>
-                      <span>−£{discountSaving.toFixed(2)}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4, color: '#c8ff00', background: 'rgba(200,255,0,.05)', padding: '3px 6px', borderRadius: 2 }}>
+                      <span>🏷️ Code: {appliedDiscount.code}</span>
+                      <span style={{ fontWeight: 700 }}>−£{discountSaving.toFixed(2)}</span>
                     </div>
                   )}
                   {/* Credits toggle */}
@@ -3951,30 +3959,38 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {/* ── Discount Code ── */}
                 {cu && (
                   <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 9, letterSpacing: '.2em', color: '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount Code</div>
                     {!shopAppliedDiscount ? (
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 0 }}>
                         <input
                           value={shopDiscountInput}
                           onChange={e => { setShopDiscountInput(e.target.value.toUpperCase()); setShopDiscountError(''); }}
                           onKeyDown={e => e.key === 'Enter' && applyShopDiscount(cu)}
-                          placeholder="DISCOUNT CODE"
-                          style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', color: '#c8e878', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '.1em', padding: '7px 10px', outline: 'none', textTransform: 'uppercase', borderRadius: 0 }}
+                          placeholder="ENTER CODE"
+                          style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', borderRight: 'none', color: '#c8e878', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '.1em', padding: '8px 10px', outline: 'none', textTransform: 'uppercase', borderRadius: 0 }}
+                          onFocus={e => e.target.style.borderColor = '#4a6820'}
+                          onBlur={e => e.target.style.borderColor = '#2a3a10'}
                         />
                         <button onClick={() => applyShopDiscount(cu)} disabled={shopDiscountChecking || !shopDiscountInput.trim()}
-                          style={{ background: 'rgba(200,255,0,.1)', border: '1px solid #2a3a10', color: '#c8ff00', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: '.1em', padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: shopDiscountChecking || !shopDiscountInput.trim() ? .5 : 1 }}>
-                          {shopDiscountChecking ? '…' : 'APPLY'}
+                          style={{ background: shopDiscountInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: shopDiscountInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: '.1em', padding: '8px 12px', cursor: shopDiscountInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
+                          {shopDiscountChecking ? '⏳' : 'APPLY'}
                         </button>
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', background: 'rgba(200,255,0,.07)', border: '1px solid rgba(200,255,0,.25)' }}>
-                        <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: '#c8ff00', letterSpacing: '.08em' }}>
-                          🏷️ {shopAppliedDiscount.code} — {shopAppliedDiscount.type === 'percent' ? `${shopAppliedDiscount.value}% OFF` : `£${Number(shopAppliedDiscount.value).toFixed(2)} OFF`}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(200,255,0,.08)', border: '1px solid rgba(200,255,0,.3)', borderLeft: '3px solid #c8ff00' }}>
+                        <div>
+                          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: '#c8ff00', letterSpacing: '.08em' }}>
+                            ✓ {shopAppliedDiscount.code}
+                          </div>
+                          <div style={{ fontSize: 10, color: '#5a7a30', marginTop: 1 }}>
+                            {shopAppliedDiscount.type === 'percent' ? `${shopAppliedDiscount.value}% off` : `£${Number(shopAppliedDiscount.value).toFixed(2)} off`} applied
+                          </div>
+                        </div>
                         <button onClick={() => { setShopAppliedDiscount(null); setShopDiscountInput(''); setShopDiscountError(''); }}
-                          style={{ background: 'none', border: 'none', color: '#5a7a30', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+                          style={{ background: 'none', border: '1px solid #2a3a10', color: '#5a7a30', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '4px 8px', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}>REMOVE</button>
                       </div>
                     )}
-                    {shopDiscountError && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>⚠ {shopDiscountError}</div>}
+                    {shopDiscountError && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>⚠ {shopDiscountError}</div>}
                   </div>
                 )}
 
@@ -3997,21 +4013,29 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   </div>
                 </div>
 
-                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:24, marginTop:16, paddingTop:12, borderTop:"1px solid #2a3a10", color:"#e8f0d8" }}>
-                  <span>TOTAL</span>
-                  <span style={{ color:"#c8ff00" }}>£{grandTotal.toFixed(2)}</span>
+                <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #2a3a10' }}>
+                  {shopDiscountSaving > 0 && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, marginBottom: 4, color: '#5a7a30' }}>
+                        <span>Subtotal</span>
+                        <span>£{subTotal.toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, marginBottom: 6, color: '#c8ff00', background: 'rgba(200,255,0,.05)', padding: '3px 6px', borderRadius: 2 }}>
+                        <span>🏷️ Code: {shopAppliedDiscount?.code}</span>
+                        <span style={{ fontWeight: 700 }}>−£{shopDiscountSaving.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, color: '#e8f0d8' }}>
+                    <span>TOTAL</span>
+                    <span style={{ color: '#c8ff00' }}>£{grandTotal.toFixed(2)}</span>
+                  </div>
+                  {!hasNoPost && postageTotal > 0 && (
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: '#3a5010', textAlign: 'right', marginTop: 2 }}>
+                      incl. {postage.name} £{postageTotal.toFixed(2)}
+                    </div>
+                  )}
                 </div>
-                {shopDiscountSaving > 0 && (
-                  <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, marginTop:4, color:"#c8ff00" }}>
-                    <span>🏷️ Discount ({shopAppliedDiscount?.code})</span>
-                    <span>−£{shopDiscountSaving.toFixed(2)}</span>
-                  </div>
-                )}
-                {!hasNoPost && postageTotal > 0 && (
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", textAlign:"right", marginTop:2 }}>
-                    incl. {postage.name} £{postageTotal.toFixed(2)}
-                  </div>
-                )}
 
                 {!cu && <div className="alert alert-red mt-2" style={{ borderRadius:0 }}>LOG IN TO COMPLETE REQUISITION</div>}
                 {cu?.role === "admin" && <div className="alert alert-red mt-2" style={{ borderRadius:0 }}>⚠ ADMIN ACCOUNTS CANNOT PLACE ORDERS</div>}
@@ -6280,15 +6304,22 @@ function AdminDiscountCodes({ data, showToast }) {
                   const assigned = allUsers.filter(u => (c.assigned_user_ids || []).includes(u.id));
                   const codeRedemptions = redemptionsByCode[c.id] || [];
                   return (
-                    <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <tr key={c.id} style={{ borderBottom: '1px solid var(--border)', opacity: (!c.active || isExpired(c) || isExhausted(c)) ? 0.55 : 1, transition: 'opacity .15s' }}>
                       <td style={{ padding: '10px', fontWeight: 800, ...cs, fontSize: 16, letterSpacing: '.05em', color: 'var(--accent)' }}>{c.code}</td>
                       <td style={{ padding: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontSize: 11, fontWeight: 700 }}>{c.type}</td>
                       <td style={{ padding: '10px', fontWeight: 700 }}>{c.type === 'percent' ? `${c.value}%` : `£${Number(c.value).toFixed(2)}`}</td>
                       <td style={{ padding: '10px', fontSize: 11, color: 'var(--muted)' }}>{scopeLabel(c.scope)}</td>
-                      <td style={{ padding: '10px' }}>
-                        <span>{c.uses}</span>
+                      <td style={{ padding: '10px', minWidth: 80 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontWeight: 700 }}>{c.uses}</span>
+                          {c.max_uses != null && (
+                            <div style={{ flex: 1, height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', minWidth: 36 }}>
+                              <div style={{ height: '100%', width: `${Math.min(100, Math.round(c.uses / c.max_uses * 100))}%`, background: c.uses >= c.max_uses ? 'var(--red)' : c.uses / c.max_uses > 0.75 ? 'var(--gold)' : 'var(--accent)', borderRadius: 2, transition: 'width .3s' }} />
+                            </div>
+                          )}
+                        </div>
                         {codeRedemptions.length > 0 && (
-                          <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--muted)' }}>({codeRedemptions.length} logged)</span>
+                          <span style={{ fontSize: 10, color: 'var(--muted)' }}>({codeRedemptions.length} logged)</span>
                         )}
                       </td>
                       <td style={{ padding: '10px', color: 'var(--muted)' }}>{c.max_uses != null ? c.max_uses : '∞'}</td>
@@ -6347,15 +6378,22 @@ function AdminDiscountCodes({ data, showToast }) {
                       <td style={{ padding: '10px', fontSize: 12, color: 'var(--muted)' }}>{new Date(r.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       <td style={{ padding: '10px', fontWeight: 800, ...cs, fontSize: 15, color: 'var(--accent)' }}>{matchedCode?.code || r.code_id?.slice(0,8)}</td>
                       <td style={{ padding: '10px', fontWeight: 600 }}>{r.user_name || <span style={{ color: 'var(--muted)' }}>Guest</span>}</td>
-                      <td style={{ padding: '10px', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase' }}>{r.scope}</td>
+                      <td style={{ padding: '10px' }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', padding: '2px 8px', borderRadius: 20,
+                          background: r.scope === 'shop' ? 'rgba(0,180,160,.15)' : r.scope === 'events' ? 'rgba(0,100,255,.15)' : 'rgba(200,255,0,.1)',
+                          color:      r.scope === 'shop' ? '#00c8b0'             : r.scope === 'events' ? '#60a0ff'             : 'var(--accent)',
+                        }}>{r.scope}</span>
+                      </td>
                       <td style={{ padding: '10px', fontWeight: 700, color: 'var(--accent)' }}>£{Number(r.amount_saved).toFixed(2)}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>
-              Total saved by players: <strong style={{ color: 'var(--accent)' }}>£{redemptions.reduce((s, r) => s + Number(r.amount_saved), 0).toFixed(2)}</strong>
+            <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Total saved by players</span>
+              <strong style={{ fontSize: 20, color: 'var(--accent)', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900 }}>£{redemptions.reduce((s, r) => s + Number(r.amount_saved), 0).toFixed(2)}</strong>
             </div>
           </div>
         )
