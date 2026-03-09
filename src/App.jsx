@@ -2167,7 +2167,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
   await sendEmail({
     toEmail:     cu.email || "",
     toName:      cu.name || "Player",
-    subject:     `🎯 Booking Confirmed — ${ev.title}`,
+    subject:     `🎯 Booking Confirmed — ${ev.title.replace(/\//g, '-')}`,
     htmlContent,
   });
 }
