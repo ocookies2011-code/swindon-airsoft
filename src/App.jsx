@@ -2612,6 +2612,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
 
+    // Clear discount if cart is emptied
+    if (cartEmpty && appliedDiscount) {
+      setAppliedDiscount(null);
+      setDiscountInput('');
+      setDiscountError('');
+    }
+
     // ── Discount code savings (applied after VIP, before credits)
     let discountSaving = 0;
     if (appliedDiscount && !cartEmpty) {
@@ -2701,13 +2708,21 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         }
 
         // Create booking records in parallel
+        // Distribute discount + credits proportionally across walkOn and rental totals
+        const preDiscountTotal = grandTotal || 1; // avoid divide-by-zero
+        const walkOnShare = grandTotal > 0 ? (walkOnTotal + extrasTotal) / preDiscountTotal : 0;
+        const rentalShare = grandTotal > 0 ? (rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal)) / preDiscountTotal : 0;
+        const totalDeductions = discountSaving + creditsApplied;
+        const walkOnPaid = Math.max(0, (walkOnTotal + extrasTotal) - totalDeductions * walkOnShare);
+        const rentalPaid = Math.max(0, (rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal)) - totalDeductions * rentalShare);
+
         const bookingPromises = [];
         if (bCart.walkOn > 0) {
           bookingPromises.push(api.bookings.create({
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "walkOn", qty: bCart.walkOn,
             extras: extrasSnapshot,
-            total: walkOnTotal + extrasTotal,
+            total: Math.round(walkOnPaid * 100) / 100,
             squareOrderId: squarePayment.id,
           }));
         }
@@ -2716,7 +2731,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             eventId: ev.id, userId: cu.id, userName: cu.name,
             type: "rental", qty: bCart.rental,
             extras: bCart.walkOn > 0 ? {} : extrasSnapshot,
-            total: rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal),
+            total: Math.round(rentalPaid * 100) / 100,
             squareOrderId: squarePayment.id,
           }));
         }
@@ -3202,7 +3217,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     </div>
                   )}
                   {/* Discount code input */}
-                  {cu && !cartEmpty && (
+                  {cu && !cartEmpty && !isAdmin && (
                     <div style={{ marginBottom: 8 }}>
                       {!appliedDiscount ? (
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -3577,7 +3592,13 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
     showToast(`${label} × ${qty} added to cart`);
   };
 
-  const removeFromCart = (key) => setCart(c => c.filter(x => x.key !== key));
+  const removeFromCart = (key) => {
+    setCart(c => {
+      const next = c.filter(x => x.key !== key);
+      if (next.length === 0) { setShopAppliedDiscount(null); setShopDiscountInput(''); setShopDiscountError(''); }
+      return next;
+    });
+  };
   const updateCartQty = (key, qty) => {
     if (qty < 1) { removeFromCart(key); return; }
     setCart(c => c.map(x => x.key === key ? { ...x, qty: Math.min(qty, x.stock) } : x));
@@ -3626,8 +3647,8 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         validDefence: validDefence.trim() || null,
       });
       showToast("✅ Order confirmed! Thank you.");
+      const cartSnapshot = [...cart];
       try {
-        const cartSnapshot = [...cart];
         sendOrderEmail({
           cu,
           order: { id: squarePayment.id, postage: postageTotal, total: grandTotal, customerAddress: cu.address || "" },
@@ -3642,7 +3663,6 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         } catch { /* non-fatal */ }
       }
       setCart([]); setCartOpen(false); setShopAppliedDiscount(null); setShopDiscountInput('');
-      const cartSnapshot = [...cart];
       Promise.all([
         ...cartSnapshot.map(ci => (
           ci.variantId
