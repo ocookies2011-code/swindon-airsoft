@@ -3645,6 +3645,8 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         total: grandTotal, squareOrderId: squarePayment.id,
         validDefence: validDefence.trim() || null,
+        discountCode: shopAppliedDiscount ? shopAppliedDiscount.code : null,
+        discountSaving: shopDiscountSaving > 0 ? shopDiscountSaving : null,
       });
       showToast("✅ Order confirmed! Thank you.");
       const cartSnapshot = [...cart];
@@ -6025,7 +6027,24 @@ function AdminDiscountCodes({ data, showToast }) {
         api.discountCodes.getAll(),
         api.discountCodes.getRedemptions(),
       ]);
-      setCodes(d);
+      // Auto-deactivate any codes that have expired but are still marked active
+      const now = new Date();
+      const toDeactivate = d.filter(c => c.active && c.expires_at && new Date(c.expires_at) < now);
+      if (toDeactivate.length > 0) {
+        await Promise.all(toDeactivate.map(c =>
+          api.discountCodes.update(c.id, {
+            code: c.code, type: c.type, value: c.value,
+            maxUses: c.max_uses, maxUsesPerUser: c.max_uses_per_user,
+            expiresAt: c.expires_at, assignedUserIds: c.assigned_user_ids,
+            scope: c.scope, active: false,
+          }).catch(() => {})
+        ));
+        // Refresh after deactivation
+        const refreshed = await api.discountCodes.getAll();
+        setCodes(refreshed);
+      } else {
+        setCodes(d);
+      }
       setRedemptions(r);
     } catch (e) { showToast(fmtErr(e), 'error'); }
     finally { setLoading(false); }
@@ -6347,7 +6366,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","cash","purchase-orders","bookkeeping","discount-codes","settings"];
+      "contact-admin","messages","cash","purchase-orders","discount-codes","settings"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -6393,8 +6412,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "messages", label: "Site Messages", icon: "📢", group: null },
     { id: "cash", label: "Cash Sales", icon: "💵", group: "TOOLS" },
     { id: "purchase-orders", label: "Purchase Orders", icon: "📋", group: null },
-    { id: "bookkeeping", label: "Bookkeeping / HMRC", icon: "📊", group: null },
-    { id: "discount-codes", label: "Discount Codes", icon: "🏷️", group: "TOOLS" },
+    { id: "discount-codes", label: "Discount Codes", icon: "🏷️", group: null },
     { id: "settings", label: "Settings", icon: "⚙️", group: "SYSTEM" },
   ];
 
@@ -6467,7 +6485,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} />}
-          {section === "bookkeeping" && <AdminBookkeeping data={data} showToast={showToast} />}
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} />}
           {section === "settings" && <AdminSettings showToast={showToast} />}
         </div>
@@ -10288,6 +10305,7 @@ function AdminVisitorStats() {
 // ── Admin Revenue ─────────────────────────────────────────
 function AdminRevenue({ data, save, showToast }) {
   const [cashSales, setCashSales] = useState([]);
+  const [shopOrders, setShopOrders] = useState([]);
   const [selected, setSelected] = useState(null); // selected transaction for detail modal
   const [monthDetail, setMonthDetail] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null); // { t: transaction, busy: false }
@@ -10295,7 +10313,10 @@ function AdminRevenue({ data, save, showToast }) {
 
   const reloadCash = () => api.cashSales.getAll().then(setCashSales).catch(console.error);
 
-  useEffect(() => { reloadCash(); }, []);
+  useEffect(() => {
+    reloadCash();
+    api.shopOrders.getAll().then(setShopOrders).catch(console.error);
+  }, []);
 
   const deleteTransaction = async (t) => {
     setDelBusy(true);
@@ -10343,6 +10364,24 @@ function AdminRevenue({ data, save, showToast }) {
     checkedIn: b.checkedIn,
   })));
 
+  const shopRevenue = shopOrders
+    .filter(o => o.status !== "cancelled" && o.status !== "refunded")
+    .map(o => ({
+      id: o.id,
+      userName: o.customer_name,
+      customerEmail: o.customer_email,
+      source: "shop",
+      eventTitle: "Shop Order",
+      items: Array.isArray(o.items) ? o.items : [],
+      total: Number(o.total),
+      subtotal: Number(o.subtotal),
+      postage: Number(o.postage || 0),
+      discountCode: o.discount_code || null,
+      discountSaving: o.discount_saving ? Number(o.discount_saving) : null,
+      date: o.created_at,
+      status: o.status,
+    }));
+
   const cashRevenue = cashSales.map(s => ({
     id: s.id,
     userName: s.customer_name,
@@ -10354,12 +10393,13 @@ function AdminRevenue({ data, save, showToast }) {
     date: s.created_at,
   }));
 
-  const all = [...bookingRevenue, ...cashRevenue]
+  const all = [...bookingRevenue, ...shopRevenue, ...cashRevenue]
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const totalBookings = bookingRevenue.reduce((s, b) => s + b.total, 0);
+  const totalShop = shopRevenue.reduce((s, o) => s + o.total, 0);
   const totalCash = cashRevenue.reduce((s, b) => s + b.total, 0);
-  const total = totalBookings + totalCash;
+  const total = totalBookings + totalShop + totalCash;
 
   const byMonth = {};
   all.forEach(b => {
@@ -10372,6 +10412,8 @@ function AdminRevenue({ data, save, showToast }) {
   const getLines = (t) => {
     if (t.source === "cash") {
       return t.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, line: i.price * i.qty }));
+    } else if (t.source === "shop") {
+      return t.items.map(i => ({ name: i.name, qty: i.qty, price: Number(i.price), line: Number(i.price) * i.qty }));
     } else {
       // Ticket line — work out ticket unit price from event
       const ev = t.eventObj || data.events.find(e => e.title === t.eventTitle);
@@ -10402,9 +10444,9 @@ function AdminRevenue({ data, save, showToast }) {
       <div className="grid-4 mb-2">
         {[
           { label: "Total Revenue", val: `£${total.toFixed(2)}`, color: "" },
-          { label: "Online Bookings", val: `£${totalBookings.toFixed(2)}`, color: "blue" },
-          { label: "Cash Sales", val: `£${totalCash.toFixed(2)}`, color: "teal" },
-          { label: "Transactions", val: all.length, color: "gold" },
+          { label: "Event Bookings", val: `£${totalBookings.toFixed(2)}`, color: "blue" },
+          { label: "Shop Orders", val: `£${totalShop.toFixed(2)}`, color: "teal" },
+          { label: "Cash Sales", val: `£${totalCash.toFixed(2)}`, color: "gold" },
         ].map(({ label, val, color }) => (
           <div key={label} className={`stat-card ${color}`}><div className="stat-val">{val}</div><div className="stat-label">{label}</div></div>
         ))}
@@ -10455,17 +10497,23 @@ function AdminRevenue({ data, save, showToast }) {
                 <td>
                   {t.source === "cash"
                     ? `Cash Sale (${t.items?.length || 0} items)`
+                    : t.source === "shop"
+                    ? `Shop Order (${t.items?.length || 0} item${t.items?.length !== 1 ? "s" : ""})`
                     : (() => {
                         const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
                         return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
                       })()
                   }
                 </td>
-                <td><span className={`tag ${t.source === "cash" ? "tag-gold" : "tag-blue"}`}>{t.source === "cash" ? "💵 Cash" : "🌐 Online"}</span></td>
+                <td>
+                  <span className={`tag ${t.source === "cash" ? "tag-gold" : t.source === "shop" ? "tag-teal" : "tag-blue"}`}>
+                    {t.source === "cash" ? "💵 Cash" : t.source === "shop" ? "🛒 Shop" : "🌐 Online"}
+                  </span>
+                </td>
                 <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
                 <td onClick={e => e.stopPropagation()} style={{ display:"flex", gap:6, alignItems:"center" }}>
                   <button className="btn btn-sm btn-ghost" onClick={() => setSelected(t)}>Detail →</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>
+                  {t.source !== "shop" && <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>}
                 </td>
               </tr>
             ))}
@@ -10478,17 +10526,21 @@ function AdminRevenue({ data, save, showToast }) {
       {selected && (
         <div className="overlay" onClick={() => setSelected(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">{selected.source === "cash" ? "💵 Cash Sale" : "🌐 Online Booking"} — Detail</div>
+            <div className="modal-title">
+              {selected.source === "cash" ? "💵 Cash Sale" : selected.source === "shop" ? "🛒 Shop Order" : "🌐 Online Booking"} — Detail
+            </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
               {[
                 ["Customer", selected.userName],
                 ["Date & Time (GMT)", gmtFull(selected.date)],
-                ["Source", selected.source === "cash" ? "Cash Sale" : "Online Booking"],
+                ["Source", selected.source === "cash" ? "Cash Sale" : selected.source === "shop" ? "Shop Order" : "Online Booking"],
                 selected.source === "booking" ? ["Event", selected.eventTitle] : ["Customer Email", selected.customerEmail || "—"],
                 selected.source === "booking" ? ["Ticket Type", selected.ticketType] : null,
                 selected.source === "booking" ? ["Qty", selected.qty] : null,
                 selected.source === "booking" ? ["Checked In", selected.checkedIn ? "✅ Yes" : "❌ No"] : null,
+                selected.source === "shop" && selected.discountCode ? ["Discount Code", `${selected.discountCode} (−£${Number(selected.discountSaving || 0).toFixed(2)})`] : null,
+                selected.source === "shop" ? ["Order Status", selected.status] : null,
               ].filter(Boolean).map(([k, v]) => (
                 <div key={k} style={{ background: "var(--bg3)", borderRadius: 6, padding: "8px 12px" }}>
                   <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: ".08em", marginBottom: 2 }}>{k.toUpperCase()}</div>
@@ -10513,7 +10565,10 @@ function AdminRevenue({ data, save, showToast }) {
             </table></div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <button className="btn btn-danger btn-sm" onClick={() => { setDelConfirm(selected); }}>🗑 Delete Transaction</button>
+              {selected.source !== "shop"
+                ? <button className="btn btn-danger btn-sm" onClick={() => { setDelConfirm(selected); }}>🗑 Delete Transaction</button>
+                : <span style={{ fontSize: 12, color: "var(--muted)" }}>Manage shop orders via the Shop section</span>
+              }
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
                 <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
                 <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
@@ -12473,576 +12528,6 @@ function AdminPurchaseOrders({ data, save, showToast }) {
 
 
 // ── Admin Bookkeeping / HMRC ──────────────────────────────────────────
-function AdminBookkeeping({ data, showToast }) {
-  const [tab, setTab] = useState("overview");
-  const [cashSales, setCashSales] = useState([]);
-  const [shopOrders, setShopOrders] = useState([]);
-  const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Business settings
-  const S = (key, def = "") => {
-    const [val, setVal] = useState(def);
-    const [loaded, setLoaded] = useState(false);
-    useEffect(() => {
-      api.settings.get(key).then(v => { if (v != null) setVal(v); setLoaded(true); }).catch(() => setLoaded(true));
-    }, []);
-    const save = async (v) => { setVal(v); await api.settings.set(key, v); };
-    return [val, save, loaded];
-  };
-
-  const [bizName,    saveBizName]    = S("biz_name", "");
-  const [vatNumber,  saveVatNumber]  = S("vat_number", "");
-  const [utrNumber,  saveUtrNumber]  = S("utr_number", "");
-  const [vatReg,     saveVatReg]     = S("vat_registered", "no");
-  const [vatRate,    saveVatRate]    = S("vat_rate", "20");
-  const [taxYear,    setTaxYear]     = useState(() => {
-    const now = new Date();
-    return now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-  });
-
-  useEffect(() => {
-    Promise.all([
-      api.cashSales.getAll(),
-      api.shopOrders.getAll(),
-      api.purchaseOrders.getAll(),
-    ]).then(([cs, so, po]) => {
-      setCashSales(cs);
-      setShopOrders(so.filter(o => o.status !== "cancelled" && o.status !== "refunded"));
-      setPurchaseOrders(po);
-    }).catch(e => showToast("Load failed: " + e.message, "red"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // UK tax year: 6 April to 5 April
-  const taxYearStart = new Date(taxYear, 3, 6); // 6 Apr
-  const taxYearEnd   = new Date(taxYear + 1, 3, 5, 23, 59, 59); // 5 Apr next yr
-  const inTaxYear = (d) => { const dt = new Date(d); return dt >= taxYearStart && dt <= taxYearEnd; };
-
-  const fmtTY = `${taxYear}/${String(taxYear + 1).slice(2)}`;
-
-  // ── Income sources ──
-  const bookingIncome = data.events.flatMap(ev =>
-    ev.bookings
-      .filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-") && inTaxYear(b.date || b.created_at))
-      .map(b => ({
-        date: b.date || b.created_at,
-        desc: `Booking — ${ev.title} (${b.type === "walkOn" ? "Walk-on" : "Rental"} ×${b.qty})`,
-        amount: Number(b.total), source: "Bookings", category: "Event Revenue",
-      }))
-  );
-
-  const cashIncome = cashSales
-    .filter(s => inTaxYear(s.created_at))
-    .map(s => ({
-      date: s.created_at,
-      desc: `Cash sale — ${s.customer_name || "Customer"} (${(s.items||[]).length} items)`,
-      amount: Number(s.total), source: "Cash Sales", category: "Cash Revenue",
-    }));
-
-  const shopIncome = shopOrders
-    .filter(o => inTaxYear(o.created_at))
-    .map(o => ({
-      date: o.created_at,
-      desc: `Shop order #${o.id?.slice(-6).toUpperCase()} — ${o.customer_name || "Customer"}`,
-      amount: Number(o.total), source: "Shop", category: "Shop Revenue",
-    }));
-
-  const allIncome = [...bookingIncome, ...cashIncome, ...shopIncome]
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const totalIncome = allIncome.reduce((s, i) => s + i.amount, 0);
-
-  // ── Expenses (purchase orders received/ordered) ──
-  const expenses = purchaseOrders
-    .filter(po => inTaxYear(po.created_at) && po.status !== "cancelled" && po.status !== "draft")
-    .map(po => ({
-      date: po.created_at,
-      desc: `PO-${po.id?.slice(-6).toUpperCase()} — ${po.supplier_name || "Supplier"} (${(po.items||[]).length} lines)`,
-      amount: Number(po.total), source: "Purchase Orders", category: "Stock / COGS",
-    }))
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const grossProfit = totalIncome - totalExpenses;
-
-  // ── VAT calculation ──
-  const vatRateNum = Number(vatRate) / 100;
-  const isVatReg = vatReg === "yes";
-  // If VAT registered: income figures include VAT, so extract it
-  const vatOnSales      = isVatReg ? allIncome.reduce((s, i) => s + (i.amount - i.amount / (1 + vatRateNum)), 0) : 0;
-  const vatOnPurchases  = isVatReg ? expenses.reduce((s, e) => s + (e.amount - e.amount / (1 + vatRateNum)), 0) : 0;
-  const vatOwed         = vatOnSales - vatOnPurchases;
-  const netIncome       = isVatReg ? allIncome.reduce((s, i) => s + i.amount / (1 + vatRateNum), 0) : totalIncome;
-  const netExpenses     = isVatReg ? expenses.reduce((s, e) => s + e.amount / (1 + vatRateNum), 0) : totalExpenses;
-  const netProfit       = netIncome - netExpenses;
-
-  // ── Self Assessment (Income Tax) estimate ──
-  // UK 2024/25 thresholds
-  const PERSONAL_ALLOWANCE = 12570;
-  const BASIC_RATE_LIMIT   = 50270;
-  const HIGHER_RATE_LIMIT  = 125140;
-  const taxableIncome = Math.max(0, netProfit - PERSONAL_ALLOWANCE);
-  const basicTax  = Math.min(taxableIncome, Math.max(0, BASIC_RATE_LIMIT - PERSONAL_ALLOWANCE)) * 0.20;
-  const higherTax = Math.min(Math.max(0, taxableIncome - (BASIC_RATE_LIMIT - PERSONAL_ALLOWANCE)), HIGHER_RATE_LIMIT - BASIC_RATE_LIMIT) * 0.40;
-  const addlTax   = Math.max(0, taxableIncome - (HIGHER_RATE_LIMIT - PERSONAL_ALLOWANCE)) * 0.45;
-  const estimatedIncomeTax = basicTax + higherTax + addlTax;
-
-  // Class 2 NI: flat rate if profits > Small Profits Threshold (£3,725 2024/25)
-  const CLASS2_THRESHOLD = 3725;
-  const CLASS2_RATE = 3.45; // weekly
-  const class2NI = netProfit > CLASS2_THRESHOLD ? CLASS2_RATE * 52 : 0;
-  // Class 4 NI: 6% on profits £12,570–£50,270, 2% above
-  const class4Low  = Math.min(Math.max(0, netProfit - 12570), 50270 - 12570) * 0.06;
-  const class4High = Math.max(0, netProfit - 50270) * 0.02;
-  const estimatedNI = class2NI + class4Low + class4High;
-
-  const totalTaxBill = estimatedIncomeTax + estimatedNI + (isVatReg ? vatOwed : 0);
-
-  // ── By-month breakdown ──
-  const byMonth = {};
-  allIncome.forEach(i => {
-    const k = new Date(i.date).toLocaleString("en-GB", { month:"short", year:"numeric", timeZone:"Europe/London" });
-    byMonth[k] = byMonth[k] || { income:0, expenses:0 };
-    byMonth[k].income += i.amount;
-  });
-  expenses.forEach(e => {
-    const k = new Date(e.date).toLocaleString("en-GB", { month:"short", year:"numeric", timeZone:"Europe/London" });
-    byMonth[k] = byMonth[k] || { income:0, expenses:0 };
-    byMonth[k].expenses += e.amount;
-  });
-  const months = Object.entries(byMonth).sort((a, b) => new Date("01 " + b[0]) - new Date("01 " + a[0]));
-
-  const fmt = (n) => "£" + Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits:2, maximumFractionDigits:2 });
-  const fmtDate = (d) => new Date(d).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
-
-  // ── Save settings ──
-  const [saving, setSaving] = useState(false);
-  const saveSettings = async () => {
-    setSaving(true);
-    try {
-      await Promise.all([
-        saveBizName(bizName), saveVatNumber(vatNumber), saveUtrNumber(utrNumber),
-        saveVatReg(vatReg), saveVatRate(vatRate),
-      ]);
-      showToast("Business settings saved!");
-    } catch(e) { showToast("Failed: " + e.message, "red"); }
-    finally { setSaving(false); }
-  };
-
-  // ── Export CSV ──
-  const exportCSV = (rows, filename) => {
-    const cols = Object.keys(rows[0]);
-    const csv = [cols.join(","), ...rows.map(r => cols.map(c => JSON.stringify(r[c] ?? "")).join(","))].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv" }));
-    a.download = filename;
-    a.click();
-  };
-
-  const TABS = [
-    ["overview",   "📊 Overview"],
-    ["pnl",        "💹 P&L"],
-    ["income",     "💰 Income"],
-    ["expenses",   "🧾 Expenses"],
-    ["tax",        "🏛 Tax Estimates"],
-    ["settings",   "⚙️ Business Info"],
-  ];
-
-  const tabStyle = (id) => ({
-    padding: "8px 16px",
-    fontFamily: "'Barlow Condensed',sans-serif",
-    fontWeight: 700, fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase",
-    background: tab === id ? "var(--accent)" : "var(--card)",
-    color: tab === id ? "#000" : "var(--muted)",
-    border: "1px solid", borderColor: tab === id ? "var(--accent)" : "var(--border)",
-    cursor: "pointer", borderRadius: 3,
-  });
-
-  const statCard = (label, val, sub, color, highlight) => (
-    <div key={label} className={`stat-card ${color||""}`} style={highlight ? { border:"1px solid var(--accent)" } : {}}>
-      <div className="stat-val">{val}</div>
-      <div className="stat-label">{label}</div>
-      {sub && <div className="stat-sub">{sub}</div>}
-    </div>
-  );
-
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <div className="page-title">📊 Bookkeeping & HMRC</div>
-          <div className="page-sub">Tax year {fmtTY} · 6 Apr {taxYear} – 5 Apr {taxYear+1}</div>
-        </div>
-        <div className="gap-2" style={{alignItems:"center"}}>
-          <span style={{fontSize:12, color:"var(--muted)"}}>Tax year:</span>
-          <select value={taxYear} onChange={e => setTaxYear(Number(e.target.value))}
-            style={{fontSize:13, padding:"6px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:3}}>
-            {Array.from({length:6},(_,i) => new Date().getFullYear() - i).map(y => (
-              <option key={y} value={y}>{y}/{String(y+1).slice(2)}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div style={{display:"flex", gap:4, flexWrap:"wrap", marginBottom:16}}>
-        {TABS.map(([id,label]) => <button key={id} style={tabStyle(id)} onClick={() => setTab(id)}>{label}</button>)}
-      </div>
-
-      {loading && <div className="card" style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading financial data…</div>}
-
-      {/* ── Overview ── */}
-      {!loading && tab === "overview" && (
-        <div>
-          <div className="alert alert-blue mb-2" style={{fontSize:12}}>
-            ⚠️ <strong>Disclaimer:</strong> These are estimates to help you stay organised. Always consult a qualified accountant for your official HMRC submissions. Tax thresholds shown are for 2024/25.
-          </div>
-          <div className="grid-4 mb-2">
-            {statCard("Total Income", fmt(isVatReg ? netIncome : totalIncome), isVatReg ? "Exc. VAT" : "All sources", "")}
-            {statCard("Total Expenses", fmt(isVatReg ? netExpenses : totalExpenses), "Purchase orders", "")}
-            {statCard("Net Profit", fmt(netProfit), grossProfit >= 0 ? "Profitable" : "Loss", netProfit >= 0 ? "blue" : "red")}
-            {statCard("Est. Tax Bill", fmt(totalTaxBill), "Inc. NI" + (isVatReg ? " + VAT" : ""), "gold", true)}
-          </div>
-
-          <div className="grid-2 mb-2">
-            <div className="card">
-              <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:14}}>INCOME BREAKDOWN</div>
-              {[
-                { label:"Event Bookings", val: bookingIncome.reduce((s,i)=>s+i.amount,0), count: bookingIncome.length },
-                { label:"Cash Sales",     val: cashIncome.reduce((s,i)=>s+i.amount,0),    count: cashIncome.length },
-                { label:"Shop Orders",    val: shopIncome.reduce((s,i)=>s+i.amount,0),    count: shopIncome.length },
-              ].map(row => (
-                <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
-                  <span style={{fontSize:13}}>{row.label} <span style={{fontSize:11,color:"var(--muted)"}}>({row.count})</span></span>
-                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:13,color:"var(--accent)",fontWeight:700}}>{fmt(row.val)}</span>
-                </div>
-              ))}
-              <div style={{display:"flex",justifyContent:"space-between",paddingTop:10,fontWeight:900}}>
-                <span>TOTAL</span>
-                <span style={{fontFamily:"'Share Tech Mono',monospace",color:"var(--accent)"}}>{fmt(totalIncome)}</span>
-              </div>
-            </div>
-
-            <div className="card">
-              <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:14}}>TAX SUMMARY</div>
-              {[
-                { label:"Net Profit (taxable base)", val: fmt(netProfit) },
-                { label:"Personal Allowance",        val: fmt(Math.min(netProfit, PERSONAL_ALLOWANCE)), note:"Tax-free" },
-                { label:"Taxable Profit",             val: fmt(taxableIncome), highlight:true },
-                { label:"Est. Income Tax",            val: fmt(estimatedIncomeTax), sub: taxableIncome <= (BASIC_RATE_LIMIT-PERSONAL_ALLOWANCE) ? "20% basic rate" : "Mixed rates" },
-                { label:"Est. Class 2 NI",            val: fmt(class2NI), note:"£3.45/wk" },
-                { label:"Est. Class 4 NI",            val: fmt(class4Low+class4High), note:"6% / 2%" },
-                isVatReg ? { label:"VAT Owed (net)", val: fmt(vatOwed), sub:"Output − Input VAT" } : null,
-              ].filter(Boolean).map(row => (
-                <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)",background:row.highlight?"rgba(var(--accent-rgb),.04)":""}}>
-                  <span style={{fontSize:12,color:row.highlight?"var(--text)":"var(--muted)"}}>{row.label}{row.note ? <span style={{fontSize:10,color:"var(--muted)",marginLeft:6}}>({row.note})</span> : ""}</span>
-                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,fontWeight:row.highlight?900:400,color:row.highlight?"var(--text)":"var(--muted)"}}>{row.val}</span>
-                </div>
-              ))}
-              <div style={{display:"flex",justifyContent:"space-between",paddingTop:10,fontWeight:900,borderTop:"2px solid var(--accent)"}}>
-                <span style={{color:"var(--gold)"}}>ESTIMATED TOTAL DUE</span>
-                <span style={{fontFamily:"'Share Tech Mono',monospace",color:"var(--gold)",fontSize:15}}>{fmt(totalTaxBill)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Monthly chart */}
-          <div className="card">
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:14}}>MONTHLY P&L — {fmtTY}</div>
-            {months.length === 0
-              ? <div style={{color:"var(--muted)",fontSize:13}}>No data for this tax year.</div>
-              : <div className="table-wrap"><table className="data-table">
-                  <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Running Profit</th></tr></thead>
-                  <tbody>
-                    {(() => {
-                      let running = 0;
-                      return months.slice().reverse().map(([m,row]) => {
-                        const net = row.income - row.expenses;
-                        running += net;
-                        return (
-                          <tr key={m}>
-                            <td style={{fontWeight:600}}>{m}</td>
-                            <td style={{color:"var(--accent)"}}>{fmt(row.income)}</td>
-                            <td style={{color:"var(--red)"}}>{fmt(row.expenses)}</td>
-                            <td style={{color:net>=0?"var(--accent)":"var(--red)",fontWeight:700}}>{net>=0?"+":"-"}{fmt(net)}</td>
-                            <td style={{color:running>=0?"var(--accent)":"var(--red)",fontFamily:"'Share Tech Mono',monospace"}}>{fmt(running)}</td>
-                          </tr>
-                        );
-                      });
-                    })()}
-                  </tbody>
-                </table></div>
-            }
-          </div>
-        </div>
-      )}
-
-      {/* ── P&L Statement ── */}
-      {!loading && tab === "pnl" && (
-        <div className="card">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-            <div style={{fontSize:16,fontWeight:900,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:".05em"}}>
-              PROFIT & LOSS — TAX YEAR {fmtTY.toUpperCase()}
-            </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => exportCSV([
-              {Section:"INCOME"},{},
-              ...allIncome.map(i=>({Date:fmtDate(i.date),Description:i.desc,Source:i.source,Amount:i.amount.toFixed(2)})),
-              {},{Section:"EXPENSES"},{},
-              ...expenses.map(e=>({Date:fmtDate(e.date),Description:e.desc,Source:e.source,Amount:e.amount.toFixed(2)})),
-              {},{Section:"SUMMARY"},{},
-              {Description:"Total Income",Amount:totalIncome.toFixed(2)},
-              {Description:"Total Expenses",Amount:totalExpenses.toFixed(2)},
-              {Description:"Gross Profit",Amount:grossProfit.toFixed(2)},
-            ], `PnL_${fmtTY.replace("/","_")}.csv`)}>⬇ Export CSV</button>
-          </div>
-
-          {bizName && <div style={{marginBottom:16,fontSize:13,color:"var(--muted)"}}>Business: <strong style={{color:"var(--text)"}}>{bizName}</strong></div>}
-
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:11,letterSpacing:".1em",color:"var(--muted)",fontWeight:700,marginBottom:8}}>INCOME</div>
-            {[
-              { label:"Event Bookings",   val: bookingIncome.reduce((s,i)=>s+i.amount,0) },
-              { label:"Cash Sales",       val: cashIncome.reduce((s,i)=>s+i.amount,0) },
-              { label:"Shop Orders",      val: shopIncome.reduce((s,i)=>s+i.amount,0) },
-            ].map(r => (
-              <div key={r.label} style={{display:"flex",justifyContent:"space-between",padding:"7px 12px",borderBottom:"1px solid var(--border)"}}>
-                <span style={{fontSize:13}}>{r.label}</span>
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:13}}>{fmt(r.val)}</span>
-              </div>
-            ))}
-            <div style={{display:"flex",justifyContent:"space-between",padding:"10px 12px",borderTop:"2px solid var(--border)",fontWeight:900}}>
-              <span>TOTAL INCOME {isVatReg?"(exc. VAT)":""}</span>
-              <span style={{fontFamily:"'Share Tech Mono',monospace",color:"var(--accent)"}}>{fmt(isVatReg?netIncome:totalIncome)}</span>
-            </div>
-          </div>
-
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:11,letterSpacing:".1em",color:"var(--muted)",fontWeight:700,marginBottom:8}}>COST OF GOODS / EXPENSES</div>
-            <div style={{display:"flex",justifyContent:"space-between",padding:"7px 12px",borderBottom:"1px solid var(--border)"}}>
-              <span style={{fontSize:13}}>Stock Purchases (Purchase Orders)</span>
-              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:13,color:"var(--red)"}}>{fmt(isVatReg?netExpenses:totalExpenses)}</span>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",padding:"10px 12px",borderTop:"2px solid var(--border)",fontWeight:900}}>
-              <span>TOTAL EXPENSES {isVatReg?"(exc. VAT)":""}</span>
-              <span style={{fontFamily:"'Share Tech Mono',monospace",color:"var(--red)"}}>{fmt(isVatReg?netExpenses:totalExpenses)}</span>
-            </div>
-          </div>
-
-          <div style={{background:"rgba(var(--accent-rgb),.05)",border:"2px solid var(--accent)",borderRadius:4,padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <span style={{fontWeight:900,fontSize:15,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:".05em"}}>NET PROFIT {isVatReg?"(exc. VAT)":""}</span>
-            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:20,fontWeight:900,color:netProfit>=0?"var(--accent)":"var(--red)"}}>{netProfit<0?"-":""}{fmt(netProfit)}</span>
-          </div>
-
-          {isVatReg && (
-            <div style={{borderTop:"1px solid var(--border)",paddingTop:16}}>
-              <div style={{fontSize:11,letterSpacing:".1em",color:"var(--muted)",fontWeight:700,marginBottom:8}}>VAT ACCOUNT</div>
-              {[
-                {label:"Output VAT (on sales)", val:fmt(vatOnSales), color:"var(--red)"},
-                {label:"Input VAT (on purchases)", val:fmt(vatOnPurchases), color:"var(--accent)"},
-                {label:"NET VAT OWED TO HMRC", val:fmt(vatOwed), color:"var(--gold)", bold:true},
-              ].map(r=>(
-                <div key={r.label} style={{display:"flex",justifyContent:"space-between",padding:"7px 12px",borderBottom:"1px solid var(--border)"}}>
-                  <span style={{fontSize:13,fontWeight:r.bold?900:400}}>{r.label}</span>
-                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:13,color:r.color,fontWeight:r.bold?900:400}}>{r.val}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Income ledger ── */}
-      {!loading && tab === "income" && (
-        <div className="card">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div style={{fontWeight:700}}>Income Ledger <span style={{fontSize:12,fontWeight:400,color:"var(--muted)"}}>— {allIncome.length} transactions</span></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(allIncome.map(i=>({Date:fmtDate(i.date),Description:i.desc,Source:i.source,Category:i.category,Amount:i.amount.toFixed(2)})), `Income_${fmtTY.replace("/","_")}.csv`)}>⬇ Export CSV</button>
-          </div>
-          {allIncome.length === 0
-            ? <div style={{color:"var(--muted)",padding:"30px 0",textAlign:"center"}}>No income records in this tax year.</div>
-            : <div className="table-wrap"><table className="data-table">
-                <thead><tr><th>Date</th><th>Description</th><th>Source</th><th style={{textAlign:"right"}}>Amount</th></tr></thead>
-                <tbody>
-                  {allIncome.map((i,idx) => (
-                    <tr key={idx}>
-                      <td className="mono" style={{fontSize:11,whiteSpace:"nowrap"}}>{fmtDate(i.date)}</td>
-                      <td style={{fontSize:12}}>{i.desc}</td>
-                      <td><span style={{fontSize:10,padding:"2px 7px",borderRadius:2,background:"rgba(60,180,80,.12)",color:"#7ccc60",fontWeight:700,letterSpacing:".06em"}}>{i.source}</span></td>
-                      <td style={{textAlign:"right",fontFamily:"'Share Tech Mono',monospace",color:"var(--accent)",fontWeight:700}}>{fmt(i.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr style={{borderTop:"2px solid var(--border)"}}>
-                    <td colSpan={3} style={{fontWeight:900}}>TOTAL</td>
-                    <td style={{textAlign:"right",fontFamily:"'Share Tech Mono',monospace",fontWeight:900,color:"var(--accent)"}}>{fmt(totalIncome)}</td>
-                  </tr>
-                </tfoot>
-              </table></div>
-          }
-        </div>
-      )}
-
-      {/* ── Expenses ledger ── */}
-      {!loading && tab === "expenses" && (
-        <div className="card">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div style={{fontWeight:700}}>Expenses Ledger <span style={{fontSize:12,fontWeight:400,color:"var(--muted)"}}>— {expenses.length} records</span></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(expenses.map(e=>({Date:fmtDate(e.date),Description:e.desc,Source:e.source,Category:e.category,Amount:e.amount.toFixed(2)})), `Expenses_${fmtTY.replace("/","_")}.csv`)}>⬇ Export CSV</button>
-          </div>
-          <div className="alert" style={{background:"rgba(255,200,0,.06)",border:"1px solid rgba(255,200,0,.2)",fontSize:12,color:"var(--gold)",marginBottom:14}}>
-            💡 Only purchase orders with status "Ordered", "Part Received" or "Fully Received" are counted as expenses. Drafts and cancelled POs are excluded.
-          </div>
-          {expenses.length === 0
-            ? <div style={{color:"var(--muted)",padding:"30px 0",textAlign:"center"}}>No expenses in this tax year.</div>
-            : <div className="table-wrap"><table className="data-table">
-                <thead><tr><th>Date</th><th>Description</th><th>Category</th><th style={{textAlign:"right"}}>Amount</th></tr></thead>
-                <tbody>
-                  {expenses.map((e,idx) => (
-                    <tr key={idx}>
-                      <td className="mono" style={{fontSize:11,whiteSpace:"nowrap"}}>{fmtDate(e.date)}</td>
-                      <td style={{fontSize:12}}>{e.desc}</td>
-                      <td><span style={{fontSize:10,padding:"2px 7px",borderRadius:2,background:"rgba(255,100,100,.1)",color:"var(--red)",fontWeight:700,letterSpacing:".06em"}}>{e.category}</span></td>
-                      <td style={{textAlign:"right",fontFamily:"'Share Tech Mono',monospace",color:"var(--red)",fontWeight:700}}>{fmt(e.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr style={{borderTop:"2px solid var(--border)"}}>
-                    <td colSpan={3} style={{fontWeight:900}}>TOTAL EXPENSES</td>
-                    <td style={{textAlign:"right",fontFamily:"'Share Tech Mono',monospace",fontWeight:900,color:"var(--red)"}}>{fmt(totalExpenses)}</td>
-                  </tr>
-                </tfoot>
-              </table></div>
-          }
-        </div>
-      )}
-
-      {/* ── Tax Estimates ── */}
-      {!loading && tab === "tax" && (
-        <div>
-          <div className="alert alert-blue mb-2" style={{fontSize:12}}>
-            ⚠️ Estimates only — based on 2024/25 UK tax thresholds for a sole trader with no other income. Consult an accountant before submitting to HMRC.
-          </div>
-
-          <div className="grid-2 mb-2">
-            {/* Income Tax */}
-            <div className="card">
-              <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:14}}>INCOME TAX (SELF ASSESSMENT)</div>
-              {[
-                {label:"Net Profit",                val:fmt(netProfit)},
-                {label:"Personal Allowance",         val:fmt(Math.min(netProfit,PERSONAL_ALLOWANCE)), note:"£12,570 — tax free", color:"var(--accent)"},
-                {label:"Taxable Profit",             val:fmt(taxableIncome), bold:true},
-                {label:"Basic Rate (20%)",           val:fmt(basicTax),  note:"Up to £50,270"},
-                {label:"Higher Rate (40%)",          val:fmt(higherTax), note:"£50,270–£125,140"},
-                {label:"Additional Rate (45%)",      val:fmt(addlTax),   note:"Over £125,140"},
-                {label:"ESTIMATED INCOME TAX",       val:fmt(estimatedIncomeTax), bold:true, color:"var(--gold)"},
-              ].map(r=>(
-                <div key={r.label} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid var(--border)"}}>
-                  <span style={{fontSize:12,fontWeight:r.bold?900:400,color:r.bold?"var(--text)":"var(--muted)"}}>{r.label}{r.note?<span style={{fontSize:10,marginLeft:6,color:"var(--muted)"}}>({r.note})</span>:""}</span>
-                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,fontWeight:r.bold?900:400,color:r.color||"var(--text)"}}>{r.val}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* NI */}
-            <div className="card">
-              <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:14}}>NATIONAL INSURANCE (SOLE TRADER)</div>
-              {[
-                {label:"Net Profit",                         val:fmt(netProfit)},
-                {label:"Class 2 NI (£3.45/wk)",            val:fmt(class2NI),     note:netProfit>CLASS2_THRESHOLD?"Applies":"Below threshold"},
-                {label:"Class 4 NI — 6% (£12,570–£50,270)",val:fmt(class4Low)},
-                {label:"Class 4 NI — 2% (above £50,270)",  val:fmt(class4High)},
-                {label:"ESTIMATED NI",                       val:fmt(estimatedNI),  bold:true, color:"var(--gold)"},
-              ].map(r=>(
-                <div key={r.label} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid var(--border)"}}>
-                  <span style={{fontSize:12,fontWeight:r.bold?900:400,color:r.bold?"var(--text)":"var(--muted)"}}>{r.label}{r.note?<span style={{fontSize:10,marginLeft:6,color:"var(--muted)"}}>({r.note})</span>:""}</span>
-                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,fontWeight:r.bold?900:400,color:r.color||"var(--text)"}}>{r.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* VAT */}
-          {isVatReg && (
-            <div className="card mb-2">
-              <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:14}}>VAT RETURN SUMMARY</div>
-              <div className="grid-4">
-                {[
-                  {label:"VAT on Sales (Output)",    val:fmt(vatOnSales),     color:"red"},
-                  {label:"VAT on Purchases (Input)", val:fmt(vatOnPurchases), color:""},
-                  {label:"Net VAT Owed",              val:fmt(vatOwed),        color:"gold"},
-                  {label:"VAT Rate",                 val:vatRate+"%",         color:""},
-                ].map(r=>(
-                  <div key={r.label} className={`stat-card ${r.color||""}`}>
-                    <div className="stat-val">{r.val}</div>
-                    <div className="stat-label">{r.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Grand total */}
-          <div className="card" style={{border:"2px solid var(--gold)"}}>
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--gold)",marginBottom:14}}>TOTAL ESTIMATED TAX DUE — {fmtTY}</div>
-            {[
-              {label:"Income Tax",         val:fmt(estimatedIncomeTax)},
-              {label:"National Insurance", val:fmt(estimatedNI)},
-              isVatReg ? {label:"VAT Owed", val:fmt(vatOwed)} : null,
-            ].filter(Boolean).map(r=>(
-              <div key={r.label} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
-                <span style={{fontSize:13}}>{r.label}</span>
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:13}}>{r.val}</span>
-              </div>
-            ))}
-            <div style={{display:"flex",justifyContent:"space-between",paddingTop:12,fontWeight:900,fontSize:16}}>
-              <span style={{color:"var(--gold)",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:".05em"}}>TOTAL DUE</span>
-              <span style={{fontFamily:"'Share Tech Mono',monospace",color:"var(--gold)",fontSize:20}}>{fmt(totalTaxBill)}</span>
-            </div>
-            <div style={{fontSize:11,color:"var(--muted)",marginTop:10}}>
-              💡 Self Assessment deadline: 31 January following the tax year end. Payment on account may also be due.
-              {utrNumber && <span> UTR: <strong style={{color:"var(--text)",fontFamily:"'Share Tech Mono',monospace"}}>{utrNumber}</strong></span>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Business Settings ── */}
-      {tab === "settings" && (
-        <div className="card" style={{maxWidth:540}}>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:16}}>BUSINESS INFORMATION</div>
-          <div className="form-group"><label>Business / Trading Name</label><input value={bizName} onChange={e=>saveBizName(e.target.value)} placeholder="e.g. Airsoft Renegades Ltd" /></div>
-          <div className="form-group"><label>UTR Number <span style={{fontWeight:400,color:"var(--muted)"}}>(Unique Taxpayer Reference)</span></label><input value={utrNumber} onChange={e=>saveUtrNumber(e.target.value)} placeholder="10-digit number" style={{fontFamily:"'Share Tech Mono',monospace"}} /></div>
-          <div className="form-group">
-            <label>VAT Registered?</label>
-            <select value={vatReg} onChange={e=>saveVatReg(e.target.value)} style={{padding:"6px 10px",background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text)",borderRadius:3,width:"100%"}}>
-              <option value="no">No — not VAT registered</option>
-              <option value="yes">Yes — VAT registered</option>
-            </select>
-          </div>
-          {vatReg === "yes" && (
-            <>
-              <div className="form-group"><label>VAT Registration Number</label><input value={vatNumber} onChange={e=>saveVatNumber(e.target.value)} placeholder="GB123456789" style={{fontFamily:"'Share Tech Mono',monospace"}} /></div>
-              <div className="form-group">
-                <label>VAT Rate</label>
-                <select value={vatRate} onChange={e=>saveVatRate(e.target.value)} style={{padding:"6px 10px",background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text)",borderRadius:3,width:"100%"}}>
-                  <option value="20">Standard Rate — 20%</option>
-                  <option value="5">Reduced Rate — 5%</option>
-                  <option value="0">Zero Rate — 0%</option>
-                </select>
-              </div>
-            </>
-          )}
-          <div className="alert" style={{background:"rgba(255,200,0,.06)",border:"1px solid rgba(255,200,0,.2)",fontSize:12,color:"var(--gold)",marginBottom:16}}>
-            ⚠️ Note: Airsoft businesses selling face protection/safety equipment may have zero-rated VAT items. Check with HMRC or your accountant.
-          </div>
-          <div style={{fontSize:11,color:"var(--muted)",marginBottom:16}}>Settings auto-save as you type.</div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 function AdminSettings({ showToast }) {

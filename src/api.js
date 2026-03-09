@@ -660,6 +660,8 @@ export const shopOrders = wrapWithTimeout({
       status:           'pending',
       square_order_id:  order.squareOrderId || null,
       valid_defence:    order.validDefence  || null,
+      discount_code:    order.discountCode  || null,
+      discount_saving:  order.discountSaving != null ? Number(order.discountSaving) : null,
     }).select().single()
     if (error) throw error
     return data
