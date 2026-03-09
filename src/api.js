@@ -897,13 +897,15 @@ export const visits = wrapWithTimeout({
     try {
       let city = null, country = null, lat = null, lon = null;
       try {
-        const geo = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+        const geo = await fetch('http://ip-api.com/json/?fields=city,country,countryCode,lat,lon,status', { signal: AbortSignal.timeout(3000) });
         if (geo.ok) {
           const g = await geo.json();
-          city    = g.city    || null;
-          country = g.country_name || null;
-          lat     = g.latitude  || null;
-          lon     = g.longitude || null;
+          if (g.status !== 'fail') {
+            city    = g.city    || null;
+            country = g.country || null;
+            lat     = g.lat     || null;
+            lon     = g.lon     || null;
+          }
         }
       } catch { /* geo unavailable */ }
 

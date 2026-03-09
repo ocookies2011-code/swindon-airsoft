@@ -13582,10 +13582,11 @@ export default function App() {
     let cancelled = false;
     const check = async () => {
       try {
-        const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(5000) });
+        const res = await fetch("http://ip-api.com/json/?fields=countryCode,status", { signal: AbortSignal.timeout(5000) });
         if (!res.ok) throw new Error("geo fetch failed");
         const g = await res.json();
-        const code = (g.country_code || "").toUpperCase();
+        if (g.status === "fail") throw new Error("geo lookup failed");
+        const code = (g.countryCode || "").toUpperCase();
         if (!cancelled) setGeoStatus(ALLOWED_COUNTRY_CODES.has(code) ? "allowed" : "blocked");
       } catch {
         // If geo check fails, fail open — don't lock out real users
