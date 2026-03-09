@@ -530,9 +530,10 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 .pub-nav-logo-text{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:.12em;color:#fff;text-transform:uppercase;white-space:nowrap;}
 .pub-nav-logo-text span{color:var(--accent);}
 .pub-nav-links{display:flex;gap:0;flex:1;}
-.pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:0 16px;height:var(--nav-h);cursor:pointer;white-space:nowrap;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:color .15s;}
+.pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:0 16px;height:var(--nav-h);cursor:pointer;white-space:nowrap;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:color .15s;position:relative;}
 .pub-nav-link:hover{color:#fff;}
-.pub-nav-link.active{color:#fff;}
+.pub-nav-link.active{color:var(--accent);}
+.pub-nav-link.active::after{content:'';position:absolute;bottom:0;left:16px;right:16px;height:2px;background:var(--accent);border-radius:1px 1px 0 0;}
 .pub-nav-link-wrap{position:relative;display:flex;align-items:center;}
 .pub-nav-link-wrap:hover .pub-nav-dropdown{display:block;}
 .pub-nav-dropdown{display:none;position:absolute;top:100%;left:0;background:#0d0d0d;border:1px solid #1a1a1a;border-top:2px solid var(--accent);min-width:160px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.7);}
@@ -555,8 +556,9 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 /* ── BOTTOM NAV ── */
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:#000;border-top:1px solid #1f1f1f;height:var(--bottom-nav-h);padding:0 4px;padding-bottom:env(safe-area-inset-bottom);}
 .bottom-nav-inner{display:flex;height:100%;}
-.bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.1em;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;transition:color .1s;}
+.bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.1em;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;transition:color .1s;position:relative;}
 .bottom-nav-btn.active{color:var(--accent);}
+.bottom-nav-btn.active::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 2px 2px;}
 .bottom-nav-icon{font-size:20px;line-height:1;}
 .pub-page-wrap{padding-bottom:80px;}
 .page-content{max-width:1100px;margin:0 auto;padding:32px 24px;}
@@ -866,6 +868,8 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .hero-cta{flex-direction:column;}
   .vip-banner{padding:32px 16px;}
   .hero-stat-num{font-size:24px;}
+  .page-content{padding:24px 14px;}
+  .page-content-sm{padding:24px 14px;}
 }
 @media(max-width:700px){
   .feature-strip{grid-template-columns:1fr;}
@@ -1877,13 +1881,14 @@ function HomePage({ data, setPage }) {
 
       {/* FEATURE STRIP */}
       <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:16, padding: isMobile ? "24px 16px" : "40px 24px", maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:0, maxWidth:1200, margin:"0 auto" }}>
           {[
             { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
             { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
             { icon:"⭐", title:"VIP BENEFITS", desc:"10% off all bookings and shop items. Exclusive VIP-only events and UKARA registration support." },
-          ].map(feat => (
-            <div key={feat.title} className="feature-card">
+            { icon:"🎯", title:"RENTAL GEAR", desc:"Full kit hire available — gun, BBs, and face protection. No prior kit required to play." },
+          ].map((feat, i) => (
+            <div key={feat.title} className="feature-card" style={{ borderRadius:0, border:"none", borderRight: !isMobile && i < 3 ? "1px solid #2a2a2a" : "none", borderBottom: isMobile && i < 3 ? "1px solid #2a2a2a" : "none", padding:"32px 28px" }}>
               <div style={{ fontSize:32, color:"var(--accent)", marginBottom:14 }}>{feat.icon}</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:17, fontWeight:800, letterSpacing:".08em", color:"#fff", marginBottom:8, textTransform:"uppercase" }}>{feat.title}</div>
               <div style={{ fontSize:13, color:"var(--muted)", lineHeight:1.7 }}>{feat.desc}</div>
@@ -3506,7 +3511,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     ].map(row => (
                       <div key={row.label} style={{ display:"flex", gap:8, alignItems:"baseline" }}>
                         <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".18em", color:"#2a3a10", flexShrink:0, width:58 }}>{row.label}</span>
-                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, fontWeight:700, color:"#6a8050", letterSpacing:".04em" }}>{row.val}</span>
+                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, fontWeight:700, color:"#9ab870", letterSpacing:".04em" }}>{row.val}</span>
                       </div>
                     ))}
                   </div>
@@ -3954,7 +3959,15 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   </div>
                 )}
                 {hasNoPost && <div className="alert alert-gold mt-1" style={{ borderRadius:0 }}>⚠ COLLECTION-ONLY ITEMS — NO POSTING</div>}
-                {cu?.vipStatus === "active" && <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"8px 12px", marginTop:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".12em", color:"#c8a000" }}>★ VIP 10% DISCOUNT APPLIED</div>}
+
+                {/* ── Checkout section divider ── */}
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:18, marginBottom:14 }}>
+                  <div style={{ flex:1, height:1, background:"#2a3a10" }} />
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".22em", color:"#3a5010", textTransform:"uppercase", flexShrink:0 }}>◈ CHECKOUT</div>
+                  <div style={{ flex:1, height:1, background:"#2a3a10" }} />
+                </div>
+
+                {cu?.vipStatus === "active" && <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"8px 12px", marginBottom:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".12em", color:"#c8a000" }}>★ VIP 10% DISCOUNT APPLIED</div>}
 
                 {/* ── Discount Code ── */}
                 {cu && (
@@ -4364,16 +4377,17 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
           const isTop3 = i < 3;
           const medalColor = i === 0 ? "#c8a000" : i === 1 ? "#8a8a8a" : i === 2 ? "#8b4513" : null;
           const rankTitle = i === 0 ? "FIELD COMMANDER" : i === 1 ? "SENIOR OPERATIVE" : i === 2 ? "OPERATIVE" : i < 10 ? "RECRUIT" : "PRIVATE";
+          const isMe = cu && player.id === cu.id;
           return (
             <div key={player.id} style={{
               display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", marginBottom: 3,
-              background: isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.04)` : "#0c1009",
-              border: `1px solid ${isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}`,
+              background: isMe ? "rgba(200,255,0,.05)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.04)` : "#0c1009",
+              border: `1px solid ${isMe ? "rgba(200,255,0,.4)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}`,
               position: "relative", overflow: "hidden",
               transition: "border-color .15s",
             }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.5)` : "#2a3a10"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}
+              onMouseEnter={e => e.currentTarget.style.borderColor = isMe ? "rgba(200,255,0,.65)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.5)` : "#2a3a10"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = isMe ? "rgba(200,255,0,.4)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}
             >
               {/* Scanlines */}
               <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px)", pointerEvents: "none" }} />
@@ -4382,22 +4396,25 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
                 {i + 1}
               </div>
               {/* Avatar */}
-              <div style={{ width: 38, height: 38, background: "#0a0c08", border: `1px solid ${medalColor || "#1a2808"}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, overflow: "hidden", flexShrink: 0, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif" }}>
+              <div style={{ width: 38, height: 38, background: "#0a0c08", border: `1px solid ${isMe ? "rgba(200,255,0,.5)" : medalColor || "#1a2808"}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, overflow: "hidden", flexShrink: 0, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif" }}>
                 {player.profilePic ? <img src={player.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : player.name[0]}
               </div>
               {/* Name + rank */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".08em", color: isTop3 ? (medalColor || "#e8f0d8") : "#b0c090", textTransform: "uppercase", lineHeight: 1.1 }}>{player.name}</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".15em", color: medalColor || "#2a3a10", marginTop: 3 }}>{rankTitle}</div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".08em", color: isMe ? "#e8f0d8" : isTop3 ? (medalColor || "#e8f0d8") : "#b0c090", textTransform: "uppercase", lineHeight: 1.1 }}>
+                  {player.name}
+                  {isMe && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".18em", color: "var(--accent)", marginLeft: 8, verticalAlign: "middle", background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.3)", padding: "1px 6px" }}>← YOU</span>}
+                </div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".15em", color: isMe ? "var(--accent)" : medalColor || "#2a3a10", marginTop: 3 }}>{rankTitle}</div>
                 {player.vipStatus === "active" && <span className="tag tag-gold" style={{ marginTop: 4, display: "inline-flex" }}>★ VIP OPERATIVE</span>}
               </div>
               {/* Games count */}
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: medalColor || "#c8ff00", lineHeight: 1 }}>{player.gamesAttended}</div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: isMe ? "var(--accent)" : medalColor || "#c8ff00", lineHeight: 1 }}>{player.gamesAttended}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".2em", color: "#2a3a10", marginTop: 2 }}>DEPLOYMENTS</div>
               </div>
-              {/* Left accent bar for top 3 */}
-              {isTop3 && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: medalColor }} />}
+              {/* Left accent bar — accent for current user, medal colour for top 3 */}
+              {(isTop3 || isMe) && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isMe ? "var(--accent)" : medalColor }} />}
             </div>
           );
         })}
@@ -5305,6 +5322,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         <option value="waiver">📋 Waiver</option>
         <option value="bookings">🎟 Bookings</option>
         <option value="orders">📦 Orders</option>
+        <option value="waitlist">🔔 Waitlist</option>
         <option value="vip">⭐ VIP</option>
       </select>
 
