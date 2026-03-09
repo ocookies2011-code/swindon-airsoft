@@ -2791,7 +2791,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     };
 
     const isCardBanned = cu && (cu.cardStatus === "red" || cu.cardStatus === "black");
-    const bookingBlocked = !cu || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
+    const isAdmin = cu?.role === "admin";
+    const bookingBlocked = !cu || isAdmin || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
 
     return (
       <div className="page-content">
@@ -2923,6 +2924,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               )}
               {cu?.vipStatus === "active" && <div className="alert alert-gold mb-2">⭐ VIP 10% discount applied</div>}
+              {isAdmin && <div className="alert alert-red mb-2">⚠️ Admin accounts cannot make bookings.</div>}
 
               {/* Existing bookings */}
               {myBookings.length > 0 && (
@@ -3987,9 +3989,10 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 )}
 
                 {!cu && <div className="alert alert-red mt-2" style={{ borderRadius:0 }}>LOG IN TO COMPLETE REQUISITION</div>}
+                {cu?.role === "admin" && <div className="alert alert-red mt-2" style={{ borderRadius:0 }}>⚠ ADMIN ACCOUNTS CANNOT PLACE ORDERS</div>}
                 {shopSquareError && <div className="alert alert-red mt-1" style={{ borderRadius:0 }}>⚠ {shopSquareError}</div>}
                 {placing && <div className="alert alert-blue mt-1" style={{ borderRadius:0 }}>⏳ PROCESSING REQUISITION…</div>}
-                {cu && grandTotal > 0 && (
+                {cu && cu.role !== "admin" && grandTotal > 0 && (
                   <SquareCheckoutButton
                     amount={grandTotal}
                     description={`Swindon Airsoft Armoury — ${cart.length} item${cart.length > 1 ? "s" : ""}`}
