@@ -932,10 +932,13 @@ export const visits = wrapWithTimeout({
 // ── Discount Codes ────────────────────────────────────────
 // Supabase table: discount_codes
 // Columns: id, code (text unique), type ('percent'|'fixed'), value (numeric),
-//          max_uses (int nullable), uses (int default 0),
-//          expires_at (timestamptz nullable),
+//          max_uses (int nullable), max_uses_per_user (int nullable),
+//          uses (int default 0), expires_at (timestamptz nullable),
 //          assigned_user_ids (uuid[] default '{}'),
-//          active (bool default true), created_at
+//          scope ('all'|'shop'|'events'), active (bool default true), created_at
+// Supabase table: discount_code_redemptions
+// Columns: id, code_id (uuid fk), user_id (uuid), user_name (text),
+//          scope (text), amount_saved (numeric), created_at
 export const discountCodes = wrapWithTimeout({
   async getAll() {
     const { data, error } = await supabase
@@ -950,14 +953,16 @@ export const discountCodes = wrapWithTimeout({
     const { data, error } = await supabase
       .from('discount_codes')
       .insert({
-        code:               code.code.toUpperCase().trim(),
-        type:               code.type,           // 'percent' | 'fixed'
-        value:              Number(code.value),
-        max_uses:           code.maxUses ? Number(code.maxUses) : null,
-        uses:               0,
-        expires_at:         code.expiresAt || null,
-        assigned_user_ids:  code.assignedUserIds || [],
-        active:             code.active ?? true,
+        code:                code.code.toUpperCase().trim(),
+        type:                code.type,           // 'percent' | 'fixed'
+        value:               Number(code.value),
+        max_uses:            code.maxUses ? Number(code.maxUses) : null,
+        max_uses_per_user:   code.maxUsesPerUser ? Number(code.maxUsesPerUser) : null,
+        uses:                0,
+        expires_at:          code.expiresAt || null,
+        assigned_user_ids:   code.assignedUserIds || [],
+        scope:               code.scope || 'all',
+        active:              code.active ?? true,
       })
       .select()
       .single()
@@ -969,26 +974,40 @@ export const discountCodes = wrapWithTimeout({
     const { error } = await supabase
       .from('discount_codes')
       .update({
-        code:              patch.code?.toUpperCase().trim(),
-        type:              patch.type,
-        value:             Number(patch.value),
-        max_uses:          patch.maxUses ? Number(patch.maxUses) : null,
-        expires_at:        patch.expiresAt || null,
-        assigned_user_ids: patch.assignedUserIds || [],
-        active:            patch.active,
+        code:               patch.code?.toUpperCase().trim(),
+        type:               patch.type,
+        value:              Number(patch.value),
+        max_uses:           patch.maxUses ? Number(patch.maxUses) : null,
+        max_uses_per_user:  patch.maxUsesPerUser ? Number(patch.maxUsesPerUser) : null,
+        expires_at:         patch.expiresAt || null,
+        assigned_user_ids:  patch.assignedUserIds || [],
+        scope:              patch.scope || 'all',
+        active:             patch.active,
       })
       .eq('id', id)
     if (error) throw error
   },
 
   async delete(id) {
+    // Delete redemption history first, then the code
+    await supabase.from('discount_code_redemptions').delete().eq('code_id', id)
     const { error } = await supabase.from('discount_codes').delete().eq('id', id)
     if (error) throw error
   },
 
-  // Called at checkout — validates and increments use count
-  // Returns the discount object or throws a descriptive error
-  async redeem(code, userId) {
+  // Fetch redemption history for all codes (admin view)
+  async getRedemptions() {
+    const { data, error } = await supabase
+      .from('discount_code_redemptions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500)
+    if (error) throw error
+    return data || []
+  },
+
+  // Validate a code without redeeming it — used for live preview at checkout
+  async validate(code, userId, scope) {
     const { data, error } = await supabase
       .from('discount_codes')
       .select('*')
@@ -996,27 +1015,55 @@ export const discountCodes = wrapWithTimeout({
       .eq('active', true)
       .single()
     if (error || !data) throw new Error('Invalid or inactive discount code.')
-
-    // Check expiry
     if (data.expires_at && new Date(data.expires_at) < new Date())
       throw new Error('This discount code has expired.')
-
-    // Check use limit
     if (data.max_uses !== null && data.uses >= data.max_uses)
       throw new Error('This discount code has reached its usage limit.')
-
-    // Check user assignment (if restricted)
     if (data.assigned_user_ids?.length > 0) {
       if (!userId || !data.assigned_user_ids.includes(userId))
         throw new Error('This discount code is not valid for your account.')
     }
+    // Scope check
+    if (data.scope && data.scope !== 'all' && scope && data.scope !== scope)
+      throw new Error(`This code is only valid for ${data.scope === 'shop' ? 'shop orders' : 'event bookings'}.`)
+    // Per-user limit check
+    if (data.max_uses_per_user && userId) {
+      const { count } = await supabase
+        .from('discount_code_redemptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('code_id', data.id)
+        .eq('user_id', userId)
+      if ((count || 0) >= data.max_uses_per_user)
+        throw new Error(`You have already used this code the maximum number of times (${data.max_uses_per_user}).`)
+    }
+    return data
+  },
 
-    // Increment use count
+  // Called at checkout — validates, records redemption, increments use count,
+  // and auto-deactivates if limit is now reached.
+  async redeem(code, userId, userName, scope, amountSaved) {
+    const data = await discountCodes.validate(code, userId, scope)
+
+    const newUses = data.uses + 1
+    const exhausted = data.max_uses !== null && newUses >= data.max_uses
+
+    // Increment use count — auto-deactivate if exhausted
     const { error: incErr } = await supabase
       .from('discount_codes')
-      .update({ uses: data.uses + 1 })
+      .update({ uses: newUses, ...(exhausted ? { active: false } : {}) })
       .eq('id', data.id)
     if (incErr) throw incErr
+
+    // Record redemption history (non-fatal if table missing)
+    try {
+      await supabase.from('discount_code_redemptions').insert({
+        code_id:      data.id,
+        user_id:      userId || null,
+        user_name:    userName || null,
+        scope:        scope || 'unknown',
+        amount_saved: Number(amountSaved) || 0,
+      })
+    } catch { /* non-fatal */ }
 
     return data
   },

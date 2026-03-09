@@ -2509,9 +2509,21 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
   const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
 
+  // ── Discount code state (events checkout)
+  const [discountInput, setDiscountInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(null); // validated code object
+  const [discountError, setDiscountError] = useState('');
+  const [discountChecking, setDiscountChecking] = useState(false);
+
   const ev = detail ? data.events.find(e => e.id === detail) : null;
 
-  const resetCart = () => { setBCart({ walkOn: 0, rental: 0, extras: {} }); setUseCredits(false); };
+  const resetCart = () => {
+    setBCart({ walkOn: 0, rental: 0, extras: {} });
+    setUseCredits(false);
+    setDiscountInput('');
+    setAppliedDiscount(null);
+    setDiscountError('');
+  };
 
   // Waitlist state
   const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
@@ -2599,8 +2611,36 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     }
     const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
-    const creditsApplied = useCredits ? Math.min(availCredits, grandTotal) : 0;
-    const payTotal     = Math.max(0, grandTotal - creditsApplied);
+
+    // ── Discount code savings (applied after VIP, before credits)
+    let discountSaving = 0;
+    if (appliedDiscount && !cartEmpty) {
+      if (appliedDiscount.type === 'percent') {
+        discountSaving = grandTotal * (Number(appliedDiscount.value) / 100);
+      } else {
+        discountSaving = Math.min(Number(appliedDiscount.value), grandTotal);
+      }
+    }
+    const afterDiscount = Math.max(0, grandTotal - discountSaving);
+
+    const creditsApplied = useCredits ? Math.min(availCredits, afterDiscount) : 0;
+    const payTotal     = Math.max(0, afterDiscount - creditsApplied);
+
+    const applyDiscountCode = async () => {
+      if (!discountInput.trim()) return;
+      setDiscountChecking(true);
+      setDiscountError('');
+      setAppliedDiscount(null);
+      try {
+        const result = await api.discountCodes.validate(discountInput, cu?.id, 'events');
+        setAppliedDiscount(result);
+        setDiscountError('');
+      } catch (e) {
+        setDiscountError(e.message);
+      } finally {
+        setDiscountChecking(false);
+      }
+    };
     const setExtra = (id, qty, variantId) => {
       const extraKeyVal = extraKey(id, variantId);
       setBCart(p => {
@@ -2687,6 +2727,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           const newCredits = Math.max(0, availCredits - creditsApplied);
           await supabase.from('profiles').update({ credits: newCredits }).eq('id', cu.id);
           updateUser(cu.id, { credits: newCredits });
+        }
+
+        // Record discount code redemption
+        if (appliedDiscount) {
+          try {
+            await api.discountCodes.redeem(appliedDiscount.code, cu.id, cu.name, 'events', discountSaving);
+          } catch { /* non-fatal */ }
         }
 
         // Show success immediately — stock deduction and refresh happen in background
@@ -3152,6 +3199,41 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       }
                     </div>
                   )}
+                  {/* Discount code input */}
+                  {cu && !cartEmpty && (
+                    <div style={{ marginBottom: 8 }}>
+                      {!appliedDiscount ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <input
+                            value={discountInput}
+                            onChange={e => { setDiscountInput(e.target.value.toUpperCase()); setDiscountError(''); }}
+                            onKeyDown={e => e.key === 'Enter' && applyDiscountCode()}
+                            placeholder="DISCOUNT CODE"
+                            style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', color: '#c8e878', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.12em', padding: '7px 10px', outline: 'none', textTransform: 'uppercase' }}
+                          />
+                          <button onClick={applyDiscountCode} disabled={discountChecking || !discountInput.trim()}
+                            style={{ background: 'rgba(200,255,0,.1)', border: '1px solid #2a3a10', color: '#c8ff00', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: '.1em', padding: '7px 14px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: discountChecking || !discountInput.trim() ? .5 : 1 }}>
+                            {discountChecking ? '…' : 'APPLY'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', background: 'rgba(200,255,0,.07)', border: '1px solid rgba(200,255,0,.25)' }}>
+                          <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: '#c8ff00', letterSpacing: '.08em' }}>
+                            🏷️ {appliedDiscount.code} — {appliedDiscount.type === 'percent' ? `${appliedDiscount.value}% OFF` : `£${Number(appliedDiscount.value).toFixed(2)} OFF`}
+                          </span>
+                          <button onClick={() => { setAppliedDiscount(null); setDiscountInput(''); setDiscountError(''); }}
+                            style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+                        </div>
+                      )}
+                      {discountError && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>⚠ {discountError}</div>}
+                    </div>
+                  )}
+                  {appliedDiscount && discountSaving > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4, color: '#c8ff00' }}>
+                      <span>🏷️ Discount ({appliedDiscount.code})</span>
+                      <span>−£{discountSaving.toFixed(2)}</span>
+                    </div>
+                  )}
                   {/* Credits toggle */}
                   {cu && availCredits > 0 && !cartEmpty && (
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 10px", background:"rgba(0,120,255,.06)", border:"1px solid rgba(0,120,255,.2)", borderRadius:3, marginTop:4, marginBottom:4 }}>
@@ -3457,6 +3539,10 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const [placing, setPlacing] = useState(false);
   const [shopSquareError, setShopSquareError] = useState(null);
   const [validDefence, setValidDefence] = useState("");
+  const [shopDiscountInput, setShopDiscountInput] = useState('');
+  const [shopAppliedDiscount, setShopAppliedDiscount] = useState(null);
+  const [shopDiscountError, setShopDiscountError] = useState('');
+  const [shopDiscountChecking, setShopDiscountChecking] = useState(false);
 
   const postageOptions = data.postageOptions || [];
   const [postageId, setPostageId] = useState(() => postageOptions[0]?.id || "");
@@ -3497,7 +3583,31 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
   const subTotal = cart.reduce((s, i) => s + i.price * i.qty * (cu?.vipStatus === "active" ? 0.9 : 1), 0);
   const postageTotal = hasNoPost ? 0 : (postage?.price || 0);
-  const grandTotal = subTotal + postageTotal;
+
+  let shopDiscountSaving = 0;
+  if (shopAppliedDiscount && cart.length > 0) {
+    if (shopAppliedDiscount.type === 'percent') {
+      shopDiscountSaving = subTotal * (Number(shopAppliedDiscount.value) / 100);
+    } else {
+      shopDiscountSaving = Math.min(Number(shopAppliedDiscount.value), subTotal);
+    }
+  }
+  const grandTotal = Math.max(0, subTotal - shopDiscountSaving) + postageTotal;
+
+  const applyShopDiscount = async (cu) => {
+    if (!shopDiscountInput.trim()) return;
+    setShopDiscountChecking(true);
+    setShopDiscountError('');
+    setShopAppliedDiscount(null);
+    try {
+      const result = await api.discountCodes.validate(shopDiscountInput, cu?.id, 'shop');
+      setShopAppliedDiscount(result);
+    } catch (e) {
+      setShopDiscountError(e.message);
+    } finally {
+      setShopDiscountChecking(false);
+    }
+  };
 
   const placeOrderAfterPayment = async (squarePayment) => {
     if (!cu || cart.length === 0) return;
@@ -3523,7 +3633,13 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         }).catch(() => {});
       } catch (emailErr) { console.warn("Order email failed:", emailErr); }
-      setCart([]); setCartOpen(false);
+      // Record discount redemption
+      if (shopAppliedDiscount) {
+        try {
+          await api.discountCodes.redeem(shopAppliedDiscount.code, cu.id, cu.name, 'shop', shopDiscountSaving);
+        } catch { /* non-fatal */ }
+      }
+      setCart([]); setCartOpen(false); setShopAppliedDiscount(null); setShopDiscountInput('');
       const cartSnapshot = [...cart];
       Promise.all([
         ...cartSnapshot.map(ci => (
@@ -3805,6 +3921,36 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {hasNoPost && <div className="alert alert-gold mt-1" style={{ borderRadius:0 }}>⚠ COLLECTION-ONLY ITEMS — NO POSTING</div>}
                 {cu?.vipStatus === "active" && <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"8px 12px", marginTop:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".12em", color:"#c8a000" }}>★ VIP 10% DISCOUNT APPLIED</div>}
 
+                {/* ── Discount Code ── */}
+                {cu && (
+                  <div style={{ marginTop: 10 }}>
+                    {!shopAppliedDiscount ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          value={shopDiscountInput}
+                          onChange={e => { setShopDiscountInput(e.target.value.toUpperCase()); setShopDiscountError(''); }}
+                          onKeyDown={e => e.key === 'Enter' && applyShopDiscount(cu)}
+                          placeholder="DISCOUNT CODE"
+                          style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', color: '#c8e878', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '.1em', padding: '7px 10px', outline: 'none', textTransform: 'uppercase', borderRadius: 0 }}
+                        />
+                        <button onClick={() => applyShopDiscount(cu)} disabled={shopDiscountChecking || !shopDiscountInput.trim()}
+                          style={{ background: 'rgba(200,255,0,.1)', border: '1px solid #2a3a10', color: '#c8ff00', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: '.1em', padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: shopDiscountChecking || !shopDiscountInput.trim() ? .5 : 1 }}>
+                          {shopDiscountChecking ? '…' : 'APPLY'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', background: 'rgba(200,255,0,.07)', border: '1px solid rgba(200,255,0,.25)' }}>
+                        <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: '#c8ff00', letterSpacing: '.08em' }}>
+                          🏷️ {shopAppliedDiscount.code} — {shopAppliedDiscount.type === 'percent' ? `${shopAppliedDiscount.value}% OFF` : `£${Number(shopAppliedDiscount.value).toFixed(2)} OFF`}
+                        </span>
+                        <button onClick={() => { setShopAppliedDiscount(null); setShopDiscountInput(''); setShopDiscountError(''); }}
+                          style={{ background: 'none', border: 'none', color: '#5a7a30', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+                      </div>
+                    )}
+                    {shopDiscountError && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>⚠ {shopDiscountError}</div>}
+                  </div>
+                )}
+
                 {/* ── Valid Defence ── */}
                 <div style={{ marginTop:14, background:"#080a06", border:"1px solid #1a2808", padding:"12px 14px" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
@@ -3828,6 +3974,12 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   <span>TOTAL</span>
                   <span style={{ color:"#c8ff00" }}>£{grandTotal.toFixed(2)}</span>
                 </div>
+                {shopDiscountSaving > 0 && (
+                  <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, marginTop:4, color:"#c8ff00" }}>
+                    <span>🏷️ Discount ({shopAppliedDiscount?.code})</span>
+                    <span>−£{shopDiscountSaving.toFixed(2)}</span>
+                  </div>
+                )}
                 {!hasNoPost && postageTotal > 0 && (
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", textAlign:"right", marginTop:2 }}>
                     incl. {postage.name} £{postageTotal.toFixed(2)}
@@ -5829,8 +5981,9 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
 // ── AdminDiscountCodes ─────────────────────────────────────────
 function AdminDiscountCodes({ data, showToast }) {
-  const EMPTY = { code: '', type: 'percent', value: '', maxUses: '', expiresAt: '', assignedUserIds: [], active: true };
+  const EMPTY = { code: '', type: 'percent', value: '', maxUses: '', maxUsesPerUser: '', expiresAt: '', assignedUserIds: [], scope: 'all', active: true };
   const [codes, setCodes] = useState([]);
+  const [redemptions, setRedemptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
@@ -5838,14 +5991,19 @@ function AdminDiscountCodes({ data, showToast }) {
   const [deleting, setDeleting] = useState(null);
   const [userSearch, setUserSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState('codes');
 
   const allUsers = data?.users || [];
 
   const load = async () => {
     try {
       setLoading(true);
-      const d = await api.discountCodes.getAll();
+      const [d, r] = await Promise.all([
+        api.discountCodes.getAll(),
+        api.discountCodes.getRedemptions(),
+      ]);
       setCodes(d);
+      setRedemptions(r);
     } catch (e) { showToast(fmtErr(e), 'error'); }
     finally { setLoading(false); }
   };
@@ -5860,13 +6018,16 @@ function AdminDiscountCodes({ data, showToast }) {
       type: c.type,
       value: String(c.value),
       maxUses: c.max_uses != null ? String(c.max_uses) : '',
+      maxUsesPerUser: c.max_uses_per_user != null ? String(c.max_uses_per_user) : '',
       expiresAt: c.expires_at ? c.expires_at.slice(0, 10) : '',
       assignedUserIds: c.assigned_user_ids || [],
+      scope: c.scope || 'all',
       active: c.active,
     });
     setEditId(c.id);
     setUserSearch('');
     setShowForm(true);
+    setActiveTab('codes');
   };
 
   const handleSave = async () => {
@@ -5890,7 +6051,7 @@ function AdminDiscountCodes({ data, showToast }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this discount code?')) return;
+    if (!window.confirm('Delete this discount code and all its redemption history?')) return;
     setDeleting(id);
     try {
       await api.discountCodes.delete(id);
@@ -5920,28 +6081,46 @@ function AdminDiscountCodes({ data, showToast }) {
   const isExhausted = (c) => c.max_uses != null && c.uses >= c.max_uses;
 
   const statusBadge = (c) => {
+    if (!c.active && isExhausted(c)) return { label: 'Used up', color: 'var(--red)' };
     if (!c.active) return { label: 'Inactive', color: 'var(--muted)' };
     if (isExpired(c)) return { label: 'Expired', color: 'var(--red)' };
     if (isExhausted(c)) return { label: 'Used up', color: 'var(--red)' };
     return { label: 'Active', color: 'var(--accent)' };
   };
 
+  const scopeLabel = (s) => ({ all: 'All', shop: 'Shop only', events: 'Events only' }[s] || s);
+
   const cs = { fontFamily: "'Barlow Condensed',sans-serif" };
+
+  // Group redemptions by code id for the history tab
+  const redemptionsByCode = redemptions.reduce((acc, r) => {
+    acc[r.code_id] = acc[r.code_id] || [];
+    acc[r.code_id].push(r);
+    return acc;
+  }, {});
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <h2 style={{ ...cs, fontSize: 26, fontWeight: 900, letterSpacing: '.06em', margin: 0 }}>🏷️ DISCOUNT CODES</h2>
-        <button className="btn btn-accent" onClick={() => { resetForm(); setShowForm(true); }}>+ New Code</button>
+        <button className="btn btn-accent" onClick={() => { resetForm(); setShowForm(true); setActiveTab('codes'); }}>+ New Code</button>
+      </div>
+
+      {/* Tabs */}
+      <div className="nav-tabs" style={{ marginBottom: 20 }}>
+        <button className={`nav-tab ${activeTab === 'codes' ? 'active' : ''}`} onClick={() => setActiveTab('codes')}>Codes</button>
+        <button className={`nav-tab ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
+          Redemption History {redemptions.length > 0 && <span style={{ marginLeft: 6, background: 'var(--accent)', color: '#000', borderRadius: 20, padding: '0 7px', fontSize: 11, fontWeight: 900 }}>{redemptions.length}</span>}
+        </button>
       </div>
 
       {/* ── Form ── */}
-      {showForm && (
+      {showForm && activeTab === 'codes' && (
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, padding: 20, marginBottom: 24 }}>
           <h3 style={{ ...cs, fontSize: 18, fontWeight: 800, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
             {editId ? '✏️ Edit Code' : '➕ New Code'}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(175px,1fr))', gap: 12, marginBottom: 16 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
               Code *
               <input className="input" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
@@ -5960,8 +6139,21 @@ function AdminDiscountCodes({ data, showToast }) {
                 placeholder={form.type === 'percent' ? '10' : '5.00'} />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-              Max Uses (optional)
+              Scope
+              <select className="input" value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value }))}>
+                <option value="all">All (shop + events)</option>
+                <option value="shop">Shop only</option>
+                <option value="events">Events only</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Total Use Limit
               <input className="input" type="number" min="1" value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))}
+                placeholder="Unlimited" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Per-User Limit
+              <input className="input" type="number" min="1" value={form.maxUsesPerUser} onChange={e => setForm(f => ({ ...f, maxUsesPerUser: e.target.value }))}
                 placeholder="Unlimited" />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
@@ -5980,7 +6172,7 @@ function AdminDiscountCodes({ data, showToast }) {
           {/* User assignment */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
-              Restrict to Specific Users (leave empty = anyone can use)
+              Restrict to Specific Users <span style={{ fontWeight: 400, textTransform: 'none' }}>(leave empty = anyone can use)</span>
             </div>
             {assignedUsers.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
@@ -6021,61 +6213,108 @@ function AdminDiscountCodes({ data, showToast }) {
         </div>
       )}
 
-      {/* ── Table ── */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>Loading…</div>
-      ) : codes.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>No discount codes yet. Create one above.</div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                {['Code','Type','Value','Uses','Limit','Expires','Assigned To','Status',''].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '8px 10px', ...cs, fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: 'var(--muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {codes.map(c => {
-                const badge = statusBadge(c);
-                const assigned = allUsers.filter(u => (c.assigned_user_ids || []).includes(u.id));
-                return (
-                  <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px', fontWeight: 800, ...cs, fontSize: 16, letterSpacing: '.05em', color: 'var(--accent)' }}>{c.code}</td>
-                    <td style={{ padding: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontSize: 11, fontWeight: 700 }}>{c.type}</td>
-                    <td style={{ padding: '10px', fontWeight: 700 }}>{c.type === 'percent' ? `${c.value}%` : `£${Number(c.value).toFixed(2)}`}</td>
-                    <td style={{ padding: '10px' }}>{c.uses}</td>
-                    <td style={{ padding: '10px', color: 'var(--muted)' }}>{c.max_uses != null ? c.max_uses : '∞'}</td>
-                    <td style={{ padding: '10px', color: 'var(--muted)', fontSize: 12 }}>{c.expires_at ? new Date(c.expires_at).toLocaleDateString('en-GB') : '—'}</td>
-                    <td style={{ padding: '10px', maxWidth: 180 }}>
-                      {assigned.length === 0
-                        ? <span style={{ color: 'var(--muted)', fontSize: 12 }}>Anyone</span>
-                        : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                            {assigned.map(u => (
-                              <span key={u.id} style={{ background: 'rgba(200,255,0,.15)', color: 'var(--accent)', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{u.name}</span>
-                            ))}
-                          </div>
-                      }
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{ background: badge.color + '22', color: badge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em' }}>{badge.label}</span>
-                    </td>
-                    <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
-                      <button className="btn btn-sm btn-ghost" onClick={() => startEdit(c)} style={{ marginRight: 6 }}>Edit</button>
-                      <button className="btn btn-sm" onClick={() => handleDelete(c.id)} disabled={deleting === c.id}
-                        style={{ background: 'var(--red)', color: '#fff', border: 'none', opacity: deleting === c.id ? .5 : 1 }}>
-                        {deleting === c.id ? '…' : 'Delete'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* ── Codes Table ── */}
+      {activeTab === 'codes' && (
+        loading ? (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>Loading…</div>
+        ) : codes.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>No discount codes yet. Create one above.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                  {['Code','Type','Value','Scope','Uses','Total Limit','Per-User','Expires','Assigned To','Status',''].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '8px 10px', ...cs, fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: 'var(--muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {codes.map(c => {
+                  const badge = statusBadge(c);
+                  const assigned = allUsers.filter(u => (c.assigned_user_ids || []).includes(u.id));
+                  const codeRedemptions = redemptionsByCode[c.id] || [];
+                  return (
+                    <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px', fontWeight: 800, ...cs, fontSize: 16, letterSpacing: '.05em', color: 'var(--accent)' }}>{c.code}</td>
+                      <td style={{ padding: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontSize: 11, fontWeight: 700 }}>{c.type}</td>
+                      <td style={{ padding: '10px', fontWeight: 700 }}>{c.type === 'percent' ? `${c.value}%` : `£${Number(c.value).toFixed(2)}`}</td>
+                      <td style={{ padding: '10px', fontSize: 11, color: 'var(--muted)' }}>{scopeLabel(c.scope)}</td>
+                      <td style={{ padding: '10px' }}>
+                        <span>{c.uses}</span>
+                        {codeRedemptions.length > 0 && (
+                          <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--muted)' }}>({codeRedemptions.length} logged)</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px', color: 'var(--muted)' }}>{c.max_uses != null ? c.max_uses : '∞'}</td>
+                      <td style={{ padding: '10px', color: 'var(--muted)' }}>{c.max_uses_per_user != null ? c.max_uses_per_user : '∞'}</td>
+                      <td style={{ padding: '10px', color: 'var(--muted)', fontSize: 12 }}>{c.expires_at ? new Date(c.expires_at).toLocaleDateString('en-GB') : '—'}</td>
+                      <td style={{ padding: '10px', maxWidth: 180 }}>
+                        {assigned.length === 0
+                          ? <span style={{ color: 'var(--muted)', fontSize: 12 }}>Anyone</span>
+                          : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {assigned.map(u => (
+                                <span key={u.id} style={{ background: 'rgba(200,255,0,.15)', color: 'var(--accent)', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{u.name}</span>
+                              ))}
+                            </div>
+                        }
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <span style={{ background: badge.color + '22', color: badge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em' }}>{badge.label}</span>
+                      </td>
+                      <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
+                        <button className="btn btn-sm btn-ghost" onClick={() => startEdit(c)} style={{ marginRight: 6 }}>Edit</button>
+                        <button className="btn btn-sm" onClick={() => handleDelete(c.id)} disabled={deleting === c.id}
+                          style={{ background: 'var(--red)', color: '#fff', border: 'none', opacity: deleting === c.id ? .5 : 1 }}>
+                          {deleting === c.id ? '…' : 'Delete'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
+      {/* ── Redemption History Tab ── */}
+      {activeTab === 'history' && (
+        loading ? (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>Loading…</div>
+        ) : redemptions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>No redemptions recorded yet.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                  {['Date','Code','Player','Scope','Saved'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '8px 10px', ...cs, fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: 'var(--muted)', textTransform: 'uppercase' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {redemptions.map(r => {
+                  const matchedCode = codes.find(c => c.id === r.code_id);
+                  return (
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px', fontSize: 12, color: 'var(--muted)' }}>{new Date(r.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      <td style={{ padding: '10px', fontWeight: 800, ...cs, fontSize: 15, color: 'var(--accent)' }}>{matchedCode?.code || r.code_id?.slice(0,8)}</td>
+                      <td style={{ padding: '10px', fontWeight: 600 }}>{r.user_name || <span style={{ color: 'var(--muted)' }}>Guest</span>}</td>
+                      <td style={{ padding: '10px', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase' }}>{r.scope}</td>
+                      <td style={{ padding: '10px', fontWeight: 700, color: 'var(--accent)' }}>£{Number(r.amount_saved).toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>
+              Total saved by players: <strong style={{ color: 'var(--accent)' }}>£{redemptions.reduce((s, r) => s + Number(r.amount_saved), 0).toFixed(2)}</strong>
+            </div>
+          </div>
+        )
+      )}
     </div>
   );
 }
