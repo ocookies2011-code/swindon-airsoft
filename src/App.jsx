@@ -625,7 +625,8 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .data-table{width:100%;border-collapse:collapse;min-width:500px;}
 .data-table th{text-align:left;padding:10px 16px;font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--muted);border-bottom:1px solid #2a2a2a;text-transform:uppercase;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;background:var(--bg2);}
 .data-table td{padding:12px 16px;font-size:13px;border-bottom:1px solid #1a1a1a;}
-.data-table tbody tr:hover td{background:rgba(255,255,255,.02);}
+.data-table tbody tr{transition:background .12s;}
+.data-table tbody tr:hover td{background:rgba(200,255,0,.03);}
 
 /* ── MODAL ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
@@ -2557,6 +2558,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const [tab, setTab] = useState("info");
   const [squareError, setSquareError] = useState(null);
   const [bookingBusy, setBookingBusy] = useState(false);
+  const bookingSafetyRef = useRef(null);
   const [useCredits, setUseCredits] = useState(false);
 
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
@@ -2587,6 +2589,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       setDiscountError('');
     }
   }, [bCart, appliedDiscount]);
+
+  // Clean up booking safety timeout on unmount
+  useEffect(() => () => { if (bookingSafetyRef.current) clearTimeout(bookingSafetyRef.current); }, []);
 
   // Waitlist state
   const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
@@ -2720,7 +2725,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const confirmBookingAfterPayment = async (squarePayment) => {
       setBookingBusy(true);
       setSquareError(null);
-      const safety = setTimeout(() => setBookingBusy(false), 30000);
+      const safety = bookingSafetyRef.current = setTimeout(() => setBookingBusy(false), 30000);
       try {
         const extrasSnapshot = Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0));
 
@@ -3618,6 +3623,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 // ── Shop ──────────────────────────────────────────────────
 function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen }) {
   const [placing, setPlacing] = useState(false);
+  const shopSafetyRef = useRef(null);
   const [shopSquareError, setShopSquareError] = useState(null);
   const [validDefence, setValidDefence] = useState("");
   const [shopDiscountInput, setShopDiscountInput] = useState('');
@@ -3630,6 +3636,9 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   useEffect(() => {
     if (!postageId && postageOptions.length > 0) setPostageId(postageOptions[0].id);
   }, [postageOptions.length]);
+
+  // Clean up shop safety timeout on unmount
+  useEffect(() => () => { if (shopSafetyRef.current) clearTimeout(shopSafetyRef.current); }, []);
 
   // Pre-fill valid defence from player's UKARA ID when cart opens
   useEffect(() => {
@@ -3699,7 +3708,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const placeOrderAfterPayment = async (squarePayment) => {
     if (!cu || cart.length === 0) return;
     setPlacing(true); setShopSquareError(null);
-    const safety = setTimeout(() => setPlacing(false), 30000);
+    const safety = shopSafetyRef.current = setTimeout(() => setPlacing(false), 30000);
     try {
       await api.shopOrders.create({
         customerName: cu.name, customerEmail: cu.email || "",
@@ -3900,7 +3909,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {/* Image */}
                 <div style={{ height:170, background:"#080a06", overflow:"hidden", position:"relative" }}>
                   {(() => { const cardImg = (item.images && item.images.length > 0) ? item.images[0] : item.image; return cardImg
-                    ? <img src={cardImg} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.8)", transition:"transform .3s" }}
+                    ? <img src={cardImg} alt="" onError={e=>{e.target.style.display='none';}} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.8)", transition:"transform .3s" }}
                         onMouseOver={e => e.currentTarget.style.transform="scale(1.05)"}
                         onMouseOut={e => e.currentTarget.style.transform=""} />
                     : <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
@@ -4188,7 +4197,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
                   {displayImg
                     ? (
                       <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setImgLightbox(displayImg)}>
-                        <img src={displayImg} alt={item.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#0a0a0a", transition:"opacity .2s" }} />
+                        <img src={displayImg} alt={item.name} onError={e=>{e.target.style.display='none';}} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#0a0a0a", transition:"opacity .2s" }} />
                         <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,.7)", border:"1px solid rgba(200,255,0,.3)", color:"rgba(200,255,0,.8)", fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".15em", padding:"3px 8px", pointerEvents:"none" }}>⊕ ENLARGE</div>
                       </div>
                     )
@@ -4199,7 +4208,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
                       {allImgs.map((img, i) => (
                         <div key={i} onClick={() => setActiveImgIdx(i)}
                           style={{ width:52, height:52, border: i === activeImgIdx ? "2px solid var(--accent)" : "1px solid #1a2808", cursor:"pointer", overflow:"hidden", flexShrink:0, opacity: i === activeImgIdx ? 1 : 0.55, transition:"all .15s" }}>
-                          <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                          <img src={img} alt="" onError={e=>{e.target.style.display='none';}} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                         </div>
                       ))}
                     </div>
@@ -4577,7 +4586,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
               </div>
               {/* Avatar */}
               <div style={{ width: 38, height: 38, background: "#0a0c08", border: `1px solid ${isMe ? "rgba(200,255,0,.5)" : medalColor || "#1a2808"}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, overflow: "hidden", flexShrink: 0, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif" }}>
-                {player.profilePic ? <img src={player.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : (player.callsign || player.name)[0]}
+                {player.profilePic ? <img src={player.profilePic} alt="" onError={e=>{e.target.style.display='none';}} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.85)" }} /> : (player.callsign || player.name)[0]}
               </div>
               {/* Name + rank */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -5475,7 +5484,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ position: "relative" }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", border: "2px solid var(--accent)", overflow: "hidden", background: "var(--bg4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700 }}>
-              {cu.profilePic ? <img src={cu.profilePic} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : cu.name[0]}
+              {cu.profilePic ? <img src={cu.profilePic} onError={e=>{e.target.style.display='none';}} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : cu.name[0]}
             </div>
             <label style={{ position: "absolute", bottom: 0, right: 0, background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: picUploading ? "wait" : "pointer", fontSize: 12, opacity: picUploading ? 0.6 : 1 }}>
               {picUploading ? "⏳" : "📷"}<input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePic} disabled={picUploading} />
@@ -6782,6 +6791,7 @@ function AdminDash({ data, setSection }) {
     outOfStockVariants.length > 0 && { msg: outOfStockVariants.length + " variant product(s) fully out of stock: " + outOfStockVariants.slice(0,2).map(p=>p.name).join(", ") + (outOfStockVariants.length>2 ? " +" + (outOfStockVariants.length-2) + " more" : "") + ".", section: "shop", color: "red", icon: "📦" },
     lowStock.length > 0 && { msg: lowStock.length + " product(s) running low (≤" + LOW_STOCK_THRESHOLD + "): " + lowStock.slice(0,3).map(p=>p.name+" ("+p.stock+")").join(", ") + (lowStock.length>3 ? " +" + (lowStock.length-3) + " more" : "") + ".", section: "shop", color: "gold", icon: "⚠️" },
     lowStockVariants.length > 0 && { msg: lowStockVariants.length + " variant product(s) have low stock variants.", section: "shop", color: "gold", icon: "⚠️" },
+    new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "📋" },
   ].filter(Boolean);
 
   // Quick action state
@@ -9262,349 +9272,6 @@ function AdminOrdersInline({ showToast }) {
 }
 
 // ── Admin Shop ────────────────────────────────────────────
-function AdminOrders({ showToast }) {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [detail, setDetail] = useState(null);
-  const [trackingModal, setTrackingModal] = useState(null); // { id, tracking }
-  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.shopOrders.getAll();
-      setOrders(data);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // Small delay so auth session is confirmed before querying RLS-protected table
-    const ordersTimer = setTimeout(fetchOrders, 600);
-    return () => clearTimeout(ordersTimer);
-  }, []);
-
-  const doDispatch = async (id, tracking) => {
-    try {
-      await api.shopOrders.updateStatus(id, "dispatched", tracking || null);
-      setOrders(o => o.map(x => x.id === id ? { ...x, status: "dispatched" } : x));
-      if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
-      showToast("Order marked as dispatched!");
-      const order = orders.find(o => o.id === id);
-      const toEmail = order?.customer_email || order?.customerEmail;
-      if (toEmail) {
-        sendDispatchEmail({
-          toEmail,
-          toName:  order.customer_name || order.customerName || "Customer",
-          order:   { ...order, customerAddress: order.customer_address || order.customerAddress || "" },
-          items:   Array.isArray(order.items) ? order.items : [],
-          tracking: tracking || null,
-        }).then(() => showToast("📧 Dispatch email sent!")).catch(e => showToast("⚠️ Email failed: " + (e?.message || e?.text || JSON.stringify(e)), "red"));
-      }
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
-    setTrackingModal(null);
-  };
-
-  const setStatus = async (id, status) => {
-    if (status === "dispatched") { setTrackingModal({ id, tracking: "" }); return; }
-    try {
-      await api.shopOrders.updateStatus(id, status);
-      setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
-      if (detail?.id === id) setDetail(d => ({ ...d, status }));
-      showToast("Status updated!");
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
-  };
-
-  const [refundModal, setRefundModal] = useState(null); // { order }
-  const [refundAmt, setRefundAmt] = useState("");
-  const [refundNote, setRefundNote] = useState("");
-  const [refunding, setRefunding] = useState(false);
-
-  const openRefund = (order) => {
-    setRefundModal({ order });
-    setRefundAmt(Number(order.total || 0).toFixed(2));
-    setRefundNote("");
-  };
-
-  const doRefund = async () => {
-    if (!refundModal) return;
-    const { order } = refundModal;
-    const amt = parseFloat(refundAmt);
-    if (isNaN(amt) || amt <= 0) { showToast("Enter a valid refund amount", "red"); return; }
-    if (amt > Number(order.total)) { showToast("Refund amount exceeds order total", "red"); return; }
-    setRefunding(true);
-    try {
-      if (!order.paypal_order_id && !order.square_order_id) throw new Error("No payment ID on this order — cannot issue automatic refund. Refund manually in your Square Dashboard.");
-      const locationId = await api.settings.get("square_location_id");
-      const isFullRefund = Math.abs(amt - Number(order.total)) < 0.01;
-      await squareRefund({ squarePaymentId: order.square_order_id || order.paypal_order_id, amount: isFullRefund ? null : amt, locationId });
-      await api.shopOrders.saveRefund(order.id, amt, refundNote || null);
-      setOrders(o => o.map(x => x.id === order.id ? { ...x, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() } : x));
-      if (detail?.id === order.id) setDetail(d => ({ ...d, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() }));
-      showToast("✅ Refund of £" + amt.toFixed(2) + " issued via Square!");
-      setRefundModal(null);
-    } catch (e) {
-      showToast("❌ Refund failed: " + (e.message || String(e)), "red");
-    } finally { setRefunding(false); }
-  };
-  const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
-  const pending = orders.filter(o => o.status === "pending").length;
-  const [statusTab, setStatusTab] = useState("pending");
-  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all","refunded"];
-  const visibleOrders = statusTab === "all" ? orders : orders.filter(o => o.status === statusTab);
-
-  return (
-    <div>
-      <div className="page-header">
-        <div><div className="page-title">Shop Orders</div><div className="page-sub">{orders.length} orders · £{totalRevenue.toFixed(2)} total</div></div>
-        <button className="btn btn-ghost" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
-      </div>
-      <div className="grid-4 mb-2">
-        {[
-          { label: "Total Orders", val: orders.length, color: "" },
-          { label: "Pending", val: pending, color: "blue" },
-          { label: "Dispatched", val: orders.filter(o => o.status === "dispatched").length, color: "gold" },
-          { label: "Revenue", val: `£${totalRevenue.toFixed(2)}`, color: "teal" },
-        ].map(s => (
-          <div key={s.label} className={`stat-card ${s.color}`}>
-            <div className="stat-val">{s.val}</div>
-            <div className="stat-label">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="nav-tabs" style={{ marginBottom:12 }}>
-        {STATUS_TABS.map(t => {
-          const cnt = t === "all" ? orders.length : orders.filter(o => o.status === t).length;
-          return (
-            <button key={t} className={`nav-tab${statusTab === t ? " active" : ""}`} onClick={() => setStatusTab(t)} style={{ textTransform:"capitalize" }}>
-              {t}{cnt > 0 && <span style={{ marginLeft:5, background: statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      {loading ? (
-        <div className="card" style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>Loading orders…</div>
-      ) : error ? (
-        <div className="card" style={{ textAlign: "center", padding: 40 }}>
-          <div style={{ color: "var(--red)", marginBottom: 12 }}>Failed to load orders: {error}</div>
-          <button className="btn btn-ghost" onClick={fetchOrders}>Retry</button>
-        </div>
-      ) : (
-        <div className="card">
-          <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Postage</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-              {visibleOrders.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No {statusTab === "all" ? "" : statusTab + " "}orders yet</td></tr>}
-              {visibleOrders.map(o => {
-                const items = Array.isArray(o.items) ? o.items : [];
-                return (
-                  <tr key={o.id}>
-                    <td className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>#{(o.id||"").slice(-8).toUpperCase()}</td>
-                    <td className="mono" style={{ fontSize: 11 }}>{gmtShort(o.created_at)}</td>
-                    <td style={{ fontWeight: 600 }}>
-                      <button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }} onClick={() => setDetail(o)}>
-                        {o.customer_name}
-                      </button>
-                    </td>
-                    <td style={{ fontSize: 12, color: "var(--muted)" }}>{items.map(i => `${i.name} ×${i.qty}`).join(", ")}</td>
-                    <td style={{ fontSize: 12 }}>{o.postage_name || "—"}</td>
-                    <td className="text-green">£{Number(o.total).toFixed(2)}</td>
-                    <td><span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span></td>
-                    <td>
-                      <select value={o.status} onChange={e => setStatus(o.id, e.target.value)}
-                        style={{ fontSize: 12, padding: "4px 8px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4 }}>
-                        {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table></div>
-        </div>
-      )}
-
-      {detail && (
-        <div className="overlay" onClick={() => setDetail(null)}>
-          <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
-              <div className="modal-title" style={{ margin: 0 }}>📦 Order Details</div>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", marginTop:2 }}>#{(detail.id||"").slice(-8).toUpperCase()}</div>
-              <button className="btn btn-ghost btn-sm" onClick={() => {
-                const addr = detail.customer_address || "No address on file";
-                const items = (Array.isArray(detail.items) ? detail.items : []).map(i => `${i.name} x${i.qty}`).join(", ");
-                const win = window.open('', '_blank', 'width=400,height=300');
-                win.document.write(`
-                  <html><head><title>Postage Label</title>
-                  <style>
-                    body{font-family:Arial,sans-serif;padding:24px;border:3px solid #000;margin:20px;}
-                    h2{font-size:18px;margin:0 0 4px;}
-                    .to{font-size:22px;font-weight:bold;margin:16px 0 8px;}
-                    .addr{font-size:16px;line-height:1.6;white-space:pre-line;}
-                    .from{font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px;}
-                    .items{font-size:10px;color:#777;margin-top:8px;}
-                    @media print{body{margin:0;border:none;}}
-                  </style></head>
-                  <body>
-                    <div style="font-size:11px;color:#888;">ORDER #${detail.id?.slice(-8).toUpperCase()} · ${gmtShort(detail.created_at)}</div>
-                    <div class="to">TO:</div>
-                    <div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div>
-                    <div class="addr">${addr}</div>
-                    <div class="from">FROM: Swindon Airsoft</div>
-                    <script>window.onload=()=>window.print();<\/script>
-                  </body></html>`);
-                win.document.close();
-              }}>🖨️ Print Postage Label</button>
-            </div>
-
-            <div className="grid-2 mb-2">
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>CUSTOMER</div><div style={{ fontWeight: 700 }}>{detail.customer_name}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>EMAIL</div><div style={{ fontSize: 13 }}>{detail.customer_email || "—"}</div></div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>SHIPPING ADDRESS</div>
-                <div style={{ fontSize: 13, whiteSpace: "pre-line", background: "var(--bg4)", padding: "10px 12px", borderRadius: 3, border: "1px solid var(--border)" }}>
-                  {detail.customer_address || <span style={{ color: "var(--muted)" }}>No address on file — player may need to update their profile</span>}
-                </div>
-              </div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>DATE</div><div className="mono" style={{ fontSize: 12 }}>{gmtShort(detail.created_at)}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>SQUARE REF</div><div className="mono" style={{ fontSize: 11, color: (detail.square_order_id || detail.paypal_order_id) ? "var(--text)" : "var(--muted)" }}>{detail.square_order_id || detail.paypal_order_id || "—"}</div></div>
-              {detail.valid_defence && (
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>🪪 VALID DEFENCE</div>
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 13, fontWeight: 700, background: "rgba(200,255,0,.04)", padding: "8px 12px", borderRadius: 3, border: "1px solid rgba(200,255,0,.18)", color: "var(--accent)" }}>{detail.valid_defence}</div>
-                </div>
-              )}
-              {detail.tracking_number && (
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>📮 TRACKING NUMBER</div>
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 14, fontWeight: 700, background: "#0c1009", padding: "8px 12px", borderRadius: 3, border: "1px solid var(--accent)", color: "var(--accent)" }}>{detail.tracking_number}</div>
-                </div>
-              )}
-              <div><div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3, letterSpacing: ".08em" }}>STATUS</div>
-                <select value={detail.status} onChange={e => setStatus(detail.id, e.target.value)}
-                  style={{ fontSize: 12, padding: "6px 10px", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 3, width: "100%" }}>
-                  {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 8, letterSpacing: ".1em" }}>ITEMS</div>
-            <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Line Total</th></tr></thead>
-              <tbody>
-                {(Array.isArray(detail.items) ? detail.items : []).map((i, idx) => (
-                  <tr key={idx}>
-                    <td>{i.name}</td><td>{i.qty}</td>
-                    <td>£{Number(i.price).toFixed(2)}</td>
-                    <td className="text-green">£{(Number(i.price) * i.qty).toFixed(2)}</td>
-                  </tr>
-                ))}
-                <tr style={{ borderTop: "2px solid var(--border)" }}>
-                  <td colSpan={3} style={{ fontWeight: 700 }}>Postage ({detail.postage_name})</td>
-                  <td>£{Number(detail.postage).toFixed(2)}</td>
-                </tr>
-                <tr>
-                  <td colSpan={3} style={{ fontWeight: 900, fontSize: 15 }}>TOTAL</td>
-                  <td className="text-green" style={{ fontWeight: 900, fontSize: 15 }}>£{Number(detail.total).toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table></div>
-              {/* Refund section */}
-              {detail.refund_amount && (
-                <div style={{ background:"rgba(255,60,60,.05)", border:"1px solid rgba(255,60,60,.2)", borderRadius:3, padding:"10px 14px", marginTop:12 }}>
-                  <div style={{ fontSize:11, color:"var(--red)", fontWeight:700, letterSpacing:".08em", marginBottom:4 }}>💸 REFUNDED</div>
-                  <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
-                    <div><span style={{ fontSize:11, color:"var(--muted)" }}>Amount: </span><span style={{ fontWeight:700, color:"var(--red)" }}>£{Number(detail.refund_amount).toFixed(2)}</span></div>
-                    {detail.refunded_at && <div><span style={{ fontSize:11, color:"var(--muted)" }}>Date: </span><span style={{ fontSize:12 }}>{gmtShort(detail.refunded_at)}</span></div>}
-                    {detail.refund_note && <div><span style={{ fontSize:11, color:"var(--muted)" }}>Note: </span><span style={{ fontSize:12 }}>{detail.refund_note}</span></div>}
-                  </div>
-                </div>
-              )}
-            <div className="gap-2 mt-2">
-              {!detail.refund_amount && (detail.paypal_order_id || detail.square_order_id) && (
-                <button className="btn btn-sm" style={{ background:"rgba(255,60,60,.12)", border:"1px solid rgba(255,60,60,.35)", color:"var(--red)" }}
-                  onClick={() => openRefund(detail)}>💸 Refund Order</button>
-              )}
-              <button className="btn btn-ghost" onClick={() => setDetail(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {trackingModal && (
-        <div className="overlay" onClick={() => setTrackingModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">📦 Mark as Dispatched</div>
-            <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 16px" }}>
-              Optionally enter a tracking number — it will be included in the dispatch email to the customer.
-            </p>
-            <div className="form-group">
-              <label>Tracking Number <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
-              <input
-                value={trackingModal.tracking}
-                onChange={e => setTrackingModal(m => ({ ...m, tracking: e.target.value }))}
-                placeholder="e.g. JD000000000000000000"
-                onKeyDown={e => e.key === "Enter" && doDispatch(trackingModal.id, trackingModal.tracking)}
-                autoFocus
-              />
-            </div>
-            <div className="gap-2 mt-2">
-              <button className="btn btn-primary" onClick={() => doDispatch(trackingModal.id, trackingModal.tracking)}>
-                ✓ Confirm Dispatch &amp; Send Email
-              </button>
-              <button className="btn btn-ghost" onClick={() => setTrackingModal(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {refundModal && (
-        <div className="overlay" onClick={() => !refunding && setRefundModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title" style={{ color:"var(--red)" }}>💸 Refund Order</div>
-            <div style={{ background:"var(--bg4)", border:"1px solid var(--border)", borderRadius:3, padding:"10px 14px", marginBottom:16, fontSize:12 }}>
-              <div style={{ fontWeight:700 }}>{refundModal.order.customer_name}</div>
-              <div style={{ color:"var(--muted)", marginTop:2 }}>Order #{(refundModal.order.id||"").slice(-8).toUpperCase()} · Total: £{Number(refundModal.order.total).toFixed(2)}</div>
-              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>Square ref: {refundModal.order.square_order_id || refundModal.order.paypal_order_id || "—"}</div>
-            </div>
-            <div className="form-group">
-              <label>Refund Amount (£)</label>
-              <input type="number" step="0.01" min="0.01" max={refundModal.order.total}
-                value={refundAmt} onChange={e => setRefundAmt(e.target.value)} autoFocus />
-              <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
-                <button style={{ background:"none", border:"none", color:"var(--accent)", cursor:"pointer", fontSize:11, padding:0 }}
-                  onClick={() => setRefundAmt(Number(refundModal.order.total).toFixed(2))}>Full refund (£{Number(refundModal.order.total).toFixed(2)})</button>
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Internal Note <span style={{ fontWeight:400, color:"var(--muted)" }}>(optional)</span></label>
-              <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Item out of stock, customer request" />
-            </div>
-            <div className="alert" style={{ background:"rgba(255,60,60,.06)", border:"1px solid rgba(255,60,60,.2)", fontSize:11, color:"var(--red)", marginBottom:14 }}>
-              ⚠️ This will immediately issue a refund via Square. This cannot be undone.
-            </div>
-            <div className="gap-2">
-              <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
-                onClick={doRefund} disabled={refunding}>
-                {refunding ? "⏳ Processing…" : `✓ Confirm Refund · £${parseFloat(refundAmt||0).toFixed(2)}`}
-              </button>
-              <button className="btn btn-ghost" onClick={() => setRefundModal(null)} disabled={refunding}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Admin Shop ─────────────────────────────────────────────
 function AdminShop({ data, save, showToast }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
@@ -11613,7 +11280,7 @@ function StaffCard({ member, rank, pips }) {
       {/* Photo */}
       <div style={{ width:"100%", height:195, background:"#06080500", overflow:"hidden", position:"relative" }}>
         {member.photo
-          ? <img src={member.photo} alt={member.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"top", filter:"contrast(1.05) saturate(0.85)" }} />
+          ? <img src={member.photo} alt={member.name} onError={e=>{e.target.style.display='none';}} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"top", filter:"contrast(1.05) saturate(0.85)" }} />
           : <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#0a0c08", gap:8 }}>
               <div style={{ fontSize:52, opacity:.08 }}>👤</div>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#1e2c0a" }}>NO PHOTO ON FILE</div>
@@ -11653,7 +11320,7 @@ function StaffCard({ member, rank, pips }) {
           ))}
         </div>
         {member.bio && (
-          <div style={{ fontSize:11, color:"#3a4f28", lineHeight:1.65, borderTop:"1px solid #141a0e", paddingTop:8, fontFamily:"'Share Tech Mono',monospace" }}>
+          <div style={{ fontSize:11, color:"#7a9a58", lineHeight:1.65, borderTop:"1px solid #141a0e", paddingTop:8, fontFamily:"'Share Tech Mono',monospace" }}>
             {member.bio}
           </div>
         )}
@@ -11782,7 +11449,7 @@ function AdminStaff({ showToast }) {
             <tbody>
               {staffList.map(m => (
                 <tr key={m.id}>
-                  <td>{m.photo ? <img src={m.photo} alt={m.name} style={{ width: 40, height: 40, borderRadius: 2, objectFit: "cover" }} /> : <div style={{ width: 40, height: 40, background: "var(--bg3)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "var(--muted)" }}>👤</div>}</td>
+                  <td>{m.photo ? <img src={m.photo} alt={m.name} onError={e=>{e.target.style.display='none';e.target.nextSibling&&(e.target.nextSibling.style.display='flex');}} style={{ width: 40, height: 40, borderRadius: 2, objectFit: "cover" }} /> : <div style={{ width: 40, height: 40, background: "var(--bg3)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "var(--muted)" }}>👤</div>}</td>
                   <td style={{ fontWeight: 700 }}>{m.name}</td>
                   <td style={{ color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".05em" }}>{m.job_title}</td>
                   <td><span style={{ fontSize: 11, color: m.rank_order === 1 ? "var(--gold)" : "var(--muted)", fontFamily: "'Barlow Condensed',sans-serif" }}>{RANK_OPTIONS.find(r => r.value === m.rank_order)?.label || `Rank ${m.rank_order}`}</span></td>
