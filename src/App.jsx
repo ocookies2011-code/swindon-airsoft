@@ -13586,24 +13586,25 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
-      // Try two geo APIs in sequence — if both fail, block by default
+      // Try three geo APIs in sequence
       const apis = [
-        { url: "https://ipwho.is/", getCode: g => g.success ? g.country_code : null },
-        { url: "https://freeipapi.com/api/json", getCode: g => g.countryCode || null },
+        { url: "https://ipwho.is/",              getCode: g => g.success ? g.country_code : null },
+        { url: "https://freeipapi.com/api/json",  getCode: g => g.countryCode || null },
+        { url: "https://api.country.is/",         getCode: g => g.country || null },
       ];
       for (const { url, getCode } of apis) {
         try {
-          const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+          const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
           if (!res.ok) continue;
           const g = await res.json();
           const code = (getCode(g) || "").toUpperCase();
           if (!code) continue;
           if (!cancelled) setGeoStatus(ALLOWED_COUNTRY_CODES.has(code) ? "allowed" : "blocked");
-          return; // got a result — stop trying
+          return; // got a valid result — stop
         } catch { continue; }
       }
-      // Both APIs failed — block by default (fail-closed)
-      if (!cancelled) setGeoStatus("blocked");
+      // All APIs failed (network issue) — fail open so real UK/EU visitors aren't locked out
+      if (!cancelled) setGeoStatus("allowed");
     };
     check();
     return () => { cancelled = true; };
