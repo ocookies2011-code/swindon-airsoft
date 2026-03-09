@@ -1534,6 +1534,9 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
                 {cu.role === "admin" && (
                   <button className="btn btn-sm btn-gold" onClick={() => go("admin")}>⚙ Admin</button>
                 )}
+                {(cu.canMarshal && cu.role !== "admin") && (
+                  <button className="btn btn-sm" style={{ background:"rgba(0,180,100,.15)", border:"1px solid rgba(0,180,100,.4)", color:"#00c864" }} onClick={() => go("marshal")}>📷 Marshal</button>
+                )}
                 <button className="btn btn-sm btn-ghost" onClick={() => go("profile")}>{cu.name.split(" ")[0]}</button>
                 <button className="btn btn-sm btn-ghost" onClick={signOut}>Sign Out</button>
               </>
@@ -1577,6 +1580,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
               {cu.role === "admin" && (
                 <button className="pub-nav-drawer-link" onClick={() => go("admin")}>
                   <span style={{ fontSize: 20 }}>⚙</span> Admin Panel
+                </button>
+              )}
+              {(cu.canMarshal && cu.role !== "admin") && (
+                <button className="pub-nav-drawer-link" style={{ color: "#00c864" }} onClick={() => go("marshal")}>
+                  <span style={{ fontSize: 20 }}>📷</span> Marshal Check-In
                 </button>
               )}
               <button className="pub-nav-drawer-link" onClick={() => go("profile")}>
@@ -4319,6 +4327,134 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
   );
 }
 
+// ── Marshal Check-In Page ─────────────────────────────────
+function MarshalCheckinPage({ data, showToast, save }) {
+  const [evId, setEvId] = useState(data.events[0]?.id || "");
+  const [manual, setManual] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const ev = data.events.find(e => e.id === evId);
+  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
+
+  const doCheckin = async (booking, evObj) => {
+    if (!booking?.id || !booking?.userId) { showToast("Invalid booking", "red"); return; }
+    setBusy(true);
+    try {
+      const actualCount = await api.bookings.checkIn(booking.id, booking.userId);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast(`✅ ${booking.userName} checked in! Total games: ${actualCount}`);
+    } catch (e) {
+      showToast("Check-in failed: " + e.message, "red");
+    } finally { setBusy(false); }
+  };
+
+  const manualCheckin = () => {
+    if (!ev || !manual.trim()) return;
+    const found = ev.bookings.find(x =>
+      x.userName.toLowerCase().includes(manual.toLowerCase()) || x.id === manual.trim()
+    );
+    if (!found) { showToast("Booking not found", "red"); return; }
+    if (found.checkedIn) { showToast("Already checked in", "gold"); return; }
+    doCheckin(found, ev); setManual("");
+  };
+
+  const onQRScan = (code) => {
+    setScanning(false);
+    for (const evObj of data.events) {
+      const b = evObj.bookings.find(x => x.id === code);
+      if (b) {
+        if (b.checkedIn) { showToast(`${b.userName} already checked in`, "gold"); return; }
+        doCheckin(b, evObj); return;
+      }
+    }
+    showToast("QR code not recognised", "red");
+  };
+
+  return (
+    <div className="page-content" style={{ maxWidth: 700 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".25em", color: "#3a5010", marginBottom: 4 }}>◈ — MARSHAL STATION</div>
+        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, letterSpacing: ".1em", textTransform: "uppercase", color: "#e8f0d8" }}>PLAYER CHECK-IN</div>
+      </div>
+
+      {/* Event selector */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label>Select Event</label>
+          <select value={evId} onChange={e => setEvId(e.target.value)}>
+            {data.events.length === 0 && <option value="">No events available</option>}
+            {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {e.date}</option>)}
+          </select>
+        </div>
+        {ev && (
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 15, color: "#9ab870" }}>
+              {checkedInCount} / {ev.bookings.length} checked in
+            </div>
+            <div className="progress-bar" style={{ flex: 1, minWidth: 80 }}>
+              <div className="progress-fill" style={{ width: ev.bookings.length ? (checkedInCount / ev.bookings.length * 100) + "%" : "0%" }} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* QR Scan button */}
+      <button
+        className="btn btn-primary"
+        style={{ width: "100%", padding: "16px", fontSize: 16, letterSpacing: ".12em", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
+        onClick={() => setScanning(true)}
+        disabled={busy}
+      >
+        <span style={{ fontSize: 22 }}>📷</span> SCAN PLAYER QR CODE
+      </button>
+
+      {/* Manual search */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 10 }}>Manual Check-In</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            value={manual}
+            onChange={e => setManual(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && manualCheckin()}
+            placeholder="Player name or booking ID"
+            style={{ flex: 1 }}
+            autoComplete="off"
+          />
+          <button className="btn btn-primary" onClick={manualCheckin} disabled={!manual.trim() || busy}>Check In</button>
+        </div>
+      </div>
+
+      {/* Player list */}
+      {ev && ev.bookings.length > 0 && (
+        <div className="card">
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 12 }}>Booking List</div>
+          {ev.bookings.map(b => (
+            <div key={b.id} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
+              borderBottom: "1px solid #1a2808",
+              opacity: b.checkedIn ? 0.5 : 1,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, color: b.checkedIn ? "#3a5010" : "#b0c090", textTransform: "uppercase", letterSpacing: ".06em" }}>{b.userName}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#3a5010", marginTop: 2 }}>{b.type === "walkOn" ? "WALK-ON" : "RENTAL"} · QTY {b.qty}</div>
+              </div>
+              {b.checkedIn
+                ? <span className="tag tag-green" style={{ flexShrink: 0 }}>✓ IN</span>
+                : <button className="btn btn-sm btn-primary" style={{ flexShrink: 0 }} onClick={() => doCheckin(b, ev)} disabled={busy}>✓ Check In</button>
+              }
+            </div>
+          ))}
+        </div>
+      )}
+
+      {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
+    </div>
+  );
+}
+
 // ── Leaderboard ───────────────────────────────────────────
 function LeaderboardPage({ data, cu, updateUser, showToast }) {
   const board = data.users
@@ -4403,9 +4539,11 @@ function LeaderboardPage({ data, cu, updateUser, showToast }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: ".08em", color: isMe ? "#e8f0d8" : isTop3 ? (medalColor || "#e8f0d8") : "#b0c090", textTransform: "uppercase", lineHeight: 1.1 }}>
                   {player.name}
-                  {isMe && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".18em", color: "var(--accent)", marginLeft: 8, verticalAlign: "middle", background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.3)", padding: "1px 6px" }}>← YOU</span>}
                 </div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".15em", color: isMe ? "var(--accent)" : medalColor || "#2a3a10", marginTop: 3 }}>{rankTitle}</div>
+                {isMe && (
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".15em", color: "var(--accent)", marginTop: 2, display: "inline-block", background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.3)", padding: "1px 5px", whiteSpace: "nowrap" }}>← YOU</div>
+                )}
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".15em", color: isMe ? "var(--accent)" : medalColor || "#2a3a10", marginTop: isMe ? 2 : 3 }}>{rankTitle}</div>
                 {player.vipStatus === "active" && <span className="tag tag-gold" style={{ marginTop: 4, display: "inline-flex" }}>★ VIP OPERATIVE</span>}
               </div>
               {/* Games count */}
@@ -5382,25 +5520,25 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 2, padding: "14px 16px", marginBottom: 14 }}>
             <div className="form-group" style={{ marginBottom: 10 }}>
               <label>Address Line 1</label>
-              <input value={edit.line1} onChange={e => setAddr("line1", e.target.value)} placeholder="House number and street name" />
+              <input autoComplete="off" value={edit.line1} onChange={e => setAddr("line1", e.target.value)} placeholder="House number and street name" />
             </div>
             <div className="form-group" style={{ marginBottom: 10 }}>
               <label>Address Line 2 <span style={{ color: "var(--subtle)", fontWeight: 400, letterSpacing: 0 }}>(optional)</span></label>
-              <input value={edit.line2} onChange={e => setAddr("line2", e.target.value)} placeholder="Flat, apartment, unit, etc." />
+              <input autoComplete="off" value={edit.line2} onChange={e => setAddr("line2", e.target.value)} placeholder="Flat, apartment, unit, etc." />
             </div>
             <div className="form-row" style={{ marginBottom: 0 }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Town / City</label>
-                <input value={edit.city} onChange={e => setAddr("city", e.target.value)} placeholder="Swindon" />
+                <input autoComplete="off" value={edit.city} onChange={e => setAddr("city", e.target.value)} placeholder="Swindon" />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>County <span style={{ color: "var(--subtle)", fontWeight: 400, letterSpacing: 0 }}>(optional)</span></label>
-                <input value={edit.county} onChange={e => setAddr("county", e.target.value)} placeholder="Wiltshire" />
+                <input autoComplete="off" value={edit.county} onChange={e => setAddr("county", e.target.value)} placeholder="Wiltshire" />
               </div>
             </div>
             <div className="form-group mt-1" style={{ marginBottom: 0 }}>
               <label>Postcode</label>
-              <input value={edit.postcode} onChange={e => setAddr("postcode", e.target.value.toUpperCase())} placeholder="SN1 1AA" style={{ maxWidth: 160 }} />
+              <input autoComplete="off" value={edit.postcode} onChange={e => setAddr("postcode", e.target.value.toUpperCase())} placeholder="SN1 1AA" style={{ maxWidth: 160 }} />
             </div>
           </div>
 
@@ -5440,7 +5578,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
       {tab === "waiver" && (
         <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, marginBottom: 4 }}>Waiver Status</div>
               {waiverValid ? <span className="tag tag-green">✓ Signed {cu.waiverYear}</span> : <span className="tag tag-red">✗ Not Signed</span>}
@@ -7983,6 +8121,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         card_status:    edit.cardStatus  || 'none',
         card_reason:    edit.cardReason  || null,
         card_issued_at: (edit.cardStatus && edit.cardStatus !== 'none') ? (edit.cardIssuedAt || new Date().toISOString()) : null,
+        can_marshal:    edit.canMarshal  || false,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
       // Refresh from DB and update global state
@@ -8294,6 +8433,22 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
               <input type="checkbox" checked={edit.deleteRequest || false} onChange={e => setEdit(p => ({ ...p, deleteRequest: e.target.checked }))} />
               <label style={{ fontSize: 13, color: "var(--red)" }}>Account deletion requested</label>
+            </div>
+            {/* Marshal permission — admin only, never visible to player */}
+            <div style={{ background: "rgba(0,180,100,.06)", border: "1px solid rgba(0,180,100,.25)", padding: "12px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <input
+                type="checkbox"
+                id="canMarshalChk"
+                checked={edit.canMarshal || false}
+                onChange={e => setEdit(p => ({ ...p, canMarshal: e.target.checked }))}
+                style={{ marginTop: 2, accentColor: "#00c864", flexShrink: 0 }}
+              />
+              <label htmlFor="canMarshalChk" style={{ cursor: "pointer" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#00c864" }}>📷 QR Check-In Marshal</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                  Grants this player access to a QR scanner page so they can check players in on game day. They will <strong style={{ color: "var(--text)" }}>not</strong> have access to any other admin features.
+                </div>
+              </label>
             </div>
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save Changes"}</button>
@@ -13792,6 +13947,8 @@ export default function App() {
           />
         )}
         {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} />}
+        {page === "marshal"     && cu?.canMarshal && <MarshalCheckinPage data={data} showToast={showToast} save={save} />}
+        {page === "marshal"     && !cu?.canMarshal && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Access denied.</div>}
         {page === "gallery"     && <GalleryPage data={data} />}
         {page === "qa"          && <QAPage data={data} />}
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}

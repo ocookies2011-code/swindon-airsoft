@@ -593,6 +593,7 @@ export function normaliseProfile(p) {
     cardStatus:         p.card_status    || 'none',
     cardReason:         p.card_reason    || '',
     cardIssuedAt:       p.card_issued_at || null,
+    canMarshal:         p.can_marshal    || false,
   }
 }
 
