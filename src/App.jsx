@@ -203,6 +203,8 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 const gmtNow = () => new Date().toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
 const gmtDate = (d) => new Date(d).toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
 const gmtShort = (d) => new Date(d).toLocaleDateString("en-GB", { timeZone: "Europe/London" });
+// Convert a YYYY-MM-DD date string to DD/MM/YYYY for display (UK format)
+const fmtDate = (d) => { if (!d) return ""; const [y,m,day] = String(d).slice(0,10).split("-"); return `${day}/${m}/${y}`; };
 const uid = () => crypto.randomUUID();
 
 // ── QR Code component using qrcode-svg ───────────────────────
@@ -1854,7 +1856,7 @@ function HomePage({ data, setPage }) {
                   <div className="countdown-panel-title">{nextEvent.title}</div>
                   <div className="countdown-panel-meta">
                     📍 {nextEvent.location}<br />
-                    🗓 {nextEvent.date} · {nextEvent.time} HRS GMT
+                    🗓 {fmtDate(nextEvent.date)} · {nextEvent.time} HRS GMT
                   </div>
                   <button className="btn btn-primary mt-2" style={{ padding:"9px 28px", letterSpacing:".2em" }} onClick={() => setPage("events")}>DEPLOY →</button>
                 </div>
@@ -1937,7 +1939,7 @@ function HomePage({ data, setPage }) {
                     <div className="event-card-body">
                       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".06em", textTransform:"uppercase", marginBottom:10, color:"#fff" }}>{ev.title}</div>
                       <div style={{ display:"flex", flexDirection:"column", gap:3, marginBottom:12 }}>
-                        <div style={{ fontSize:12, color:"var(--muted)" }}>📅 {ev.date}</div>
+                        <div style={{ fontSize:12, color:"var(--muted)" }}>📅 {fmtDate(ev.date)}</div>
                         <div style={{ fontSize:12, color:"var(--muted)" }}>📍 {ev.location}</div>
                         <div style={{ fontSize:12, color:"var(--muted)" }}>👥 {spotsLeft} spots left</div>
                       </div>
@@ -2865,7 +2867,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             </div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
               {[
-                { icon:"📅", val:ev.date, color:"#c8ff00" },
+                { icon:"📅", val:fmtDate(ev.date), color:"#c8ff00" },
                 { icon:"⏱", val: ev.endTime ? `${ev.time}–${ev.endTime} GMT` : `${ev.time} GMT`, color:"#4fc3f7" },
                 { icon:"📍", val:ev.location, color:"#ce93d8" },
               ].map(({icon,val,color}) => (
@@ -3376,7 +3378,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             <div style={{ background:"var(--bg2)", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
               <div>
                 <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>📍 {ev.location}</div>
-                <div style={{ fontSize:12, color:"var(--muted)" }}>{ev.date} · {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT</div>
+                <div style={{ fontSize:12, color:"var(--muted)" }}>{fmtDate(ev.date)} · {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT</div>
               </div>
               <a href={(() => {
   // Extract exact coordinates from the map embed (most precise)
@@ -3513,7 +3515,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   {/* Data rows */}
                   <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:12 }}>
                     {[
-                      { icon:"▸", label:"DATE", val:ev.date, color:"#c8ff00" },
+                      { icon:"▸", label:"DATE", val:fmtDate(ev.date), color:"#c8ff00" },
                       { icon:"▸", label:"TIME", val:`${ev.time}${ev.endTime ? `–${ev.endTime}` : ""} GMT`, color:"#4fc3f7" },
                       { icon:"▸", label:"LOCATION", val:ev.location, color:"#ce93d8" },
                     ].map(row => (
@@ -4339,6 +4341,11 @@ function MarshalCheckinPage({ data, showToast, save }) {
 
   const doCheckin = async (booking, evObj) => {
     if (!booking?.id || !booking?.userId) { showToast("Invalid booking", "red"); return; }
+    // Block check-in before event date
+    const today = new Date().toISOString().slice(0, 10);
+    if (evObj?.date && today < evObj.date) {
+      showToast(`❌ Check-in not open yet — event is on ${fmtDate(evObj.date)}`, "red"); return;
+    }
     setBusy(true);
     try {
       const actualCount = await api.bookings.checkIn(booking.id, booking.userId);
@@ -4385,8 +4392,7 @@ function MarshalCheckinPage({ data, showToast, save }) {
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Select Event</label>
           <select value={evId} onChange={e => setEvId(e.target.value)}>
-            {data.events.length === 0 && <option value="">No events available</option>}
-            {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {e.date}</option>)}
+            {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)}</option>)}
           </select>
         </div>
         {ev && (
@@ -5863,7 +5869,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       <div class="classification">FIELD PASS // ${new Date().getFullYear()}</div>
     </div>
     <div class="event-name">${b.eventTitle || 'Operation'}</div>
-    <div class="event-date">${b.eventDate || '—'}</div>
+    <div class="event-date">${b.eventDate ? b.eventDate.slice(0,10).split('-').reverse().join('/') : '—'}</div>
   </div>
 
   <div class="tear">
@@ -5964,7 +5970,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                       {b.eventTitle}
                     </div>
                     <div style={{ fontSize:11, color:"#4a6820", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>
-                      📅 {b.eventDate}
+                      📅 {fmtDate(b.eventDate)}
                     </div>
                   </div>
 
@@ -6060,7 +6066,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
             <div style={{ background:"#0d0d0d", border:"1px solid #6b2222", maxWidth:440, width:"100%", padding:28 }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".12em", color:"#ef4444", textTransform:"uppercase", marginBottom:6 }}>⚠ CANCEL BOOKING</div>
-              <div style={{ fontWeight:700, fontSize:15, color:"var(--text)", marginBottom:16 }}>{b.eventTitle} — {b.eventDate}</div>
+              <div style={{ fontWeight:700, fontSize:15, color:"var(--text)", marginBottom:16 }}>{b.eventTitle} — {fmtDate(b.eventDate)}</div>
 
               <div style={{ background:"#1a0a0a", border:"1px solid #3a1515", padding:16, marginBottom:20, display:"flex", flexDirection:"column", gap:8 }}>
                 {[
@@ -7143,6 +7149,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
     if (!booking?.id || !booking?.userId) {
       showToast("Invalid booking data", "red"); return;
     }
+    // Block check-in before event date
+    const today = new Date().toISOString().slice(0, 10);
+    if (evObj?.date && today < evObj.date) {
+      showToast(`❌ Check-in not open yet — event is on ${fmtDate(evObj.date)}`, "red"); return;
+    }
     try {
       const actualCount = await api.bookings.checkIn(booking.id, booking.userId);
       const evList = await api.events.getAll();
@@ -7445,7 +7456,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }}
                       onClick={() => setViewId(ev.id)}>{ev.title}</button>
                   </td>
-                  <td className="mono" style={{ fontSize: 12 }}>{ev.date} {ev.time}</td>
+                  <td className="mono" style={{ fontSize: 12 }}>{fmtDate(ev.date)} {ev.time}</td>
                   <td>{ev.walkOnSlots + ev.rentalSlots}</td>
                   <td>{booked}</td>
                   <td>{ev.published ? <span className="tag tag-green">Live</span> : <span className="tag tag-red">Draft</span>}</td>
@@ -7499,7 +7510,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
             <div className="form-group" style={{ margin: 0 }}>
               <label>Select Event</label>
               <select value={evId} onChange={e => setEvId(e.target.value)}>
-                {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {e.date}</option>)}
+                {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)}</option>)}
               </select>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
@@ -7516,7 +7527,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           {ev && (
             <div className="card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{ev.title} — {ev.date}</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{ev.title} — {fmtDate(ev.date)}</div>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <span className="text-green" style={{ fontSize: 13, fontWeight: 700 }}>
                     {checkedInCount} / {ev.bookings.length} checked in
@@ -7581,7 +7592,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
               <div className="modal-title" style={{ margin:0 }}>📅 {viewEv.title}</div>
               <button className="btn btn-ghost btn-sm" onClick={() => printPlayerList(viewEv)}>🖨️ Print Player List</button>
             </div>
-            <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{viewEv.date} @ {viewEv.time} GMT | {viewEv.location} · {viewEv.bookings.length} booked</p>
+            <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{fmtDate(viewEv.date)} @ {viewEv.time} GMT | {viewEv.location} · {viewEv.bookings.length} booked</p>
             <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Status</th></tr></thead>
               <tbody>
@@ -8680,7 +8691,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                         {playerBookings.map((b, i) => (
                           <tr key={i}>
                             <td style={{ fontSize:12 }}>{b.eventTitle}</td>
-                            <td className="mono" style={{ fontSize:11 }}>{b.date}</td>
+                            <td className="mono" style={{ fontSize:11 }}>{fmtDate(b.date)}</td>
                             <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                             <td>{b.qty}</td>
                             <td className="text-green">£{b.total.toFixed(2)}</td>
