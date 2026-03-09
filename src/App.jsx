@@ -6076,24 +6076,6 @@ function AdminDiscountCodes({ data, showToast }) {
         </div>
       )}
 
-      <div style={{ marginTop: 24, padding: 16, background: 'rgba(200,255,0,.06)', border: '1px solid rgba(200,255,0,.15)', borderRadius: 8, fontSize: 12, color: 'var(--muted)' }}>
-        <strong style={{ color: 'var(--accent)' }}>SQL to create the table:</strong><br />
-        <code style={{ display: 'block', marginTop: 8, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 11 }}>{`CREATE TABLE discount_codes (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  code             text UNIQUE NOT NULL,
-  type             text NOT NULL CHECK (type IN ('percent','fixed')),
-  value            numeric NOT NULL,
-  max_uses         int,
-  uses             int NOT NULL DEFAULT 0,
-  expires_at       timestamptz,
-  assigned_user_ids uuid[] NOT NULL DEFAULT '{}',
-  active           bool NOT NULL DEFAULT true,
-  created_at       timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE discount_codes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admin full access" ON discount_codes USING (true) WITH CHECK (true);`}
-        </code>
-      </div>
     </div>
   );
 }
