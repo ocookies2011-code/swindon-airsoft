@@ -11473,16 +11473,9 @@ function StaffPage({ staff = [] }) {
   const RANK_PIPS = { 1: 5, 2: 4, 3: 3 };
   const getRankLabel = r => RANK_LABELS[r] || "MARSHAL";
 
-  // Normalise old rank numbers: previously 1=Owner,2=Manager,3=SeniorMarshal,4=Marshal
-  // Now: 1=Owner, 2=SeniorMarshal, 3=Marshal. Map old values gracefully.
-  const normaliseRank = (r) => {
-    if (r === 3) return 2; // old Senior Marshal → new rank 2
-    if (r === 4) return 3; // old Marshal → new rank 3
-    return r;             // 1 (Owner) unchanged
-  };
-
   const tiers = staff.reduce((acc, member) => {
-    const rank = normaliseRank(member.rank_order);
+    // rank_order 4 is a legacy value — treat as Marshal (3)
+    const rank = member.rank_order === 4 ? 3 : member.rank_order;
     const existingTier = acc.find(tier => tier.rank === rank);
     if (existingTier) existingTier.members.push(member);
     else acc.push({ rank, members: [member] });
