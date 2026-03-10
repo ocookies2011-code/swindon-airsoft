@@ -598,6 +598,7 @@ export function normaliseProfile(p) {
     publicProfile:      p.public_profile ?? false,
     bio:                p.bio            || '',
     customRank:         p.custom_rank    || null,
+    designation:        p.designation    || null,
   }
 }
 
