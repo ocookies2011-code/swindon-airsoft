@@ -5490,25 +5490,40 @@ function RankInsignia({ rank, size = 56 }) {
       </g>
     );
   };
-  const Bar = ({ y }) => <rect x={s*.1} y={y} width={s*.8} height={s*.055} fill={c} rx={s*.01}/>;
+  // Beret — used for Private and Recruit (no official British Army insignia yet)
+  const Beret = ({ col = c }) => {
+    const bw = s * .7; const bh = s * .32; const bx = cx - bw/2; const by = cy - bh * .3;
+    return (
+      <g>
+        {/* Beret dome */}
+        <ellipse cx={cx} cy={by} rx={bw/2} ry={bh} fill="rgba(200,255,0,.06)" stroke={col} strokeWidth={s*.03}/>
+        {/* Brim band */}
+        <rect x={bx} y={by + bh*.55} width={bw} height={s*.09} fill="rgba(200,255,0,.1)" stroke={col} strokeWidth={s*.025} rx={s*.01}/>
+        {/* Cap badge — small diamond */}
+        <polygon points={`${cx - s*.04},${by - bh*.1} ${cx},${by - bh*.38} ${cx + s*.04},${by - bh*.1} ${cx},${by + bh*.18}`} fill={col} stroke="none" opacity=".7"/>
+        {/* Brim chin strap suggestion */}
+        <line x1={bx + bw*.05} y1={by + bh*.64} x2={bx - s*.05} y2={by + bh*.9} stroke={col} strokeWidth={s*.02} strokeLinecap="round" opacity=".5"/>
+        <line x1={bx + bw*.95} y1={by + bh*.64} x2={bx + bw + s*.05} y2={by + bh*.9} stroke={col} strokeWidth={s*.02} strokeLinecap="round" opacity=".5"/>
+      </g>
+    );
+  };
 
   // British Army rank structure mapped to Swindon Airsoft ranks:
-  // Civilian — nothing
-  // Private — 1 chevron (Lance Corporal style)
-  // Recruit — 2 chevrons (Corporal)
+  // Civilian — dashed circle (no affiliation)
+  // Private / Recruit — Beret (no earned insignia yet)
   // Operative — 3 chevrons (Sergeant)
-  // Senior Operative — 3 pips (Captain / officer pips)
-  // Field Commander — Crown + 2 pips (Colonel equivalent)
+  // Senior Operative — 3 gold pips (Captain)
+  // Field Commander — Crown + 2 filled pips (Colonel)
   const gap = s * .135;
   const insig = {
     "CIVILIAN": (
       <circle cx={cx} cy={cy} r={s*.1} fill="none" stroke={dim} strokeWidth={s*.025} strokeDasharray={`${s*.05},${s*.05}`}/>
     ),
     "PRIVATE": (
-      <Chevron y={cy - gap*.4}/>
+      <Beret/>
     ),
     "RECRUIT": (
-      <g><Chevron y={cy - gap}/><Chevron y={cy + gap*.1}/></g>
+      <Beret col="#6ab030"/>
     ),
     "OPERATIVE": (
       <g><Chevron y={cy - gap*1.6}/><Chevron y={cy - gap*.45}/><Chevron y={cy + gap*.7}/></g>
