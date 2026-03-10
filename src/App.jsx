@@ -4610,7 +4610,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                 <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: isMe ? "var(--accent)" : medalColor || "#c8ff00", lineHeight: 1 }}>{player.gamesAttended}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".2em", color: "#2a3a10", marginTop: 2 }}>DEPLOYMENTS</div>
                 {player.publicProfile && onPlayerClick && (
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, letterSpacing: ".15em", color: "#3a5010", marginTop: 3, borderTop: "1px solid #1a2808", paddingTop: 3 }}>VIEW FILE ▸</div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, letterSpacing: ".12em", color: "#3a5010", marginTop: 3, borderTop: "1px solid #1a2808", paddingTop: 3 }}>VIEW FILE ▸</div>
                 )}
               </div>
               {/* Left accent bar — accent for current user, medal colour for top 3 */}
@@ -5484,7 +5484,6 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
       <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, letterSpacing: ".25em", color: "#2a3a10" }}>RETRIEVING OPERATIVE FILE…</div>
     </div>
   );
-
   if (notFound) return (
     <div style={{ background: "#080a06", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
       <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: ".15em", color: "#c8ff00" }}>FILE NOT FOUND</div>
@@ -5496,7 +5495,6 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
   const games     = profile.games_attended || 0;
   const rankTitle = games === 0 ? "CIVILIAN" : games < 3 ? "PRIVATE" : games < 6 ? "RECRUIT" : games < 10 ? "OPERATIVE" : games < 20 ? "SENIOR OPERATIVE" : "FIELD COMMANDER";
   const rankStars = games === 0 ? "" : games < 3 ? "★" : games < 6 ? "★★" : games < 10 ? "★★★" : games < 20 ? "★★★★" : "★★★★★";
-
   const hasWeapons = profile.primary_name || profile.secondary_name || profile.support_name;
   const hasGear    = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
 
@@ -5534,7 +5532,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
 
   return (
     <div style={{ background: "#080a06", minHeight: "100vh" }}>
-      {/* ── Header banner ── */}
+      {/* Header */}
       <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#0c1009 0%,#080a06 100%)", borderBottom: "2px solid #2a3a10", padding: "40px 24px 36px" }}>
         <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)", pointerEvents: "none" }} />
         {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
@@ -5546,7 +5544,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
           }} />
         ))}
         <div style={{ maxWidth: 760, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <button onClick={() => setPage(prevPage || "leaderboard")} style={{ background: "none", border: "1px solid #2a3a10", color: "#3a5010", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11, letterSpacing: ".15em", padding: "4px 12px", cursor: "pointer", marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>← BACK</button>
+          <button onClick={() => setPage(prevPage || "leaderboard")} style={{ background: "none", border: "1px solid #2a3a10", color: "#3a5010", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11, letterSpacing: ".15em", padding: "4px 12px", cursor: "pointer", marginBottom: 20 }}>← BACK</button>
           <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
             {/* Avatar */}
             <div style={{ width: 88, height: 88, border: "2px solid #c8ff00", overflow: "hidden", background: "#0a0c08", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 900, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0, position: "relative" }}>
@@ -5554,27 +5552,22 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
                 ? <img src={profile.profile_pic} alt="" onError={e => { e.target.style.display="none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.8)" }} />
                 : (profile.callsign || profile.name || "?")[0].toUpperCase()}
               {profile.can_marshal && (
-                <div style={{ position: "absolute", bottom: 0, right: 0, background: "#c8ff00", color: "#000", fontSize: 8, fontWeight: 900, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".1em", padding: "2px 4px" }}>MSHL</div>
+                <div style={{ position: "absolute", bottom: 0, right: 0, background: "#c8ff00", color: "#000", fontSize: 7, fontWeight: 900, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em", padding: "2px 4px" }}>MSHL</div>
               )}
             </div>
-            {/* Name / rank block */}
+            {/* Name block */}
             <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".25em", color: "#3a5010", marginBottom: 4 }}>OPERATIVE FILE // CLASSIFIED</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".25em", color: "#3a5010", marginBottom: 4 }}>OPERATIVE FILE // SWINDON AIRSOFT</div>
               <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(22px,5vw,38px)", letterSpacing: ".1em", color: "#e8f0d8", textTransform: "uppercase", lineHeight: 1, marginBottom: 4 }}>
                 {profile.callsign || profile.name}
               </div>
-              {profile.callsign && (
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a5010", marginBottom: 6 }}>{profile.name}</div>
-              )}
+              {profile.callsign && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a5010", marginBottom: 6 }}>{profile.name}</div>}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 {profile.vip_status === "active" && (
                   <span style={{ background: "rgba(200,160,0,.15)", border: "1px solid rgba(200,160,0,.4)", color: "#c8a000", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>★ VIP OPERATIVE</span>
                 )}
                 {profile.can_marshal && (
                   <span style={{ background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.4)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>🎖 MARSHAL</span>
-                )}
-                {profile.ukara && (
-                  <span style={{ background: "rgba(79,195,247,.1)", border: "1px solid rgba(79,195,247,.3)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>UKARA REGISTERED</span>
                 )}
                 {profile.join_date && (
                   <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".1em" }}>ENLISTED {new Date(profile.join_date).getFullYear()}</span>
@@ -5587,46 +5580,35 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
 
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 80px" }}>
 
-        {/* ── Field Stats ── */}
+        {/* Field Stats grid — no UKARA */}
         <div style={{ marginBottom: 24 }}>
           <SectionHeader label="Field Stats" />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
-            {/* Deployments */}
             <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 16px", textAlign: "center" }}>
               <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 38, color: "#c8ff00", lineHeight: 1 }}>{games}</div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>DEPLOYMENTS</div>
             </div>
-            {/* Rank */}
             <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 18, color: "#c8ff00", lineHeight: 1, letterSpacing: ".06em" }}>{rankTitle}</div>
-              {rankStars && <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 14, color: "#c8a000", marginTop: 4, letterSpacing: ".1em" }}>{rankStars}</div>}
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".04em" }}>{rankTitle}</div>
+              {rankStars && <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, color: "#c8a000", marginTop: 4 }}>{rankStars}</div>}
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>RANK</div>
             </div>
-            {/* VIP */}
             <div style={{ background: "#0c1009", border: `1px solid ${profile.vip_status === "active" ? "rgba(200,160,0,.35)" : "#1a2808"}`, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 18, color: profile.vip_status === "active" ? "#c8a000" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, color: profile.vip_status === "active" ? "#c8a000" : "#2a3a10", lineHeight: 1, letterSpacing: ".04em" }}>
                 {profile.vip_status === "active" ? "ACTIVE" : profile.vip_status === "expired" ? "EXPIRED" : "STANDARD"}
               </div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>VIP STATUS</div>
             </div>
-            {/* Marshal */}
             <div style={{ background: "#0c1009", border: `1px solid ${profile.can_marshal ? "rgba(200,255,0,.25)" : "#1a2808"}`, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 18, color: profile.can_marshal ? "#c8ff00" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
-                {profile.can_marshal ? "YES" : "NO"}
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, color: profile.can_marshal ? "#c8ff00" : "#2a3a10", lineHeight: 1, letterSpacing: ".04em" }}>
+                {profile.can_marshal ? "QUALIFIED" : "—"}
               </div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>MARSHAL</div>
-            </div>
-            {/* UKARA */}
-            <div style={{ background: "#0c1009", border: `1px solid ${profile.ukara ? "rgba(79,195,247,.2)" : "#1a2808"}`, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 18, color: profile.ukara ? "#4fc3f7" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
-                {profile.ukara ? "REGISTERED" : "PENDING"}
-              </div>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>UKARA</div>
             </div>
           </div>
         </div>
 
-        {/* ── Bio ── */}
+        {/* Bio */}
         {profile.bio && (
           <div style={{ marginBottom: 24 }}>
             <SectionHeader label="Operative Brief" />
@@ -5636,17 +5618,17 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
           </div>
         )}
 
-        {/* ── Weapons ── */}
+        {/* Weapons */}
         {hasWeapons && (
           <div style={{ marginBottom: 24 }}>
             <SectionHeader label="Weapons Loadout" />
-            <GunCard title="PRIMARY WEAPON"         name={profile.primary_name}   fps={profile.primary_fps}   mags={profile.primary_mags}   upgrades={profile.primary_upgrades} />
-            <GunCard title="SECONDARY WEAPON"       name={profile.secondary_name} fps={profile.secondary_fps} mags={profile.secondary_mags} upgrades={profile.secondary_upgrades} />
-            <GunCard title="SUPPORT / SPECIAL"      name={profile.support_name}   fps={profile.support_fps}   mags={profile.support_mags}   upgrades={profile.support_upgrades} />
+            <GunCard title="PRIMARY WEAPON"    name={profile.primary_name}   fps={profile.primary_fps}   mags={profile.primary_mags}   upgrades={profile.primary_upgrades} />
+            <GunCard title="SECONDARY WEAPON"  name={profile.secondary_name} fps={profile.secondary_fps} mags={profile.secondary_mags} upgrades={profile.secondary_upgrades} />
+            <GunCard title="SUPPORT / SPECIAL" name={profile.support_name}   fps={profile.support_fps}   mags={profile.support_mags}   upgrades={profile.support_upgrades} />
           </div>
         )}
 
-        {/* ── Gear ── */}
+        {/* Gear */}
         {hasGear && (
           <div style={{ marginBottom: 24 }}>
             <SectionHeader label="Kit & Gear" />
@@ -5662,7 +5644,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
           </div>
         )}
 
-        {/* ── Notes ── */}
+        {/* Notes */}
         {profile.notes && (
           <div style={{ marginBottom: 24 }}>
             <SectionHeader label="Field Notes" />
