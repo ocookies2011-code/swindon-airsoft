@@ -5495,10 +5495,71 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
   const games       = profile.games_attended || 0;
   const customRank  = profile.custom_rank || null;
   const designation = profile.designation || null;
-  const RANK_STARS  = { "CIVILIAN":"","PRIVATE":"★","RECRUIT":"★★","OPERATIVE":"★★★","SENIOR OPERATIVE":"★★★★","FIELD COMMANDER":"★★★★★" };
   const autoRank    = games === 0 ? "CIVILIAN" : games < 3 ? "PRIVATE" : games < 6 ? "RECRUIT" : games < 10 ? "OPERATIVE" : games < 20 ? "SENIOR OPERATIVE" : "FIELD COMMANDER";
   const rankTitle   = customRank || autoRank;
-  const rankStars   = RANK_STARS[rankTitle] ?? "";
+  const hasWeapons  = profile.primary_name || profile.secondary_name || profile.support_name;
+  const hasGear     = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
+
+  // SVG rank insignia — military chevron/pip style
+  const RankInsignia = ({ rank, size = 56 }) => {
+    const s = size; const c = "#c8ff00"; const dim = "#1e3008"; const gold = "#c8a000";
+    const Chevron = ({ y, col = c }) => (
+      <polyline points={`4,${y+8} ${s/2},${y} ${s-4},${y+8}`} fill="none" stroke={col} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    );
+    const Pip = ({ cx, cy, col = c, r = 4 }) => (
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth="1.8"/>
+    );
+    const Diamond = ({ cx, cy, w = 7, col = gold }) => (
+      <polygon points={`${cx},${cy-w} ${cx+w},${cy} ${cx},${cy+w} ${cx-w},${cy}`} fill="none" stroke={col} strokeWidth="1.8"/>
+    );
+    const Crown = ({ cx, cy, col = gold }) => (
+      <g>
+        <polyline points={`${cx-10},${cy+5} ${cx-10},${cy-4} ${cx-5},${cy} ${cx},${cy-6} ${cx+5},${cy} ${cx+10},${cy-4} ${cx+10},${cy+5}`} fill="none" stroke={col} strokeWidth="1.8" strokeLinejoin="round"/>
+        <line x1={cx-10} y1={cy+5} x2={cx+10} y2={cy+5} stroke={col} strokeWidth="1.8"/>
+      </g>
+    );
+    const Bar = ({ y, col = c }) => (
+      <rect x={6} y={y} width={s-12} height={3} fill={col} rx={1}/>
+    );
+
+    const insig = {
+      "CIVILIAN":         <circle cx={s/2} cy={s/2} r={6} fill="none" stroke={dim} strokeWidth="1.5" strokeDasharray="3,3"/>,
+      "PRIVATE":          <Chevron y={s/2-2}/>,
+      "RECRUIT":          <g><Chevron y={s/2-8}/><Chevron y={s/2+2}/></g>,
+      "OPERATIVE":        <g><Chevron y={s/2-13}/><Chevron y={s/2-3}/><Chevron y={s/2+7}/></g>,
+      "SENIOR OPERATIVE": <g><Pip cx={s/2-10} cy={s/2} /><Pip cx={s/2} cy={s/2-10} /><Pip cx={s/2+10} cy={s/2} /><Pip cx={s/2} cy={s/2+10} /></g>,
+      "FIELD COMMANDER":  <g><Crown cx={s/2} cy={s/2-6}/><Bar y={s/2+10}/></g>,
+    };
+    return (
+      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display:"block" }}>
+        <rect width={s} height={s} fill="#080a06" rx={2}/>
+        {insig[rank] || <circle cx={s/2} cy={s/2} r={5} fill={dim}/>}
+      </svg>
+    );
+  };
+
+  // SVG designation icons
+  const DesignationInsignia = ({ desig, size = 56 }) => {
+    const s = size; const c = "#4fc3f7"; const bg = "#080a06";
+    const icons = {
+      "GHOST":        <g stroke={c} fill="none" strokeWidth="1.8"><ellipse cx={s/2} cy={s/2+2} rx={10} ry={12}/><polyline points={`${s/2-10},${s/2+14} ${s/2-6},${s/2+10} ${s/2-2},${s/2+14} ${s/2+2},${s/2+10} ${s/2+6},${s/2+14} ${s/2+10},${s/2+10}`}/><circle cx={s/2-4} cy={s/2-1} r={2} fill={c}/><circle cx={s/2+4} cy={s/2-1} r={2} fill={c}/></g>,
+      "SNIPER":       <g stroke={c} fill="none" strokeWidth="1.8"><circle cx={s/2} cy={s/2} r={10}/><line x1={s/2} y1={s/2-14} x2={s/2} y2={s/2-10}/><line x1={s/2} y1={s/2+10} x2={s/2} y2={s/2+14}/><line x1={s/2-14} y1={s/2} x2={s/2-10} y2={s/2}/><line x1={s/2+10} y1={s/2} x2={s/2+14} y2={s/2}/><circle cx={s/2} cy={s/2} r={2} fill={c}/></g>,
+      "MEDIC":        <g stroke={c} fill="none" strokeWidth="2"><rect x={s/2-8} y={s/2-4} width={16} height={8} rx={1}/><rect x={s/2-4} y={s/2-8} width={8} height={16} rx={1}/></g>,
+      "DEMOLITIONS":  <g stroke={c} fill="none" strokeWidth="1.8"><ellipse cx={s/2} cy={s/2+2} rx={6} ry={9}/><line x1={s/2} y1={s/2-7} x2={s/2} y2={s/2-14}/><polyline points={`${s/2-4},${s/2-14} ${s/2},${s/2-11} ${s/2+4},${s/2-14}`}/><line x1={s/2-10} y1={s/2+2} x2={s/2+10} y2={s/2+2}/></g>,
+      "RECON":        <g stroke={c} fill="none" strokeWidth="1.8"><circle cx={s/2} cy={s/2} r={4}/><path d={`M${s/2-8},${s/2} Q${s/2},${s/2-14} ${s/2+8},${s/2}`}/><path d={`M${s/2-8},${s/2} Q${s/2},${s/2+14} ${s/2+8},${s/2}`}/><line x1={s/2-14} y1={s/2} x2={s/2-8} y2={s/2}/><line x1={s/2+8} y1={s/2} x2={s/2+14} y2={s/2}/></g>,
+      "HEAVY GUNNER": <g stroke={c} fill="none" strokeWidth="1.8"><rect x={s/2-11} y={s/2-4} width={18} height={6} rx={2}/><rect x={s/2+4} y={s/2-6} width={4} height={2} rx={1}/><circle cx={s/2-8} cy={s/2+8} r={3}/><circle cx={s/2+2} cy={s/2+8} r={3}/><line x1={s/2-14} y1={s/2-1} x2={s/2-11} y2={s/2-1}/></g>,
+      "SUPPORT":      <g stroke={c} fill="none" strokeWidth="1.8"><path d={`M${s/2},${s/2-14} L${s/2+12},${s/2+8} L${s/2-12},${s/2+8} Z`}/><line x1={s/2} y1={s/2-6} x2={s/2} y2={s/2+2}/><circle cx={s/2} cy={s/2+5} r={1.5} fill={c}/></g>,
+      "SQUAD LEADER": <g stroke={c} fill="none" strokeWidth="1.8"><polygon points={`${s/2},${s/2-12} ${s/2+4},${s/2-4} ${s/2+13},${s/2-4} ${s/2+6},${s/2+2} ${s/2+9},${s/2+12} ${s/2},${s/2+6} ${s/2-9},${s/2+12} ${s/2-6},${s/2+2} ${s/2-13},${s/2-4} ${s/2-4},${s/2-4}`}/></g>,
+      "VETERAN":      <g stroke={c} fill="none" strokeWidth="1.8"><polygon points={`${s/2},${s/2-13} ${s/2+4},${s/2-4} ${s/2+14},${s/2-4} ${s/2+6},${s/2+2} ${s/2+9},${s/2+13} ${s/2},${s/2+7} ${s/2-9},${s/2+13} ${s/2-6},${s/2+2} ${s/2-14},${s/2-4} ${s/2-4},${s/2-4}`}/><circle cx={s/2} cy={s/2-1} r={3} fill={c}/></g>,
+      "LEGEND":       <g stroke="#c8a000" fill="none" strokeWidth="1.8"><polygon points={`${s/2},${s/2-14} ${s/2+5},${s/2-4} ${s/2+15},${s/2-4} ${s/2+7},${s/2+3} ${s/2+10},${s/2+14} ${s/2},${s/2+8} ${s/2-10},${s/2+14} ${s/2-7},${s/2+3} ${s/2-15},${s/2-4} ${s/2-5},${s/2-4}`}/></g>,
+    };
+    return (
+      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display:"block" }}>
+        <rect width={s} height={s} fill={bg} rx={2}/>
+        {icons[desig] || <text x={s/2} y={s/2+5} textAnchor="middle" fontSize={20} fill={c}>{desig[0]}</text>}
+      </svg>
+    );
+  };
   const hasWeapons = profile.primary_name || profile.secondary_name || profile.support_name;
   const hasGear    = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
 
@@ -5573,9 +5634,10 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
                 {profile.can_marshal && (
                   <span style={{ background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.4)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>🎖 MARSHAL</span>
                 )}
-                {designation && (
-                  <span style={{ background: "rgba(79,195,247,.1)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>{designation}</span>
-                )}
+                {designation && (() => {
+                  const DESIG_ICONS = { "GHOST":"👻","SNIPER":"🎯","MEDIC":"🩹","DEMOLITIONS":"💥","RECON":"🔭","HEAVY GUNNER":"🔫","SUPPORT":"🛡","SQUAD LEADER":"⚔️","VETERAN":"🎖","LEGEND":"🏆" };
+                  return <span style={{ background: "rgba(79,195,247,.1)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>{DESIG_ICONS[designation] || "◆"} {designation}</span>;
+                })()}
                 {profile.join_date && (
                   <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".1em" }}>ENLISTED {new Date(profile.join_date).getFullYear()}</span>
                 )}
@@ -5596,13 +5658,18 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>DEPLOYMENTS</div>
             </div>
             <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".04em" }}>{rankTitle}</div>
-              {rankStars && <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, color: "#c8a000", marginTop: 4 }}>{rankStars}</div>}
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                <RankInsignia rank={rankTitle} size={52}/>
+              </div>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".06em" }}>{rankTitle}</div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>RANK</div>
             </div>
             {designation && (
               <div style={{ background: "#0c1009", border: "1px solid rgba(79,195,247,.25)", padding: "14px 16px", textAlign: "center" }}>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                  <DesignationInsignia desig={designation} size={52}/>
+                </div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, color: "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>DESIGNATION</div>
               </div>
             )}
