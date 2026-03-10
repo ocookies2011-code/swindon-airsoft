@@ -453,7 +453,7 @@ function useData() {
       vipApplied: "vip_applied", vipExpiresAt: "vip_expires_at", ukara: "ukara", credits: "credits",
       leaderboardOptOut: "leaderboard_opt_out", profilePic: "profile_pic",
       deleteRequest: "delete_request", permissions: "permissions",
-      publicProfile: "public_profile", bio: "bio",
+      publicProfile: "public_profile", bio: "bio", customRank: "custom_rank",
     };
     Object.entries(patch).forEach(([k, v]) => {
       if (map[k]) snakePatch[map[k]] = v;
@@ -5492,9 +5492,13 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
     </div>
   );
 
-  const games     = profile.games_attended || 0;
-  const rankTitle = games === 0 ? "CIVILIAN" : games < 3 ? "PRIVATE" : games < 6 ? "RECRUIT" : games < 10 ? "OPERATIVE" : games < 20 ? "SENIOR OPERATIVE" : "FIELD COMMANDER";
-  const rankStars = games === 0 ? "" : games < 3 ? "★" : games < 6 ? "★★" : games < 10 ? "★★★" : games < 20 ? "★★★★" : "★★★★★";
+  const games      = profile.games_attended || 0;
+  const customRank = profile.custom_rank || null;
+  const STANDARD_RANKS = ["CIVILIAN","PRIVATE","RECRUIT","OPERATIVE","SENIOR OPERATIVE","FIELD COMMANDER"];
+  const autoRank  = games === 0 ? "CIVILIAN" : games < 3 ? "PRIVATE" : games < 6 ? "RECRUIT" : games < 10 ? "OPERATIVE" : games < 20 ? "SENIOR OPERATIVE" : "FIELD COMMANDER";
+  const rankTitle = customRank || autoRank;
+  const isSpecial = !!customRank && !STANDARD_RANKS.includes(customRank);
+  const rankStars = isSpecial ? null : ({ "CIVILIAN":"","PRIVATE":"★","RECRUIT":"★★","OPERATIVE":"★★★","SENIOR OPERATIVE":"★★★★","FIELD COMMANDER":"★★★★★" }[rankTitle] ?? "");
   const hasWeapons = profile.primary_name || profile.secondary_name || profile.support_name;
   const hasGear    = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
 
@@ -5588,9 +5592,10 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
               <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 38, color: "#c8ff00", lineHeight: 1 }}>{games}</div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>DEPLOYMENTS</div>
             </div>
-            <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".04em" }}>{rankTitle}</div>
-              {rankStars && <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, color: "#c8a000", marginTop: 4 }}>{rankStars}</div>}
+            <div style={{ background: "#0c1009", border: `1px solid ${isSpecial ? "rgba(79,195,247,.25)" : "#1a2808"}`, padding: "14px 16px", textAlign: "center" }}>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: isSpecial ? 13 : 16, color: isSpecial ? "#4fc3f7" : "#c8ff00", lineHeight: 1.1, letterSpacing: ".04em" }}>{rankTitle}</div>
+              {rankStars !== null && rankStars !== "" && <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, color: "#c8a000", marginTop: 4 }}>{rankStars}</div>}
+              {isSpecial && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".18em", color: "#4fc3f7", marginTop: 4, opacity: .6 }}>SPECIAL</div>}
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>RANK</div>
             </div>
             <div style={{ background: "#0c1009", border: `1px solid ${profile.vip_status === "active" ? "rgba(200,160,0,.35)" : "#1a2808"}`, padding: "14px 16px", textAlign: "center" }}>
@@ -8536,6 +8541,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         card_reason:    edit.cardReason  || null,
         card_issued_at: (edit.cardStatus && edit.cardStatus !== 'none') ? (edit.cardIssuedAt || new Date().toISOString()) : null,
         can_marshal:    edit.canMarshal  || false,
+        custom_rank:    edit.customRank  || null,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
       // Refresh from DB and update global state
@@ -8847,6 +8853,45 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
               <input type="checkbox" checked={edit.deleteRequest || false} onChange={e => setEdit(p => ({ ...p, deleteRequest: e.target.checked }))} />
               <label style={{ fontSize: 13, color: "var(--red)" }}>Account deletion requested</label>
+            </div>
+            {/* Custom Rank — overrides auto rank on public profile */}
+            <div style={{ background: "rgba(200,255,0,.03)", border: "1px solid rgba(200,255,0,.15)", padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 6 }}>🎖 Public Profile Rank</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10, lineHeight: 1.5 }}>
+                Overrides the rank shown on this player's public profile. Leave as <strong style={{ color: "var(--text)" }}>Auto</strong> to use the default (based on games played).
+              </div>
+              <select
+                value={edit.customRank || ""}
+                onChange={e => setEdit(p => ({ ...p, customRank: e.target.value || null }))}
+                style={{ width: "100%", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
+              >
+                <option value="">— Auto (based on games played) —</option>
+                <optgroup label="Standard Ranks">
+                  <option value="CIVILIAN">CIVILIAN</option>
+                  <option value="PRIVATE">PRIVATE ★</option>
+                  <option value="RECRUIT">RECRUIT ★★</option>
+                  <option value="OPERATIVE">OPERATIVE ★★★</option>
+                  <option value="SENIOR OPERATIVE">SENIOR OPERATIVE ★★★★</option>
+                  <option value="FIELD COMMANDER">FIELD COMMANDER ★★★★★</option>
+                </optgroup>
+                <optgroup label="Special Designations">
+                  <option value="GHOST">👻 GHOST</option>
+                  <option value="SNIPER">🎯 SNIPER</option>
+                  <option value="MEDIC">🩹 MEDIC</option>
+                  <option value="DEMOLITIONS">💥 DEMOLITIONS</option>
+                  <option value="RECON">🔭 RECON</option>
+                  <option value="HEAVY GUNNER">🔫 HEAVY GUNNER</option>
+                  <option value="SUPPORT">🛡 SUPPORT</option>
+                  <option value="SQUAD LEADER">⚔️ SQUAD LEADER</option>
+                  <option value="VETERAN">🎖 VETERAN</option>
+                  <option value="LEGEND">🏆 LEGEND</option>
+                </optgroup>
+              </select>
+              {edit.customRank && (
+                <div style={{ marginTop: 8, fontSize: 11, color: "var(--accent)" }}>
+                  ✓ Custom rank active — auto rank overridden
+                </div>
+              )}
             </div>
             {/* Marshal permission — admin only, never visible to player */}
             <div style={{ background: "rgba(0,180,100,.06)", border: "1px solid rgba(0,180,100,.25)", padding: "12px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>

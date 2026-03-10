@@ -597,6 +597,7 @@ export function normaliseProfile(p) {
     canMarshal:         p.can_marshal    || false,
     publicProfile:      p.public_profile ?? false,
     bio:                p.bio            || '',
+    customRank:         p.custom_rank    || null,
   }
 }
 
