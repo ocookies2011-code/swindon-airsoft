@@ -334,10 +334,29 @@ function useData() {
               const profiles = userList.map(normaliseProfile);
               // Auto-expire any VIP members whose expiry date has passed
               const now = new Date();
+              const thisYear = now.getFullYear();
               profiles.forEach(u => {
                 if (u.vipStatus === "active" && u.vipExpiresAt && new Date(u.vipExpiresAt) < now) {
                   supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).catch(() => {});
                   u.vipStatus = "expired";
+                }
+
+                // Birthday free game: VIP members get 1 free game credit in a 14-day window around their birthday
+                if (u.vipStatus === "active" && u.birthDate && u.birthdayCreditYear !== thisYear) {
+                  const bd = new Date(u.birthDate);
+                  const bdThisYear = new Date(thisYear, bd.getMonth(), bd.getDate());
+                  const diffDays = Math.round((bdThisYear - now) / 86400000);
+                  if (diffDays >= -7 && diffDays <= 7) {
+                    // Within birthday window — award credit
+                    const grantAmount = 25; // 1 free standard game day (£25 credit)
+                    const newCredits = (u.credits || 0) + grantAmount;
+                    supabase.from('profiles').update({
+                      credits: newCredits,
+                      birthday_credit_year: thisYear,
+                    }).eq('id', u.id).catch(() => {});
+                    u.credits = newCredits;
+                    u.birthdayCreditYear = thisYear;
+                  }
                 }
               });
               setData(prev => prev ? { ...prev, users: profiles } : prev);
@@ -454,6 +473,7 @@ function useData() {
       leaderboardOptOut: "leaderboard_opt_out", profilePic: "profile_pic",
       deleteRequest: "delete_request", permissions: "permissions",
       publicProfile: "public_profile", bio: "bio", customRank: "custom_rank", designation: "designation",
+      birthDate: "birth_date", birthdayCreditYear: "birthday_credit_year",
     };
     Object.entries(patch).forEach(([k, v]) => {
       if (map[k]) snakePatch[map[k]] = v;
@@ -5875,6 +5895,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
     email: cu.email || "",
     phone: cu.phone || "",
     ...parseAddress(cu.address),
+    birthDate: cu.birthDate || cu.waiverData?.dob || "",
   });
   const [emailSaving, setEmailSaving] = useState(false);
 
@@ -5995,6 +6016,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         callsign: edit.callsign,
         phone:    edit.phone,
         address:  composeAddress(edit),
+        birthDate: edit.birthDate || null,
       });
       showToast("Profile updated!");
     } catch(e) {
@@ -6086,6 +6108,19 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           <div className="form-row">
             <div className="form-group"><label>Full Name</label><input value={edit.name} onChange={e => setEdit(p => ({ ...p, name: e.target.value }))} /></div>
             <div className="form-group"><label>Phone</label><input value={edit.phone} onChange={e => setEdit(p => ({ ...p, phone: e.target.value }))} placeholder="07700 000000" /></div>
+          </div>
+          {/* Date of Birth — used for VIP birthday free game credit */}
+          <div className="form-group">
+            <label>Date of Birth
+              {cu.vipStatus === "active" && <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: "var(--gold)", marginLeft: 8, fontSize: 11 }}>⭐ VIPs receive £25 credit in the week around their birthday</span>}
+            </label>
+            <input
+              type="date"
+              value={edit.birthDate || ""}
+              onChange={e => setEdit(p => ({ ...p, birthDate: e.target.value }))}
+              style={{ maxWidth: 200 }}
+            />
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Used for age verification and VIP birthday perks. Never shared publicly.</div>
           </div>
           <div className="form-group">
             <label>Player Callsign <span style={{ color:"var(--muted)", fontWeight:400, letterSpacing:0, textTransform:"none" }}>(shown on leaderboard instead of your real name)</span></label>
@@ -6692,10 +6727,48 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
         const expiry      = cu.vipExpiresAt ? new Date(cu.vipExpiresAt) : null;
         const now         = new Date();
+        const thisYear    = now.getFullYear();
         const isExpired   = expiry && expiry < now;
         const nearExpiry  = expiry && !isExpired && (expiry - now) < THREE_WEEKS;
+
+        // Birthday credit status
+        const bdRaw = cu.birthDate || cu.waiverData?.dob;
+        const bd = bdRaw ? new Date(bdRaw) : null;
+        const bdThisYear = bd ? new Date(thisYear, bd.getMonth(), bd.getDate()) : null;
+        const bdDiffDays = bdThisYear ? Math.round((bdThisYear - now) / 86400000) : null;
+        const isBirthdayWindow = bdDiffDays !== null && bdDiffDays >= -7 && bdDiffDays <= 7;
+        const birthdayCreditAwarded = cu.birthdayCreditYear === thisYear;
+        const birthdayComingUp = bdDiffDays !== null && bdDiffDays > 7 && bdDiffDays <= 30;
+
         return (
         <div className="card">
+          {/* Birthday credit banner */}
+          {cu.vipStatus === "active" && birthdayCreditAwarded && isBirthdayWindow && (
+            <div style={{ background: "rgba(200,160,0,.12)", border: "1px solid rgba(200,160,0,.4)", borderRadius: 6, padding: "12px 16px", marginBottom: 16, display: "flex", gap: 14, alignItems: "center" }}>
+              <span style={{ fontSize: 32 }}>🎂</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: "var(--gold)", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", letterSpacing: ".06em" }}>Happy Birthday from Swindon Airsoft! 🎉</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>As a VIP member, we've added <strong style={{ color: "var(--gold)" }}>£25 credit</strong> to your account — enjoy a free game day on us!</div>
+              </div>
+            </div>
+          )}
+          {cu.vipStatus === "active" && birthdayComingUp && !birthdayCreditAwarded && bd && (
+            <div style={{ background: "rgba(200,160,0,.06)", border: "1px solid rgba(200,160,0,.2)", borderRadius: 6, padding: "10px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
+              <span style={{ fontSize: 24 }}>🎂</span>
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                Your birthday is in <strong style={{ color: "var(--gold)" }}>{bdDiffDays} days</strong> — as a VIP, you'll automatically receive £25 credit for a free game day!
+              </div>
+            </div>
+          )}
+          {cu.vipStatus === "active" && !bd && (
+            <div style={{ background: "rgba(200,160,0,.06)", border: "1px solid rgba(200,160,0,.2)", borderRadius: 6, padding: "10px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
+              <span style={{ fontSize: 22 }}>🎂</span>
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                <strong style={{ color: "var(--gold)" }}>VIP Birthday Perk:</strong> Add your date of birth in your Profile settings to receive £25 credit for a free game day each year around your birthday!
+              </div>
+            </div>
+          )}
+
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
           <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
           {[
@@ -6704,6 +6777,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             cu.vipStatus === "active" && expiry && { label: "Expires", value: expiry.toLocaleDateString("en-GB"), ok: !isExpired },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
             { label: "VIP Discount", value: "10% off game days & shop", ok: cu.vipStatus === "active" },
+            cu.vipStatus === "active" && bd && { label: "Birthday Credit", value: birthdayCreditAwarded ? `£25 awarded ${thisYear} 🎂` : `£25 credit in birthday week`, ok: true },
           ].filter(Boolean).map(({ label, value, ok }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg4)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
               <span className="text-muted">{label}</span>

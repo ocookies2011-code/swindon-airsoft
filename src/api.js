@@ -599,6 +599,8 @@ export function normaliseProfile(p) {
     bio:                p.bio            || '',
     customRank:         p.custom_rank    || null,
     designation:        p.designation    || null,
+    birthDate:          p.birth_date     || null,
+    birthdayCreditYear: p.birthday_credit_year || null,
   }
 }
 
