@@ -5560,8 +5560,6 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
       </svg>
     );
   };
-  const hasWeapons = profile.primary_name || profile.secondary_name || profile.support_name;
-  const hasGear    = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
 
   const SectionHeader = ({ label }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
