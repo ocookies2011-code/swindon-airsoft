@@ -453,6 +453,7 @@ function useData() {
       vipApplied: "vip_applied", vipExpiresAt: "vip_expires_at", ukara: "ukara", credits: "credits",
       leaderboardOptOut: "leaderboard_opt_out", profilePic: "profile_pic",
       deleteRequest: "delete_request", permissions: "permissions",
+      publicProfile: "public_profile", bio: "bio",
     };
     Object.entries(patch).forEach(([k, v]) => {
       if (map[k]) snakePatch[map[k]] = v;
@@ -5326,10 +5327,263 @@ function PlayerOrders({ cu }) {
   );
 }
 
+// ── Loadout field config ──────────────────────────────────────
+const LOADOUT_WEAPON_FIELDS = [
+  { key: "Name",     field: "name",     placeholder: "e.g. Tokyo Marui M4A1" },
+  { key: "FPS",      field: "fps",      placeholder: "e.g. 350 FPS" },
+  { key: "Mags",     field: "mags",     placeholder: "e.g. 5× mid-cap 120rnd" },
+  { key: "Upgrades", field: "upgrades", placeholder: "e.g. Prometheus hop rubber, SHS motor" },
+];
+const LOADOUT_GEAR_FIELDS = [
+  { key: "Helmet",      field: "helmet",     placeholder: "e.g. Ops-Core FAST Carbon" },
+  { key: "Vest / Rig",  field: "vest",       placeholder: "e.g. Crye JPC 2.0" },
+  { key: "Camo",        field: "camo",       placeholder: "e.g. Multicam / MTP" },
+  { key: "Eye Pro",     field: "eyepro",     placeholder: "e.g. Revision Sawfly" },
+  { key: "Comms",       field: "comms",      placeholder: "e.g. Baofeng UV-5R + Peltor" },
+  { key: "Boots",       field: "boots",      placeholder: "e.g. Haix Black Eagle" },
+  { key: "Other Gear",  field: "other_gear", placeholder: "Knee pads, gloves, chest rig extras…" },
+];
+
+function LoadoutTab({ cu, showToast }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [publicProfile, setPublicProfile] = useState(cu.publicProfile ?? false);
+  const [bio, setBio] = useState(cu.bio || "");
+  const defaultLoadout = {
+    primary_name: "", primary_fps: "", primary_mags: "", primary_upgrades: "",
+    secondary_name: "", secondary_fps: "", secondary_mags: "", secondary_upgrades: "",
+    support_name: "", support_fps: "", support_mags: "", support_upgrades: "",
+    helmet: "", vest: "", camo: "", eyepro: "", comms: "", boots: "", other_gear: "",
+    notes: "",
+  };
+  const [draft, setDraft] = useState(defaultLoadout);
+
+  useEffect(() => {
+    if (!cu?.id) return;
+    (async () => {
+      try {
+        const data = await api.loadouts.getMyLoadout(cu.id);
+        if (data) setDraft(prev => ({ ...prev, ...data }));
+      } catch (e) { console.warn("Loadout fetch:", e.message); }
+      finally { setLoading(false); }
+    })();
+  }, [cu?.id]);
+
+  const set = (field, val) => setDraft(p => ({ ...p, [field]: val }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.loadouts.save(cu.id, draft);
+      const { error } = await supabase.from("profiles").update({ public_profile: publicProfile, bio }).eq("id", cu.id);
+      if (error) throw error;
+      showToast("Loadout saved!");
+    } catch (e) {
+      showToast("Save failed: " + (e.message || "unknown error"), "red");
+    } finally { setSaving(false); }
+  };
+
+  const profileUrl = `${window.location.origin}${window.location.pathname}#player/${cu.id}`;
+
+  if (loading) return (
+    <div className="card" style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>Loading loadout…</div>
+  );
+
+  return (
+    <div className="card">
+      <div style={{ background: "rgba(200,255,0,.06)", border: "1px solid rgba(200,255,0,.2)", padding: "14px 16px", marginBottom: 24, borderRadius: 4, display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".12em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 4 }}>🌐 Public Profile</div>
+          <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>When enabled, anyone can view your callsign, profile picture, games attended, and loadout via a shareable link. Personal details are never shown.</div>
+          {publicProfile && (
+            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontFamily: "'Share Tech Mono',monospace", color: "var(--accent)", background: "rgba(200,255,0,.08)", padding: "4px 10px", border: "1px solid rgba(200,255,0,.2)", borderRadius: 2 }}>{profileUrl}</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => { navigator.clipboard.writeText(profileUrl); showToast("Link copied!"); }}>Copy Link</button>
+            </div>
+          )}
+        </div>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0, marginTop: 4 }}>
+          <div style={{ width: 44, height: 24, borderRadius: 12, background: publicProfile ? "var(--accent)" : "var(--bg4)", border: `1px solid ${publicProfile ? "var(--accent)" : "var(--border)"}`, position: "relative", transition: "background .2s", flexShrink: 0 }}>
+            <div style={{ width: 18, height: 18, borderRadius: "50%", background: publicProfile ? "#000" : "#888", position: "absolute", top: 2, left: publicProfile ? 22 : 2, transition: "left .2s" }} />
+          </div>
+          <input type="checkbox" checked={publicProfile} onChange={e => setPublicProfile(e.target.checked)} style={{ display: "none" }} />
+          <span style={{ fontSize: 12, color: publicProfile ? "var(--accent)" : "var(--muted)", fontWeight: 700, letterSpacing: ".08em", fontFamily: "'Barlow Condensed',sans-serif" }}>{publicProfile ? "PROFILE PUBLIC" : "PROFILE PRIVATE"}</span>
+        </label>
+      </div>
+
+      <div className="form-group" style={{ marginBottom: 24 }}>
+        <label>Player Bio <span style={{ color: "var(--muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(shown on your public profile)</span></label>
+        <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the community about your play style, team, or experience…" maxLength={300} rows={3} style={{ resize: "vertical", fontFamily: "inherit", fontSize: 13 }} />
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>{bio.length}/300</div>
+      </div>
+
+      {[
+        { label: "Primary Weapon",              prefix: "primary" },
+        { label: "Secondary Weapon",            prefix: "secondary" },
+        { label: "Support / Special (optional)",prefix: "support" },
+      ].map(({ label, prefix }) => (
+        <div key={prefix} style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 10 }}>🔫 {label}</div>
+          <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", padding: "12px 14px", borderRadius: 2 }}>
+            {LOADOUT_WEAPON_FIELDS.map(({ key, field, placeholder }) => (
+              <div className="form-group" key={field} style={{ marginBottom: 10 }}>
+                <label style={{ textTransform: "none", letterSpacing: 0, fontWeight: 600, fontSize: 11 }}>{key}</label>
+                <input value={draft[`${prefix}_${field}`] || ""} onChange={e => set(`${prefix}_${field}`, e.target.value)} placeholder={placeholder} maxLength={120} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 10 }}>🪖 Kit &amp; Gear</div>
+        <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", padding: "12px 14px", borderRadius: 2 }}>
+          {LOADOUT_GEAR_FIELDS.map(({ key, field, placeholder }) => (
+            <div className="form-group" key={field} style={{ marginBottom: 10 }}>
+              <label style={{ textTransform: "none", letterSpacing: 0, fontWeight: 600, fontSize: 11 }}>{key}</label>
+              <input value={draft[field] || ""} onChange={e => set(field, e.target.value)} placeholder={placeholder} maxLength={120} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="form-group" style={{ marginBottom: 24 }}>
+        <label>Loadout Notes <span style={{ color: "var(--muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(role, play style, etc.)</span></label>
+        <textarea value={draft.notes || ""} onChange={e => set("notes", e.target.value)} placeholder="e.g. Run-and-gun CQB player, medic role, prefer night ops…" maxLength={400} rows={3} style={{ resize: "vertical", fontFamily: "inherit", fontSize: 13 }} />
+      </div>
+
+      <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save Loadout"}</button>
+    </div>
+  );
+}
+
+function PublicProfilePage({ userId, setPage }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!userId) { setNotFound(true); setLoading(false); return; }
+    (async () => {
+      try {
+        const data = await api.loadouts.getPublic(userId);
+        if (!data) setNotFound(true);
+        else setProfile(data);
+      } catch { setNotFound(true); }
+      finally { setLoading(false); }
+    })();
+  }, [userId]);
+
+  const GunCard = ({ title, name, fps, mags, upgrades }) => {
+    if (!name) return null;
+    return (
+      <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 3, padding: "12px 14px", marginBottom: 10 }}>
+        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 8 }}>🔫 {title}</div>
+        {[["Model", name], ["FPS", fps], ["Mags", mags], ["Upgrades", upgrades]].filter(([, v]) => v).map(([k, v]) => (
+          <div key={k} style={{ display: "flex", gap: 10, padding: "5px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+            <span style={{ color: "var(--muted)", minWidth: 72, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", paddingTop: 1 }}>{k}</span>
+            <span style={{ color: "var(--text)" }}>{v}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const GearRow = ({ label, value }) => {
+    if (!value) return null;
+    return (
+      <div style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+        <span style={{ color: "var(--muted)", minWidth: 90, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", paddingTop: 1 }}>{label}</span>
+        <span style={{ color: "var(--text)" }}>{value}</span>
+      </div>
+    );
+  };
+
+  if (loading) return (
+    <div className="page-content"><div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Loading player profile…</div></div>
+  );
+  if (notFound) return (
+    <div className="page-content">
+      <div style={{ textAlign: "center", padding: 60 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+        <div style={{ color: "var(--muted)", marginBottom: 20 }}>Profile not found or set to private.</div>
+        <button className="btn btn-ghost" onClick={() => setPage("home")}>← Back to Home</button>
+      </div>
+    </div>
+  );
+
+  const hasWeapons = profile.primary_name || profile.secondary_name || profile.support_name;
+  const hasGear = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
+
+  return (
+    <div className="page-content">
+      <div className="page-header">
+        <button className="btn btn-ghost btn-sm" onClick={() => setPage("home")} style={{ marginBottom: 16 }}>← Back</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ width: 80, height: 80, borderRadius: "50%", border: "3px solid var(--accent)", overflow: "hidden", background: "var(--bg4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, fontWeight: 700, flexShrink: 0 }}>
+            {profile.profile_pic
+              ? <img src={profile.profile_pic} alt="" onError={e => { e.target.style.display="none"; }} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : (profile.callsign || profile.name || "?")[0].toUpperCase()}
+          </div>
+          <div>
+            <div className="page-title" style={{ fontSize: 26, marginBottom: 6 }}>{profile.callsign || profile.name}</div>
+            {profile.callsign && <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 6 }}>{profile.name}</div>}
+            <div className="gap-2">
+              {profile.vip_status === "active" && <span className="tag tag-gold">⭐ VIP</span>}
+              {profile.games_attended > 0 && <span className="tag tag-green">{profile.games_attended} Games</span>}
+              {profile.join_date && <span className="tag" style={{ background: "var(--bg4)", color: "var(--muted)" }}>Joined {new Date(profile.join_date).getFullYear()}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {profile.bio && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 8 }}>About</div>
+          <p style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.6, margin: 0 }}>{profile.bio}</p>
+        </div>
+      )}
+
+      {hasWeapons && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 14 }}>Weapons Loadout</div>
+          <GunCard title="Primary"          name={profile.primary_name}   fps={profile.primary_fps}   mags={profile.primary_mags}   upgrades={profile.primary_upgrades} />
+          <GunCard title="Secondary"        name={profile.secondary_name} fps={profile.secondary_fps} mags={profile.secondary_mags} upgrades={profile.secondary_upgrades} />
+          <GunCard title="Support / Special"name={profile.support_name}   fps={profile.support_fps}   mags={profile.support_mags}   upgrades={profile.support_upgrades} />
+        </div>
+      )}
+
+      {hasGear && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 14 }}>Kit &amp; Gear</div>
+          <GearRow label="Helmet"     value={profile.helmet} />
+          <GearRow label="Vest / Rig" value={profile.vest} />
+          <GearRow label="Camo"       value={profile.camo} />
+          <GearRow label="Eye Pro"    value={profile.eyepro} />
+          <GearRow label="Comms"      value={profile.comms} />
+          <GearRow label="Boots"      value={profile.boots} />
+          <GearRow label="Other Gear" value={profile.other_gear} />
+        </div>
+      )}
+
+      {profile.notes && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 8 }}>Notes</div>
+          <p style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.6, margin: 0 }}>{profile.notes}</p>
+        </div>
+      )}
+
+      {!hasWeapons && !hasGear && !profile.bio && (
+        <div className="card" style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>This player hasn't filled in their loadout yet.</div>
+      )}
+    </div>
+  );
+}
+
 function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
-    return p[0]==="profile" && ["profile","waiver","bookings","orders","waitlist","vip"].includes(p[1]) ? p[1] : "profile";
+    return p[0]==="profile" && ["profile","waiver","bookings","orders","waitlist","vip","loadout"].includes(p[1]) ? p[1] : "profile";
   };
   const [tab, setTabState] = useState(getInitTab);
   const setTab = (t) => { setTabState(t); window.location.hash = "profile/" + t; };
@@ -5505,7 +5759,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       </div>
 
       <div className="nav-tabs profile-tabs">
-        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],["orders","📦 Orders"],["waitlist","🔔 Waitlist"],["vip","⭐ VIP"]].map(([t, label]) => (
+        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],["orders","📦 Orders"],["waitlist","🔔 Waitlist"],["vip","⭐ VIP"],["loadout","🎒 Loadout"]].map(([t, label]) => (
           <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{label}</button>
         ))}
       </div>
@@ -5520,6 +5774,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         <option value="orders">📦 Orders</option>
         <option value="waitlist">🔔 Waitlist</option>
         <option value="vip">⭐ VIP</option>
+        <option value="loadout">🎒 Loadout</option>
       </select>
 
       {tab === "profile" && (
@@ -6248,12 +6503,12 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         </div>
         );
       })()}
+
+      {tab === "loadout" && <LoadoutTab cu={cu} showToast={showToast} />}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════
-// ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 
 // ── AdminDiscountCodes ─────────────────────────────────────────
@@ -13390,7 +13645,7 @@ export default function App() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","leaderboard","profile","about","staff","contact","terms"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","leaderboard","profile","about","staff","contact","terms","player"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
@@ -13398,6 +13653,10 @@ export default function App() {
     return PUBLIC_PAGES.includes(p) ? p : "home";
   };
   const [page, setPageState] = useState(getInitialPage);
+  const [publicProfileId, setPublicProfileId] = useState(() => {
+    const parts = window.location.hash.replace("#","").split("/");
+    return parts[0] === "player" ? (parts[1] || null) : null;
+  });
 
   // setPage writes the hash AND updates state
   const setPage = (p) => {
@@ -13436,6 +13695,7 @@ export default function App() {
       const parts = window.location.hash.replace("#","").split("/");
       const p = parts[0];
       if (p === "admin") { setPageState("admin"); return; }
+      if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); return; }
       if (PUBLIC_PAGES.includes(p)) setPageState(p);
     };
     window.addEventListener("hashchange", onHash);
@@ -13752,6 +14012,7 @@ export default function App() {
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
         {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
         {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
+        {page === "player"      && <PublicProfilePage userId={publicProfileId} setPage={setPage} />}
         {page === "about"       && <AboutPage setPage={setPage} />}
         {page === "staff"       && <StaffPage staff={data.staff || []} />}
         {page === "contact"     && <ContactPage data={data} cu={cu} showToast={showToast} />}

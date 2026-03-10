@@ -595,6 +595,8 @@ export function normaliseProfile(p) {
     cardReason:         p.card_reason    || '',
     cardIssuedAt:       p.card_issued_at || null,
     canMarshal:         p.can_marshal    || false,
+    publicProfile:      p.public_profile ?? false,
+    bio:                p.bio            || '',
   }
 }
 
@@ -1127,3 +1129,43 @@ export const waitlistApi = {
     if (error) throw new Error(error.message);
   },
 };
+
+// ── Player Loadouts ───────────────────────────────────────────
+export const loadouts = wrapWithTimeout({
+  async getMyLoadout(userId) {
+    const { data, error } = await supabase
+      .from('player_loadouts')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) throw error
+    return data
+  },
+
+  async save(userId, loadout) {
+    const { error } = await supabase
+      .from('player_loadouts')
+      .upsert({ ...loadout, user_id: userId }, { onConflict: 'user_id' })
+    if (error) throw error
+  },
+
+  async getPublic(userId) {
+    const { data, error } = await supabase
+      .from('public_profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+    if (error) throw error
+    return data
+  },
+
+  async getAllPublic() {
+    const { data, error } = await supabase
+      .from('public_profiles')
+      .select('id, name, callsign, profile_pic, games_attended, vip_status, join_date, bio')
+      .order('games_attended', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+})
+
