@@ -5462,6 +5462,103 @@ function LoadoutTab({ cu, showToast }) {
   );
 }
 
+// ─── Shared rank & designation insignia — used in PublicProfilePage + AdminPlayers ───
+
+function RankInsignia({ rank, size = 56 }) {
+  const s = size; const c = "#c8ff00"; const dim = "#1e3008"; const gold = "#c8a000"; const cx = s / 2; const cy = s / 2;
+
+  // British Army style: OR ranks use chevrons (point-up), NCO/Officer use pips, top rank uses crown+pips
+  const Chevron = ({ y }) => (
+    <polyline points={`${s*.12},${y + s*.14} ${cx},${y} ${s*.88},${y + s*.14}`}
+      fill="none" stroke={c} strokeWidth={s * .04} strokeLinecap="round" strokeLinejoin="round"/>
+  );
+  const Pip = ({ px, py, filled = false }) => (
+    <g>
+      <polygon points={`${px},${py - s*.13} ${px + s*.12},${py - s*.04} ${px + s*.08},${py + s*.1} ${px - s*.08},${py + s*.1} ${px - s*.12},${py - s*.04}`}
+        fill={filled ? gold : "none"} stroke={gold} strokeWidth={s * .03}/>
+    </g>
+  );
+  const Crown = ({ px, py }) => {
+    const w = s * .32; const h = s * .2;
+    return (
+      <g fill="none" stroke={gold} strokeWidth={s * .035} strokeLinejoin="round">
+        <polyline points={`${px - w},${py + h*.4} ${px - w},${py - h*.3} ${px - w*.5},${py + h*.05} ${px},${py - h*.6} ${px + w*.5},${py + h*.05} ${px + w},${py - h*.3} ${px + w},${py + h*.4}`}/>
+        <line x1={px - w} y1={py + h*.4} x2={px + w} y2={py + h*.4}/>
+        <circle cx={px} cy={py - h*.6} r={s*.04} fill={gold}/>
+        <circle cx={px - w*.5} cy={py - h*.05} r={s*.03} fill={gold}/>
+        <circle cx={px + w*.5} cy={py - h*.05} r={s*.03} fill={gold}/>
+      </g>
+    );
+  };
+  const Bar = ({ y }) => <rect x={s*.1} y={y} width={s*.8} height={s*.055} fill={c} rx={s*.01}/>;
+
+  // British Army rank structure mapped to Swindon Airsoft ranks:
+  // Civilian — nothing
+  // Private — 1 chevron (Lance Corporal style)
+  // Recruit — 2 chevrons (Corporal)
+  // Operative — 3 chevrons (Sergeant)
+  // Senior Operative — 3 pips (Captain / officer pips)
+  // Field Commander — Crown + 2 pips (Colonel equivalent)
+  const gap = s * .135;
+  const insig = {
+    "CIVILIAN": (
+      <circle cx={cx} cy={cy} r={s*.1} fill="none" stroke={dim} strokeWidth={s*.025} strokeDasharray={`${s*.05},${s*.05}`}/>
+    ),
+    "PRIVATE": (
+      <Chevron y={cy - gap*.4}/>
+    ),
+    "RECRUIT": (
+      <g><Chevron y={cy - gap}/><Chevron y={cy + gap*.1}/></g>
+    ),
+    "OPERATIVE": (
+      <g><Chevron y={cy - gap*1.6}/><Chevron y={cy - gap*.45}/><Chevron y={cy + gap*.7}/></g>
+    ),
+    "SENIOR OPERATIVE": (
+      <g>
+        <Pip px={cx - s*.18} py={cy}/>
+        <Pip px={cx}         py={cy}/>
+        <Pip px={cx + s*.18} py={cy}/>
+      </g>
+    ),
+    "FIELD COMMANDER": (
+      <g>
+        <Crown px={cx} py={cy - s*.12}/>
+        <Pip px={cx - s*.15} py={cy + s*.2} filled/>
+        <Pip px={cx + s*.15} py={cy + s*.2} filled/>
+      </g>
+    ),
+  };
+
+  return (
+    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}>
+      <rect width={s} height={s} fill="#080a06" rx={s * .04}/>
+      {insig[rank] || <circle cx={cx} cy={cy} r={s*.08} fill={dim}/>}
+    </svg>
+  );
+}
+
+function DesignationInsignia({ desig, size = 56 }) {
+  const s = size; const c = "#4fc3f7"; const gold = "#c8a000"; const cx = s / 2; const cy = s / 2;
+  const icons = {
+    "GHOST":        <g stroke={c} fill="none" strokeWidth={s*.033}><ellipse cx={cx} cy={cy + s*.04} rx={s*.18} ry={s*.21}/><polyline points={`${cx - s*.18},${cy + s*.25} ${cx - s*.1},${cy + s*.18} ${cx - s*.04},${cy + s*.25} ${cx + s*.04},${cy + s*.18} ${cx + s*.1},${cy + s*.25} ${cx + s*.18},${cy + s*.18}`}/><circle cx={cx - s*.07} cy={cy - s*.02} r={s*.035} fill={c}/><circle cx={cx + s*.07} cy={cy - s*.02} r={s*.035} fill={c}/></g>,
+    "SNIPER":       <g stroke={c} fill="none" strokeWidth={s*.033}><circle cx={cx} cy={cy} r={s*.18}/><line x1={cx} y1={cy - s*.28} x2={cx} y2={cy - s*.18}/><line x1={cx} y1={cy + s*.18} x2={cx} y2={cy + s*.28}/><line x1={cx - s*.28} y1={cy} x2={cx - s*.18} y2={cy}/><line x1={cx + s*.18} y1={cy} x2={cx + s*.28} y2={cy}/><circle cx={cx} cy={cy} r={s*.04} fill={c}/></g>,
+    "MEDIC":        <g stroke={c} fill="rgba(79,195,247,.12)" strokeWidth={s*.038}><rect x={cx - s*.15} y={cy - s*.07} width={s*.3} height={s*.14} rx={s*.02}/><rect x={cx - s*.07} y={cy - s*.15} width={s*.14} height={s*.3} rx={s*.02}/></g>,
+    "DEMOLITIONS":  <g stroke={c} fill="none" strokeWidth={s*.033}><ellipse cx={cx} cy={cy + s*.04} rx={s*.11} ry={s*.16}/><line x1={cx} y1={cy - s*.12} x2={cx} y2={cy - s*.25}/><polyline points={`${cx - s*.07},${cy - s*.25} ${cx},${cy - s*.2} ${cx + s*.07},${cy - s*.25}`}/><line x1={cx - s*.18} y1={cy + s*.04} x2={cx + s*.18} y2={cy + s*.04}/></g>,
+    "RECON":        <g stroke={c} fill="none" strokeWidth={s*.033}><circle cx={cx} cy={cy} r={s*.08}/><path d={`M${cx - s*.15},${cy} Q${cx},${cy - s*.25} ${cx + s*.15},${cy}`}/><path d={`M${cx - s*.15},${cy} Q${cx},${cy + s*.25} ${cx + s*.15},${cy}`}/><line x1={cx - s*.28} y1={cy} x2={cx - s*.15} y2={cy}/><line x1={cx + s*.15} y1={cy} x2={cx + s*.28} y2={cy}/></g>,
+    "HEAVY GUNNER": <g stroke={c} fill="none" strokeWidth={s*.033}><rect x={cx - s*.2} y={cy - s*.08} width={s*.32} height={s*.11} rx={s*.03}/><rect x={cx + s*.08} y={cy - s*.12} width={s*.07} height={s*.04} rx={s*.01}/><circle cx={cx - s*.14} cy={cy + s*.15} r={s*.055}/><circle cx={cx + s*.04} cy={cy + s*.15} r={s*.055}/><line x1={cx - s*.28} y1={cy - s*.02} x2={cx - s*.2} y2={cy - s*.02}/></g>,
+    "SUPPORT":      <g stroke={c} fill="rgba(79,195,247,.1)" strokeWidth={s*.033}><path d={`M${cx},${cy - s*.25} L${cx + s*.22},${cy + s*.15} L${cx - s*.22},${cy + s*.15} Z`}/><line x1={cx} y1={cy - s*.12} x2={cx} y2={cy + s*.04}/><circle cx={cx} cy={cy + s*.1} r={s*.03} fill={c}/></g>,
+    "SQUAD LEADER": <g stroke={c} fill="none" strokeWidth={s*.033}><polygon points={`${cx},${cy - s*.22} ${cx + s*.07},${cy - s*.07} ${cx + s*.23},${cy - s*.07} ${cx + s*.11},${cy + s*.04} ${cx + s*.16},${cy + s*.22} ${cx},${cy + s*.13} ${cx - s*.16},${cy + s*.22} ${cx - s*.11},${cy + s*.04} ${cx - s*.23},${cy - s*.07} ${cx - s*.07},${cy - s*.07}`}/></g>,
+    "VETERAN":      <g strokeWidth={s*.033}><polygon points={`${cx},${cy - s*.22} ${cx + s*.07},${cy - s*.07} ${cx + s*.23},${cy - s*.07} ${cx + s*.11},${cy + s*.04} ${cx + s*.16},${cy + s*.22} ${cx},${cy + s*.13} ${cx - s*.16},${cy + s*.22} ${cx - s*.11},${cy + s*.04} ${cx - s*.23},${cy - s*.07} ${cx - s*.07},${cy - s*.07}`} fill="rgba(79,195,247,.08)" stroke={c}/><circle cx={cx} cy={cy - s*.01} r={s*.06} fill={c} stroke="none"/></g>,
+    "LEGEND":       <g strokeWidth={s*.033}><polygon points={`${cx},${cy - s*.24} ${cx + s*.09},${cy - s*.07} ${cx + s*.26},${cy - s*.07} ${cx + s*.12},${cy + s*.04} ${cx + s*.18},${cy + s*.24} ${cx},${cy + s*.14} ${cx - s*.18},${cy + s*.24} ${cx - s*.12},${cy + s*.04} ${cx - s*.26},${cy - s*.07} ${cx - s*.09},${cy - s*.07}`} fill="rgba(200,160,0,.15)" stroke={gold}/><polygon points={`${cx},${cy - s*.12} ${cx + s*.04},${cy - s*.03} ${cx + s*.12},${cy - s*.03} ${cx + s*.06},${cy + s*.02} ${cx + s*.08},${cy + s*.11} ${cx},${cy + s*.06} ${cx - s*.08},${cy + s*.11} ${cx - s*.06},${cy + s*.02} ${cx - s*.12},${cy - s*.03} ${cx - s*.04},${cy - s*.03}`} fill={gold} stroke="none"/></g>,
+  };
+  return (
+    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}>
+      <rect width={s} height={s} fill="#080a06" rx={s * .04}/>
+      {icons[desig] || <text x={cx} y={cy + s*.07} textAnchor="middle" fontSize={s*.35} fill={c}>{desig[0]}</text>}
+    </svg>
+  );
+}
+
 function PublicProfilePage({ userId, prevPage, setPage }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -5499,67 +5596,6 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
   const rankTitle   = customRank || autoRank;
   const hasWeapons  = profile.primary_name || profile.secondary_name || profile.support_name;
   const hasGear     = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
-
-  // SVG rank insignia — military chevron/pip style
-  const RankInsignia = ({ rank, size = 56 }) => {
-    const s = size; const c = "#c8ff00"; const dim = "#1e3008"; const gold = "#c8a000";
-    const Chevron = ({ y, col = c }) => (
-      <polyline points={`4,${y+8} ${s/2},${y} ${s-4},${y+8}`} fill="none" stroke={col} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-    );
-    const Pip = ({ cx, cy, col = c, r = 4 }) => (
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth="1.8"/>
-    );
-    const Diamond = ({ cx, cy, w = 7, col = gold }) => (
-      <polygon points={`${cx},${cy-w} ${cx+w},${cy} ${cx},${cy+w} ${cx-w},${cy}`} fill="none" stroke={col} strokeWidth="1.8"/>
-    );
-    const Crown = ({ cx, cy, col = gold }) => (
-      <g>
-        <polyline points={`${cx-10},${cy+5} ${cx-10},${cy-4} ${cx-5},${cy} ${cx},${cy-6} ${cx+5},${cy} ${cx+10},${cy-4} ${cx+10},${cy+5}`} fill="none" stroke={col} strokeWidth="1.8" strokeLinejoin="round"/>
-        <line x1={cx-10} y1={cy+5} x2={cx+10} y2={cy+5} stroke={col} strokeWidth="1.8"/>
-      </g>
-    );
-    const Bar = ({ y, col = c }) => (
-      <rect x={6} y={y} width={s-12} height={3} fill={col} rx={1}/>
-    );
-
-    const insig = {
-      "CIVILIAN":         <circle cx={s/2} cy={s/2} r={6} fill="none" stroke={dim} strokeWidth="1.5" strokeDasharray="3,3"/>,
-      "PRIVATE":          <Chevron y={s/2-2}/>,
-      "RECRUIT":          <g><Chevron y={s/2-8}/><Chevron y={s/2+2}/></g>,
-      "OPERATIVE":        <g><Chevron y={s/2-13}/><Chevron y={s/2-3}/><Chevron y={s/2+7}/></g>,
-      "SENIOR OPERATIVE": <g><Pip cx={s/2-10} cy={s/2} /><Pip cx={s/2} cy={s/2-10} /><Pip cx={s/2+10} cy={s/2} /><Pip cx={s/2} cy={s/2+10} /></g>,
-      "FIELD COMMANDER":  <g><Crown cx={s/2} cy={s/2-6}/><Bar y={s/2+10}/></g>,
-    };
-    return (
-      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display:"block" }}>
-        <rect width={s} height={s} fill="#080a06" rx={2}/>
-        {insig[rank] || <circle cx={s/2} cy={s/2} r={5} fill={dim}/>}
-      </svg>
-    );
-  };
-
-  // SVG designation icons
-  const DesignationInsignia = ({ desig, size = 56 }) => {
-    const s = size; const c = "#4fc3f7"; const bg = "#080a06";
-    const icons = {
-      "GHOST":        <g stroke={c} fill="none" strokeWidth="1.8"><ellipse cx={s/2} cy={s/2+2} rx={10} ry={12}/><polyline points={`${s/2-10},${s/2+14} ${s/2-6},${s/2+10} ${s/2-2},${s/2+14} ${s/2+2},${s/2+10} ${s/2+6},${s/2+14} ${s/2+10},${s/2+10}`}/><circle cx={s/2-4} cy={s/2-1} r={2} fill={c}/><circle cx={s/2+4} cy={s/2-1} r={2} fill={c}/></g>,
-      "SNIPER":       <g stroke={c} fill="none" strokeWidth="1.8"><circle cx={s/2} cy={s/2} r={10}/><line x1={s/2} y1={s/2-14} x2={s/2} y2={s/2-10}/><line x1={s/2} y1={s/2+10} x2={s/2} y2={s/2+14}/><line x1={s/2-14} y1={s/2} x2={s/2-10} y2={s/2}/><line x1={s/2+10} y1={s/2} x2={s/2+14} y2={s/2}/><circle cx={s/2} cy={s/2} r={2} fill={c}/></g>,
-      "MEDIC":        <g stroke={c} fill="none" strokeWidth="2"><rect x={s/2-8} y={s/2-4} width={16} height={8} rx={1}/><rect x={s/2-4} y={s/2-8} width={8} height={16} rx={1}/></g>,
-      "DEMOLITIONS":  <g stroke={c} fill="none" strokeWidth="1.8"><ellipse cx={s/2} cy={s/2+2} rx={6} ry={9}/><line x1={s/2} y1={s/2-7} x2={s/2} y2={s/2-14}/><polyline points={`${s/2-4},${s/2-14} ${s/2},${s/2-11} ${s/2+4},${s/2-14}`}/><line x1={s/2-10} y1={s/2+2} x2={s/2+10} y2={s/2+2}/></g>,
-      "RECON":        <g stroke={c} fill="none" strokeWidth="1.8"><circle cx={s/2} cy={s/2} r={4}/><path d={`M${s/2-8},${s/2} Q${s/2},${s/2-14} ${s/2+8},${s/2}`}/><path d={`M${s/2-8},${s/2} Q${s/2},${s/2+14} ${s/2+8},${s/2}`}/><line x1={s/2-14} y1={s/2} x2={s/2-8} y2={s/2}/><line x1={s/2+8} y1={s/2} x2={s/2+14} y2={s/2}/></g>,
-      "HEAVY GUNNER": <g stroke={c} fill="none" strokeWidth="1.8"><rect x={s/2-11} y={s/2-4} width={18} height={6} rx={2}/><rect x={s/2+4} y={s/2-6} width={4} height={2} rx={1}/><circle cx={s/2-8} cy={s/2+8} r={3}/><circle cx={s/2+2} cy={s/2+8} r={3}/><line x1={s/2-14} y1={s/2-1} x2={s/2-11} y2={s/2-1}/></g>,
-      "SUPPORT":      <g stroke={c} fill="none" strokeWidth="1.8"><path d={`M${s/2},${s/2-14} L${s/2+12},${s/2+8} L${s/2-12},${s/2+8} Z`}/><line x1={s/2} y1={s/2-6} x2={s/2} y2={s/2+2}/><circle cx={s/2} cy={s/2+5} r={1.5} fill={c}/></g>,
-      "SQUAD LEADER": <g stroke={c} fill="none" strokeWidth="1.8"><polygon points={`${s/2},${s/2-12} ${s/2+4},${s/2-4} ${s/2+13},${s/2-4} ${s/2+6},${s/2+2} ${s/2+9},${s/2+12} ${s/2},${s/2+6} ${s/2-9},${s/2+12} ${s/2-6},${s/2+2} ${s/2-13},${s/2-4} ${s/2-4},${s/2-4}`}/></g>,
-      "VETERAN":      <g stroke={c} fill="none" strokeWidth="1.8"><polygon points={`${s/2},${s/2-13} ${s/2+4},${s/2-4} ${s/2+14},${s/2-4} ${s/2+6},${s/2+2} ${s/2+9},${s/2+13} ${s/2},${s/2+7} ${s/2-9},${s/2+13} ${s/2-6},${s/2+2} ${s/2-14},${s/2-4} ${s/2-4},${s/2-4}`}/><circle cx={s/2} cy={s/2-1} r={3} fill={c}/></g>,
-      "LEGEND":       <g stroke="#c8a000" fill="none" strokeWidth="1.8"><polygon points={`${s/2},${s/2-14} ${s/2+5},${s/2-4} ${s/2+15},${s/2-4} ${s/2+7},${s/2+3} ${s/2+10},${s/2+14} ${s/2},${s/2+8} ${s/2-10},${s/2+14} ${s/2-7},${s/2+3} ${s/2-15},${s/2-4} ${s/2-5},${s/2-4}`}/></g>,
-    };
-    return (
-      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display:"block" }}>
-        <rect width={s} height={s} fill={bg} rx={2}/>
-        {icons[desig] || <text x={s/2} y={s/2+5} textAnchor="middle" fontSize={20} fill={c}>{desig[0]}</text>}
-      </svg>
-    );
-  };
 
   const SectionHeader = ({ label }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
@@ -5647,42 +5683,96 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
 
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 80px" }}>
 
-        {/* Field Stats grid — no UKARA */}
+        {/* Field Stats grid */}
         <div style={{ marginBottom: 24 }}>
           <SectionHeader label="Field Stats" />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
-            <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 38, color: "#c8ff00", lineHeight: 1 }}>{games}</div>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>DEPLOYMENTS</div>
+
+            {/* Deployments */}
+            <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10" }}>DEPLOYMENTS</div>
+              <svg width={48} height={48} viewBox="0 0 48 48">
+                <rect width={48} height={48} fill="#080a06" rx={3}/>
+                {/* Map with pin */}
+                <path d="M10,14 L22,10 L26,14 L38,10 L38,34 L26,38 L22,34 L10,38 Z" fill="none" stroke="#1e3008" strokeWidth="1.5"/>
+                <path d="M10,14 L22,10 L22,34 L10,38 Z" fill="rgba(200,255,0,.04)" stroke="#1e3008" strokeWidth="1"/>
+                <path d="M26,14 L38,10 L38,34 L26,38 Z" fill="rgba(200,255,0,.04)" stroke="#1e3008" strokeWidth="1"/>
+                <circle cx={24} cy={20} r={5} fill="none" stroke="#c8ff00" strokeWidth="1.8"/>
+                <circle cx={24} cy={20} r={1.5} fill="#c8ff00"/>
+                <path d="M24,25 Q18,30 18,35" fill="none" stroke="#c8ff00" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M24,25 Q30,30 30,35" fill="none" stroke="#c8ff00" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 36, color: "#c8ff00", lineHeight: 1 }}>{games}</div>
             </div>
-            <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-                <RankInsignia rank={rankTitle} size={52}/>
-              </div>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".06em" }}>{rankTitle}</div>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>RANK</div>
+
+            {/* Rank */}
+            <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10" }}>RANK</div>
+              <RankInsignia rank={rankTitle} size={48}/>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".06em" }}>{rankTitle}</div>
             </div>
+
+            {/* Designation — only if set */}
             {designation && (
-              <div style={{ background: "#0c1009", border: "1px solid rgba(79,195,247,.25)", padding: "14px 16px", textAlign: "center" }}>
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-                  <DesignationInsignia desig={designation} size={52}/>
-                </div>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, color: "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>DESIGNATION</div>
+              <div style={{ background: "#0c1009", border: "1px solid rgba(79,195,247,.25)", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#1a3a4a" }}>DESIGNATION</div>
+                <DesignationInsignia desig={designation} size={48}/>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
               </div>
             )}
-            <div style={{ background: "#0c1009", border: `1px solid ${profile.vip_status === "active" ? "rgba(200,160,0,.35)" : "#1a2808"}`, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, color: profile.vip_status === "active" ? "#c8a000" : "#2a3a10", lineHeight: 1, letterSpacing: ".04em" }}>
+
+            {/* VIP Status */}
+            <div style={{ background: "#0c1009", border: `1px solid ${profile.vip_status === "active" ? "rgba(200,160,0,.35)" : "#1a2808"}`, padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10" }}>VIP STATUS</div>
+              <svg width={48} height={48} viewBox="0 0 48 48">
+                <rect width={48} height={48} fill="#080a06" rx={3}/>
+                {profile.vip_status === "active" ? (
+                  <g>
+                    {/* Star */}
+                    <polygon points="24,8 27.5,18 38,18 29.5,24.5 32.5,35 24,28.5 15.5,35 18.5,24.5 10,18 20.5,18" fill="rgba(200,160,0,.2)" stroke="#c8a000" strokeWidth="1.8" strokeLinejoin="round"/>
+                    {/* Shine lines */}
+                    <line x1="24" y1="4" x2="24" y2="7" stroke="#c8a000" strokeWidth="1.5"/>
+                    <line x1="38" y1="14" x2="35.5" y2="16" stroke="#c8a000" strokeWidth="1.5"/>
+                    <line x1="10" y1="14" x2="12.5" y2="16" stroke="#c8a000" strokeWidth="1.5"/>
+                  </g>
+                ) : (
+                  <g>
+                    {/* Empty star outline, dimmed */}
+                    <polygon points="24,8 27.5,18 38,18 29.5,24.5 32.5,35 24,28.5 15.5,35 18.5,24.5 10,18 20.5,18" fill="none" stroke="#1e3008" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <line x1="16" y1="16" x2="32" y2="32" stroke="#1e3008" strokeWidth="1.5" strokeLinecap="round"/>
+                  </g>
+                )}
+              </svg>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: profile.vip_status === "active" ? "#c8a000" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
                 {profile.vip_status === "active" ? "ACTIVE" : profile.vip_status === "expired" ? "EXPIRED" : "STANDARD"}
               </div>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>VIP STATUS</div>
             </div>
-            <div style={{ background: "#0c1009", border: `1px solid ${profile.can_marshal ? "rgba(200,255,0,.25)" : "#1a2808"}`, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, color: profile.can_marshal ? "#c8ff00" : "#2a3a10", lineHeight: 1, letterSpacing: ".04em" }}>
-                {profile.can_marshal ? "QUALIFIED" : "—"}
+
+            {/* Marshal */}
+            <div style={{ background: "#0c1009", border: `1px solid ${profile.can_marshal ? "rgba(200,255,0,.25)" : "#1a2808"}`, padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10" }}>MARSHAL</div>
+              <svg width={48} height={48} viewBox="0 0 48 48">
+                <rect width={48} height={48} fill="#080a06" rx={3}/>
+                {profile.can_marshal ? (
+                  <g fill="none" stroke="#c8ff00" strokeWidth="1.8">
+                    {/* Shield */}
+                    <path d="M24,6 L36,11 L36,24 Q36,34 24,42 Q12,34 12,24 L12,11 Z" fill="rgba(200,255,0,.07)" stroke="#c8ff00" strokeWidth="1.8" strokeLinejoin="round"/>
+                    {/* Tick inside */}
+                    <polyline points="17,24 22,29 31,19" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2"/>
+                  </g>
+                ) : (
+                  <g fill="none" stroke="#1e3008" strokeWidth="1.8">
+                    <path d="M24,6 L36,11 L36,24 Q36,34 24,42 Q12,34 12,24 L12,11 Z" strokeLinejoin="round"/>
+                    <line x1="19" y1="19" x2="29" y2="29" strokeLinecap="round"/>
+                    <line x1="29" y1="19" x2="19" y2="29" strokeLinecap="round"/>
+                  </g>
+                )}
+              </svg>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: profile.can_marshal ? "#c8ff00" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
+                {profile.can_marshal ? "QUALIFIED" : "NOT QUALIFIED"}
               </div>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10", marginTop: 4 }}>MARSHAL</div>
             </div>
+
           </div>
         </div>
 
@@ -8933,43 +9023,62 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 10 }}>🎖 Public Profile Rank &amp; Designation</div>
 
               {/* Standard Rank */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>RANK — leave as Auto to use games-played calculation</label>
-                <select
-                  value={edit.customRank || ""}
-                  onChange={e => setEdit(p => ({ ...p, customRank: e.target.value || null }))}
-                  style={{ width: "100%", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
-                >
-                  <option value="">— Auto (based on games played) —</option>
-                  <option value="CIVILIAN">CIVILIAN</option>
-                  <option value="PRIVATE">PRIVATE ★</option>
-                  <option value="RECRUIT">RECRUIT ★★</option>
-                  <option value="OPERATIVE">OPERATIVE ★★★</option>
-                  <option value="SENIOR OPERATIVE">SENIOR OPERATIVE ★★★★</option>
-                  <option value="FIELD COMMANDER">FIELD COMMANDER ★★★★★</option>
-                </select>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6 }}>RANK — leave as Auto to use games-played calculation</label>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  {(edit.customRank || "CIVILIAN") && (
+                    <div style={{ flexShrink: 0, border: "1px solid #2a3a10", borderRadius: 4, overflow: "hidden" }}>
+                      <RankInsignia rank={edit.customRank || "CIVILIAN"} size={44}/>
+                    </div>
+                  )}
+                  <select
+                    value={edit.customRank || ""}
+                    onChange={e => setEdit(p => ({ ...p, customRank: e.target.value || null }))}
+                    style={{ flex: 1, background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
+                  >
+                    <option value="">— Auto (based on games played) —</option>
+                    <option value="CIVILIAN">CIVILIAN</option>
+                    <option value="PRIVATE">PRIVATE</option>
+                    <option value="RECRUIT">RECRUIT</option>
+                    <option value="OPERATIVE">OPERATIVE</option>
+                    <option value="SENIOR OPERATIVE">SENIOR OPERATIVE</option>
+                    <option value="FIELD COMMANDER">FIELD COMMANDER</option>
+                  </select>
+                </div>
               </div>
 
               {/* Special Designation */}
               <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>DESIGNATION — optional special role badge displayed alongside rank</label>
-                <select
-                  value={edit.designation || ""}
-                  onChange={e => setEdit(p => ({ ...p, designation: e.target.value || null }))}
-                  style={{ width: "100%", background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
-                >
-                  <option value="">— None —</option>
-                  <option value="GHOST">👻 GHOST</option>
-                  <option value="SNIPER">🎯 SNIPER</option>
-                  <option value="MEDIC">🩹 MEDIC</option>
-                  <option value="DEMOLITIONS">💥 DEMOLITIONS</option>
-                  <option value="RECON">🔭 RECON</option>
-                  <option value="HEAVY GUNNER">🔫 HEAVY GUNNER</option>
-                  <option value="SUPPORT">🛡 SUPPORT</option>
-                  <option value="SQUAD LEADER">⚔️ SQUAD LEADER</option>
-                  <option value="VETERAN">🎖 VETERAN</option>
-                  <option value="LEGEND">🏆 LEGEND</option>
-                </select>
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6 }}>DESIGNATION — optional special role badge displayed alongside rank</label>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  {edit.designation && (
+                    <div style={{ flexShrink: 0, border: "1px solid rgba(79,195,247,.3)", borderRadius: 4, overflow: "hidden" }}>
+                      <DesignationInsignia desig={edit.designation} size={44}/>
+                    </div>
+                  )}
+                  {!edit.designation && (
+                    <div style={{ flexShrink: 0, width: 44, height: 44, border: "1px solid #1a2808", borderRadius: 4, background: "#080a06", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 18, opacity: .3 }}>—</span>
+                    </div>
+                  )}
+                  <select
+                    value={edit.designation || ""}
+                    onChange={e => setEdit(p => ({ ...p, designation: e.target.value || null }))}
+                    style={{ flex: 1, background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
+                  >
+                    <option value="">— None —</option>
+                    <option value="GHOST">👻 GHOST</option>
+                    <option value="SNIPER">🎯 SNIPER</option>
+                    <option value="MEDIC">🩹 MEDIC</option>
+                    <option value="DEMOLITIONS">💥 DEMOLITIONS</option>
+                    <option value="RECON">🔭 RECON</option>
+                    <option value="HEAVY GUNNER">🔫 HEAVY GUNNER</option>
+                    <option value="SUPPORT">🛡 SUPPORT</option>
+                    <option value="SQUAD LEADER">⚔️ SQUAD LEADER</option>
+                    <option value="VETERAN">🎖 VETERAN</option>
+                    <option value="LEGEND">🏆 LEGEND</option>
+                  </select>
+                </div>
               </div>
 
               {(edit.customRank || edit.designation) && (
