@@ -934,7 +934,8 @@ function useToast() {
   const [toast, setToast] = useState(null);
   const show = (msg, type = "green") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    const duration = type === "red" ? 5000 : msg.length > 60 ? 5000 : 3000;
+    setTimeout(() => setToast(null), duration);
   };
   return [toast, show];
 }
@@ -1496,19 +1497,19 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
   const links = [
-    { id: "home", label: "Home", icon: "🏠" },
-    { id: "events", label: "Events", icon: "📅" },
-    { id: "shop", label: "Shop", icon: "🛒" },
-    { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
-    { id: "gallery", label: "Gallery", icon: "🖼" },
+    { id: "home", label: "Home", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg> },
+    { id: "events", label: "Events", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
+    { id: "shop", label: "Shop", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
+    { id: "leaderboard", label: "Leaderboard", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg> },
+    { id: "gallery", label: "Gallery", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
     {
-      id: "about", label: "About", icon: "ℹ️",
+      id: "about", label: "About", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4"/><path d="M10 9v6M10 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
       children: [
-        { id: "about", label: "About Us", icon: "ℹ️" },
-        { id: "qa", label: "Q&A / Rules", icon: "❓" },
-        { id: "staff", label: "Staff", icon: "🪖" },
-        { id: "contact", label: "Contact", icon: "✉️" },
-        { id: "terms", label: "Terms & Privacy", icon: "📄" },
+        { id: "about", label: "About Us", icon: "◈" },
+        { id: "qa", label: "Q&A / Rules", icon: "◈" },
+        { id: "staff", label: "Staff", icon: "◈" },
+        { id: "contact", label: "Contact", icon: "◈" },
+        { id: "terms", label: "Terms & Privacy", icon: "◈" },
       ]
     },
   ];
@@ -1572,7 +1573,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
                   <button className="btn btn-sm btn-gold" onClick={() => go("admin")}>⚙ Admin</button>
                 )}
                 {(cu.canMarshal && cu.role !== "admin") && (
-                  <button className="btn btn-sm" style={{ background:"rgba(0,180,100,.15)", border:"1px solid rgba(0,180,100,.4)", color:"#00c864" }} onClick={() => go("marshal")}>📷 Marshal</button>
+                  <button className="btn btn-sm" style={{ background:"rgba(0,180,100,.15)", border:"1px solid rgba(0,180,100,.4)", color:"#00c864", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => go("marshal")}><svg width="12" height="12" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>Marshal</button>
                 )}
                 <button className="btn btn-sm btn-ghost" onClick={() => go("profile")}>{cu.name.split(" ")[0]}</button>
                 <button className="btn btn-sm btn-ghost" onClick={signOut}>Sign Out</button>
@@ -1601,13 +1602,13 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
                 <div style={{ padding:"10px 20px 4px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase" }}>◈ ABOUT</div>
                 {l.children.map(c => (
                   <button key={c.id} className={`pub-nav-drawer-link ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)} style={{ paddingLeft:32 }}>
-                    <span style={{ fontSize:18 }}>{c.icon}</span> {c.label}
+                    <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"#3a5010", width:20, display:"inline-block" }}>{c.icon}</span> {c.label}
                   </button>
                 ))}
               </div>
             ) : (
               <button key={l.id} className={`pub-nav-drawer-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
-                <span style={{ fontSize: 20 }}>{l.icon}</span> {l.label}
+                <span style={{ display:"flex", alignItems:"center", width:20 }}>{l.icon}</span> {l.label}
               </button>
             )
           ))}
@@ -1616,28 +1617,28 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
             <>
               {cu.role === "admin" && (
                 <button className="pub-nav-drawer-link" onClick={() => go("admin")}>
-                  <span style={{ fontSize: 20 }}>⚙</span> Admin Panel
+                  <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> Admin Panel
                 </button>
               )}
               {(cu.canMarshal && cu.role !== "admin") && (
                 <button className="pub-nav-drawer-link" style={{ color: "#00c864" }} onClick={() => go("marshal")}>
-                  <span style={{ fontSize: 20 }}>📷</span> Marshal Check-In
+                  <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> Marshal Check-In
                 </button>
               )}
               <button className="pub-nav-drawer-link" onClick={() => go("profile")}>
-                <span style={{ fontSize: 20 }}>👤</span> {cu.name}
+                <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> {cu.name}
               </button>
               <button className="pub-nav-drawer-link" style={{ color: "var(--red)" }} onClick={signOut}>
-                <span style={{ fontSize: 20 }}>🚪</span> Sign Out
+                <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 3h4v14h-4M9 14l4-4-4-4M13 10H4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></span> Sign Out
               </button>
             </>
           ) : (
             <>
               <button className="pub-nav-drawer-link" onClick={() => { setAuthModal("login"); setDrawerOpen(false); }}>
-                <span style={{ fontSize: 20 }}>🔐</span> Login
+                <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="4" y="8" width="12" height="10" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M7 8V6a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> Login
               </button>
               <button className="pub-nav-drawer-link" onClick={() => { setAuthModal("register"); setDrawerOpen(false); }}>
-                <span style={{ fontSize: 20 }}>🎯</span> Register
+                <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="8" cy="8" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M14 14l4 4M2 18c0-3.3 2.7-6 6-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M15 7v4M17 9h-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> Register
               </button>
             </>
           )}
@@ -1648,14 +1649,14 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
           {[
-            { id: "home", icon: "🏠", label: "Home" },
-            { id: "events", icon: "📅", label: "Events" },
-            { id: "shop", icon: "🛒", label: "Shop" },
-            { id: "leaderboard", icon: "🏆", label: "Ranks" },
-            { id: "profile", icon: "👤", label: "Profile" },
+            { id: "home", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg>, label: "Home" },
+            { id: "events", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label: "Events" },
+            { id: "shop", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label: "Shop" },
+            { id: "leaderboard", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg>, label: "Ranks" },
+            { id: "profile", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label: "Profile" },
           ].map(b => (
             <button key={b.id} className={`bottom-nav-btn ${page === b.id ? "active" : ""}`} onClick={() => go(b.id)}>
-              <span className="bottom-nav-icon">{b.icon}</span>
+              <span className="bottom-nav-icon" style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>{b.icon}</span>
               <span>{b.label}</span>
             </button>
           ))}
@@ -1928,13 +1929,13 @@ function HomePage({ data, setPage }) {
       <div style={{ background:"#0d0d0d", borderTop:"1px solid #1a1a1a", borderBottom:"3px solid var(--accent)" }}>
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:0, maxWidth:1200, margin:"0 auto" }}>
           {[
-            { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
-            { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
-            { icon:"⭐", title:"VIP BENEFITS", desc:"10% off all bookings and shop items. Free game day on your birthday. Exclusive VIP-only events and UKARA registration support." },
-            { icon:"🎯", title:"RENTAL GEAR", desc:"Full kit hire available — gun, BBs, and face protection. No prior kit required to play." },
+            { svg: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 2L4 7v9c0 7 5.4 13.5 12 15 6.6-1.5 12-8 12-15V7L16 2z" stroke="#c8ff00" strokeWidth="1.5" fill="none"/><path d="M11 16l3 3 7-7" stroke="#c8ff00" strokeWidth="1.5" strokeLinecap="round"/></svg>, title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
+            { svg: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="12" cy="10" r="4" stroke="#c8ff00" strokeWidth="1.5"/><circle cx="22" cy="10" r="4" stroke="#c8ff00" strokeWidth="1.5"/><path d="M4 26c0-4.4 3.6-8 8-8h8c4.4 0 8 3.6 8 8" stroke="#c8ff00" strokeWidth="1.5" strokeLinecap="round"/></svg>, title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
+            { svg: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 19.5,12 30,12 21.5,18.5 24.5,28.5 16,22 7.5,28.5 10.5,18.5 2,12 12.5,12" stroke="#c8ff00" strokeWidth="1.5" fill="none"/></svg>, title:"VIP BENEFITS", desc:"10% off all bookings and shop items. Free game day on your birthday. Exclusive VIP-only events and UKARA registration support." },
+            { svg: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12" stroke="#c8ff00" strokeWidth="1.5"/><circle cx="16" cy="16" r="6" stroke="#c8ff00" strokeWidth="1.5"/><circle cx="16" cy="16" r="2" fill="#c8ff00"/><line x1="16" y1="2" x2="16" y2="6" stroke="#c8ff00" strokeWidth="1.5"/><line x1="16" y1="26" x2="16" y2="30" stroke="#c8ff00" strokeWidth="1.5"/><line x1="2" y1="16" x2="6" y2="16" stroke="#c8ff00" strokeWidth="1.5"/><line x1="26" y1="16" x2="30" y2="16" stroke="#c8ff00" strokeWidth="1.5"/></svg>, title:"RENTAL GEAR", desc:"Full kit hire available — gun, BBs, and face protection. No prior kit required to play." },
           ].map((feat, i) => (
             <div key={feat.title} className="feature-card" style={{ borderRadius:0, border:"none", borderRight: !isMobile && i < 3 ? "1px solid #2a2a2a" : "none", borderBottom: isMobile && i < 3 ? "1px solid #2a2a2a" : "none", padding:"32px 28px" }}>
-              <div style={{ fontSize:32, color:"var(--accent)", marginBottom:14 }}>{feat.icon}</div>
+              <div style={{ marginBottom:14 }}>{feat.svg}</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:17, fontWeight:800, letterSpacing:".08em", color:"#fff", marginBottom:8, textTransform:"uppercase" }}>{feat.title}</div>
               <div style={{ fontSize:13, color:"var(--muted)", lineHeight:1.7 }}>{feat.desc}</div>
             </div>
@@ -1964,7 +1965,10 @@ function HomePage({ data, setPage }) {
                     <div className="event-banner-img" style={{ position:"relative" }}>
                       {ev.banner
                         ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
-                        : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#333", fontSize:40 }}>📅</div>
+                        : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", background:"#0d1400", position:"relative", overflow:"hidden" }}>
+                            <svg width="80" height="80" viewBox="0 0 80 80" opacity="0.12" xmlns="http://www.w3.org/2000/svg"><ellipse cx="15" cy="12" rx="13" ry="9" fill="#c8ff00"/><ellipse cx="52" cy="28" rx="18" ry="11" fill="#c8ff00"/><ellipse cx="35" cy="52" rx="15" ry="10" fill="#c8ff00"/><ellipse cx="68" cy="62" rx="10" ry="8" fill="#c8ff00"/><ellipse cx="10" cy="60" rx="9" ry="7" fill="#c8ff00"/></svg>
+                            <div style={{ position:"absolute", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".3em", color:"rgba(200,255,0,.2)", textTransform:"uppercase" }}>SA</div>
+                          </div>
                       }
                       <div style={{ position:"absolute", top:12, left:12, display:"flex", flexDirection:"column", gap:4 }}>
                         <span style={{ background:"var(--accent)", color:"#000", fontSize:10, fontWeight:800, padding:"3px 10px", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em", textTransform:"uppercase" }}>SKIRMISH</span>
@@ -1973,10 +1977,10 @@ function HomePage({ data, setPage }) {
                     </div>
                     <div className="event-card-body">
                       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".06em", textTransform:"uppercase", marginBottom:10, color:"#fff" }}>{ev.title}</div>
-                      <div style={{ display:"flex", flexDirection:"column", gap:3, marginBottom:12 }}>
-                        <div style={{ fontSize:12, color:"var(--muted)" }}>📅 {fmtDate(ev.date)}</div>
-                        <div style={{ fontSize:12, color:"var(--muted)" }}>📍 {ev.location}</div>
-                        <div style={{ fontSize:12, color:"var(--muted)" }}>👥 {spotsLeft} spots left</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:12 }}>
+                        <div style={{ fontSize:12, color:"var(--muted)", display:"flex", alignItems:"center", gap:6 }}><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="1" stroke="#6b6b6b" strokeWidth="1.5"/><path d="M5 1v4M11 1v4M1 7h14" stroke="#6b6b6b" strokeWidth="1.5" strokeLinecap="round"/></svg>{fmtDate(ev.date)}</div>
+                        <div style={{ fontSize:12, color:"var(--muted)", display:"flex", alignItems:"center", gap:6 }}><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M8 1C5.2 1 3 3.2 3 6c0 3.8 5 9 5 9s5-5.2 5-9c0-2.8-2.2-5-5-5z" stroke="#6b6b6b" strokeWidth="1.5"/><circle cx="8" cy="6" r="1.5" fill="#6b6b6b"/></svg>{ev.location}</div>
+                        <div style={{ fontSize:12, color:"var(--muted)", display:"flex", alignItems:"center", gap:6 }}><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="6" r="3" stroke="#6b6b6b" strokeWidth="1.5"/><circle cx="11" cy="6" r="3" stroke="#6b6b6b" strokeWidth="1.5"/><path d="M1 14c0-2.8 2.2-4 5-4h4c2.8 0 5 1.2 5 4" stroke="#6b6b6b" strokeWidth="1.5" strokeLinecap="round"/></svg>{spotsLeft} spots left</div>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:17, color:"var(--accent)" }}>£{Math.min(ev.walkOnPrice, ev.rentalPrice)}</span>
@@ -2028,13 +2032,30 @@ function HomePage({ data, setPage }) {
       </div>
 
       {/* VIP BANNER */}
-      <div className="vip-banner">
-        <div style={{ maxWidth:700, margin:"0 auto" }}>
-          <div className="section-title" style={{ marginBottom:16 }}>BECOME A <span>VIP MEMBER</span></div>
-          <p style={{ fontSize:15, color:"#aaa", marginBottom:28, lineHeight:1.7 }}>
-            After 3 game days, unlock VIP membership for just £30/year. Get 10% off everything, a free game day on your birthday, access exclusive events, and UKARA registration support.
+      <div style={{ background:"linear-gradient(180deg,#0c1009 0%,#080d05 100%)", borderTop:"2px solid #2a3a10", borderBottom:"2px solid #2a3a10", padding:"52px 20px", position:"relative", overflow:"hidden" }}>
+        {/* Scanlines */}
+        <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.08) 3px,rgba(0,0,0,.08) 4px)", pointerEvents:"none" }} />
+        {/* Corner brackets */}
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div key={v+h} style={{ position:"absolute", width:24, height:24, zIndex:2,
+            top:v==="top"?12:"auto", bottom:v==="bottom"?12:"auto",
+            left:h==="left"?12:"auto", right:h==="right"?12:"auto",
+            borderTop:v==="top"?"2px solid #c8ff00":"none", borderBottom:v==="bottom"?"2px solid #c8ff00":"none",
+            borderLeft:h==="left"?"2px solid #c8ff00":"none", borderRight:h==="right"?"2px solid #c8ff00":"none",
+          }} />
+        ))}
+        <div style={{ maxWidth:700, margin:"0 auto", textAlign:"center", position:"relative", zIndex:1 }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".35em", color:"#3a5010", marginBottom:12, textTransform:"uppercase" }}>◈ — MEMBERSHIP — ◈</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(26px,5vw,44px)", letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:18 }}>
+            BECOME A <span style={{ color:"#c8ff00", textShadow:"0 0 24px rgba(200,255,0,.3)" }}>VIP OPERATIVE</span>
+          </div>
+          <p style={{ fontSize:14, color:"#7a9a50", marginBottom:28, lineHeight:1.8, fontFamily:"'Share Tech Mono',monospace", letterSpacing:".03em" }}>
+            After 3 game days, unlock VIP membership for just £30/year.<br/>10% off everything · Free birthday game day · Exclusive events · UKARA registration support.
           </p>
-          <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => setPage("vip")}>LEARN MORE</button>
+          <button style={{ background:"#c8ff00", color:"#000", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".2em", padding:"13px 40px", border:"none", cursor:"pointer", textTransform:"uppercase", transition:"background .15s" }}
+            onMouseEnter={e => e.currentTarget.style.background="#d8ff33"}
+            onMouseLeave={e => e.currentTarget.style.background="#c8ff00"}
+            onClick={() => setPage("vip")}>▸ LEARN MORE</button>
         </div>
       </div>
 
@@ -2992,9 +3013,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             </div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
               {[
-                { icon:"📅", val:fmtDate(ev.date), color:"#c8ff00" },
-                { icon:"⏱", val: ev.endTime ? `${ev.time}–${ev.endTime} GMT` : `${ev.time} GMT`, color:"#4fc3f7" },
-                { icon:"📍", val:ev.location, color:"#ce93d8" },
+                { icon:<svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="1" stroke="#c8ff00" strokeWidth="1.5"/><path d="M5 1v4M11 1v4M1 7h14" stroke="#c8ff00" strokeWidth="1.5" strokeLinecap="round"/></svg>, val:fmtDate(ev.date), color:"#c8ff00" },
+                { icon:<svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#4fc3f7" strokeWidth="1.5"/><path d="M8 5v3.5l2 2" stroke="#4fc3f7" strokeWidth="1.5" strokeLinecap="round"/></svg>, val: ev.endTime ? `${ev.time}–${ev.endTime} GMT` : `${ev.time} GMT`, color:"#4fc3f7" },
+                { icon:<svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M8 1C5.2 1 3 3.2 3 6c0 3.8 5 9 5 9s5-5.2 5-9c0-2.8-2.2-5-5-5z" stroke="#ce93d8" strokeWidth="1.5"/><circle cx="8" cy="6" r="1.5" fill="#ce93d8"/></svg>, val:ev.location, color:"#ce93d8" },
               ].map(({icon,val,color}) => (
                 <span key={val} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".12em", color, background:"rgba(0,0,0,.4)", border:`1px solid ${color}33`, padding:"3px 10px" }}>
                   {icon} {val}
@@ -4662,12 +4683,13 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
               background: isMe ? "rgba(200,255,0,.05)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.04)` : "#0c1009",
               border: `1px solid ${isMe ? "rgba(200,255,0,.4)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}`,
               position: "relative", overflow: "hidden",
-              transition: "border-color .15s",
+              transition: "border-color .15s, opacity .15s",
               cursor: player.publicProfile ? "pointer" : "default",
+              opacity: player.publicProfile ? 1 : 0.6,
             }}
               onClick={() => player.publicProfile && onPlayerClick && onPlayerClick(player.id)}
-              onMouseEnter={e => e.currentTarget.style.borderColor = isMe ? "rgba(200,255,0,.65)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.5)` : "#2a3a10"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = isMe ? "rgba(200,255,0,.4)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"}
+              onMouseEnter={e => { if (player.publicProfile) e.currentTarget.style.borderColor = isMe ? "rgba(200,255,0,.65)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.5)` : "#2a3a10"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = isMe ? "rgba(200,255,0,.4)" : isTop3 ? `rgba(${i===0?"200,160,0":i===1?"130,130,130":"139,69,19"},.25)` : "#1a2808"; }}
             >
               {/* Scanlines */}
               <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px)", pointerEvents: "none" }} />
@@ -4694,9 +4716,13 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: isMe ? "var(--accent)" : medalColor || "#c8ff00", lineHeight: 1 }}>{player.gamesAttended}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: ".2em", color: "#2a3a10", marginTop: 2 }}>DEPLOYMENTS</div>
-                {player.publicProfile && onPlayerClick && (
+                {player.publicProfile && onPlayerClick ? (
                   <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, letterSpacing: ".12em", color: "#3a5010", marginTop: 3, borderTop: "1px solid #1a2808", paddingTop: 3 }}>VIEW FILE ▸</div>
-                )}
+                ) : !player.publicProfile ? (
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, letterSpacing: ".1em", color: "#2a2a2a", marginTop: 3, borderTop: "1px solid #1a2808", paddingTop: 3, display:"flex", alignItems:"center", gap:3 }}>
+                    <svg width="7" height="7" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1" stroke="#2a2a2a" strokeWidth="1.5"/><path d="M4 6V4a2 2 0 014 0v2" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round"/></svg>GHOST
+                  </div>
+                ) : null}
               </div>
               {/* Left accent bar — accent for current user, medal colour for top 3 */}
               {(isTop3 || isMe) && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isMe ? "var(--accent)" : medalColor }} />}
@@ -5246,9 +5272,9 @@ function PlayerOrders({ cu }) {
   }, [cu.id]);
 
   const STATUS_META = {
-    pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: "⏳", label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
-    processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",   icon: "⚙️", label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
-    dispatched: { color: "#c8ff00", bg: "rgba(200,255,0,.08)",    border: "rgba(200,255,0,.25)",  icon: "📦", label: "Dispatched",        step: 3, desc: "Your order is on its way. Check your tracking number below." },
+    pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: "◈", label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
+    processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",   icon: "◈", label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
+    dispatched: { color: "#c8ff00", bg: "rgba(200,255,0,.08)",    border: "rgba(200,255,0,.25)",  icon: "▸", label: "Dispatched",        step: 3, desc: "Your order is on its way. Check your tracking number below." },
     completed:  { color: "#4caf50", bg: "rgba(76,175,80,.1)",     border: "rgba(76,175,80,.3)",   icon: "✅", label: "Delivered",         step: 4, desc: "Order complete. Enjoy your kit!" },
     cancelled:  { color: "var(--red)", bg: "rgba(220,50,50,.08)", border: "rgba(220,50,50,.25)",  icon: "✗",  label: "Cancelled",         step: 0, desc: "This order has been cancelled." },
   };
@@ -6116,7 +6142,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               {cu.profilePic ? <img src={cu.profilePic} onError={e=>{e.target.style.display='none';}} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : cu.name[0]}
             </div>
             <label style={{ position: "absolute", bottom: 0, right: 0, background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: picUploading ? "wait" : "pointer", fontSize: 12, opacity: picUploading ? 0.6 : 1 }}>
-              {picUploading ? "⏳" : "📷"}<input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePic} disabled={picUploading} />
+              {picUploading ? "..." : <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>}<input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePic} disabled={picUploading} />
             </label>
           </div>
           <div>
@@ -7339,19 +7365,19 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
   const NAV = [
     { id: "dashboard", label: "Dashboard", icon: "📊", group: "OPERATIONS" },
-    { id: "events", label: "Events & Bookings", icon: "📅", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
-    { id: "players", label: "Players", icon: "👥", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
-    { id: "shop", label: "Shop", icon: "🛒", badge: pendingOrders, badgeColor: "red", group: null },
-    { id: "leaderboard-admin", label: "Leaderboard", icon: "🏆", group: null },
+    { id: "events", label: "Events & Bookings", icon: "▸", badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
+    { id: "players", label: "Players", icon: "▸", badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
+    { id: "shop", label: "Shop", icon: "▸", badge: pendingOrders, badgeColor: "red", group: null },
+    { id: "leaderboard-admin", label: "Leaderboard", icon: "▸", group: null },
     { id: "revenue", label: "Revenue", icon: "💰", group: "ANALYTICS" },
     { id: "visitor-stats", label: "Visitor Stats", icon: "📈", group: null },
-    { id: "gallery-admin", label: "Gallery", icon: "🖼", group: null },
-    { id: "qa-admin", label: "Q&A", icon: "❓", group: null },
-    { id: "staff-admin", label: "Staff", icon: "🪖", group: null },
-    { id: "contact-admin", label: "Contact Depts", icon: "✉️", group: null },
+    { id: "gallery-admin", label: "Gallery", icon: "▸", group: null },
+    { id: "qa-admin", label: "Q&A", icon: "▸", group: null },
+    { id: "staff-admin", label: "Staff", icon: "▸", group: null },
+    { id: "contact-admin", label: "Contact Depts", icon: "▸", group: null },
     { id: "messages", label: "Site Messages", icon: "📢", group: null },
     { id: "cash", label: "Cash Sales", icon: "💵", group: "TOOLS" },
-    { id: "purchase-orders", label: "Purchase Orders", icon: "📋", group: null },
+    { id: "purchase-orders", label: "Purchase Orders", icon: "▸", group: null },
     { id: "discount-codes", label: "Discount Codes", icon: "🏷️", group: null },
     { id: "settings", label: "Settings", icon: "⚙️", group: "SYSTEM" },
   ];
@@ -7464,11 +7490,11 @@ function AdminDash({ data, setSection }) {
     pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers", color: "red" },
     data.users.filter(u => u.deleteRequest).length > 0 && { msg: `${data.users.filter(u => u.deleteRequest).length} account deletion request(s).`, section: "players", color: "red" },
     data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length > 0 && { msg: `${data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length} VIP application(s) awaiting review.`, section: "players", color: "red" },
-    outOfStock.length > 0 && { msg: outOfStock.length + " product(s) OUT OF STOCK: " + outOfStock.slice(0,3).map(p=>p.name).join(", ") + (outOfStock.length>3 ? " +" + (outOfStock.length-3) + " more" : "") + ".", section: "shop", color: "red", icon: "📦" },
-    outOfStockVariants.length > 0 && { msg: outOfStockVariants.length + " variant product(s) fully out of stock: " + outOfStockVariants.slice(0,2).map(p=>p.name).join(", ") + (outOfStockVariants.length>2 ? " +" + (outOfStockVariants.length-2) + " more" : "") + ".", section: "shop", color: "red", icon: "📦" },
+    outOfStock.length > 0 && { msg: outOfStock.length + " product(s) OUT OF STOCK: " + outOfStock.slice(0,3).map(p=>p.name).join(", ") + (outOfStock.length>3 ? " +" + (outOfStock.length-3) + " more" : "") + ".", section: "shop", color: "red", icon: "◈" },
+    outOfStockVariants.length > 0 && { msg: outOfStockVariants.length + " variant product(s) fully out of stock: " + outOfStockVariants.slice(0,2).map(p=>p.name).join(", ") + (outOfStockVariants.length>2 ? " +" + (outOfStockVariants.length-2) + " more" : "") + ".", section: "shop", color: "red", icon: "◈" },
     lowStock.length > 0 && { msg: lowStock.length + " product(s) running low (≤" + LOW_STOCK_THRESHOLD + "): " + lowStock.slice(0,3).map(p=>p.name+" ("+p.stock+")").join(", ") + (lowStock.length>3 ? " +" + (lowStock.length-3) + " more" : "") + ".", section: "shop", color: "gold", icon: "⚠️" },
     lowStockVariants.length > 0 && { msg: lowStockVariants.length + " variant product(s) have low stock variants.", section: "shop", color: "gold", icon: "⚠️" },
-    new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "📋" },
+    new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "◈" },
   ].filter(Boolean);
 
   // Quick action state
@@ -7509,11 +7535,11 @@ function AdminDash({ data, setSection }) {
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", color: "var(--muted)", marginBottom: 12, textTransform: "uppercase" }}>⚡ Quick Actions</div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {[
-            { icon: "📅", label: "New Event", sub: "Create & publish", action: () => setSection("events"), color: "var(--accent)", textColor: "#000" },
-            { icon: "👥", label: "Players", sub: `${data.users.filter(u=>u.role==="player").length} registered`, action: () => setSection("players"), color: "rgba(79,195,247,.12)", textColor: "#4fc3f7", border: "rgba(79,195,247,.3)" },
-            { icon: "🛒", label: "Shop Orders", sub: "Manage orders", action: () => setSection("shop"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
-            { icon: "📋", label: "Waivers", sub: unsigned > 0 ? `${unsigned} unsigned` : "All signed", action: () => setSection("unsigned-waivers"), color: unsigned > 0 ? "rgba(220,50,50,.12)" : "rgba(100,180,50,.08)", textColor: unsigned > 0 ? "var(--red)" : "var(--accent)", border: unsigned > 0 ? "rgba(220,50,50,.3)" : "rgba(100,180,50,.2)" },
-            { icon: "⭐", label: "VIP Queue", sub: data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length > 0 ? `${data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length} pending` : "No pending", action: () => setSection("players"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
+            { icon: "▸", label: "New Event", sub: "Create & publish", action: () => setSection("events"), color: "var(--accent)", textColor: "#000" },
+            { icon: "▸", label: "Players", sub: `${data.users.filter(u=>u.role==="player").length} registered`, action: () => setSection("players"), color: "rgba(79,195,247,.12)", textColor: "#4fc3f7", border: "rgba(79,195,247,.3)" },
+            { icon: "▸", label: "Shop Orders", sub: "Manage orders", action: () => setSection("shop"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
+            { icon: "▸", label: "Waivers", sub: unsigned > 0 ? `${unsigned} unsigned` : "All signed", action: () => setSection("unsigned-waivers"), color: unsigned > 0 ? "rgba(220,50,50,.12)" : "rgba(100,180,50,.08)", textColor: unsigned > 0 ? "var(--red)" : "var(--accent)", border: unsigned > 0 ? "rgba(220,50,50,.3)" : "rgba(100,180,50,.2)" },
+            { icon: "▸", label: "VIP Queue", sub: data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length > 0 ? `${data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length} pending` : "No pending", action: () => setSection("players"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
             { icon: "💰", label: "Revenue", sub: "View report", action: () => setSection("revenue"), color: "rgba(100,180,50,.08)", textColor: "var(--accent)", border: "rgba(100,180,50,.2)" },
             { icon: "⚙️", label: "Settings", sub: "Site config", action: () => setSection("settings"), color: "rgba(150,150,150,.08)", textColor: "var(--muted)", border: "rgba(150,150,150,.2)" },
           ].map(qa => (
@@ -7560,9 +7586,9 @@ function AdminDash({ data, setSection }) {
         {[
           { label: "Total Revenue", val: `£${revenue.toFixed(0)}`, sub: "From bookings", icon: "💰", color: "" },
           { label: "Bookings", val: allBookings.length, sub: `${data.events.length} events`, icon: "🎟", color: "gold" },
-          { label: "Registered Players", val: players, sub: "Active accounts", icon: "👥", color: "blue" },
-          { label: "Unsigned Waivers", val: unsigned, sub: unsigned > 0 ? "Action required" : "All clear", icon: "📋", color: unsigned > 0 ? "red" : "", subColor: unsigned > 0 ? "red" : "" },
-          { label: "Active Events", val: activeEvents, sub: "Upcoming", icon: "📅", color: "teal" },
+          { label: "Registered Players", val: players, sub: "Active accounts", icon: "◈", color: "blue" },
+          { label: "Unsigned Waivers", val: unsigned, sub: unsigned > 0 ? "Action required" : "All clear", icon: "◈", color: unsigned > 0 ? "red" : "", subColor: unsigned > 0 ? "red" : "" },
+          { label: "Active Events", val: activeEvents, sub: "Upcoming", icon: "◈", color: "teal" },
           { label: "Check-Ins", val: checkins, sub: "All events", icon: "✅", color: "purple" },
         ].map(({ label, val, sub, icon, color, subColor }) => (
           <div key={label} className={`stat-card ${color}`}>
@@ -7773,7 +7799,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
                 <div style={{ padding:"0 14px" }}>
                   {/* Ticket */}
                   <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
-                    <span>{currentBooking.type === "walkOn" ? "🎯" : "🪖"} {ticketLabel} ×{currentBooking.qty}</span>
+                    <span>{ticketLabel} ×{currentBooking.qty}</span>
                     <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(Number(ticketPrice) * currentBooking.qty).toFixed(2)}</span>
                   </div>
                   {/* Extras */}
@@ -10780,7 +10806,7 @@ function AdminVisitorStats() {
   }, {});
   const refRows = Object.entries(refCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 8);
 
-  const PAGE_ICONS = { home:"🏠", events:"📅", shop:"🛒", gallery:"🖼", staff:"🪖", leaderboard:"🏆", vip:"⭐", qa:"❓", contact:"✉️", profile:"👤" };
+  const PAGE_ICONS = { home:"◈", events:"◈", shop:"◈", gallery:"◈", staff:"◈", leaderboard:"◈", vip:"◈", qa:"◈", contact:"◈", profile:"◈" };
 
   const CORNERS = [["top","left"],["top","right"],["bottom","left"],["bottom","right"]];
 
@@ -11774,7 +11800,7 @@ function AboutPage({ setPage }) {
           </div>
         </div>
         <div style={{ background:"#0a0f07", border:"1px solid #2a3a10", padding:"24px 26px", marginBottom:44 }}>
-          <InfoRow icon="🎯">
+          <InfoRow icon={<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#c8ff00" strokeWidth="1.4"/><circle cx="10" cy="10" r="4" stroke="#c8ff00" strokeWidth="1.4"/><circle cx="10" cy="10" r="1.5" fill="#c8ff00"/></svg>}>
             New to Airsoft? We have a limited number of <span style={{ color:"#c8ff00" }}>rental kits available to pre-book</span>. Full details on the rental kit can be found in our Shop.
           </InfoRow>
           <InfoRow icon="👶">
@@ -11783,7 +11809,7 @@ function AboutPage({ setPage }) {
           <InfoRow icon="🥾">
             As this is a woodland site, <span style={{ color:"#c8ff00" }}>boots are a MUST</span> at all times — no trainers or open footwear.
           </InfoRow>
-          <InfoRow icon="📋">
+          <InfoRow icon={<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><rect x="4" y="2" width="12" height="16" rx="1" stroke="#c8ff00" strokeWidth="1.4"/><path d="M7 7h6M7 11h6M7 15h4" stroke="#c8ff00" strokeWidth="1.4" strokeLinecap="round"/></svg>}>
             Please ensure the <span style={{ color:"#c8ff00" }}>digital waiver is signed</span> before attending. You can do this from your Profile page.
           </InfoRow>
         </div>
@@ -14375,7 +14401,7 @@ export default function App() {
     const isSlowLoad = loadingSeconds >= 6;
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "var(--accent,#e05c00)", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
+        <div style={{ width: 48, height: 48, background: "#c8ff00", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#000", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
         <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>
           {isSlowLoad ? "WAKING UP DATABASE..." : "LOADING..."}
         </div>
