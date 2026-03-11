@@ -84,10 +84,13 @@ export const profiles = wrapWithTimeout({
   },
 
   async getAll() {
+    // Security: This returns all profiles including PII (phone, address, waiverData).
+    // Access is controlled by Supabase RLS — ensure your policy restricts this to admin role only.
+    // Non-admin users will get an empty array or error from RLS, which is handled gracefully.
     const { data, error } = await supabase
       .from('profiles').select('*').order('join_date')
     if (error) throw error
-    return data
+    return data || []
   },
 
   async update(id, patch) {
@@ -97,9 +100,18 @@ export const profiles = wrapWithTimeout({
   },
 
   async delete(id) {
-    // Deletes auth user too via cascade
-    const { error } = await supabase.auth.admin.deleteUser(id)
-    if (error) throw error
+    // Deletes auth user via Edge Function — never use auth.admin client-side (requires service role key)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/delete-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({ userId: id }),
+    })
+    const result = await res.json()
+    if (!res.ok || result.error) throw new Error(result.error || 'Delete failed')
   },
 
   async uploadProfilePic(userId, file) {
@@ -455,8 +467,16 @@ export const qa = wrapWithTimeout({
 })
 
 // ── Site settings ─────────────────────────────────────────────
+// Keys that must NEVER be stored in the DB or returned to the client
+const SENSITIVE_SETTING_KEYS = ['square_access_token']
+
 export const settings = wrapWithTimeout({
   async get(key) {
+    // Security: sensitive keys must live in Edge Function env vars, not this table
+    if (SENSITIVE_SETTING_KEYS.includes(key)) {
+      console.error(`Security: attempted to read sensitive key "${key}" from DB — use Edge Function env vars instead`)
+      return ''
+    }
     const { data, error } = await supabase
       .from('site_settings').select('value').eq('key', key).single()
     if (error) return ''
@@ -464,6 +484,10 @@ export const settings = wrapWithTimeout({
   },
 
   async set(key, value) {
+    // Security: block storing sensitive values in the DB
+    if (SENSITIVE_SETTING_KEYS.includes(key)) {
+      throw new Error(`Security: "${key}" must be stored in Edge Function environment variables, not the database.`)
+    }
     // upsert with explicit conflict target — works regardless of whether row exists
     const { error } = await supabase
       .from('site_settings')

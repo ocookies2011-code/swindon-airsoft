@@ -473,8 +473,8 @@ function useData() {
     // Convert camelCase patch to snake_case for Supabase
     const snakePatch = {};
     const map = {
-      name: "name", email: "email", phone: "phone", address: "address", role: "role",
-      callsign: "callsign",
+      name: "name", email: "email", phone: "phone", address: "address",
+      callsign: "callsign", // NOTE: "role" intentionally excluded — role changes must go via admin Edge Function
       gamesAttended: "games_attended", waiverSigned: "waiver_signed",
       waiverYear: "waiver_year", waiverData: "waiver_data", extraWaivers: "extra_waivers",
       waiverPending: "waiver_pending", vipStatus: "vip_status",
@@ -2128,9 +2128,11 @@ function CountdownPanel({ target }) {
 // ── Events Page ───────────────────────────────────────────
 // ── Send Ticket Email ────────────────────────────────────────
 // ── EmailJS shared helper ────────────────────────────────────
-const EMAILJS_SERVICE_ID  = "service_np4zvqs";
-const EMAILJS_TEMPLATE_ID = "template_d84acm9";
-const EMAILJS_PUBLIC_KEY  = "jC6heZ9LvgHiaHTFq";
+// Keys should be set in .env as VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY
+// The fallback values below work but are visible in source — move to .env for production
+const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID  || "service_np4zvqs";
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_d84acm9";
+const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY  || "jC6heZ9LvgHiaHTFq";
 async function sendEmail({ toEmail, toName, subject, htmlContent }) {
   if (!toEmail) throw new Error("No email address");
   if (!window.emailjs) {
@@ -3512,10 +3514,24 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         {tab === "map" && (
           <div style={{ borderRadius:4, overflow:"hidden", border:"1px solid var(--border)" }}>
             {ev.mapEmbed ? (
-              <div
-                style={{ width:"100%", height:"clamp(340px,60vh,620px)", lineHeight:0 }}
-                dangerouslySetInnerHTML={{ __html: ev.mapEmbed.replace(/height="[^"]*"/g,'height="100%"').replace(/width="[^"]*"/g,'width="100%"').replace(/<iframe /g,'<iframe style="width:100%;height:100%;border:0;display:block;" ') }}
-              />
+              <div style={{ width:"100%", height:"clamp(340px,60vh,620px)", lineHeight:0 }}>
+                {(() => {
+                  // Security: extract only the src from the embed HTML — never inject raw HTML
+                  // This prevents XSS while still rendering the map
+                  const srcMatch = ev.mapEmbed.match(/src=["']([^"']+)["']/);
+                  const src = srcMatch ? srcMatch[1] : null;
+                  // Only allow Google Maps and OpenStreetMap embed URLs
+                  const isSafeUrl = src && (
+                    src.startsWith("https://www.google.com/maps/") ||
+                    src.startsWith("https://maps.google.com/") ||
+                    src.startsWith("https://www.openstreetmap.org/") ||
+                    src.startsWith("https://embed.maps.apple.com/")
+                  );
+                  return isSafeUrl
+                    ? <iframe src={src} style={{ width:"100%", height:"100%", border:0, display:"block" }} title="Event location map" loading="lazy" referrerPolicy="no-referrer" />
+                    : <div style={{ height:260, background:"var(--bg4)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--red)", fontSize:13 }}>Invalid map URL — only Google Maps and OpenStreetMap embeds are supported.</div>;
+                })()}
+              </div>
             ) : (
               <div style={{ height:260, background:"var(--bg4)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--muted)", fontSize:13 }}>
                 No map configured for this event
@@ -12303,11 +12319,16 @@ function ContactPage({ data, cu, showToast }) {
   const [form, setForm]     = useState(blank);
   const [sending, setSending] = useState(false);
   const [sent, setSent]     = useState(false);
+  const lastSentRef = useRef(0);
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const selectedDept = departments.find(d => d.name === form.department);
 
   const handleSend = async () => {
+    const now = Date.now();
+    if (now - lastSentRef.current < 60000) {
+      showToast("Please wait a minute before sending another message.", "red"); return;
+    }
     if (!form.name.trim())    { showToast("Please enter your name", "red"); return; }
     if (!form.email.trim() || !form.email.includes("@")) { showToast("Please enter a valid email", "red"); return; }
     if (!form.department)     { showToast("Please select a department", "red"); return; }
@@ -12336,6 +12357,7 @@ function ContactPage({ data, cu, showToast }) {
           </div>
         `,
       });
+      lastSentRef.current = Date.now();
       setSent(true);
       showToast("Message sent successfully!");
     } catch (e) {
@@ -13285,8 +13307,14 @@ function AdminSettings({ showToast }) {
     try {
       await api.settings.set("square_app_id", squareAppId.trim());
       await api.settings.set("square_location_id", squareLocationId.trim());
-      await api.settings.set("square_access_token", squareAccessToken.trim());
       await api.settings.set("square_env", squareEnv);
+      // NOTE: square_access_token is NOT stored in the DB — it must be set as SQUARE_ACCESS_TOKEN
+      // in your Supabase Edge Function environment variables (square-payment / square-refund functions).
+      // Storing it in the DB would expose it to any authenticated user via the settings table.
+      if (squareAccessToken.trim()) {
+        showToast("⚠️ Access Token not saved to DB — paste it into your Edge Function env vars (see note below).", "gold");
+        return;
+      }
       // Reset cached config so next checkout reloads it
       _squareConfigLoaded = false;
       showToast("✅ Square settings saved! Changes take effect on next checkout.");
@@ -13368,6 +13396,11 @@ function AdminSettings({ showToast }) {
 
         <div className="form-group">
           <label>Access Token <span style={{ color: "var(--red)", fontSize: 10 }}>Required for refunds</span></label>
+          <div className="alert alert-red" style={{ fontSize: 11, marginBottom: 8, lineHeight: 1.6 }}>
+            🔒 <strong>Security:</strong> Do NOT save your Access Token here — it would be stored in the database where any logged-in user could read it.
+            Instead, set <code style={{ background:"rgba(255,255,255,.1)", padding:"1px 5px", borderRadius:2 }}>SQUARE_ACCESS_TOKEN</code> as an
+            environment variable in your Supabase Edge Function dashboard (square-payment &amp; square-refund functions).
+          </div>
           <div style={{ position: "relative" }}>
             <input
               type={showToken ? "text" : "password"}
@@ -14364,6 +14397,11 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
+      // SECURITY NOTE: This geo-check is client-side and can be bypassed with a VPN or DevTools.
+      // It is a UX-level restriction only, not a security control.
+      // For legally binding geo-restriction, enforce it server-side:
+      //   - Supabase Edge Function: check CF-IPCountry header
+      //   - Or your hosting provider's edge rules (Vercel, Netlify, Cloudflare)
       // Try three geo APIs in sequence
       const apis = [
         { url: "https://ipwho.is/",              getCode: g => g.success ? g.country_code : null },
