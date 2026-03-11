@@ -7,7 +7,7 @@ import { supabase } from './supabaseClient'
 // Every exported api object method is wrapped with withApiTimeout
 // so stale connections after browser sleep always fail in 10s
 // rather than hanging the UI forever.
-const API_TIMEOUT_MS = 10000
+const API_TIMEOUT_MS = 30000
 function withApiTimeout(promise) {
   let timer
   const race = new Promise((_, reject) => {

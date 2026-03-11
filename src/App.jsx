@@ -341,9 +341,11 @@ function useData() {
                   u.vipStatus = "expired";
                 }
 
-                // Birthday free game: VIP members get 1 free game credit in a 14-day window around their birthday
-                if (u.vipStatus === "active" && u.birthDate && u.birthdayCreditYear !== thisYear) {
-                  const bd = new Date(u.birthDate);
+                // Birthday free game day: VIP members get 1 free game day in a 14-day window around their birthday
+                // Uses waiver DOB only — cannot be gamed by editing profile
+                const waiverDob = u.waiverData?.dob;
+                if (u.vipStatus === "active" && waiverDob && u.birthdayCreditYear !== thisYear) {
+                  const bd = new Date(waiverDob);
                   const bdThisYear = new Date(thisYear, bd.getMonth(), bd.getDate());
                   const diffDays = Math.round((bdThisYear - now) / 86400000);
                   if (diffDays >= -7 && diffDays <= 7) {
@@ -1920,7 +1922,7 @@ function HomePage({ data, setPage }) {
           {[
             { icon:"🛡", title:"SAFETY FIRST", desc:"Full safety briefings, quality equipment, and experienced marshals on every game day." },
             { icon:"👥", title:"ALL SKILL LEVELS", desc:"Whether you're a beginner or veteran, we have game modes for everyone." },
-            { icon:"⭐", title:"VIP BENEFITS", desc:"10% off all bookings and shop items. Exclusive VIP-only events and UKARA registration support." },
+            { icon:"⭐", title:"VIP BENEFITS", desc:"10% off all bookings and shop items. Free game day on your birthday. Exclusive VIP-only events and UKARA registration support." },
             { icon:"🎯", title:"RENTAL GEAR", desc:"Full kit hire available — gun, BBs, and face protection. No prior kit required to play." },
           ].map((feat, i) => (
             <div key={feat.title} className="feature-card" style={{ borderRadius:0, border:"none", borderRight: !isMobile && i < 3 ? "1px solid #2a2a2a" : "none", borderBottom: isMobile && i < 3 ? "1px solid #2a2a2a" : "none", padding:"32px 28px" }}>
@@ -2022,7 +2024,7 @@ function HomePage({ data, setPage }) {
         <div style={{ maxWidth:700, margin:"0 auto" }}>
           <div className="section-title" style={{ marginBottom:16 }}>BECOME A <span>VIP MEMBER</span></div>
           <p style={{ fontSize:15, color:"#aaa", marginBottom:28, lineHeight:1.7 }}>
-            After 3 game days, unlock VIP membership for just £30/year. Get 10% off everything, access exclusive events, and UKARA registration support.
+            After 3 game days, unlock VIP membership for just £30/year. Get 10% off everything, a free game day on your birthday, access exclusive events, and UKARA registration support.
           </p>
           <button className="btn btn-primary" style={{ padding:"13px 36px", fontSize:14 }} onClick={() => setPage("vip")}>LEARN MORE</button>
         </div>
@@ -4855,6 +4857,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   const benefits = [
     "10% discount on all game day bookings",
     "10% discount on all shop purchases",
+    "Free game day on your birthday 🎂",
     "Access to exclusive VIP-only events",
     "Private game day bookings",
     "UKARA registration support",
@@ -5693,9 +5696,8 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
             <div style={{ flex: 1, minWidth: 180 }}>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".25em", color: "#3a5010", marginBottom: 4 }}>OPERATIVE FILE // SWINDON AIRSOFT</div>
               <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(22px,5vw,38px)", letterSpacing: ".1em", color: "#e8f0d8", textTransform: "uppercase", lineHeight: 1, marginBottom: 4 }}>
-                {profile.callsign || profile.name}
+                {profile.callsign || "OPERATIVE"}
               </div>
-              {profile.callsign && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a5010", marginBottom: 6 }}>{profile.name}</div>}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 {profile.vip_status === "active" && (
                   <span style={{ background: "rgba(200,160,0,.15)", border: "1px solid rgba(200,160,0,.4)", color: "#c8a000", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>★ VIP OPERATIVE</span>
@@ -5895,7 +5897,6 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
     email: cu.email || "",
     phone: cu.phone || "",
     ...parseAddress(cu.address),
-    birthDate: cu.birthDate || cu.waiverData?.dob || "",
   });
   const [emailSaving, setEmailSaving] = useState(false);
 
@@ -6016,7 +6017,6 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         callsign: edit.callsign,
         phone:    edit.phone,
         address:  composeAddress(edit),
-        birthDate: edit.birthDate || null,
       });
       showToast("Profile updated!");
     } catch(e) {
@@ -6109,19 +6109,14 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             <div className="form-group"><label>Full Name</label><input value={edit.name} onChange={e => setEdit(p => ({ ...p, name: e.target.value }))} /></div>
             <div className="form-group"><label>Phone</label><input value={edit.phone} onChange={e => setEdit(p => ({ ...p, phone: e.target.value }))} placeholder="07700 000000" /></div>
           </div>
-          {/* Date of Birth — used for VIP birthday free game credit */}
-          <div className="form-group">
-            <label>Date of Birth
-              {cu.vipStatus === "active" && <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: "var(--gold)", marginLeft: 8, fontSize: 11 }}>⭐ VIPs receive £25 credit in the week around their birthday</span>}
-            </label>
-            <input
-              type="date"
-              value={edit.birthDate || ""}
-              onChange={e => setEdit(p => ({ ...p, birthDate: e.target.value }))}
-              style={{ maxWidth: 200 }}
-            />
-            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Used for age verification and VIP birthday perks. Never shared publicly.</div>
-          </div>
+          {/* Date of Birth — read-only, taken from signed waiver — cannot be changed to prevent gaming birthday perk */}
+          {cu.waiverData?.dob && (
+            <div className="form-group">
+              <label>Date of Birth</label>
+              <input type="date" value={cu.waiverData.dob} readOnly disabled style={{ maxWidth: 200, opacity: 0.6, cursor: "not-allowed" }} />
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Taken from your signed waiver. Used for age verification and your VIP birthday free game day perk.</div>
+            </div>
+          )}
           <div className="form-group">
             <label>Player Callsign <span style={{ color:"var(--muted)", fontWeight:400, letterSpacing:0, textTransform:"none" }}>(shown on leaderboard instead of your real name)</span></label>
             <input
@@ -6731,8 +6726,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         const isExpired   = expiry && expiry < now;
         const nearExpiry  = expiry && !isExpired && (expiry - now) < THREE_WEEKS;
 
-        // Birthday credit status
-        const bdRaw = cu.birthDate || cu.waiverData?.dob;
+        // Birthday free game day — waiver DOB only, cannot be gamed
+        const bdRaw = cu.waiverData?.dob;
         const bd = bdRaw ? new Date(bdRaw) : null;
         const bdThisYear = bd ? new Date(thisYear, bd.getMonth(), bd.getDate()) : null;
         const bdDiffDays = bdThisYear ? Math.round((bdThisYear - now) / 86400000) : null;
@@ -6748,7 +6743,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               <span style={{ fontSize: 32 }}>🎂</span>
               <div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: "var(--gold)", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", letterSpacing: ".06em" }}>Happy Birthday from Swindon Airsoft! 🎉</div>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>As a VIP member, we've added <strong style={{ color: "var(--gold)" }}>£25 credit</strong> to your account — enjoy a free game day on us!</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>As a VIP member, we've added a <strong style={{ color: "var(--gold)" }}>FREE GAME DAY</strong> to your account — enjoy it on us! Book any game day and it's on the house.</div>
               </div>
             </div>
           )}
@@ -6756,7 +6751,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             <div style={{ background: "rgba(200,160,0,.06)", border: "1px solid rgba(200,160,0,.2)", borderRadius: 6, padding: "10px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
               <span style={{ fontSize: 24 }}>🎂</span>
               <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                Your birthday is in <strong style={{ color: "var(--gold)" }}>{bdDiffDays} days</strong> — as a VIP, you'll automatically receive £25 credit for a free game day!
+                Your birthday is in <strong style={{ color: "var(--gold)" }}>{bdDiffDays} days</strong> — as a VIP, you'll automatically receive a <strong style={{ color: "var(--gold)" }}>FREE GAME DAY</strong> added to your account!
               </div>
             </div>
           )}
@@ -6764,20 +6759,20 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             <div style={{ background: "rgba(200,160,0,.06)", border: "1px solid rgba(200,160,0,.2)", borderRadius: 6, padding: "10px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
               <span style={{ fontSize: 22 }}>🎂</span>
               <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                <strong style={{ color: "var(--gold)" }}>VIP Birthday Perk:</strong> Add your date of birth in your Profile settings to receive £25 credit for a free game day each year around your birthday!
+                <strong style={{ color: "var(--gold)" }}>VIP Birthday Perk:</strong> Once you've signed a waiver with your date of birth, you'll automatically receive a <strong style={{ color: "var(--gold)" }}>free game day</strong> each year around your birthday!
               </div>
             </div>
           )}
 
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
-          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
+          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, a free game day on their birthday, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
           {[
             { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
             cu.vipStatus === "active" && expiry && { label: "Expires", value: expiry.toLocaleDateString("en-GB"), ok: !isExpired },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
             { label: "VIP Discount", value: "10% off game days & shop", ok: cu.vipStatus === "active" },
-            cu.vipStatus === "active" && bd && { label: "Birthday Credit", value: birthdayCreditAwarded ? `£25 awarded ${thisYear} 🎂` : `£25 credit in birthday week`, ok: true },
+            cu.vipStatus === "active" && bd && { label: "Birthday Perk", value: birthdayCreditAwarded ? `Free game day awarded ${thisYear} 🎂` : `Free game day in birthday week`, ok: true },
           ].filter(Boolean).map(({ label, value, ok }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg4)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
               <span className="text-muted">{label}</span>
