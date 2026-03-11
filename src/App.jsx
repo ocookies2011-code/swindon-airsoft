@@ -2350,6 +2350,8 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
   </div>`;
   await sendEmail({ toEmail: cu.email, toName: cu.name, subject: `Booking Cancelled — ${eventTitle}`, htmlContent });
 }
+
+async function sendWelcomeEmail({ name, email }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
