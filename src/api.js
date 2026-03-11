@@ -103,13 +103,15 @@ export const profiles = wrapWithTimeout({
   },
 
   async uploadProfilePic(userId, file) {
-    const ext = file.name.split('.').pop()
-    const path = `profiles/${userId}/avatar.${ext}`
-    const { error: upErr } = await supabase.storage.from('images').upload(path, file, { upsert: true })
+    // Always store as avatar.jpg regardless of source format — ensures old files are replaced, never orphaned
+    const path = `profiles/${userId}/avatar.jpg`
+    const { error: upErr } = await supabase.storage.from('images').upload(path, file, { upsert: true, contentType: 'image/jpeg' })
     if (upErr) throw upErr
+    // Bust cache by appending a timestamp query param
     const { data } = supabase.storage.from('images').getPublicUrl(path)
-    await supabase.from('profiles').update({ profile_pic: data.publicUrl }).eq('id', userId)
-    return data.publicUrl
+    const urlWithBust = `${data.publicUrl}?t=${Date.now()}`
+    await supabase.from('profiles').update({ profile_pic: urlWithBust }).eq('id', userId)
+    return urlWithBust
   },
 
   async uploadVipId(userId, file, slot) {

@@ -343,21 +343,28 @@ function useData() {
 
                 // Birthday free game day: VIP members get 1 free game day in a 14-day window around their birthday
                 // Uses waiver DOB only — cannot be gamed by editing profile
+                // Guard: only proceeds if birthdayCreditYear !== thisYear (DB update is the true lock)
                 const waiverDob = u.waiverData?.dob;
                 if (u.vipStatus === "active" && waiverDob && u.birthdayCreditYear !== thisYear) {
-                  const bd = new Date(waiverDob);
-                  const bdThisYear = new Date(thisYear, bd.getMonth(), bd.getDate());
-                  const diffDays = Math.round((bdThisYear - now) / 86400000);
+                  // Parse DOB components explicitly to avoid UTC vs local midnight mismatch
+                  const [dobYear, dobMonth, dobDay] = waiverDob.split("-").map(Number);
+                  const bdThisYear = new Date(thisYear, dobMonth - 1, dobDay); // local midnight
+                  const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const diffDays = Math.round((bdThisYear - nowMidnight) / 86400000);
                   if (diffDays >= -7 && diffDays <= 7) {
-                    // Within birthday window — award credit
-                    const grantAmount = 25; // 1 free standard game day (£25 credit)
-                    const newCredits = (u.credits || 0) + grantAmount;
-                    supabase.from('profiles').update({
-                      credits: newCredits,
-                      birthday_credit_year: thisYear,
-                    }).eq('id', u.id).catch(() => {});
-                    u.credits = newCredits;
-                    u.birthdayCreditYear = thisYear;
+                    // Use atomic increment via RPC to prevent race condition double-award
+                    // Only updates if birthday_credit_year IS NULL or != thisYear (DB-enforced)
+                    const grantAmount = 25;
+                    supabase.rpc("award_birthday_credit", {
+                      p_user_id: u.id,
+                      p_amount: grantAmount,
+                      p_year: thisYear,
+                    }).then(({ error }) => {
+                      if (!error) {
+                        u.credits = (u.credits || 0) + grantAmount;
+                        u.birthdayCreditYear = thisYear;
+                      }
+                    }).catch(() => {});
                   }
                 }
               });
@@ -476,6 +483,7 @@ function useData() {
       deleteRequest: "delete_request", permissions: "permissions",
       publicProfile: "public_profile", bio: "bio", customRank: "custom_rank", designation: "designation",
       birthDate: "birth_date", birthdayCreditYear: "birthday_credit_year",
+      cardStatus: "card_status", cardReason: "card_reason", cardIssuedAt: "card_issued_at",
     };
     Object.entries(patch).forEach(([k, v]) => {
       if (map[k]) snakePatch[map[k]] = v;
@@ -2309,7 +2317,39 @@ async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
   await sendEmail({ toEmail, toName, subject: `🎯 A slot just opened — ${ev.title}`, htmlContent });
 }
 
-async function sendWelcomeEmail({ name, email }) {
+async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, refundAmount, isCredits, isRental }) {
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "—";
+  const refundLine = isCredits
+    ? `£${refundAmount.toFixed(2)} has been added to your game credits and will automatically apply at your next checkout.`
+    : `£${refundAmount.toFixed(2)} has been refunded to your original payment method. Please allow 3–5 working days.`;
+  const rentalNote = isRental ? `<p style="margin:8px 0 0;font-size:12px;color:#888;">A 10% rental preparation fee has been applied to this cancellation.</p>` : "";
+  const htmlContent = `
+  <div style="background:#0a0a0a;font-family:'Barlow Condensed',Arial,sans-serif;padding:32px;max-width:560px;margin:0 auto;border:1px solid #1a1a1a;">
+    <div style="border-bottom:2px solid #c8ff00;padding-bottom:16px;margin-bottom:24px;">
+      <div style="font-size:11px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:6px;">SWINDON AIRSOFT</div>
+      <div style="font-size:26px;font-weight:900;color:#e8f0d8;letter-spacing:.08em;text-transform:uppercase;">Booking Cancelled</div>
+    </div>
+    <p style="color:#8a9a70;font-size:14px;line-height:1.6;margin:0 0 20px;">Hi ${cu.name || "Operative"},</p>
+    <p style="color:#8a9a70;font-size:14px;line-height:1.6;margin:0 0 24px;">Your booking has been successfully cancelled. Here's a summary:</p>
+    <div style="background:#111;border:1px solid #1e2a10;padding:16px 20px;margin-bottom:20px;">
+      ${[
+        ["Event", eventTitle || "—"],
+        ["Date", fmtDate(eventDate)],
+        ["Ticket", ticketType === "rental" ? "Rental Package" : "Walk-On"],
+        ["Refund", `£${refundAmount.toFixed(2)} ${isCredits ? "(game credits)" : "(to original payment)"}`],
+      ].map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a2808;font-size:13px;"><span style="color:#3a5010;letter-spacing:.08em;text-transform:uppercase;">${k}</span><span style="color:#c8e878;font-weight:700;">${v}</span></div>`).join("")}
+    </div>
+    <p style="color:#8a9a70;font-size:13px;line-height:1.6;margin:0 0 8px;">${refundLine}</p>
+    ${rentalNote}
+    <div style="margin-top:28px;text-align:center;">
+      <a href="https://swindonairsoft.co.uk/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK ANOTHER GAME →</a>
+    </div>
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid #1a1a1a;font-size:11px;color:#2a2a2a;text-align:center;">
+      Questions? Contact us at swindonairsoft.co.uk · Swindon Airsoft
+    </div>
+  </div>`;
+  await sendEmail({ toEmail: cu.email, toName: cu.name, subject: `Booking Cancelled — ${eventTitle}`, htmlContent });
+}
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
@@ -2634,6 +2674,12 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
   const joinWaitlist = async (eventId, ticketType) => {
     if (!cu) { showToast("Please log in to join the waitlist", "red"); return; }
+    if (cu.cardStatus === "red" || cu.cardStatus === "black") {
+      showToast("Your account is currently suspended — you cannot join the waitlist.", "red"); return;
+    }
+    if (!(cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) && cu.role !== "admin") {
+      showToast("You must have a valid waiver signed this year to join the waitlist.", "red"); return;
+    }
     setWaitlistBusy(true);
     try {
       await waitlistApi.join({ eventId, userId: cu.id, userName: cu.name, userEmail: cu.email, ticketType });
@@ -2754,7 +2800,15 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       try {
         const extrasSnapshot = Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0));
 
-        // ── Stock check: verify extras haven't sold out between cart and payment ──
+        // ── Duplicate booking guard: check DB for existing booking by this user for this event ──
+        const { data: existingBookings } = await supabase
+          .from('bookings').select('id').eq('event_id', ev.id).eq('user_id', cu.id).limit(1);
+        if (existingBookings && existingBookings.length > 0) {
+          clearTimeout(safety);
+          setBookingBusy(false);
+          setSquareError("You already have a booking for this event. If you need to change it, please cancel your existing booking first.");
+          return;
+        }
         const extrasToCheck = Object.entries(extrasSnapshot).filter(([,qty]) => qty > 0);
         if (extrasToCheck.length > 0) {
           const productIds = [...new Set(extrasToCheck.map(([key]) => {
@@ -4403,7 +4457,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
 }
 
 // ── Marshal Check-In Page ─────────────────────────────────
-function MarshalCheckinPage({ data, showToast, save }) {
+function MarshalCheckinPage({ data, showToast, save, updateUser }) {
   const [evId, setEvId] = useState(data.events[0]?.id || "");
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -4425,6 +4479,13 @@ function MarshalCheckinPage({ data, showToast, save }) {
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast(`✅ ${booking.userName} checked in! Total games: ${actualCount}`);
+
+      // Auto-clear red card after serving their 1-game ban
+      const player = data.users?.find(u => u.id === booking.userId);
+      if (player?.cardStatus === "red" && updateUser) {
+        await updateUser(booking.userId, { cardStatus: "none", cardReason: "" });
+        showToast(`🟢 Red card cleared for ${booking.userName} — ban served.`, "gold");
+      }
     } catch (e) {
       showToast("Check-in failed: " + e.message, "red");
     } finally { setBusy(false); }
@@ -4896,11 +4957,17 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
       <div className="page-content" style={{ maxWidth:960 }}>
 
         {/* Status banner for logged-in users */}
-        {isVip && (
-          <div className="alert alert-green mb-2" style={{ display:"flex", alignItems:"center", gap:10, fontSize:14 }}>
-            ⭐ You are an active VIP member! Your membership is valid through December {new Date().getFullYear()}.
-          </div>
-        )}
+        {isVip && (() => {
+          const vipExpiry = cu?.vipExpiresAt ? new Date(cu.vipExpiresAt) : null;
+          const expiryStr = vipExpiry
+            ? vipExpiry.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+            : `December ${new Date().getFullYear()}`;
+          return (
+            <div className="alert alert-green mb-2" style={{ display:"flex", alignItems:"center", gap:10, fontSize:14 }}>
+              ⭐ You are an active VIP member! Your membership is valid through {expiryStr}.
+            </div>
+          );
+        })()}
         {hasPending && (
           <div className="alert alert-blue mb-2" style={{ fontSize:14 }}>
             ⏳ Your VIP application is pending admin review. We'll notify you once it's approved.
@@ -5687,7 +5754,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
             <div style={{ width: 88, height: 88, border: "2px solid #c8ff00", overflow: "hidden", background: "#0a0c08", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 900, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0, position: "relative" }}>
               {profile.profile_pic
                 ? <img src={profile.profile_pic} alt="" onError={e => { e.target.style.display="none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.8)" }} />
-                : (profile.callsign || profile.name || "?")[0].toUpperCase()}
+                : (profile.callsign || "?")[0].toUpperCase()}
               {profile.can_marshal && (
                 <div style={{ position: "absolute", bottom: 0, right: 0, background: "#c8ff00", color: "#000", fontSize: 7, fontWeight: 900, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em", padding: "2px 4px" }}>MSHL</div>
               )}
@@ -5988,6 +6055,20 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           ? `Booking cancelled. £${refundAmount.toFixed(2)} added as game credits (within 48h of event).`
           : `Booking cancelled. £${refundAmount.toFixed(2)} refunded.`
       );
+
+      // Send cancellation confirmation email (fire & forget)
+      if (cu.email) {
+        sendCancellationEmail({
+          cu,
+          eventTitle: b.eventTitle,
+          eventDate:  b.eventDate,
+          ticketType: b.type,
+          refundAmount,
+          isCredits,
+          isRental,
+        }).then(() => showToast("📧 Cancellation confirmation sent.")).catch(() => {});
+      }
+
       setCancelModal(null);
     } catch (e) {
       showToast("Cancellation failed: " + (e.message || String(e)), "red");
@@ -14414,7 +14495,7 @@ export default function App() {
           />
         )}
         {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} onPlayerClick={id => { setPrevPage("leaderboard"); setPublicProfileId(id); setPageState("player"); window.location.hash = "player/" + id; }} />}
-        {page === "marshal"     && cu?.canMarshal && <MarshalCheckinPage data={data} showToast={showToast} save={save} />}
+        {page === "marshal"     && cu?.canMarshal && <MarshalCheckinPage data={data} showToast={showToast} save={save} updateUser={updateUserAndRefresh} />}
         {page === "marshal"     && !cu?.canMarshal && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Access denied.</div>}
         {page === "gallery"     && <GalleryPage data={data} />}
         {page === "qa"          && <QAPage data={data} />}
