@@ -2119,7 +2119,7 @@ function HomePage({ data, setPage }) {
               <div>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#1a4a5a", textTransform:"uppercase", marginBottom:3 }}>INDEPENDENT TECHNICIAN</div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
-                  AIRSOFT <span style={{ color:"#4fc3f7" }}>TECH SERVICES</span>
+                  AIRSOFT <span style={{ color:"#4fc3f7" }}>TECH SERVICES (GBB/AEG)</span>
                 </div>
               </div>
             </div>
