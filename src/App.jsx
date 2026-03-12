@@ -318,7 +318,7 @@ function useData() {
             albums: albumList,
             qa: qaList,
             staff: staffList,
-            homeMsg,
+            homeMsg: (() => { try { const p = JSON.parse(homeMsg); return Array.isArray(p) ? p : (homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []); } catch { return homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []; } })(),
             socialFacebook,
             socialInstagram,
             socialWhatsapp,
@@ -854,26 +854,11 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .pub-footer-social-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
 
 /* ── TICKER / MARQUEE ── */
-.ticker-wrap{overflow:hidden;background:#000;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:10px 24px;white-space:nowrap;position:relative;}
-.ticker-wrap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:60px;background:linear-gradient(90deg,#000,transparent);z-index:2;pointer-events:none;}
-.ticker-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:60px;background:linear-gradient(270deg,#000,transparent);z-index:2;pointer-events:none;}
-.ticker-track{display:inline-block;animation:ticker-bounce 35s ease-in-out infinite;}
-.ticker-track:hover{animation-play-state:paused;}
-.ticker-item{display:inline-flex;align-items:center;gap:12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);white-space:nowrap;}
-.ticker-sep{color:#333;font-size:18px;flex-shrink:0;}
-@keyframes ticker-bounce{
-  0%   { transform:translateX(0); }
-  45%  { transform:translateX(calc(100vw - 100% - 80px)); }
-  55%  { transform:translateX(calc(100vw - 100% - 80px)); }
-  100% { transform:translateX(0); }
-}
-/* Mobile: much slower — same pixel travel on a narrow screen felt frantic at 22s */
-@media(max-width:640px){
-  .ticker-track{animation-duration:70s;}
-}
-@media(min-width:641px) and (max-width:960px){
-  .ticker-track{animation-duration:50s;}
-}
+.site-banners{display:flex;flex-direction:column;gap:0;}
+.site-banner{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 20px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-align:center;position:relative;overflow:hidden;}
+.site-banner-icon{font-size:16px;flex-shrink:0;}
+.site-banner-text{flex:1;line-height:1.4;}
+.site-banner::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 40px);}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -1665,15 +1650,15 @@ function HomePage({ data, setPage }) {
 
   return (
     <div>
-      {data.homeMsg && (
-        <div className="ticker-wrap">
-          <div className="ticker-track">
-            <span className="ticker-item">
-              <span style={{ color:"var(--accent)", fontSize:16 }}>⚡</span>
-              {data.homeMsg}
-              <span style={{ color:"var(--accent)", fontSize:16 }}>⚡</span>
-            </span>
-          </div>
+      {Array.isArray(data.homeMsg) && data.homeMsg.length > 0 && (
+        <div className="site-banners">
+          {data.homeMsg.map((msg, i) => (
+            <div key={i} className="site-banner" style={{ background: msg.bg || "#0a0f06", color: msg.color || "#c8ff00", borderBottom: i < data.homeMsg.length - 1 ? `1px solid rgba(0,0,0,.3)` : "none" }}>
+              {msg.icon && <span className="site-banner-icon">{msg.icon}</span>}
+              <span className="site-banner-text">{msg.text}</span>
+              {msg.icon && <span className="site-banner-icon">{msg.icon}</span>}
+            </div>
+          ))}
         </div>
       )}
 
@@ -13627,8 +13612,21 @@ function AdminSettings({ showToast }) {
 }
 
 // ── Admin Messages ────────────────────────────────────────
+const PRESET_ICONS = ["⚡","🎯","⚠️","🔥","📢","✅","❗","🎮","🏆","🛡️","💥","📅"];
+const PRESET_COMBOS = [
+  { label:"Lime / Black",   color:"#c8ff00", bg:"#080a06" },
+  { label:"White / Dark",   color:"#ffffff", bg:"#111418" },
+  { label:"Amber / Black",  color:"#ffb300", bg:"#100900" },
+  { label:"Red / Dark",     color:"#ff4444", bg:"#120808" },
+  { label:"Cyan / Dark",    color:"#4fc3f7", bg:"#060e12" },
+  { label:"Green / Black",  color:"#4caf50", bg:"#070d07" },
+  { label:"Purple / Dark",  color:"#ce93d8", bg:"#0d080f" },
+  { label:"Orange / Black", color:"#ff7043", bg:"#0f0800" },
+];
+const emptyBanner = () => ({ text:"", color:"#c8ff00", bg:"#080a06", icon:"⚡" });
+
 function AdminMessages({ data, save, showToast }) {
-  const [msg, setMsg] = useState(data.homeMsg || "");
+  const [banners, setBanners] = useState(() => Array.isArray(data.homeMsg) && data.homeMsg.length > 0 ? data.homeMsg.map(b => ({ ...emptyBanner(), ...b })) : []);
   const [facebook, setFacebook] = useState(data.socialFacebook || "");
   const [instagram, setInstagram] = useState(data.socialInstagram || "");
   const [whatsapp, setWhatsapp] = useState(data.socialWhatsapp || "");
@@ -13639,12 +13637,30 @@ function AdminMessages({ data, save, showToast }) {
   const [savingSocial, setSavingSocial] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
 
+  const saveBanners = async (list) => {
+    setSaving(true);
+    try {
+      const clean = list.filter(b => b.text.trim());
+      await api.settings.set("home_message", JSON.stringify(clean));
+      setBanners(list);
+      save({ homeMsg: clean });
+      showToast(clean.length ? `${clean.length} banner${clean.length > 1 ? "s" : ""} saved!` : "Banners cleared");
+    } catch (e) {
+      showToast("Save failed: " + fmtErr(e), "red");
+    } finally { setSaving(false); }
+  };
+
+  const updateBanner = (i, field, val) => setBanners(prev => prev.map((b, idx) => idx === i ? { ...b, [field]: val } : b));
+  const addBanner    = () => setBanners(prev => [...prev, emptyBanner()]);
+  const removeBanner = (i) => setBanners(prev => prev.filter((_, idx) => idx !== i));
+  const moveBanner   = (i, dir) => setBanners(prev => { const n = [...prev]; const swap = i + dir; if (swap < 0 || swap >= n.length) return n; [n[i], n[swap]] = [n[swap], n[i]]; return n; });
+
+  // legacy saveMsg kept for safety
   const saveMsg = async (val) => {
     setSaving(true);
     try {
       await api.settings.set("home_message", val);
-      setMsg(val);
-      save({ homeMsg: val });
+      save({ homeMsg: val ? [{ text: val, color: "#c8ff00", bg: "#080a06", icon: "⚡" }] : [] });
       showToast(val ? "Message saved!" : "Message cleared");
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
@@ -13684,17 +13700,94 @@ function AdminMessages({ data, save, showToast }) {
       <div className="page-header"><div><div className="page-title">Site Messages</div><div className="page-sub">Ticker, social links and contact details</div></div></div>
 
       <div className="card mb-2">
-        <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Ticker Message</div>
-        <div className="form-group">
-          <label>Message</label>
-          <textarea rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="e.g. Next event booking now open! — Saturday 14th June" />
-          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Leave blank to hide the ticker.</div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, flexWrap:"wrap", gap:8 }}>
+          <div>
+            <div style={{ fontWeight:700, fontSize:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase" }}>Site Banners</div>
+            <div style={{ fontSize:11, color:"var(--muted)", marginTop:3 }}>Displayed at the top of the site. Each banner can have its own colour and icon.</div>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={addBanner}>+ Add Banner</button>
         </div>
-        <div className="gap-2">
-          <button className="btn btn-primary" onClick={() => saveMsg(msg)} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
-          <button className="btn btn-danger" onClick={() => { setMsg(""); saveMsg(""); }} disabled={saving}>Clear</button>
+
+        {banners.length === 0 && (
+          <div style={{ padding:"24px", textAlign:"center", border:"1px dashed #2a3a10", color:"var(--muted)", fontSize:13, marginBottom:12 }}>
+            No banners active. Click <strong>+ Add Banner</strong> to create one.
+          </div>
+        )}
+
+        {banners.map((banner, i) => (
+          <div key={i} style={{ border:"1px solid #2a3a10", marginBottom:10, overflow:"hidden" }}>
+            {/* Live preview */}
+            <div style={{ background: banner.bg || "#080a06", color: banner.color || "#c8ff00", padding:"8px 16px", display:"flex", alignItems:"center", gap:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, letterSpacing:".1em", textTransform:"uppercase", minHeight:36 }}>
+              {banner.icon && <span>{banner.icon}</span>}
+              <span style={{ flex:1 }}>{banner.text || <span style={{ opacity:.4 }}>Preview — type your message below</span>}</span>
+              {banner.icon && <span>{banner.icon}</span>}
+            </div>
+            {/* Editor */}
+            <div style={{ padding:"12px 14px", background:"#0a0d08", display:"flex", flexDirection:"column", gap:10 }}>
+              {/* Message text */}
+              <div className="form-group" style={{ margin:0 }}>
+                <label style={{ fontSize:11 }}>Message Text</label>
+                <input value={banner.text} onChange={e => updateBanner(i, "text", e.target.value)} placeholder="e.g. Next event — Saturday 14th June, booking now open!" />
+              </div>
+              {/* Icon picker */}
+              <div>
+                <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:5 }}>Icon</label>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:6 }}>
+                  {PRESET_ICONS.map(ic => (
+                    <button key={ic} onClick={() => updateBanner(i, "icon", ic)} style={{ width:32, height:32, fontSize:16, border: banner.icon === ic ? "2px solid var(--accent)" : "1px solid #2a3a10", background: banner.icon === ic ? "rgba(200,255,0,.1)" : "transparent", cursor:"pointer", borderRadius:2 }}>
+                      {ic}
+                    </button>
+                  ))}
+                  <button onClick={() => updateBanner(i, "icon", "")} style={{ height:32, padding:"0 10px", fontSize:10, letterSpacing:".1em", border: !banner.icon ? "2px solid var(--accent)" : "1px solid #2a3a10", background: !banner.icon ? "rgba(200,255,0,.1)" : "transparent", cursor:"pointer", color:"var(--muted)", borderRadius:2 }}>
+                    NONE
+                  </button>
+                </div>
+              </div>
+              {/* Colour presets */}
+              <div>
+                <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:5 }}>Colour Preset</label>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:8 }}>
+                  {PRESET_COMBOS.map(p => (
+                    <button key={p.label} onClick={() => { updateBanner(i, "color", p.color); updateBanner(i, "bg", p.bg); }} style={{ padding:"3px 10px", fontSize:10, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", border: banner.color === p.color && banner.bg === p.bg ? "2px solid var(--accent)" : "1px solid #2a3a10", background: p.bg, color: p.color, cursor:"pointer", borderRadius:2 }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Custom colour pickers */}
+              <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <label style={{ fontSize:11, color:"var(--muted)", whiteSpace:"nowrap" }}>Text colour</label>
+                  <input type="color" value={banner.color || "#c8ff00"} onChange={e => updateBanner(i, "color", e.target.value)} style={{ width:36, height:28, border:"1px solid #2a3a10", background:"none", cursor:"pointer", padding:2 }} />
+                  <span style={{ fontFamily:"monospace", fontSize:11, color:"var(--muted)" }}>{banner.color}</span>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <label style={{ fontSize:11, color:"var(--muted)", whiteSpace:"nowrap" }}>Background</label>
+                  <input type="color" value={banner.bg || "#080a06"} onChange={e => updateBanner(i, "bg", e.target.value)} style={{ width:36, height:28, border:"1px solid #2a3a10", background:"none", cursor:"pointer", padding:2 }} />
+                  <span style={{ fontFamily:"monospace", fontSize:11, color:"var(--muted)" }}>{banner.bg}</span>
+                </div>
+              </div>
+              {/* Row actions */}
+              <div style={{ display:"flex", gap:8, alignItems:"center", borderTop:"1px solid #1a2808", paddingTop:8 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => moveBanner(i, -1)} disabled={i === 0} title="Move up">↑</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => moveBanner(i,  1)} disabled={i === banners.length - 1} title="Move down">↓</button>
+                <div style={{ flex:1 }} />
+                <button className="btn btn-danger btn-sm" onClick={() => removeBanner(i)}>Remove</button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div style={{ display:"flex", gap:8, marginTop:4 }}>
+          <button className="btn btn-primary" onClick={() => saveBanners(banners)} disabled={saving}>{saving ? "Saving..." : `Save ${banners.length} Banner${banners.length !== 1 ? "s" : ""}`}</button>
+          {banners.length > 0 && <button className="btn btn-danger" onClick={() => { setBanners([]); saveBanners([]); }} disabled={saving}>Clear All</button>}
         </div>
-        {data.homeMsg && <div className="alert alert-green mt-2" style={{ fontSize:12 }}>Active: {data.homeMsg}</div>}
+
+        {Array.isArray(data.homeMsg) && data.homeMsg.length > 0 && (
+          <div className="alert alert-green mt-2" style={{ fontSize:11 }}>
+            {data.homeMsg.length} banner{data.homeMsg.length > 1 ? "s" : ""} currently live
+          </div>
+        )}
       </div>
 
       <div className="card mb-2">
