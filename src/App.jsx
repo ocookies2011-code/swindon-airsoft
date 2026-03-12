@@ -2043,34 +2043,72 @@ function HomePage({ data, setPage }) {
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, background:"#1a2808" }}>
 
           {/* ── Column 1: Airsoft Armoury UK ── */}
-          <div style={{ background:"#0a0d08", padding:"28px 28px 28px 28px", display:"flex", flexDirection:"column", gap:16 }}>
+          <div style={{ background:"#0a0d08", padding:"28px", display:"flex", flexDirection:"column", gap:18 }}>
+            {/* Header */}
             <div style={{ display:"flex", alignItems:"center", gap:14 }}>
               <div style={{ width:44, height:44, border:"2px solid rgba(200,255,0,.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🤝</div>
               <div>
-                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", textTransform:"uppercase", marginBottom:3 }}>OFFICIAL PARTNER</div>
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", textTransform:"uppercase", marginBottom:3 }}>OFFICIAL FIELD PARTNER</div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
                   AIRSOFT <span style={{ color:"#c8ff00" }}>ARMOURY UK</span>
                 </div>
               </div>
             </div>
-            <p style={{ fontSize:13, color:"#7a9a50", lineHeight:1.8, margin:0, flex:1 }}>
-              Browse and purchase quality airsoft equipment from our partner store. Order online and collect at game day using code{" "}
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".12em", color:"#c8ff00" }}>COLLECTION</span>
-              {" "}at checkout — we'll bring your gear to the field.
+
+            {/* Tagline */}
+            <p style={{ fontSize:13, color:"#7a9a50", lineHeight:1.8, margin:0 }}>
+              Your one-stop shop for quality airsoft gear — handpicked kit trusted by players at Swindon Airsoft. Order online and pick up on game day, no postage needed.
             </p>
+
+            {/* Category chips */}
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+              {["AEGs & GBBs","Pistols & Sidearms","BBs & Ammo","Eye Pro & Helmets","Tactical Vests","Magazines","Accessories","Batteries & Chargers"].map(cat => (
+                <span key={cat} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", color:"#5a8030", border:"1px solid #1e2e0a", padding:"3px 9px", textTransform:"uppercase" }}>
+                  {cat}
+                </span>
+              ))}
+            </div>
+
+            {/* Key perks */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 12px" }}>
+              {[
+                ["🚚","Click & Collect", "Order online, pick up at the field — no postage cost"],
+                ["💸","Exclusive Discount", "Use code COLLECTION at checkout for your deal"],
+                ["✅","Field-Tested Stock", "Kit recommended and used by our own players"],
+                ["📦","Fast Dispatch",     "Orders placed before 2pm ship same day"],
+              ].map(([icon, title, desc]) => (
+                <div key={title} style={{ background:"rgba(200,255,0,.03)", border:"1px solid #1a2808", padding:"10px 12px" }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, color:"#c8ff00", letterSpacing:".06em", marginBottom:3 }}>{icon} {title}</div>
+                  <div style={{ fontSize:11, color:"#4a6030", lineHeight:1.5 }}>{desc}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Collection code callout */}
+            <div style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", padding:"12px 16px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
+              <div>
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010", marginBottom:4 }}>FIELD COLLECTION CODE</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#c8ff00", letterSpacing:".15em" }}>COLLECTION</div>
+              </div>
+              <div style={{ fontSize:12, color:"#5a8030", lineHeight:1.6, flex:1, minWidth:160 }}>
+                Enter at checkout to flag your order for field collection. We'll bring it to game day — saving you postage and getting gear in your hands faster.
+              </div>
+            </div>
+
+            {/* CTA */}
             <a
               href="https://www.airsoftarmoury.uk"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ display:"inline-flex", alignItems:"center", gap:8, background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".15em", padding:"10px 20px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s, color .15s", alignSelf:"flex-start" }}
+              style={{ display:"inline-flex", alignItems:"center", gap:8, background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".15em", padding:"11px 22px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s, color .15s", alignSelf:"flex-start" }}
               onMouseEnter={e => { e.currentTarget.style.background="#c8ff00"; e.currentTarget.style.color="#000"; }}
               onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#c8ff00"; }}
             >
-              🛒 VISIT STORE
+              🛒 SHOP NOW — AIRSOFTARMOURY.UK
             </a>
           </div>
 
-          {/* ── Column 2: Independent Tech Services ── */}
+                    {/* ── Column 2: Independent Tech Services ── */}
           <div style={{ background:"#0a0d08", padding:"28px 28px 28px 28px", display:"flex", flexDirection:"column", gap:16, position:"relative" }}>
             {/* Corner accent */}
             <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(79,195,247,.4),transparent)" }}/>
@@ -10871,35 +10909,42 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
 
 // ── Admin Visitor Stats ───────────────────────────────────
 function AdminVisitorStats() {
-  const [visitData, setVisitData] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [dateRange, setDateRange] = useState("7d");
+  const [visitData, setVisitData]         = useState([]);
+  const [allTimeCounts, setAllTimeCounts] = useState(null);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState(null);
+  const [activeTab, setActiveTab]         = useState("overview");
+  const [dateRange, setDateRange]         = useState("7d");
 
+  const rangeToDays = { "1d": 1, "7d": 7, "30d": 30, "90d": 90, "all": 0 };
+
+  // Re-fetch whenever date range changes — filtering happens server-side so no row cap
   useEffect(() => {
     setLoading(true);
-    api.visits.getAll()
-      .then(rows => { setVisitData(rows); setLoading(false); })
-      .catch(err  => { setError(err.message); setLoading(false); });
-  }, []);
+    setError(null);
+    const days = rangeToDays[dateRange] ?? 7;
+    Promise.all([
+      api.visits.getStats(days),
+      dateRange === "all" ? api.visits.getAllTimeCounts() : Promise.resolve(null),
+    ])
+      .then(([rows, counts]) => {
+        setVisitData(rows);
+        if (counts) setAllTimeCounts(counts);
+        setLoading(false);
+      })
+      .catch(err => { setError(err.message); setLoading(false); });
+  }, [dateRange]); // eslint-disable-line
 
-  const nowDate = new Date();
-  const cutoffDate = new Date(nowDate);
-  if      (dateRange === "1d")  cutoffDate.setDate(nowDate.getDate() - 1);
-  else if (dateRange === "7d")  cutoffDate.setDate(nowDate.getDate() - 7);
-  else if (dateRange === "30d") cutoffDate.setDate(nowDate.getDate() - 30);
-  else if (dateRange === "90d") cutoffDate.setDate(nowDate.getDate() - 90);
-  else cutoffDate.setFullYear(2000);
-
-  const filtered = visitData.filter(row => new Date(row.created_at) >= cutoffDate);
+  // Data arrives pre-filtered from the server
+  const filtered = visitData;
 
   // ── Derived stats ──
-  const totalVisits    = filtered.length;
-  const uniqueSessions = new Set(filtered.map(row => row.session_id).filter(Boolean)).size;
+  // For "ALL" range, use the exact server-side counts (avoids any row-limit distortion)
+  const totalVisits    = (dateRange === "all" && allTimeCounts) ? allTimeCounts.totalRows      : filtered.length;
+  const uniqueSessions = (dateRange === "all" && allTimeCounts) ? allTimeCounts.uniqueSessions : new Set(filtered.map(row => row.session_id).filter(Boolean)).size;
   const uniqueUsers    = new Set(filtered.map(row => row.user_id).filter(Boolean)).size;
   const loggedInVisits = filtered.filter(row => row.user_id).length;
-  const anonVisits     = totalVisits - loggedInVisits;
+  const anonVisits     = filtered.length - loggedInVisits; // use filtered.length for anon ratio
 
   // Page breakdown
   const pageCounts = filtered.reduce((acc, row) => {
@@ -11058,10 +11103,10 @@ function AdminVisitorStats() {
         {activeTab === "overview" && (
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
-              {statCard("Total Visits",     totalVisits.toLocaleString())}
-              {statCard("Unique Sessions",  uniqueSessions.toLocaleString(), null, "#4fc3f7")}
-              {statCard("Logged-In Visits", loggedInVisits.toLocaleString(), `${uniqueUsers} unique users`, "#c8a000")}
-              {statCard("Anonymous Visits", anonVisits.toLocaleString(), null, "#6a8050")}
+              {statCard("Unique Visitors", uniqueSessions.toLocaleString(), "distinct sessions", "#c8ff00")}
+              {statCard("Total Page Views", totalVisits.toLocaleString(), `across ${dateRange === "all" ? "all time" : dateRange}`, "#4fc3f7")}
+              {statCard("Logged-In Visits", loggedInVisits.toLocaleString(), `${uniqueUsers} unique members`, "#c8a000")}
+              {statCard("Anonymous Views",  anonVisits.toLocaleString(), `${totalVisits > 0 ? Math.round(anonVisits / filtered.length * 100) : 0}% of page views`, "#6a8050")}
             </div>
 
             {/* Day chart */}

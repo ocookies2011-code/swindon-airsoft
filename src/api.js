@@ -922,14 +922,17 @@ export const staff = wrapWithTimeout({
   },
 })
 
+
 // ── Page Visits ───────────────────────────────────────────
+// Architecture:
+//  - Every page navigation inserts one raw row (audit log — never truncated)
+//  - getStats(days) fetches only lightweight columns with the date filter
+//    applied SERVER-SIDE, so the old 5000-row client cap is never hit
+//  - Unique visits = distinct session_ids (one per browser tab session)
+//  - getAllTimeCounts() returns total rows + unique sessions across all time
 export const visits = wrapWithTimeout({
   async track({ page, userId, userName, sessionId }) {
-    // Fire-and-forget — never throw, never block the UI
     try {
-      // Geo-lookup via ipwho.is removed — it fired an external HTTP request on every
-      // page navigation, adding latency and an unnecessary third-party dependency.
-      // city/country columns remain in the schema for any future server-side enrichment.
       await supabase.from('page_visits').insert({
         page,
         user_id:    userId    || null,
@@ -945,12 +948,42 @@ export const visits = wrapWithTimeout({
     } catch { /* never break the site */ }
   },
 
+  // Primary stats fetch — date filtered ON THE SERVER, lightweight columns only.
+  // Pass days=0 to get all-time data with no lower date bound.
+  async getStats(days = 7) {
+    let q = supabase
+      .from('page_visits')
+      .select('id, page, user_id, user_name, session_id, referrer, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500000);
+    if (days > 0) {
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+      q = q.gte('created_at', since.toISOString());
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Two cheap queries for the all-time headline numbers
+  async getAllTimeCounts() {
+    const [totalRes, sessionRes] = await Promise.all([
+      supabase.from('page_visits').select('id', { count: 'exact', head: true }),
+      supabase.from('page_visits').select('session_id').not('session_id', 'is', null).limit(2000000),
+    ]);
+    const totalRows      = totalRes.count ?? 0;
+    const uniqueSessions = new Set((sessionRes.data || []).map(r => r.session_id)).size;
+    return { totalRows, uniqueSessions };
+  },
+
+  // Legacy — kept for backwards compat; main stats use getStats() now
   async getAll() {
     const { data, error } = await supabase
       .from('page_visits')
-      .select('*')
+      .select('id, page, user_id, user_name, session_id, referrer, created_at')
       .order('created_at', { ascending: false })
-      .limit(5000)
+      .limit(200);
     if (error) throw error;
     return data || [];
   },
