@@ -8087,6 +8087,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
   const [viewId, setViewId] = useState(null);
   const blank = { title: "", date: "", time: "09:00", endTime: "17:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false };
   const [form, setForm] = useState(blank);
+  const bannerFileRef = useRef(null); // holds the raw File object so we don't rely on fetch(data:URL)
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
   const f = setField;
 
@@ -8228,14 +8229,22 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       if (modal === "new") {
         const { _descTab: _dt, _emailUsers, ...createForm } = form;
         const created = await withTimeout(api.events.create(createForm));
-        if (form.banner && form.banner.startsWith("data:") && created?.id) {
+        // Upload banner — prefer the raw File object (reliable), fall back to data: URL re-fetch
+        const fileToUpload = bannerFileRef.current;
+        if (created?.id && (fileToUpload || (form.banner && form.banner.startsWith("data:")))) {
           try {
-            const res = await fetch(form.banner);
-            const blob = await res.blob();
-            const file = new File([blob], "banner.jpg", { type: "image/jpeg" });
-            await api.events.uploadBanner(created.id, file);
+            let uploadFile = fileToUpload;
+            if (!uploadFile && form.banner.startsWith("data:")) {
+              const res = await fetch(form.banner);
+              const blob = await res.blob();
+              uploadFile = new File([blob], "banner.jpg", { type: "image/jpeg" });
+            }
+            if (uploadFile) await api.events.uploadBanner(created.id, uploadFile);
           } catch (bannerErr) {
-            console.warn("Banner upload failed (non-fatal):", bannerErr);
+            console.warn("Banner upload failed:", bannerErr);
+            showToast("Event saved but banner upload failed: " + bannerErr.message, "gold");
+          } finally {
+            bannerFileRef.current = null;
           }
         }
         // Email all users if checkbox was ticked
@@ -8252,14 +8261,21 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       } else {
         const { _descTab, ...formToSave } = form;
         await withTimeout(api.events.update(formToSave.id, formToSave));
-        if (form.banner && form.banner.startsWith("data:") && form.id) {
+        const editFileToUpload = bannerFileRef.current;
+        if (form.id && (editFileToUpload || (form.banner && form.banner.startsWith("data:")))) {
           try {
-            const res = await fetch(form.banner);
-            const blob = await res.blob();
-            const file = new File([blob], "banner.jpg", { type: "image/jpeg" });
-            await api.events.uploadBanner(form.id, file);
+            let uploadFile = editFileToUpload;
+            if (!uploadFile && form.banner.startsWith("data:")) {
+              const res = await fetch(form.banner);
+              const blob = await res.blob();
+              uploadFile = new File([blob], "banner.jpg", { type: "image/jpeg" });
+            }
+            if (uploadFile) await api.events.uploadBanner(form.id, uploadFile);
           } catch (bannerErr) {
-            console.warn("Banner upload failed (non-fatal):", bannerErr);
+            console.warn("Banner upload failed:", bannerErr);
+            showToast("Event saved but banner upload failed: " + bannerErr.message, "gold");
+          } finally {
+            bannerFileRef.current = null;
           }
         }
       }
@@ -8386,7 +8402,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
           <div className="page-sub">{data.events.length} events · {allBookings.length} bookings · {allBookings.filter(b => b.checkedIn).length} checked in</div>
         </div>
         <div className="gap-2">
-          {tab === "events" && <button className="btn btn-primary" onClick={() => { setForm(blank); setModal("new"); }}>+ New Event</button>}
+          {tab === "events" && <button className="btn btn-primary" onClick={() => { setForm(blank); bannerFileRef.current = null; setModal("new"); }}>+ New Event</button>}
           {tab === "checkin" && <>
             <button className="btn btn-primary" onClick={() => setScanning(true)}>📷 Scan QR</button>
             <button className="btn btn-ghost" onClick={downloadList}>⬇ Export</button>
@@ -8675,6 +8691,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <div className="btn btn-ghost btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>📁 Upload Image</div>
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                       const file = e.target.files[0]; if (!file) return;
+                      bannerFileRef.current = file; // store raw File for upload
                       const img = new Image();
                       const reader = new FileReader();
                       reader.onload = ev => {
@@ -8694,12 +8711,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                   </label>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>Or paste a URL:</div>
                   <input value={form.banner && form.banner.startsWith("data:") ? "" : (form.banner || "")}
-                    onChange={e => f("banner", e.target.value)} placeholder="https://..." />
+                    onChange={e => { bannerFileRef.current = null; f("banner", e.target.value); }} placeholder="https://..." />
                 </div>
                 {form.banner && (
                   <div style={{ position: "relative" }}>
                     <img src={form.banner} style={{ width: 100, height: 60, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} alt="" />
-                    <button onClick={() => f("banner", "")} style={{ position: "absolute", top: -6, right: -6, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 11 }}>✕</button>
+                    <button onClick={() => { bannerFileRef.current = null; f("banner", ""); }} style={{ position: "absolute", top: -6, right: -6, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 11 }}>✕</button>
                   </div>
                 )}
               </div>
