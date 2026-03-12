@@ -854,11 +854,10 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .pub-footer-social-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
 
 /* ── TICKER / MARQUEE ── */
-.site-banners{display:flex;flex-direction:column;gap:0;}
-.site-banner{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 20px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-align:center;position:relative;overflow:hidden;}
-.site-banner-icon{font-size:16px;flex-shrink:0;}
-.site-banner-text{flex:1;line-height:1.4;}
-.site-banner::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 40px);}
+.site-banners{display:flex;flex-direction:column;gap:12px;padding:16px 20px;background:#0a0d08;border-bottom:1px solid #1a2808;}
+.site-banner{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:400;letter-spacing:.04em;line-height:1.7;border:1px solid;position:relative;}
+.site-banner-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.site-banner-text{flex:1;}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -1653,10 +1652,15 @@ function HomePage({ data, setPage }) {
       {Array.isArray(data.homeMsg) && data.homeMsg.length > 0 && (
         <div className="site-banners">
           {data.homeMsg.map((msg, i) => (
-            <div key={i} className="site-banner" style={{ background: msg.bg || "#0a0f06", color: msg.color || "#c8ff00", borderBottom: i < data.homeMsg.length - 1 ? `1px solid rgba(0,0,0,.3)` : "none" }}>
+            <div key={i} className="site-banner" style={{
+              background: msg.bg || "#0a0f06",
+              color: msg.color || "#c8ff00",
+              borderColor: msg.color || "#c8ff00",
+              borderLeftWidth: 3,
+              boxShadow: `inset 0 0 0 1px ${(msg.color || "#c8ff00")}22`,
+            }}>
               {msg.icon && <span className="site-banner-icon">{msg.icon}</span>}
               <span className="site-banner-text">{msg.text}</span>
-              {msg.icon && <span className="site-banner-icon">{msg.icon}</span>}
             </div>
           ))}
         </div>
