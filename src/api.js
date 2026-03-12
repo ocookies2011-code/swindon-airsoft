@@ -229,11 +229,24 @@ export const events = wrapWithTimeout({
           else reject(new Error('canvas.toBlob failed'))
         }, 'image/jpeg', 0.85)
       }
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) } // fall back to original on error
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
       img.src = url
     })
-    const path = `events/${eventId}/banner.jpg`
-    const { error } = await supabase.storage.from('images').upload(path, resized, { upsert: true, contentType: 'image/jpeg' })
+
+    // Delete any existing banner files for this event first
+    // (prevents CDN cache serving stale images at the old path)
+    try {
+      const { data: existing } = await supabase.storage.from('images').list(`events/${eventId}`)
+      if (existing?.length) {
+        const oldPaths = existing.map(f => `events/${eventId}/${f.name}`)
+        await supabase.storage.from('images').remove(oldPaths)
+      }
+    } catch { /* non-fatal — proceed with upload regardless */ }
+
+    // Use a timestamped filename so the CDN never serves a cached old version
+    const ts = Date.now()
+    const path = `events/${eventId}/banner_${ts}.jpg`
+    const { error } = await supabase.storage.from('images').upload(path, resized, { contentType: 'image/jpeg' })
     if (error) throw error
     const { data } = supabase.storage.from('images').getPublicUrl(path)
     await supabase.from('events').update({ banner: data.publicUrl }).eq('id', eventId)
