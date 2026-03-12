@@ -2129,7 +2129,7 @@ function HomePage({ data, setPage }) {
               {[
                 "Repairs & full diagnostics","Spring / FPS / air-seal work",
                 "Inner barrel & hop-up upgrades","Feeding & power issue fixes",
-                "Gearbox rebuilds & re-shims","Gas mag repair (GBB/AEG)",
+                "Gearbox rebuilds & re-shims","Mag repair (GBB/AEG)",
                 "General service & regrease","Full strip & inspection report",
               ].map(s => (
                 <div key={s} style={{ display:"flex", alignItems:"flex-start", gap:7, fontSize:12, color:"#7ab8c8", lineHeight:1.5, padding:"3px 0" }}>
