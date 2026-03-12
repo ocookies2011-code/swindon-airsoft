@@ -10953,12 +10953,13 @@ function AdminVisitorStats() {
   const pageRows = Object.entries(pageCounts).sort((aa, bb) => bb[1] - aa[1]);
 
   // Visits by day
+  const nowDate = new Date();
   const dayMap = {};
   filtered.forEach(row => {
     const dayKey = row.created_at?.slice(0, 10);
     if (dayKey) dayMap[dayKey] = (dayMap[dayKey] || 0) + 1;
   });
-  const daysToShow = dateRange === "1d" ? 1 : dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : 14;
+  const daysToShow = dateRange === "1d" ? 1 : dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 30;
   const dayBars = [];
   for (let offset = daysToShow - 1; offset >= 0; offset--) {
     const dayDate = new Date(nowDate);
