@@ -2038,41 +2038,111 @@ function HomePage({ data, setPage }) {
         </div>
       </div>
 
-      {/* PARTNER SHOP BANNER */}
+      {/* PARTNER SHOP + TECH SERVICES — two column banner */}
       <div style={{ background:"#0a0d08", borderTop:"1px solid #1a2808", borderBottom:"1px solid #1a2808", padding:"36px 20px" }}>
-        <div style={{ maxWidth:860, margin:"0 auto", display:"flex", flexWrap:"wrap", alignItems:"center", gap:24, justifyContent:"center" }}>
-          {/* Icon + label */}
-          <div style={{ display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
-            <div style={{ width:48, height:48, border:"2px solid rgba(200,255,0,.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>🤝</div>
-            <div>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", textTransform:"uppercase", marginBottom:4 }}>OFFICIAL PARTNER</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, letterSpacing:".12em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
-                AIRSOFT <span style={{ color:"#c8ff00" }}>ARMOURY UK</span>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, background:"#1a2808" }}>
+
+          {/* ── Column 1: Airsoft Armoury UK ── */}
+          <div style={{ background:"#0a0d08", padding:"28px 28px 28px 28px", display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ width:44, height:44, border:"2px solid rgba(200,255,0,.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🤝</div>
+              <div>
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", textTransform:"uppercase", marginBottom:3 }}>OFFICIAL PARTNER</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
+                  AIRSOFT <span style={{ color:"#c8ff00" }}>ARMOURY UK</span>
+                </div>
               </div>
             </div>
-          </div>
-          {/* Divider */}
-          <div style={{ width:1, height:48, background:"#1e2c0a", flexShrink:0, display:"flex" }} />
-          {/* Text */}
-          <div style={{ flex:1, minWidth:220 }}>
-            <p style={{ fontSize:13, color:"#7a9a50", lineHeight:1.8, margin:0 }}>
+            <p style={{ fontSize:13, color:"#7a9a50", lineHeight:1.8, margin:0, flex:1 }}>
               Browse and purchase quality airsoft equipment from our partner store. Order online and collect at game day using code{" "}
               <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".12em", color:"#c8ff00" }}>COLLECTION</span>
               {" "}at checkout — we'll bring your gear to the field.
             </p>
+            <a
+              href="https://www.airsoftarmoury.uk"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", gap:8, background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".15em", padding:"10px 20px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s, color .15s", alignSelf:"flex-start" }}
+              onMouseEnter={e => { e.currentTarget.style.background="#c8ff00"; e.currentTarget.style.color="#000"; }}
+              onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#c8ff00"; }}
+            >
+              🛒 VISIT STORE
+            </a>
           </div>
-          {/* CTA */}
-          <a
-            href="https://www.airsoftarmoury.uk"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ flexShrink:0, display:"inline-flex", alignItems:"center", gap:8, background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".15em", padding:"11px 24px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s, color .15s" }}
-            onMouseEnter={e => { e.currentTarget.style.background="#c8ff00"; e.currentTarget.style.color="#000"; }}
-            onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#c8ff00"; }}
-          >
-            🛒 VISIT STORE
-          </a>
+
+          {/* ── Column 2: Independent Tech Services ── */}
+          <div style={{ background:"#0a0d08", padding:"28px 28px 28px 28px", display:"flex", flexDirection:"column", gap:16, position:"relative" }}>
+            {/* Corner accent */}
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(79,195,247,.4),transparent)" }}/>
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ width:44, height:44, border:"2px solid rgba(79,195,247,.3)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="#4fc3f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#1a4a5a", textTransform:"uppercase", marginBottom:3 }}>INDEPENDENT TECHNICIAN</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
+                  AIRSOFT <span style={{ color:"#4fc3f7" }}>TECH SERVICES</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Services grid */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 12px" }}>
+              {[
+                "Repairs & full diagnostics","Spring / FPS / air-seal work",
+                "Inner barrel & hop-up upgrades","Feeding & power issue fixes",
+                "Gearbox rebuilds & re-shims","Gas mag repair (GBB/AEG)",
+                "General service & regrease","Full strip & inspection report",
+              ].map(s => (
+                <div key={s} style={{ display:"flex", alignItems:"flex-start", gap:7, fontSize:12, color:"#7ab8c8", lineHeight:1.5, padding:"3px 0" }}>
+                  <span style={{ color:"#4fc3f7", fontWeight:900, flexShrink:0, marginTop:1 }}>✓</span>
+                  {s}
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontSize:12, color:"#4a7a8a", lineHeight:1.7, margin:0 }}>
+              Whether your replica is shooting weak, misfeeding, or making odd noises — it gets a full strip and inspection. You'll be contacted straight away to discuss findings before any work begins.
+            </p>
+
+            {/* Rate + disclaimer */}
+            <div style={{ background:"rgba(79,195,247,.05)", border:"1px solid rgba(79,195,247,.15)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:6 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+                <div>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:"#4fc3f7", letterSpacing:".04em" }}>£40</span>
+                  <span style={{ fontSize:11, color:"#4a7a8a", marginLeft:6, letterSpacing:".1em" }}>/ HOUR + PARTS</span>
+                </div>
+                <a
+                  href="https://wa.me/447877731973"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", gap:7, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".12em", padding:"8px 16px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s", borderRadius:2 }}
+                  onMouseEnter={e => e.currentTarget.style.background="rgba(37,211,102,.22)"}
+                  onMouseLeave={e => e.currentTarget.style.background="rgba(37,211,102,.12)"}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                  WHATSAPP
+                </a>
+              </div>
+              <p style={{ fontSize:11, color:"#336070", lineHeight:1.6, margin:0 }}>
+                💡 Please discuss your repair <em>before</em> purchasing parts — shops often don't accept returns and online specs can be misleading.
+              </p>
+            </div>
+
+            {/* Independent disclaimer */}
+            <div style={{ fontSize:10, color:"#2a3a3a", letterSpacing:".05em", lineHeight:1.6, borderTop:"1px solid #0d1a1a", paddingTop:10 }}>
+              ⚠ This technician operates independently and is not affiliated with, employed by, or acting on behalf of Swindon Airsoft. All work is arranged directly between the customer and the technician.
+            </div>
+          </div>
+
         </div>
+
+        {/* Responsive: stack on mobile */}
+        <style>{`
+          @media(max-width:700px){
+            .partner-grid{grid-template-columns:1fr !important;}
+          }
+        `}</style>
       </div>
 
     </div>
@@ -14487,17 +14557,91 @@ export default function App() {
   if (loading) {
     const isSlowLoad = loadingSeconds >= 6;
     return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, background: "#0d1117", padding: 24 }}>
-        <div style={{ width: 48, height: 48, background: "#c8ff00", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#000", fontSize: 16, animation: "pulse 1s infinite", fontFamily: "'Barlow Condensed',sans-serif" }}>SA</div>
-        <div style={{ color: "var(--muted)", fontSize: 13, letterSpacing: ".15em" }}>
-          {isSlowLoad ? "WAKING UP DATABASE..." : "LOADING..."}
+      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", background:"#080a06", overflow:"hidden", position:"relative", fontFamily:"'Barlow Condensed',sans-serif" }}>
+        {/* Crosshair reticle background */}
+        <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", opacity:.04, pointerEvents:"none" }}>
+          <svg width="520" height="520" viewBox="0 0 520 520" fill="none">
+            <circle cx="260" cy="260" r="200" stroke="#c8ff00" strokeWidth="1"/>
+            <circle cx="260" cy="260" r="120" stroke="#c8ff00" strokeWidth="1"/>
+            <circle cx="260" cy="260" r="40" stroke="#c8ff00" strokeWidth="1"/>
+            <line x1="0" y1="260" x2="520" y2="260" stroke="#c8ff00" strokeWidth="1"/>
+            <line x1="260" y1="0" x2="260" y2="520" stroke="#c8ff00" strokeWidth="1"/>
+            <line x1="80" y1="260" x2="80" y2="240" stroke="#c8ff00" strokeWidth="1.5"/>
+            <line x1="440" y1="260" x2="440" y2="240" stroke="#c8ff00" strokeWidth="1.5"/>
+            <line x1="260" y1="80" x2="240" y2="80" stroke="#c8ff00" strokeWidth="1.5"/>
+            <line x1="260" y1="440" x2="240" y2="440" stroke="#c8ff00" strokeWidth="1.5"/>
+          </svg>
+        </div>
+        {/* Corner bracket decorations */}
+        <div style={{ position:"absolute", top:32, left:32, width:40, height:40, borderTop:"2px solid rgba(200,255,0,.2)", borderLeft:"2px solid rgba(200,255,0,.2)" }}/>
+        <div style={{ position:"absolute", top:32, right:32, width:40, height:40, borderTop:"2px solid rgba(200,255,0,.2)", borderRight:"2px solid rgba(200,255,0,.2)" }}/>
+        <div style={{ position:"absolute", bottom:32, left:32, width:40, height:40, borderBottom:"2px solid rgba(200,255,0,.2)", borderLeft:"2px solid rgba(200,255,0,.2)" }}/>
+        <div style={{ position:"absolute", bottom:32, right:32, width:40, height:40, borderBottom:"2px solid rgba(200,255,0,.2)", borderRight:"2px solid rgba(200,255,0,.2)" }}/>
+        {/* Airsoft gun SVG */}
+        <div style={{ marginBottom:32, animation:"aimIn 0.6s ease-out forwards" }}>
+          <svg width="180" height="80" viewBox="0 0 180 80" fill="none">
+            {/* Stock */}
+            <rect x="2" y="34" width="38" height="12" rx="2" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
+            <rect x="6" y="37" width="28" height="2" rx="1" fill="#2a3a10"/>
+            <rect x="6" y="41" width="28" height="2" rx="1" fill="#2a3a10"/>
+            {/* Lower receiver */}
+            <rect x="38" y="30" width="72" height="20" rx="2" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
+            {/* Upper receiver */}
+            <rect x="42" y="18" width="68" height="14" rx="2" fill="#1e2e0c" stroke="#c8ff00" strokeWidth="1.2"/>
+            {/* Rail */}
+            <rect x="44" y="15" width="64" height="4" rx="1" fill="#222" stroke="#3a5010" strokeWidth="1"/>
+            {[0,8,16,24,32,40,48,56].map(x=><line key={x} x1={46+x} y1="15" x2={46+x} y2="19" stroke="#3a5010" strokeWidth="1"/>)}
+            {/* Barrel */}
+            <rect x="108" y="23" width="68" height="8" rx="1.5" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
+            {/* Muzzle */}
+            <rect x="172" y="21" width="8" height="12" rx="1" fill="#111" stroke="#c8ff00" strokeWidth="1.2"/>
+            <circle cx="176" cy="27" r="2.5" fill="#000" stroke="#c8ff00" strokeWidth="1"/>
+            {/* Grip */}
+            <path d="M68 50 L74 50 L80 70 L62 70 Z" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
+            <rect x="66" y="55" width="12" height="2" rx="1" fill="#2a3a10"/>
+            <rect x="65" y="59" width="13" height="2" rx="1" fill="#2a3a10"/>
+            <rect x="66" y="63" width="12" height="2" rx="1" fill="#2a3a10"/>
+            {/* Trigger guard */}
+            <path d="M88 50 Q94 62 100 50" stroke="#c8ff00" strokeWidth="1.2" fill="none"/>
+            {/* Trigger */}
+            <line x1="93" y1="50" x2="91" y2="60" stroke="#c8ff00" strokeWidth="1.5"/>
+            {/* Magazine */}
+            <rect x="50" y="50" width="14" height="28" rx="2" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
+            <rect x="52" y="53" width="10" height="3" rx="1" fill="#2a3a10"/>
+            <rect x="52" y="58" width="10" height="3" rx="1" fill="#2a3a10"/>
+            <rect x="52" y="63" width="10" height="3" rx="1" fill="#2a3a10"/>
+            {/* Sight */}
+            <rect x="66" y="13" width="16" height="6" rx="1" fill="#111" stroke="#c8ff00" strokeWidth="1"/>
+            <circle cx="74" cy="16" r="2" fill="none" stroke="#c8ff00" strokeWidth="1"/>
+            <line x1="74" y1="13" x2="74" y2="10" stroke="#c8ff00" strokeWidth="1" strokeDasharray="1 1"/>
+          </svg>
+        </div>
+        {/* Site name */}
+        <div style={{ fontSize:32, fontWeight:900, letterSpacing:".12em", color:"#fff", textTransform:"uppercase", lineHeight:1, marginBottom:4 }}>
+          SWINDON <span style={{ color:"#c8ff00" }}>AIRSOFT</span>
+        </div>
+        <div style={{ fontSize:10, letterSpacing:".35em", color:"#3a5010", textTransform:"uppercase", marginBottom:32 }}>
+          TACTICAL OPERATIONS CENTRE
+        </div>
+        {/* Progress bar */}
+        <div style={{ width:220, height:2, background:"#1a2808", marginBottom:14, position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:0, left:0, height:"100%", width:"100%", background:"linear-gradient(90deg,transparent,#c8ff00,transparent)", animation:"scanBar 1.4s ease-in-out infinite" }}/>
+        </div>
+        {/* Status text */}
+        <div style={{ fontSize:11, letterSpacing:".2em", color:"#3a5010", textTransform:"uppercase", display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ display:"inline-block", width:6, height:6, background:"#c8ff00", borderRadius:"50%", animation:"pulse 1s infinite" }}/>
+          {isSlowLoad ? "WAKING UP DATABASE…" : "INITIALISING SYSTEMS…"}
         </div>
         {isSlowLoad && (
-          <div style={{ color: "#555", fontSize: 11, letterSpacing: ".05em", textAlign: "center", maxWidth: 260 }}>
-            This can take a moment after a period of inactivity
+          <div style={{ marginTop:12, fontSize:11, color:"#333", letterSpacing:".05em", textAlign:"center", maxWidth:260 }}>
+            Cold start — database coming online, hold tight
           </div>
         )}
-        <style>{`@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}`}</style>
+        <style>{`
+          @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.2;}}
+          @keyframes scanBar{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+          @keyframes aimIn{from{opacity:0;transform:translateX(-20px);}to{opacity:1;transform:translateX(0);}}
+        `}</style>
       </div>
     );
   }
@@ -14505,9 +14649,13 @@ export default function App() {
   // ── Geo-block screens ─────────────────────────────────────
   if (geoStatus === "checking") {
     return (
-      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, background:"#0d1117" }}>
-        <div style={{ width:48, height:48, background:"#c8ff00", borderRadius:2, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#000", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>SA</div>
-        <div style={{ color:"#555", fontSize:13, letterSpacing:".15em" }}>LOADING...</div>
+      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12, background:"#080a06", fontFamily:"'Barlow Condensed',sans-serif" }}>
+        <div style={{ fontSize:26, fontWeight:900, letterSpacing:".12em", color:"#fff", textTransform:"uppercase" }}>SWINDON <span style={{ color:"#c8ff00" }}>AIRSOFT</span></div>
+        <div style={{ width:160, height:2, background:"#1a2808", position:"relative", overflow:"hidden", marginTop:8 }}>
+          <div style={{ position:"absolute", top:0, left:0, height:"100%", width:"100%", background:"linear-gradient(90deg,transparent,#c8ff00,transparent)", animation:"scanBar 1.4s ease-in-out infinite" }}/>
+        </div>
+        <div style={{ color:"#3a5010", fontSize:10, letterSpacing:".25em", textTransform:"uppercase", marginTop:4 }}>VERIFYING LOCATION…</div>
+        <style>{`@keyframes scanBar{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}`}</style>
       </div>
     );
   }
