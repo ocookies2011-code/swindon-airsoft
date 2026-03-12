@@ -8229,17 +8229,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       if (modal === "new") {
         const { _descTab: _dt, _emailUsers, ...createForm } = form;
         const created = await withTimeout(api.events.create(createForm));
-        // Upload banner — prefer the raw File object (reliable), fall back to data: URL re-fetch
-        const fileToUpload = bannerFileRef.current;
-        if (created?.id && (fileToUpload || (form.banner && form.banner.startsWith("data:")))) {
+        // Upload banner using the resized File stored in bannerFileRef
+        if (created?.id && bannerFileRef.current) {
           try {
-            let uploadFile = fileToUpload;
-            if (!uploadFile && form.banner.startsWith("data:")) {
-              const res = await fetch(form.banner);
-              const blob = await res.blob();
-              uploadFile = new File([blob], "banner.jpg", { type: "image/jpeg" });
-            }
-            if (uploadFile) await api.events.uploadBanner(created.id, uploadFile);
+            await api.events.uploadBanner(created.id, bannerFileRef.current);
           } catch (bannerErr) {
             console.warn("Banner upload failed:", bannerErr);
             showToast("Event saved but banner upload failed: " + bannerErr.message, "gold");
@@ -8261,16 +8254,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       } else {
         const { _descTab, ...formToSave } = form;
         await withTimeout(api.events.update(formToSave.id, formToSave));
-        const editFileToUpload = bannerFileRef.current;
-        if (form.id && (editFileToUpload || (form.banner && form.banner.startsWith("data:")))) {
+        // Upload banner using the resized File stored in bannerFileRef
+        if (form.id && bannerFileRef.current) {
           try {
-            let uploadFile = editFileToUpload;
-            if (!uploadFile && form.banner.startsWith("data:")) {
-              const res = await fetch(form.banner);
-              const blob = await res.blob();
-              uploadFile = new File([blob], "banner.jpg", { type: "image/jpeg" });
-            }
-            if (uploadFile) await api.events.uploadBanner(form.id, uploadFile);
+            await api.events.uploadBanner(form.id, bannerFileRef.current);
           } catch (bannerErr) {
             console.warn("Banner upload failed:", bannerErr);
             showToast("Event saved but banner upload failed: " + bannerErr.message, "gold");
@@ -8691,7 +8678,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <div className="btn btn-ghost btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>📁 Upload Image</div>
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                       const file = e.target.files[0]; if (!file) return;
-                      bannerFileRef.current = file; // store raw File for upload
                       const img = new Image();
                       const reader = new FileReader();
                       reader.onload = ev => {
@@ -8702,7 +8688,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                           canvas.width  = Math.round(img.width  * scale);
                           canvas.height = Math.round(img.height * scale);
                           canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-                          f("banner", canvas.toDataURL("image/jpeg", 0.75));
+                          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+                          f("banner", dataUrl);
+                          // Store the resized blob as a File so uploadBanner gets the same image shown in preview
+                          canvas.toBlob(blob => {
+                            if (blob) bannerFileRef.current = new File([blob], "banner.jpg", { type: "image/jpeg" });
+                          }, "image/jpeg", 0.85);
                         };
                         img.src = ev.target.result;
                       };
