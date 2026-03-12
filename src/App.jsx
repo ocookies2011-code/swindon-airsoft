@@ -440,30 +440,16 @@ function useData() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [loadAll]);
 
-  // save() now delegates to specific API calls based on what changed
+  // save() merges a patch into local state.
+  // All actual DB writes happen via specific api.* calls in each admin component;
+  // this function is only used to sync local state after those writes complete.
+  // The only special case is patch.users, which triggers a full profile re-fetch.
   const save = useCallback(async (patch) => {
     // Optimistic local update
     setData(prev => ({ ...prev, ...patch }));
 
-    // homeMsg is written directly by AdminMessages — do NOT re-write here
-    if (patch.postageOptions !== undefined) {
-      // Diff is handled by admin components calling api.postage directly
-      // This just keeps local state in sync
-    }
-    if (patch.qa !== undefined) {
-      // Handled by admin components calling api.qa directly
-    }
-    if (patch.albums !== undefined) {
-      // Handled by admin components calling api.gallery directly
-    }
-    if (patch.shop !== undefined) {
-      // Handled by admin components calling api.shop directly
-    }
-    if (patch.events !== undefined) {
-      // Handled by admin components calling api.events directly
-    }
     if (patch.users !== undefined) {
-      // Local admin user list — refresh from DB
+      // Re-fetch full profiles to ensure local state is consistent with DB
       const allProfiles = await api.profiles.getAll();
       setData(prev => ({ ...prev, users: allProfiles.map(normaliseProfile) }));
     }
@@ -514,17 +500,6 @@ function useData() {
   return { data, loading, loadError, save, updateUser, updateEvent, refresh };
 }
 
-// ── useAdminUsers — load all profiles (admin only) ────────────
-function useAdminUsers(isAdmin) {
-  const [users, setUsers] = useState([]);
-  useEffect(() => {
-    if (!isAdmin) return;
-    api.profiles.getAll()
-      .then(list => setUsers(list.map(normaliseProfile)))
-      .catch(console.error);
-  }, [isAdmin]);
-  return [users, setUsers];
-}
 
 
 // (SEED data removed — all data comes from Supabase)
@@ -1137,6 +1112,9 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
 
   const register = async () => {
     if (!form.name || !form.email || !form.password) { showToast("All fields required", "red"); return; }
+    if (!form.email.includes("@") || !form.email.includes(".")) { showToast("Please enter a valid email address", "red"); return; }
+    if (form.password.length < 8) { showToast("Password must be at least 8 characters", "red"); return; }
+    if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) { showToast("Password must contain at least one letter and one number", "red"); return; }
     setBusy(true);
     try {
       await api.auth.signUp({ email: form.email, password: form.password, name: form.name, phone: form.phone });
@@ -1189,6 +1167,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
             {mode === "register" && (
               <div className="alert alert-blue" style={{ marginBottom: 12 }}>
                 📧 You'll receive a confirmation email — click the link to activate your account.
+                <br/><span style={{ fontSize: 11, opacity: .8 }}>🔒 Password: 8+ characters, must include at least one letter and one number.</span>
               </div>
             )}
             <div className="gap-2 mt-2">
@@ -2587,7 +2566,7 @@ async function sendNewEventEmail({ ev, users }) {
       </div>
 
       <!-- Max players -->
-      ${ev.maxPlayers ? `<div style="font-size:11px;color:#3a5010;text-align:center;margin-bottom:20px;letter-spacing:.1em;">⚠ LIMITED TO ${ev.maxPlayers} PLAYERS — BOOK EARLY</div>` : ""}
+      ${(ev.walkOnSlots || ev.rentalSlots) ? `<div style="font-size:11px;color:#3a5010;text-align:center;margin-bottom:20px;letter-spacing:.1em;">⚠ LIMITED TO ${(Number(ev.walkOnSlots || 0) + Number(ev.rentalSlots || 0))} PLAYERS — BOOK EARLY</div>` : ""}
 
       <!-- CTA -->
       <div style="text-align:center;margin-top:8px;">
@@ -2632,6 +2611,80 @@ async function sendNewEventEmail({ ev, users }) {
     }
   }
   return results;
+}
+
+// ── Admin notification: new booking ─────────────────────────
+// Fired after a player successfully books. Sends to the site contact_email.
+async function sendAdminBookingNotification({ adminEmail, cu, ev, bookings, total }) {
+  if (!adminEmail) return;
+  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const rows = (bookings || []).map(b =>
+    `<tr>
+      <td style="padding:7px 12px;border:1px solid #1a2808;color:#ccc;font-size:13px;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+      <td style="padding:7px 12px;border:1px solid #1a2808;color:#ccc;font-size:13px;text-align:center;">${b.qty}</td>
+      <td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-weight:700;">£${Number(b.total).toFixed(2)}</td>
+    </tr>`
+  ).join("");
+  const htmlContent = `
+  <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
+    <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
+      <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
+        <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">Swindon Airsoft · Admin Alert</div>
+        <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.04em;">NEW BOOKING</div>
+      </div>
+      <div style="padding:20px 24px;">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;width:30%;">Player</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${cu.name}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Email</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#4fc3f7;font-size:13px;">${cu.email}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Event</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${ev.title}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Date</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${dateStr}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Total Paid</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:15px;font-weight:900;">£${Number(total).toFixed(2)}</td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr style="background:#0a0f06;"><th style="padding:7px 12px;text-align:left;font-size:9px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;">Ticket Type</th><th style="padding:7px 12px;text-align:center;font-size:9px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;">Qty</th><th style="padding:7px 12px;text-align:left;font-size:9px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;">Total</th></tr>
+          ${rows}
+        </table>
+      </div>
+      <div style="padding:12px 24px;border-top:1px solid #1a2808;text-align:center;font-size:10px;color:#2a3a10;letter-spacing:.15em;text-transform:uppercase;">Swindon Airsoft Admin · Auto-generated notification</div>
+    </div>
+  </div>`;
+  await sendEmail({ toEmail: adminEmail, toName: "Swindon Airsoft Admin", subject: `📋 New Booking: ${cu.name} — ${ev.title} (£${Number(total).toFixed(2)})`, htmlContent });
+}
+
+// ── Admin notification: new shop order ──────────────────────
+async function sendAdminOrderNotification({ adminEmail, cu, order, items }) {
+  if (!adminEmail) return;
+  const rows = (items || []).map(i =>
+    `<tr>
+      <td style="padding:7px 12px;border:1px solid #1a2808;color:#ccc;font-size:13px;">${i.name}${i.variant ? ` <span style="color:#888;font-size:11px;">(${i.variant})</span>` : ""}</td>
+      <td style="padding:7px 12px;border:1px solid #1a2808;color:#ccc;font-size:13px;text-align:center;">${i.qty}</td>
+      <td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-weight:700;">£${Number(i.price * i.qty).toFixed(2)}</td>
+    </tr>`
+  ).join("");
+  const htmlContent = `
+  <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
+    <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
+      <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
+        <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">Swindon Airsoft · Admin Alert</div>
+        <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.04em;">NEW SHOP ORDER</div>
+      </div>
+      <div style="padding:20px 24px;">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;width:30%;">Customer</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${cu?.name || order.customerName}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Email</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#4fc3f7;font-size:13px;">${cu?.email || order.customerEmail}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Ship To</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${order.customerAddress || "—"}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Postage</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${order.postageName || "N/A"} · £${Number(order.postage || 0).toFixed(2)}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Total</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:15px;font-weight:900;">£${Number(order.total).toFixed(2)}</td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr style="background:#0a0f06;"><th style="padding:7px 12px;text-align:left;font-size:9px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;">Item</th><th style="padding:7px 12px;text-align:center;font-size:9px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;">Qty</th><th style="padding:7px 12px;text-align:left;font-size:9px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;">Total</th></tr>
+          ${rows}
+        </table>
+      </div>
+      <div style="padding:12px 24px;border-top:1px solid #1a2808;text-align:center;font-size:10px;color:#2a3a10;letter-spacing:.15em;text-transform:uppercase;">Swindon Airsoft Admin · Auto-generated notification</div>
+    </div>
+  </div>`;
+  await sendEmail({ toEmail: adminEmail, toName: "Swindon Airsoft Admin", subject: `🛒 New Order: ${cu?.name || order.customerName} — £${Number(order.total).toFixed(2)}`, htmlContent });
 }
 
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
@@ -2725,7 +2778,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   };
 
   if (ev) {
-    const vipDisc   = cu?.vipStatus === "active" ? 0.1 : 0;
+    const vipIsActive = cu?.vipStatus === "active" && (!cu?.vipExpiresAt || new Date(cu.vipExpiresAt) > new Date());
+    const vipDisc   = vipIsActive ? 0.1 : 0;
     const waiverValid = (cu?.waiverSigned === true && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
     const myBookings  = cu ? ev.bookings.filter(b => b.userId === cu.id) : [];
 
@@ -2935,6 +2989,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           if (emailBookings.length > 0) {
             await sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
             showToast("📧 Confirmation email sent!");
+            // Admin notification — fire-and-forget
+            sendAdminBookingNotification({
+              adminEmail: data.contactEmail,
+              cu, ev,
+              bookings: emailBookings,
+              total: emailBookings.reduce((s, b) => s + Number(b.total), 0),
+            }).catch(() => {});
           } else {
             console.warn("No bookings found for email after retries");
           }
@@ -2943,16 +3004,19 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           showToast("Booking confirmed but email failed: " + (emailErr?.message || String(emailErr)), "gold");
         }
 
-        // Background: deduct stock (non-blocking)
+        // Background: deduct stock (non-blocking but logged)
         const deductPromises = Object.entries(extrasSnapshot)
           .filter(([,qty]) => qty > 0)
           .map(([key, qty]) => {
             const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
             const extra = visibleExtras.find(e => e.id === extraId);
             if (!extra?.productId) return Promise.resolve();
-            return variantId
-              ? Promise.resolve(supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: variantId, qty })).catch(() => {})
-              : Promise.resolve(supabase.rpc("deduct_stock", { product_id: extra.productId, qty })).catch(() => {});
+            const rpc = variantId
+              ? supabase.rpc("deduct_variant_stock", { product_id: extra.productId, variant_id: variantId, qty })
+              : supabase.rpc("deduct_stock", { product_id: extra.productId, qty });
+            return rpc.then(({ error }) => {
+              if (error) console.error("Stock deduct failed for extra", extra.name, error.message);
+            }).catch(err => console.error("Stock deduct RPC error", extra.name, err?.message));
           });
 
         // Refresh data in background
@@ -3104,7 +3168,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   </div>
                 </div>
               )}
-              {cu?.vipStatus === "active" && <div className="alert alert-gold mb-2">⭐ VIP 10% discount applied</div>}
+              {vipIsActive && <div className="alert alert-gold mb-2">⭐ VIP 10% discount applied</div>}
               {isAdmin && <div className="alert alert-red mb-2">⚠️ Admin accounts cannot make bookings.</div>}
 
               {/* Existing bookings */}
@@ -3849,6 +3913,13 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           items: cartSnapshot.map(i => ({ name: i.name, variant: i.variantName || "", price: i.price, qty: i.qty })),
           postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         }).catch(() => {});
+        // Admin notification — fire-and-forget
+        sendAdminOrderNotification({
+          adminEmail: data.contactEmail,
+          cu,
+          order: { postage: postageTotal, total: grandTotal, customerAddress: cu.address || "", postageName: hasNoPost ? "Collection Only" : (postage?.name || ""), customerName: cu.name, customerEmail: cu.email },
+          items: cartSnapshot.map(i => ({ name: i.name, variant: i.variantName || "", price: i.price, qty: i.qty })),
+        }).catch(() => {});
       } catch (emailErr) { console.warn("Order email failed:", emailErr); }
       // Record discount redemption
       if (shopAppliedDiscount) {
@@ -3858,11 +3929,14 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
       }
       setCart([]); setCartOpen(false); setShopAppliedDiscount(null); setShopDiscountInput('');
       Promise.all([
-        ...cartSnapshot.map(ci => (
-          ci.variantId
-            ? Promise.resolve(supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty })).catch(() => {})
-            : Promise.resolve(supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty })).catch(() => {})
-        )),
+        ...cartSnapshot.map(ci => {
+          const rpc = ci.variantId
+            ? supabase.rpc("deduct_variant_stock", { product_id: ci.id, variant_id: ci.variantId, qty: ci.qty })
+            : supabase.rpc("deduct_stock", { product_id: ci.id, qty: ci.qty });
+          return rpc.then(({ error }) => {
+            if (error) console.error("Stock deduct failed for shop item", ci.name, error.message);
+          }).catch(err => console.error("Stock deduct RPC error", ci.name, err?.message));
+        }),
         api.shop.getAll().then(freshShop => save({ shop: freshShop })).catch(() => {}),
       ]);
     } catch (e) {

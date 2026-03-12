@@ -927,29 +927,18 @@ export const visits = wrapWithTimeout({
   async track({ page, userId, userName, sessionId }) {
     // Fire-and-forget — never throw, never block the UI
     try {
-      let city = null, country = null, lat = null, lon = null;
-      try {
-        const geo = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(3000) });
-        if (geo.ok) {
-          const g = await geo.json();
-          if (g.success) {
-            city    = g.city        || null;
-            country = g.country     || null;
-            lat     = g.latitude    || null;
-            lon     = g.longitude   || null;
-          }
-        }
-      } catch { /* geo unavailable */ }
-
+      // Geo-lookup via ipwho.is removed — it fired an external HTTP request on every
+      // page navigation, adding latency and an unnecessary third-party dependency.
+      // city/country columns remain in the schema for any future server-side enrichment.
       await supabase.from('page_visits').insert({
         page,
         user_id:    userId    || null,
         user_name:  userName  || null,
         session_id: sessionId || null,
-        city,
-        country,
-        lat,
-        lon,
+        city:       null,
+        country:    null,
+        lat:        null,
+        lon:        null,
         user_agent: navigator.userAgent || null,
         referrer:   document.referrer   || null,
       });
