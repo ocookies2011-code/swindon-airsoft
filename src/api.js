@@ -212,9 +212,28 @@ export const events = wrapWithTimeout({
   },
 
   async uploadBanner(eventId, file) {
-    const ext = file.name.split('.').pop()
-    const path = `events/${eventId}/banner.${ext}`
-    const { error } = await supabase.storage.from('images').upload(path, file, { upsert: true })
+    // Resize to max 1200px before uploading
+    const resized = await new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const MAX = 1200
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width  = Math.round(img.width  * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(blob => {
+          if (blob) resolve(new File([blob], 'banner.jpg', { type: 'image/jpeg' }))
+          else reject(new Error('canvas.toBlob failed'))
+        }, 'image/jpeg', 0.85)
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) } // fall back to original on error
+      img.src = url
+    })
+    const path = `events/${eventId}/banner.jpg`
+    const { error } = await supabase.storage.from('images').upload(path, resized, { upsert: true, contentType: 'image/jpeg' })
     if (error) throw error
     const { data } = supabase.storage.from('images').getPublicUrl(path)
     await supabase.from('events').update({ banner: data.publicUrl }).eq('id', eventId)

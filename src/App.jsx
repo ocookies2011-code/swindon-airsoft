@@ -8678,25 +8678,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                     <div className="btn btn-ghost btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>📁 Upload Image</div>
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                       const file = e.target.files[0]; if (!file) return;
-                      const img = new Image();
+                      // Store original file immediately — no async race condition
+                      bannerFileRef.current = file;
+                      // Generate preview data URL for display only
                       const reader = new FileReader();
-                      reader.onload = ev => {
-                        img.onload = () => {
-                          const MAX = 1200;
-                          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-                          const canvas = document.createElement("canvas");
-                          canvas.width  = Math.round(img.width  * scale);
-                          canvas.height = Math.round(img.height * scale);
-                          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-                          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-                          f("banner", dataUrl);
-                          // Store the resized blob as a File so uploadBanner gets the same image shown in preview
-                          canvas.toBlob(blob => {
-                            if (blob) bannerFileRef.current = new File([blob], "banner.jpg", { type: "image/jpeg" });
-                          }, "image/jpeg", 0.85);
-                        };
-                        img.src = ev.target.result;
-                      };
+                      reader.onload = ev => f("banner", ev.target.result);
                       reader.readAsDataURL(file);
                     }} />
                   </label>
