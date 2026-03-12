@@ -13296,11 +13296,9 @@ function AdminSettings({ showToast }) {
 
   const [squareAppId, setSquareAppId] = S("square_app_id");
   const [squareLocationId, setSquareLocationId] = S("square_location_id");
-  const [squareAccessToken, setSquareAccessToken] = S("square_access_token");
   const [squareEnv, setSquareEnv, sqLoaded] = S("square_env", "sandbox");
   const [savingSQ, setSavingSQ] = useState(false);
   const [showAppId, setShowAppId] = useState(false);
-  const [showToken, setShowToken] = useState(false);
 
   const saveSquare = async () => {
     setSavingSQ(true);
@@ -13308,14 +13306,7 @@ function AdminSettings({ showToast }) {
       await api.settings.set("square_app_id", squareAppId.trim());
       await api.settings.set("square_location_id", squareLocationId.trim());
       await api.settings.set("square_env", squareEnv);
-      // NOTE: square_access_token is NOT stored in the DB — it must be set as SQUARE_ACCESS_TOKEN
-      // in your Supabase Edge Function environment variables (square-payment / square-refund functions).
-      // Storing it in the DB would expose it to any authenticated user via the settings table.
-      if (squareAccessToken.trim()) {
-        showToast("⚠️ Access Token not saved to DB — paste it into your Edge Function env vars (see note below).", "gold");
-        return;
-      }
-      // Reset cached config so next checkout reloads it
+      // Access token is stored in Supabase Edge Function secrets, not the DB
       _squareConfigLoaded = false;
       showToast("✅ Square settings saved! Changes take effect on next checkout.");
     } catch (e) {
@@ -13396,26 +13387,10 @@ function AdminSettings({ showToast }) {
 
         <div className="form-group">
           <label>Access Token <span style={{ color: "var(--red)", fontSize: 10 }}>Required for refunds</span></label>
-          <div className="alert alert-red" style={{ fontSize: 11, marginBottom: 8, lineHeight: 1.6 }}>
-            🔒 <strong>Security:</strong> Do NOT save your Access Token here — it would be stored in the database where any logged-in user could read it.
-            Instead, set <code style={{ background:"rgba(255,255,255,.1)", padding:"1px 5px", borderRadius:2 }}>SQUARE_ACCESS_TOKEN</code> as an
-            environment variable in your Supabase Edge Function dashboard (square-payment &amp; square-refund functions).
-          </div>
-          <div style={{ position: "relative" }}>
-            <input
-              type={showToken ? "text" : "password"}
-              value={squareAccessToken}
-              onChange={e => setSquareAccessToken(e.target.value)}
-              placeholder={squareEnv === "production" ? "EAAAl... (Production Access Token)" : "EAAAl... (Sandbox Access Token)"}
-              style={{ paddingRight: 80 }}
-            />
-            <button onClick={() => setShowToken(v => !v)}
-              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>
-              {showToken ? "Hide" : "Show"}
-            </button>
-          </div>
-          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
-            Found in Square Developer Dashboard → your app → Credentials. Used server-side for refunds only — never exposed to customers.
+          <div className="alert alert-green" style={{ fontSize: 12, lineHeight: 1.8 }}>
+            🔒 <strong>Your Access Token is stored securely.</strong><br/>
+            It lives in your Supabase Edge Function secrets — not in the database — so it is never exposed to the browser.<br/>
+            <span style={{ color: "var(--muted)" }}>To update it: Supabase Dashboard → Edge Functions → square-payment → Secrets → <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px", borderRadius:2 }}>SQUARE_ACCESS_TOKEN</code></span>
           </div>
         </div>
 
