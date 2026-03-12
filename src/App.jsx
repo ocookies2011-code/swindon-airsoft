@@ -867,6 +867,13 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   55%  { transform:translateX(calc(100vw - 100% - 80px)); }
   100% { transform:translateX(0); }
 }
+/* Mobile: much slower — same pixel travel on a narrow screen felt frantic at 22s */
+@media(max-width:640px){
+  .ticker-track{animation-duration:42s;}
+}
+@media(min-width:641px) and (max-width:960px){
+  .ticker-track{animation-duration:30s;}
+}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
