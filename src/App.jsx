@@ -857,7 +857,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .ticker-wrap{overflow:hidden;background:#000;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:10px 24px;white-space:nowrap;position:relative;}
 .ticker-wrap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:60px;background:linear-gradient(90deg,#000,transparent);z-index:2;pointer-events:none;}
 .ticker-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:60px;background:linear-gradient(270deg,#000,transparent);z-index:2;pointer-events:none;}
-.ticker-track{display:inline-block;animation:ticker-bounce 22s ease-in-out infinite;}
+.ticker-track{display:inline-block;animation:ticker-bounce 35s ease-in-out infinite;}
 .ticker-track:hover{animation-play-state:paused;}
 .ticker-item{display:inline-flex;align-items:center;gap:12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);white-space:nowrap;}
 .ticker-sep{color:#333;font-size:18px;flex-shrink:0;}
@@ -869,10 +869,10 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 }
 /* Mobile: much slower — same pixel travel on a narrow screen felt frantic at 22s */
 @media(max-width:640px){
-  .ticker-track{animation-duration:42s;}
+  .ticker-track{animation-duration:70s;}
 }
 @media(min-width:641px) and (max-width:960px){
-  .ticker-track{animation-duration:30s;}
+  .ticker-track{animation-duration:50s;}
 }
 
 /* ── RESPONSIVE ── */
