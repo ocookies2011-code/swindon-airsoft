@@ -1505,11 +1505,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
     {
       id: "about", label: "About", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4"/><path d="M10 9v6M10 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
       children: [
-        { id: "about", label: "About Us", icon: "◈" },
-        { id: "qa", label: "Q&A / Rules", icon: "◈" },
-        { id: "staff", label: "Staff", icon: "◈" },
-        { id: "contact", label: "Contact", icon: "◈" },
-        { id: "terms", label: "Terms & Privacy", icon: "◈" },
+        { id: "about",   label: "About Us",       icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 8v.5" strokeLinecap="round"/></svg> },
+        { id: "qa",      label: "Q&A / Rules",    icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+        { id: "staff",   label: "Staff",          icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+        { id: "contact", label: "Contact",        icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> },
+        { id: "terms",   label: "Terms & Privacy",icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
       ]
     },
   ];
@@ -1599,7 +1599,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal }) {
           {links.map(l => (
             l.children ? (
               <div key={l.id}>
-                <div style={{ padding:"10px 20px 4px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase" }}>◈ ABOUT</div>
+                <div style={{ padding:"10px 20px 4px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#3a4a20" strokeWidth="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 8v.5" strokeLinecap="round"/></svg> ABOUT</div>
                 {l.children.map(c => (
                   <button key={c.id} className={`pub-nav-drawer-link ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)} style={{ paddingLeft:32 }}>
                     <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"#3a5010", width:20, display:"inline-block" }}>{c.icon}</span> {c.label}
@@ -5288,8 +5288,8 @@ function PlayerOrders({ cu }) {
   }, [cu.id]);
 
   const STATUS_META = {
-    pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: "◈", label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
-    processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",   icon: "◈", label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
+    pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>, label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
+    processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-9.5"/></svg>, label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
     dispatched: { color: "#c8ff00", bg: "rgba(200,255,0,.08)",    border: "rgba(200,255,0,.25)",  icon: "▸", label: "Dispatched",        step: 3, desc: "Your order is on its way. Check your tracking number below." },
     completed:  { color: "#4caf50", bg: "rgba(76,175,80,.1)",     border: "rgba(76,175,80,.3)",   icon: "✅", label: "Delivered",         step: 4, desc: "Order complete. Enjoy your kit!" },
     cancelled:  { color: "var(--red)", bg: "rgba(220,50,50,.08)", border: "rgba(220,50,50,.25)",  icon: "✗",  label: "Cancelled",         step: 0, desc: "This order has been cancelled." },
@@ -7506,11 +7506,11 @@ function AdminDash({ data, setSection }) {
     pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers", color: "red" },
     data.users.filter(u => u.deleteRequest).length > 0 && { msg: `${data.users.filter(u => u.deleteRequest).length} account deletion request(s).`, section: "players", color: "red" },
     data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length > 0 && { msg: `${data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length} VIP application(s) awaiting review.`, section: "players", color: "red" },
-    outOfStock.length > 0 && { msg: outOfStock.length + " product(s) OUT OF STOCK: " + outOfStock.slice(0,3).map(p=>p.name).join(", ") + (outOfStock.length>3 ? " +" + (outOfStock.length-3) + " more" : "") + ".", section: "shop", color: "red", icon: "◈" },
-    outOfStockVariants.length > 0 && { msg: outOfStockVariants.length + " variant product(s) fully out of stock: " + outOfStockVariants.slice(0,2).map(p=>p.name).join(", ") + (outOfStockVariants.length>2 ? " +" + (outOfStockVariants.length-2) + " more" : "") + ".", section: "shop", color: "red", icon: "◈" },
+    outOfStock.length > 0 && { msg: outOfStock.length + " product(s) OUT OF STOCK: " + outOfStock.slice(0,3).map(p=>p.name).join(", ") + (outOfStock.length>3 ? " +" + (outOfStock.length-3) + " more" : "") + ".", section: "shop", color: "red", icon: "⚠" },
+    outOfStockVariants.length > 0 && { msg: outOfStockVariants.length + " variant product(s) fully out of stock: " + outOfStockVariants.slice(0,2).map(p=>p.name).join(", ") + (outOfStockVariants.length>2 ? " +" + (outOfStockVariants.length-2) + " more" : "") + ".", section: "shop", color: "red", icon: "⚠" },
     lowStock.length > 0 && { msg: lowStock.length + " product(s) running low (≤" + LOW_STOCK_THRESHOLD + "): " + lowStock.slice(0,3).map(p=>p.name+" ("+p.stock+")").join(", ") + (lowStock.length>3 ? " +" + (lowStock.length-3) + " more" : "") + ".", section: "shop", color: "gold", icon: "⚠️" },
     lowStockVariants.length > 0 && { msg: lowStockVariants.length + " variant product(s) have low stock variants.", section: "shop", color: "gold", icon: "⚠️" },
-    new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "◈" },
+    new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "⚠" },
   ].filter(Boolean);
 
   // Quick action state
@@ -7602,9 +7602,9 @@ function AdminDash({ data, setSection }) {
         {[
           { label: "Total Revenue", val: `£${revenue.toFixed(0)}`, sub: "From bookings", icon: "💰", color: "" },
           { label: "Bookings", val: allBookings.length, sub: `${data.events.length} events`, icon: "🎟", color: "gold" },
-          { label: "Registered Players", val: players, sub: "Active accounts", icon: "◈", color: "blue" },
-          { label: "Unsigned Waivers", val: unsigned, sub: unsigned > 0 ? "Action required" : "All clear", icon: "◈", color: unsigned > 0 ? "red" : "", subColor: unsigned > 0 ? "red" : "" },
-          { label: "Active Events", val: activeEvents, sub: "Upcoming", icon: "◈", color: "teal" },
+          { label: "Registered Players", val: players, sub: "Active accounts", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>, color: "blue" },
+          { label: "Unsigned Waivers", val: unsigned, sub: unsigned > 0 ? "Action required" : "All clear", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, color: unsigned > 0 ? "red" : "", subColor: unsigned > 0 ? "red" : "" },
+          { label: "Active Events", val: activeEvents, sub: "Upcoming", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, color: "teal" },
           { label: "Check-Ins", val: checkins, sub: "All events", icon: "✅", color: "purple" },
         ].map(({ label, val, sub, icon, color, subColor }) => (
           <div key={label} className={`stat-card ${color}`}>
@@ -10822,7 +10822,7 @@ function AdminVisitorStats() {
   }, {});
   const refRows = Object.entries(refCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 8);
 
-  const PAGE_ICONS = { home:"◈", events:"◈", shop:"◈", gallery:"◈", staff:"◈", leaderboard:"◈", vip:"◈", qa:"◈", contact:"◈", profile:"◈" };
+  const PAGE_ICONS = { home:"⌂", events:"📅", shop:"🛒", gallery:"🖼", staff:"👥", leaderboard:"🏆", vip:"⭐", qa:"💬", contact:"✉", profile:"👤" };
 
   const CORNERS = [["top","left"],["top","right"],["bottom","left"],["bottom","right"]];
 
