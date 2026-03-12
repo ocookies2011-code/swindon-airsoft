@@ -8709,6 +8709,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
                       reader.readAsDataURL(file);
                     }} />
                   </label>
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6, lineHeight: 1.6 }}>
+                    Displayed at <strong style={{ color:"var(--accent)" }}>full width × 220px</strong> — recommended image size <strong style={{ color:"var(--accent)" }}>1200 × 400px</strong> (3:1 ratio). Uploads are auto-resized to max 1200px wide.
+                  </div>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>Or paste a URL:</div>
                   <input value={form.banner && form.banner.startsWith("data:") ? "" : (form.banner || "")}
                     onChange={e => { bannerFileRef.current = null; f("banner", e.target.value); }} placeholder="https://..." />
