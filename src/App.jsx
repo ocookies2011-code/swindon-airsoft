@@ -854,6 +854,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .pub-footer-social-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
 
 /* ── TICKER / MARQUEE ── */
+@keyframes skeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .site-banners{display:flex;flex-direction:column;gap:12px;padding:16px 20px;background:#0a0d08;border-bottom:1px solid #1a2808;}
 .site-banner{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:400;letter-spacing:.04em;line-height:1.7;border:1px solid;position:relative;}
 .site-banner-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
@@ -882,6 +883,19 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .bottom-nav{display:none;}
 }
 `
+function SkeletonCard({ height = 280, style = {} }) {
+  return (
+    <div style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", position:"relative", height, ...style }}>
+      <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg,transparent 0%,rgba(200,255,0,.03) 50%,transparent 100%)", backgroundSize:"200% 100%", animation:"skeletonShimmer 1.6s ease-in-out infinite" }} />
+      <div style={{ padding:14 }}>
+        <div style={{ background:"#1a2808", height:140, marginBottom:12, borderRadius:2 }} />
+        <div style={{ background:"#1a2808", height:12, width:"70%", marginBottom:8, borderRadius:2 }} />
+        <div style={{ background:"#1a2808", height:10, width:"45%", marginBottom:8, borderRadius:2 }} />
+        <div style={{ background:"#1a2808", height:10, width:"55%", borderRadius:2 }} />
+      </div>
+    </div>
+  );
+}
 function Toast({ msg, type }) {
   return msg ? <div className={`toast toast-${type || "green"}`}>{msg}</div> : null;
 }
@@ -3775,7 +3789,12 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       </div>
 
       <div style={{ maxWidth:1100, margin:"0 auto", padding:"40px 16px 80px" }}>
-        {publishedEvents.length === 0 && (
+        {publishedEvents.length === 0 && data.events.length === 0 && (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, marginBottom:40 }}>
+            {Array.from({length:3}).map((_,i) => <SkeletonCard key={i} height={320} />)}
+          </div>
+        )}
+        {publishedEvents.length === 0 && data.events.length > 0 && (
           <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>NO OPERATIONS SCHEDULED — CHECK BACK SOON</div>
         )}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
@@ -4055,6 +4074,9 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
   const [shopCatFilter, setShopCatFilter] = useState("");
   const [shopSearch, setShopSearch] = useState("");
+  const [shopSort, setShopSort] = useState("default");
+  const [shopPage, setShopPage] = useState(1);
+  const SHOP_PAGE_SIZE = 12;
   const allShopCategories = useMemo(() => {
     const cats = [...new Set((data.shop || []).map(p => p.category).filter(Boolean))].sort();
     return cats;
@@ -4066,8 +4088,23 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
       const q = shopSearch.toLowerCase();
       list = list.filter(p => p.name.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q) || (p.category || "").toLowerCase().includes(q));
     }
+    if (shopSort === "price-asc") list = [...list].sort((a,b) => {
+      const pa = a.variants?.length ? Math.min(...a.variants.map(v=>Number(v.price))) : (a.onSale && a.salePrice ? a.salePrice : a.price);
+      const pb = b.variants?.length ? Math.min(...b.variants.map(v=>Number(v.price))) : (b.onSale && b.salePrice ? b.salePrice : b.price);
+      return pa - pb;
+    });
+    else if (shopSort === "price-desc") list = [...list].sort((a,b) => {
+      const pa = a.variants?.length ? Math.min(...a.variants.map(v=>Number(v.price))) : (a.onSale && a.salePrice ? a.salePrice : a.price);
+      const pb = b.variants?.length ? Math.min(...b.variants.map(v=>Number(v.price))) : (b.onSale && b.salePrice ? b.salePrice : b.price);
+      return pb - pa;
+    });
+    else if (shopSort === "name-asc") list = [...list].sort((a,b) => a.name.localeCompare(b.name));
+    else if (shopSort === "name-desc") list = [...list].sort((a,b) => b.name.localeCompare(a.name));
     return list;
-  }, [data.shop, shopCatFilter, shopSearch]);
+  }, [data.shop, shopCatFilter, shopSearch, shopSort]);
+  useEffect(() => { setShopPage(1); }, [shopCatFilter, shopSearch, shopSort]);
+  const paginatedShop = useMemo(() => filteredShop.slice(0, shopPage * SHOP_PAGE_SIZE), [filteredShop, shopPage]);
+  const hasMoreShop = filteredShop.length > shopPage * SHOP_PAGE_SIZE;
 
   return (
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
@@ -4110,22 +4147,28 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           </div>
         )}
 
-        {data.shop.length === 0 && (
-          <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>ARMOURY IS EMPTY — AWAITING RESUPPLY</div>
+        {data.shop.length === 0 && !shopSearch && !shopCatFilter && (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12, marginBottom:40 }}>
+            {Array.from({length:8}).map((_,i) => <SkeletonCard key={i} height={260} />)}
+          </div>
         )}
 
-        {/* Search bar */}
-        <div style={{ marginBottom:16, position:"relative" }}>
-          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#3a5010", fontSize:14, pointerEvents:"none" }}>🔍</span>
-          <input
-            value={shopSearch}
-            onChange={e => setShopSearch(e.target.value)}
-            placeholder="SEARCH ARMOURY…"
-            style={{ width:"100%", background:"#0c1009", border:"1px solid #1a2808", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", padding:"10px 36px 10px 36px", outline:"none", boxSizing:"border-box", textTransform:"uppercase" }}
-          />
-          {shopSearch && (
-            <button onClick={() => setShopSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#5a7a30", cursor:"pointer", fontSize:16, lineHeight:1 }}>✕</button>
-          )}
+        {/* Search + Sort row */}
+        <div style={{ display:"flex", gap:8, marginBottom:16, alignItems:"stretch" }}>
+          <div style={{ flex:1, position:"relative" }}>
+            <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#3a5010", fontSize:14, pointerEvents:"none" }}>🔍</span>
+            <input value={shopSearch} onChange={e => setShopSearch(e.target.value)} placeholder="SEARCH ARMOURY…"
+              style={{ width:"100%", background:"#0c1009", border:"1px solid #1a2808", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", padding:"10px 36px 10px 36px", outline:"none", boxSizing:"border-box", textTransform:"uppercase" }} />
+            {shopSearch && <button onClick={() => setShopSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#5a7a30", cursor:"pointer", fontSize:16, lineHeight:1 }}>✕</button>}
+          </div>
+          <select value={shopSort} onChange={e => setShopSort(e.target.value)}
+            style={{ background:"#0c1009", border:"1px solid #1a2808", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".12em", padding:"8px 12px", outline:"none", cursor:"pointer", flexShrink:0, textTransform:"uppercase" }}>
+            <option value="default">SORT: DEFAULT</option>
+            <option value="price-asc">PRICE: LOW → HIGH</option>
+            <option value="price-desc">PRICE: HIGH → LOW</option>
+            <option value="name-asc">NAME: A → Z</option>
+            <option value="name-desc">NAME: Z → A</option>
+          </select>
         </div>
 
         {/* Category filter tabs */}
@@ -4169,7 +4212,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           </div>
         )}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
-          {filteredShop.map((item, idx) => {
+          {paginatedShop.map((item, idx) => {
             const hasV = item.variants?.length > 0;
             const displayPrice = hasV
               ? Math.min(...item.variants.map(v => Number(v.price)))
@@ -4270,6 +4313,20 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             );
           })}
         </div>
+
+        {hasMoreShop && (
+          <div style={{ textAlign:"center", marginTop:32 }}>
+            <button onClick={() => setShopPage(p => p + 1)}
+              style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".22em", padding:"10px 32px", cursor:"pointer", transition:"all .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="#c8ff00"; e.currentTarget.style.color="#c8ff00"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.color="#5a7a30"; }}>
+              ▸ LOAD MORE — {filteredShop.length - shopPage * SHOP_PAGE_SIZE} MORE ITEMS
+            </button>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#2a3a10", letterSpacing:".15em", marginTop:8 }}>
+              SHOWING {Math.min(shopPage * SHOP_PAGE_SIZE, filteredShop.length)} OF {filteredShop.length}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* CART MODAL */}
@@ -8996,6 +9053,12 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
   const [playerSearch, setPlayerSearch] = useState("");
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkEmailSubject, setBulkEmailSubject] = useState("");
+  const [bulkEmailBody, setBulkEmailBody] = useState("");
+  const [bulkEmailModal, setBulkEmailModal] = useState(false);
 
   const loadUsers = () =>
     api.profiles.getAll()
@@ -9177,11 +9240,102 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               {filteredPlayers.length} / {players.length}
             </span>
           </div>
+          {selectedPlayerIds.size > 0 && (
+            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", marginBottom:8, flexWrap:"wrap" }}>
+              <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#c8ff00", letterSpacing:".15em", whiteSpace:"nowrap" }}>{selectedPlayerIds.size} SELECTED</span>
+              <select value={bulkAction} onChange={e => setBulkAction(e.target.value)}
+                style={{ background:"#0c1009", border:"1px solid #2a3a10", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, padding:"4px 8px", outline:"none" }}>
+                <option value="">— Choose action —</option>
+                <option value="export-csv">📊 Export CSV</option>
+                <option value="bulk-email">📧 Send Email</option>
+                <option value="yellow-card">🟡 Yellow card</option>
+                <option value="clear-card">✅ Clear card</option>
+                <option value="add-credit">💰 Add £5 credit</option>
+              </select>
+              <button className="btn btn-sm btn-primary" disabled={!bulkAction || bulkBusy}
+                onClick={async () => {
+                  if (!bulkAction) return;
+                  const selected = filteredPlayers.filter(u => selectedPlayerIds.has(u.id));
+                  if (bulkAction === "bulk-email") { setBulkEmailModal(true); return; }
+                  if (bulkAction === "export-csv") {
+                    const rows = ["Name,Email,Games,VIP,UKARA,Credits,CardStatus",
+                      ...selected.map(u => `"${u.name}","${u.email||""}",${ u.gamesAttended||0},${u.vipStatus==="active"?"YES":"NO"},"${u.ukara||""}",${u.credits||0},"${u.cardStatus||"none"}"`)
+                    ].join("\n");
+                    const a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(rows); a.download = "players-export.csv"; a.click();
+                    showToast(`Exported ${selected.length} players`);
+                  } else {
+                    setBulkBusy(true);
+                    try {
+                      for (const u of selected) {
+                        const update = bulkAction === "add-credit" ? { credits: (u.credits||0)+5 }
+                          : bulkAction === "yellow-card" ? { cardStatus:"yellow" }
+                          : { cardStatus:"none" };
+                        await updateUserAndRefresh(u.id, update);
+                      }
+                      showToast(`Updated ${selected.length} players`);
+                    } catch(e) { showToast("Bulk action failed: " + e.message, "red"); }
+                    finally { setBulkBusy(false); }
+                  }
+                  setSelectedPlayerIds(new Set()); setBulkAction("");
+                }}>
+                {bulkBusy ? "⏳" : "APPLY"}
+              </button>
+              <button className="btn btn-sm btn-ghost" onClick={() => { setSelectedPlayerIds(new Set()); setBulkAction(""); }}>✕ Clear</button>
+            </div>
+          )}
+
+          {/* Bulk email modal */}
+          {bulkEmailModal && (
+            <div className="overlay" onClick={() => setBulkEmailModal(false)}>
+              <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:500 }}>
+                <div className="modal-title">📧 Send Email to {selectedPlayerIds.size} Players</div>
+                <div className="form-group">
+                  <label>Subject</label>
+                  <input value={bulkEmailSubject} onChange={e => setBulkEmailSubject(e.target.value)} placeholder="e.g. Important update from Swindon Airsoft" />
+                </div>
+                <div className="form-group">
+                  <label>Message</label>
+                  <textarea rows={6} value={bulkEmailBody} onChange={e => setBulkEmailBody(e.target.value)} placeholder="Write your message here…" />
+                </div>
+                <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>
+                  Will be sent to: {filteredPlayers.filter(u => selectedPlayerIds.has(u.id)).map(u => u.name).join(", ")}
+                </div>
+                <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+                  <button className="btn btn-ghost" onClick={() => setBulkEmailModal(false)}>Cancel</button>
+                  <button className="btn btn-primary" disabled={!bulkEmailSubject.trim() || !bulkEmailBody.trim() || bulkBusy}
+                    onClick={async () => {
+                      const selected = filteredPlayers.filter(u => selectedPlayerIds.has(u.id)).filter(u => u.email);
+                      setBulkBusy(true);
+                      let sent = 0, failed = 0;
+                      for (const u of selected) {
+                        try {
+                          await sendEmail({ toEmail: u.email, toName: u.name, subject: bulkEmailSubject, htmlContent: `<div style="font-family:sans-serif;color:#ddd;background:#111;padding:24px;border-radius:8px"><p style="white-space:pre-wrap">${bulkEmailBody}</p><hr style="border-color:#333;margin:20px 0"><p style="font-size:12px;color:#666">— Swindon Airsoft</p></div>` });
+                          sent++;
+                        } catch { failed++; }
+                      }
+                      showToast(`📧 Sent: ${sent}${failed > 0 ? `, Failed: ${failed}` : ""}`, failed > 0 ? "gold" : "");
+                      setBulkBusy(false); setBulkEmailModal(false); setBulkEmailSubject(""); setBulkEmailBody("");
+                      setSelectedPlayerIds(new Set()); setBulkAction("");
+                    }}>
+                    {bulkBusy ? "⏳ Sending…" : `📧 Send to ${filteredPlayers.filter(u=>selectedPlayerIds.has(u.id)&&u.email).length} players`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
+            <thead><tr>
+              <th style={{ width:28 }}>
+                <input type="checkbox"
+                  checked={filteredPlayers.length > 0 && filteredPlayers.every(u => selectedPlayerIds.has(u.id))}
+                  onChange={e => setSelectedPlayerIds(e.target.checked ? new Set(filteredPlayers.map(u=>u.id)) : new Set())} />
+              </th>
+              <th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {filteredPlayers.map(u => (
-                <tr key={u.id}>
+                <tr key={u.id} style={{ background: selectedPlayerIds.has(u.id) ? "rgba(200,255,0,.03)" : "" }}>
+                  <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
                   <td style={{ fontWeight: 600 }}>{u.name}</td>
                   <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
                   <td>{u.gamesAttended}</td>
@@ -14445,6 +14599,30 @@ function TermsPage({ setPage }) {
   );
 }
 
+// ── Error Boundary ────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { console.error("App error caught:", error, info); }
+  render() {
+    if (this.state.hasError) return (
+      <div style={{ background:"#080a06", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+        <div style={{ maxWidth:480, width:"100%", background:"#0c1009", border:"1px solid #3a0a0a", padding:"32px 28px", position:"relative" }}>
+          {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+            <div key={v+h} style={{ position:"absolute", width:16, height:16, top:v==="top"?8:"auto", bottom:v==="bottom"?8:"auto", left:h==="left"?8:"auto", right:h==="right"?8:"auto", borderTop:v==="top"?"1px solid #ef4444":"none", borderBottom:v==="bottom"?"1px solid #ef4444":"none", borderLeft:h==="left"?"1px solid #ef4444":"none", borderRight:h==="right"?"1px solid #ef4444":"none" }} />
+          ))}
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#ef4444", marginBottom:12 }}>⚠ SYSTEM FAULT DETECTED</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".1em", color:"#e8f0d8", marginBottom:8 }}>SOMETHING WENT WRONG</div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#5a7a30", lineHeight:1.7, marginBottom:20 }}>An unexpected error has occurred. Your session data is safe.</div>
+          {this.state.error && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a3a3a", background:"#080a06", border:"1px solid #1a1a1a", padding:"8px 10px", marginBottom:20, wordBreak:"break-all", lineHeight:1.6 }}>{this.state.error.message}</div>}
+          <button onClick={() => window.location.reload()} style={{ background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", padding:"10px 24px", cursor:"pointer", width:"100%" }}>↺ RELOAD SYSTEM</button>
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 // ── Root App ──────────────────────────────────────────────────
 
 // ── Geo-block: allowed country codes ──────────────────────
@@ -14456,8 +14634,18 @@ const ALLOWED_COUNTRY_CODES = new Set([
   "PL","PT","RO","SK","SI","ES","SE",
 ]);
 
-export default function App() {
+function AppInner() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
+  // ── Offline detection ─────────────────────────────────────
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline  = () => setIsOffline(false);
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online",  goOnline);
+    return () => { window.removeEventListener("offline", goOffline); window.removeEventListener("online", goOnline); };
+  }, []);
+
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
@@ -14868,6 +15056,12 @@ export default function App() {
       <style>{CSS}</style>
       <Toast {...toast} />
       {errorBanner}
+      {isOffline && (
+        <div style={{ background:"#1a0a00", borderBottom:"1px solid #3a1a00", padding:"8px 16px", display:"flex", alignItems:"center", gap:10, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#ff9944", letterSpacing:".15em" }}>
+          <span style={{ fontSize:14 }}>📡</span>
+          <span>NO SIGNAL — YOU ARE OFFLINE. SOME FEATURES MAY NOT WORK.</span>
+        </div>
+      )}
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} />
 
       <div className="pub-page-wrap">
@@ -15006,4 +15200,9 @@ export default function App() {
       )}
     </>
   );
+}
+
+
+export default function App() {
+  return <ErrorBoundary><AppInner /></ErrorBoundary>;
 }
