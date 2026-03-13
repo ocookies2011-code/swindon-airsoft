@@ -932,7 +932,42 @@ async function fetchTrackingStatus(tn, courier) {
 
 
 // ── Admin orders table — inline courier status badge ──────────
-function AdminTrackBadge({ trackingNumber, courier }) {
+// ── Admin orders table — STATUS cell with live courier status ─
+// Shows the live courier tracking status (e.g. "In Transit") instead of
+// the plain order status badge (e.g. "dispatched") when tracking data loads.
+function AdminTrackStatusCell({ orderStatus, trackingNumber, courier, statusColors }) {
+  const [liveStatus, setLiveStatus] = React.useState(null);
+  React.useEffect(() => {
+    if (!trackingNumber) return;
+    const { tn } = detectCourier(trackingNumber);
+    fetchTrackingStatus(tn, courier).then(r => { if (r?.status) setLiveStatus(r.status); });
+  }, [trackingNumber, courier]);
+
+  const trackColors = {
+    "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800",
+    "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800",
+  };
+
+  if (liveStatus) {
+    const color = trackColors[liveStatus] || "#c8e878";
+    return (
+      <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, fontWeight:700,
+          color, letterSpacing:".08em", background:`rgba(0,0,0,.4)`,
+          border:`1px solid ${color}`, padding:"3px 8px", borderRadius:2,
+          whiteSpace:"nowrap", display:"inline-block" }}>
+          {liveStatus.toUpperCase()}
+        </span>
+        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a4a20", letterSpacing:".05em" }}>LIVE TRACKING</span>
+      </div>
+    );
+  }
+
+  // Fallback to plain order status while tracking loads
+  return <span className={`tag tag-${statusColors[orderStatus] || "blue"}`}>{orderStatus}</span>;
+}
+
+function AdminTrackBadge({ trackingNumber, courier, asStatusBadge = false }) {
   const [liveStatus, setLiveStatus] = React.useState(null);
   React.useEffect(() => {
     if (!trackingNumber) return;
@@ -944,10 +979,25 @@ function AdminTrackBadge({ trackingNumber, courier }) {
     "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800",
     "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800",
   };
+  const color = colors[liveStatus] || "#c8e878";
+  if (asStatusBadge) {
+    // Rendered as the main status badge — replaces the order status tag
+    return (
+      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, fontWeight:700,
+          color, letterSpacing:".08em", background:`rgba(0,0,0,.4)`,
+          border:`1px solid ${color}`, padding:"3px 8px", borderRadius:2,
+          whiteSpace:"nowrap", display:"inline-block" }}>
+          📦 {liveStatus.toUpperCase()}
+        </span>
+        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"var(--muted)", letterSpacing:".05em" }}>LIVE TRACKING</span>
+      </div>
+    );
+  }
   return (
     <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, fontWeight:700,
-      color: colors[liveStatus] || "#c8e878", letterSpacing:".06em", background:"rgba(0,0,0,.3)",
-      border:`1px solid ${colors[liveStatus] || "#c8e878"}`, padding:"2px 6px", borderRadius:2, whiteSpace:"nowrap" }}>
+      color, letterSpacing:".06em", background:"rgba(0,0,0,.3)",
+      border:`1px solid ${color}`, padding:"2px 6px", borderRadius:2, whiteSpace:"nowrap" }}>
       {liveStatus.toUpperCase()}
     </span>
   );
@@ -10631,24 +10681,34 @@ function AdminOrdersInline({ showToast }) {
                     <td style={{ fontSize:12 }}>{o.postage_name || "—"}</td>
                     <td className="text-green">£{Number(o.total).toFixed(2)}</td>
                     <td>
-                      <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
-                      {o.tracking_number && (() => {
-                        const { courier, trackUrl } = detectCourier(o.tracking_number);
-                        return (
-                          <div style={{ marginTop:4, display:"flex", alignItems:"center", gap:4, flexWrap:"wrap" }}>
-                            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#c8ff00", letterSpacing:".05em" }}>
-                              📮 {o.tracking_number.trim()}
-                            </span>
-                            {courier && <span style={{ fontSize:9, color:"var(--muted)" }}>({courier})</span>}
-                            {trackUrl && (
-                              <a href={trackUrl} target="_blank" rel="noopener noreferrer"
-                                style={{ fontSize:9, color:"#4fc3f7", textDecoration:"none", fontWeight:700, letterSpacing:".05em" }}
-                                onClick={e => e.stopPropagation()}>↗ TRACK</a>
-                            )}
-                            <AdminTrackBadge trackingNumber={o.tracking_number} courier={courier} />
-                          </div>
-                        );
-                      })()}
+                      {o.tracking_number
+                        ? (() => {
+                            const { courier, trackUrl } = detectCourier(o.tracking_number);
+                            return (
+                              <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                                {/* Live status badge — replaces order status when tracking data is available */}
+                                <AdminTrackStatusCell
+                                  orderStatus={o.status}
+                                  trackingNumber={o.tracking_number}
+                                  courier={courier}
+                                  statusColors={STATUS_COLORS}
+                                />
+                                <div style={{ display:"flex", alignItems:"center", gap:4, flexWrap:"wrap" }}>
+                                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#c8ff00", letterSpacing:".05em" }}>
+                                    📮 {o.tracking_number.trim()}
+                                  </span>
+                                  {courier && <span style={{ fontSize:9, color:"var(--muted)" }}>({courier})</span>}
+                                  {trackUrl && (
+                                    <a href={trackUrl} target="_blank" rel="noopener noreferrer"
+                                      style={{ fontSize:9, color:"#4fc3f7", textDecoration:"none", fontWeight:700, letterSpacing:".05em" }}
+                                      onClick={e => e.stopPropagation()}>↗ TRACK</a>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()
+                        : <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
+                      }
                     </td>
                     <td>
                       <select value={o.status} onChange={e => setStatus(o.id, e.target.value)}

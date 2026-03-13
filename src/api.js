@@ -101,10 +101,13 @@ export const profiles = wrapWithTimeout({
 
   async delete(id) {
     // Deletes auth user via Supabase Edge Function.
-    // Uses supabase.functions.invoke() so auth is attached automatically
-    // and it works in all environments (dev + production) without a Vite proxy.
+    // Explicitly pass the JWT — supabase.functions.invoke() can sometimes
+    // miss a refreshed token if the session was recently renewed.
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) throw new Error('Not authenticated — please log in again')
     const { data, error } = await supabase.functions.invoke('delete-user', {
       body: { userId: id },
+      headers: { Authorization: `Bearer ${session.access_token}` },
     })
     if (error) {
       // Extract the real message from the Edge Function response body if available
