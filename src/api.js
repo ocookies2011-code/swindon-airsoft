@@ -106,7 +106,16 @@ export const profiles = wrapWithTimeout({
     const { data, error } = await supabase.functions.invoke('delete-user', {
       body: { userId: id },
     })
-    if (error) throw new Error(error.message || 'Delete failed')
+    if (error) {
+      // Extract the real message from the Edge Function response body if available
+      let msg = error.message || 'Delete failed'
+      try {
+        const ctx = await error.context?.json?.()
+        if (ctx?.error) msg = ctx.error
+        else if (ctx?.message) msg = ctx.message
+      } catch {}
+      throw new Error(msg)
+    }
     if (data?.error) throw new Error(data.error)
   },
 

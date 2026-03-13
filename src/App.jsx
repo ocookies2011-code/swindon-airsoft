@@ -930,11 +930,34 @@ async function fetchTrackingStatus(tn, courier) {
   }
 }
 
+
+// ── Admin orders table — inline courier status badge ──────────
+function AdminTrackBadge({ trackingNumber, courier }) {
+  const [liveStatus, setLiveStatus] = React.useState(null);
+  React.useEffect(() => {
+    if (!trackingNumber) return;
+    const { tn } = detectCourier(trackingNumber);
+    fetchTrackingStatus(tn, courier).then(r => { if (r?.status) setLiveStatus(r.status); });
+  }, [trackingNumber, courier]);
+  if (!liveStatus) return null;
+  const colors = {
+    "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800",
+    "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800",
+  };
+  return (
+    <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, fontWeight:700,
+      color: colors[liveStatus] || "#c8e878", letterSpacing:".06em", background:"rgba(0,0,0,.3)",
+      border:`1px solid ${colors[liveStatus] || "#c8e878"}`, padding:"2px 6px", borderRadius:2, whiteSpace:"nowrap" }}>
+      {liveStatus.toUpperCase()}
+    </span>
+  );
+}
+
 function detectCourier(rawTn) {
   const tn = (rawTn || "").trim().replace(/\s/g, "");
   if (!tn) return { tn, courier: null, trackUrl: null };
   let courier = null, trackUrl = null;
-  if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(tn) || /^\d{13}$/.test(tn))
+  if (/^[A-Za-z]{2}\d{9}[A-Za-z]{2}$/i.test(tn) || /^\d{13}$/.test(tn))
     { courier = "Royal Mail"; trackUrl = `https://www.royalmail.com/track-your-item#/tracking-results/${tn}`; }
   else if (/^1Z[A-Z0-9]{16}$/.test(tn))
     { courier = "UPS"; trackUrl = `https://www.ups.com/track?tracknum=${tn}`; }
@@ -10622,6 +10645,7 @@ function AdminOrdersInline({ showToast }) {
                                 style={{ fontSize:9, color:"#4fc3f7", textDecoration:"none", fontWeight:700, letterSpacing:".05em" }}
                                 onClick={e => e.stopPropagation()}>↗ TRACK</a>
                             )}
+                            <AdminTrackBadge trackingNumber={o.tracking_number} courier={courier} />
                           </div>
                         );
                       })()}
