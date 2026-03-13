@@ -883,117 +883,113 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .bottom-nav{display:none;}
 }
 `
-// ── Parcel tracking status (uses 17track API via Supabase edge proxy or localStorage cache) ──
+// ── Parcel tracking status ───────────────────────────────────
 const TRACKING_CACHE_KEY = (tn) => `tracking_status_${tn}`;
-const TRACKING_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours between auto-checks
-
-// Cache the 17track API key once loaded from site_settings
-let _17trackKey = null;
-async function get17trackKey() {
-  if (_17trackKey !== null) return _17trackKey;
-  try {
-    // Key stored in Supabase site_settings as "17track_api_key"
-    const { supabase } = await import('./supabaseClient');
-    const { data } = await supabase.from('site_settings').select('value').eq('key', '17track_api_key').single();
-    _17trackKey = data?.value || '';
-  } catch { _17trackKey = ''; }
-  return _17trackKey;
-}
+const TRACKING_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 async function fetchTrackingStatus(tn, courier) {
   if (!tn) return null;
+
   // Check localStorage cache first
   try {
     const cached = localStorage.getItem(TRACKING_CACHE_KEY(tn));
     if (cached) {
       const { status, events, checkedAt } = JSON.parse(cached);
-      const age = Date.now() - checkedAt;
-      if (age < TRACKING_TTL_MS) return { status, events, checkedAt, fromCache: true };
+      if (Date.now() - checkedAt < TRACKING_TTL_MS) return { status, events, checkedAt, fromCache: true };
     }
   } catch {}
 
-  // Map courier to 17track carrier code
-  const carrierMap = {
-    "Royal Mail": 190, "UPS": 100002, "FedEx": 100003,
-    "DPD": 3011, "Evri": 3011, "Parcelforce": 190,
-  };
+  const carrierMap = { "Royal Mail": 190, "UPS": 100002, "FedEx": 100003, "DPD": 3011, "Evri": 3011, "Parcelforce": 190 };
   const carrierCode = carrierMap[courier] || 0;
 
-  // Try 17track API (requires API key stored in site_settings → 17track_api_key)
+  // ── Attempt 1: 17track API key from site_settings ──────────
   try {
-    const apiKey = await get17trackKey();
-    if (!apiKey) throw new Error("No API key");
-    const res = await fetch(`https://api.17track.net/track/v2/gettrackinfo`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "17token": apiKey },
-      body: JSON.stringify({ number: tn, carrier: carrierCode }),
-    });
-    if (!res.ok) throw new Error("API error");
-    const data = await res.json();
-    const info = data?.data?.accepted?.[0]?.track;
-    if (!info) throw new Error("No data");
-
-    const events = (info.z0 || []).map(e => ({ time: e.a, desc: e.z, location: e.c || "" })).slice(0, 5);
-    const statusMap = { 0: "Pending", 10: "In Transit", 20: "Expired", 30: "Pick Up", 35: "Undelivered", 40: "Delivered", 50: "In Transit" };
-    const status = statusMap[info.e] || "In Transit";
-    const result = { status, events, checkedAt: Date.now(), fromCache: false };
-    localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
-    return result;
+    const { data: keyRow } = await import('./supabaseClient')
+      .then(m => m.supabase.from('site_settings').select('value').eq('key','17track_api_key').single());
+    const apiKey = keyRow?.value;
+    if (apiKey) {
+      const res = await fetch('https://api.17track.net/track/v2/gettrackinfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', '17token': apiKey },
+        body: JSON.stringify({ number: tn, carrier: carrierCode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const info = data?.data?.accepted?.[0]?.track;
+        if (info) {
+          const statusMap = { 0:'Pending', 10:'In Transit', 20:'Expired', 30:'Pick Up', 35:'Undelivered', 40:'Delivered', 50:'In Transit' };
+          const status = statusMap[info.e] || 'In Transit';
+          const events = (info.z0 || []).slice(0,5).map(e => ({ time:e.a, desc:e.z, location:e.c||'' }));
+          const result = { status, events, checkedAt: Date.now(), fromCache: false };
+          try { localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result)); } catch {}
+          return result;
+        }
+      }
+    }
   } catch {}
 
-  // Fallback: call our own Supabase Edge Function as a tracking proxy
-  // (Deploy supabase/functions/track-parcel/index.ts — see comment below)
+  // ── Attempt 2: Supabase Edge Function proxy ─────────────────
+  // Deploy supabase/functions/track-parcel — stores 17track key as SEVENTEEN_TRACK_KEY secret
   try {
     const { supabase } = await import('./supabaseClient');
     const { data, error } = await supabase.functions.invoke('track-parcel', {
       body: { trackingNumber: tn, courier, carrierCode },
     });
-    if (error || !data?.status) throw new Error("Edge fn failed");
-    const result = { status: data.status, events: data.events || [], checkedAt: Date.now(), fromCache: false };
-    localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
-    return result;
+    if (!error && data?.status) {
+      const result = { status: data.status, events: data.events || [], checkedAt: Date.now(), fromCache: false };
+      try { localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result)); } catch {}
+      return result;
+    }
   } catch {}
 
   return null;
 }
 
-
-// ── Admin orders table — inline courier status badge ──────────
-// ── Admin orders table — STATUS cell with live courier status ─
-// Shows the live courier tracking status (e.g. "In Transit") instead of
-// the plain order status badge (e.g. "dispatched") when tracking data loads.
-function AdminTrackStatusCell({ orderStatus, trackingNumber, courier, statusColors }) {
-  const [liveStatus, setLiveStatus] = React.useState(null);
+// ── Admin orders — STATUS cell showing ONLY live courier status ──
+// Shows live tracking (In Transit / Delivered etc). While loading, shows nothing
+// so the cell stays clean. The Actions dropdown is the source of truth for order status.
+function AdminTrackStatusCell({ trackingNumber, courier }) {
+  const [liveStatus, setLiveStatus] = React.useState(undefined); // undefined = loading, null = failed
   React.useEffect(() => {
-    if (!trackingNumber) return;
+    if (!trackingNumber) { setLiveStatus(null); return; }
     const { tn } = detectCourier(trackingNumber);
-    fetchTrackingStatus(tn, courier).then(r => { if (r?.status) setLiveStatus(r.status); });
+    fetchTrackingStatus(tn, courier).then(r => setLiveStatus(r?.status || null));
   }, [trackingNumber, courier]);
 
   const trackColors = {
-    "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800",
-    "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800",
+    'Delivered':        '#4caf50',
+    'In Transit':       '#c8ff00',
+    'Out for Delivery': '#ff9800',
+    'Pending':          '#4fc3f7',
+    'Undelivered':      'var(--red)',
+    'Expired':          'var(--muted)',
+    'Pick Up':          '#ff9800',
   };
 
-  if (liveStatus) {
-    const color = trackColors[liveStatus] || "#c8e878";
-    return (
-      <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, fontWeight:700,
-          color, letterSpacing:".08em", background:`rgba(0,0,0,.4)`,
-          border:`1px solid ${color}`, padding:"3px 8px", borderRadius:2,
-          whiteSpace:"nowrap", display:"inline-block" }}>
-          {liveStatus.toUpperCase()}
-        </span>
-        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a4a20", letterSpacing:".05em" }}>LIVE TRACKING</span>
-      </div>
-    );
+  if (liveStatus === undefined) {
+    // Still loading — show a subtle spinner so the cell isn't empty
+    return <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#3a4a20', letterSpacing:'.08em' }}>⏳ CHECKING…</span>;
+  }
+  if (!liveStatus) {
+    // API returned nothing — no live data available
+    return <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#3a4a20', letterSpacing:'.08em' }}>— NO TRACKING DATA</span>;
   }
 
-  // Fallback to plain order status while tracking loads
-  return <span className={`tag tag-${statusColors[orderStatus] || "blue"}`}>{orderStatus}</span>;
+  const color = trackColors[liveStatus] || '#c8e878';
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, fontWeight:700,
+        color, letterSpacing:'.1em', background:'rgba(0,0,0,.5)',
+        border:`1px solid ${color}`, padding:'4px 10px',
+        whiteSpace:'nowrap', display:'inline-block' }}>
+        {liveStatus === 'Delivered' ? '✅' : liveStatus === 'Out for Delivery' ? '🚚' : '📦'} {liveStatus.toUpperCase()}
+      </span>
+      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:'#3a4a20', letterSpacing:'.05em' }}>LIVE TRACKING</span>
+    </div>
+  );
 }
 
+// ── TrackingBlock inline badge (used inside detail panels) ────
 function AdminTrackBadge({ trackingNumber, courier, asStatusBadge = false }) {
   const [liveStatus, setLiveStatus] = React.useState(null);
   React.useEffect(() => {
@@ -1003,28 +999,14 @@ function AdminTrackBadge({ trackingNumber, courier, asStatusBadge = false }) {
   }, [trackingNumber, courier]);
   if (!liveStatus) return null;
   const colors = {
-    "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800",
-    "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800",
+    'Delivered': '#4caf50', 'In Transit': '#c8ff00', 'Out for Delivery': '#ff9800',
+    'Pending': '#4fc3f7', 'Undelivered': 'var(--red)', 'Expired': 'var(--muted)', 'Pick Up': '#ff9800',
   };
-  const color = colors[liveStatus] || "#c8e878";
-  if (asStatusBadge) {
-    // Rendered as the main status badge — replaces the order status tag
-    return (
-      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, fontWeight:700,
-          color, letterSpacing:".08em", background:`rgba(0,0,0,.4)`,
-          border:`1px solid ${color}`, padding:"3px 8px", borderRadius:2,
-          whiteSpace:"nowrap", display:"inline-block" }}>
-          📦 {liveStatus.toUpperCase()}
-        </span>
-        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"var(--muted)", letterSpacing:".05em" }}>LIVE TRACKING</span>
-      </div>
-    );
-  }
+  const color = colors[liveStatus] || '#c8e878';
   return (
     <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, fontWeight:700,
-      color, letterSpacing:".06em", background:"rgba(0,0,0,.3)",
-      border:`1px solid ${color}`, padding:"2px 6px", borderRadius:2, whiteSpace:"nowrap" }}>
+      color, letterSpacing:'.06em', background:'rgba(0,0,0,.3)',
+      border:`1px solid ${color}`, padding:'2px 6px', borderRadius:2, whiteSpace:'nowrap' }}>
       {liveStatus.toUpperCase()}
     </span>
   );
@@ -10715,10 +10697,8 @@ function AdminOrdersInline({ showToast }) {
                               <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                                 {/* Live status badge — replaces order status when tracking data is available */}
                                 <AdminTrackStatusCell
-                                  orderStatus={o.status}
                                   trackingNumber={o.tracking_number}
                                   courier={courier}
-                                  statusColors={STATUS_COLORS}
                                 />
                                 <div style={{ display:"flex", alignItems:"center", gap:4, flexWrap:"wrap" }}>
                                   <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#c8ff00", letterSpacing:".05em" }}>
