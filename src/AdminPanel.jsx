@@ -20,7 +20,7 @@ import {
   WaiverModal,
 } from "./utils";
 
-function AdminDiscountCodes({ data, showToast }) {
+function AdminDiscountCodes({ data, showToast, cu }) {
   const EMPTY = { code: '', type: 'percent', value: '', maxUses: '', maxUsesPerUser: '', expiresAt: '', assignedUserIds: [], scope: 'all', active: true };
   const [codes, setCodes] = useState([]);
   const [redemptions, setRedemptions] = useState([]);
@@ -97,9 +97,11 @@ function AdminDiscountCodes({ data, showToast }) {
       if (editId) {
         await api.discountCodes.update(editId, form);
         showToast('Discount code updated.', 'success');
+        logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Discount code updated", detail: form.code });
       } else {
         await api.discountCodes.create(form);
         showToast('Discount code created.', 'success');
+        logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Discount code created", detail: form.code });
       }
       resetForm();
       load();
@@ -109,10 +111,12 @@ function AdminDiscountCodes({ data, showToast }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this discount code and all its redemption history?')) return;
+    const code = codes.find(c => c.id === id)?.code || id;
     setDeleting(id);
     try {
       await api.discountCodes.delete(id);
       showToast('Deleted.', 'success');
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Discount code deleted", detail: code });
       load();
     } catch (e) { showToast(fmtErr(e), 'error'); }
     finally { setDeleting(null); }
@@ -390,12 +394,153 @@ function AdminDiscountCodes({ data, showToast }) {
   );
 }
 
+// ── Audit log ────────────────────────────────────────────────
+const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
+
+async function logAction({ adminEmail, adminName, action, detail = null }) {
+  try {
+    await supabase.from("admin_audit_log").insert({
+      admin_email: adminEmail,
+      admin_name:  adminName || adminEmail,
+      action,
+      detail,
+      created_at:  new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn("Audit log failed:", e.message);
+  }
+}
+
+// ── Admin Audit Log viewer ───────────────────────────────────
+function AdminAuditLog() {
+  const [logs, setLogs]       = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter]   = useState("");
+  const [page, setPage]       = useState(0);
+  const PAGE_SIZE = 50;
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("admin_audit_log")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (e) {
+      console.error("Audit log load failed:", e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const filtered = logs.filter(l => {
+    if (!filter.trim()) return true;
+    const q = filter.toLowerCase();
+    return (
+      (l.action || "").toLowerCase().includes(q) ||
+      (l.detail || "").toLowerCase().includes(q) ||
+      (l.admin_email || "").toLowerCase().includes(q) ||
+      (l.admin_name || "").toLowerCase().includes(q)
+    );
+  });
+
+  const pages     = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const ACTION_COLOR = (action = "") => {
+    if (action.includes("delete") || action.includes("Delete") || action.includes("banned") || action.includes("rejected")) return "var(--red)";
+    if (action.includes("refund") || action.includes("Refund")) return "#ff9800";
+    if (action.includes("approved") || action.includes("Approved") || action.includes("VIP")) return "var(--accent)";
+    if (action.includes("dispatched") || action.includes("Dispatched")) return "#4fc3f7";
+    return "var(--muted)";
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", textTransform: "uppercase" }}>
+            🔐 Admin Audit Log
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+            {logs.length} actions recorded · visible only to superadmin
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            value={filter}
+            onChange={e => { setFilter(e.target.value); setPage(0); }}
+            placeholder="Filter by action, detail, admin…"
+            style={{ fontSize: 12, width: 240 }}
+          />
+          <button className="btn btn-sm btn-ghost" onClick={load}>↺ Refresh</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 40, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>Loading…</div>
+      ) : paginated.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>No actions logged yet.</div>
+      ) : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th style={{ width: 150 }}>Time</th>
+                <th style={{ width: 160 }}>Admin</th>
+                <th>Action</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginated.map((l, i) => (
+                <tr key={l.id || i}>
+                  <td className="mono" style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>
+                    {new Date(l.created_at).toLocaleString("en-GB", { timeZone: "Europe/London", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  </td>
+                  <td style={{ fontSize: 11 }}>
+                    <div style={{ fontWeight: 700, color: "var(--text)" }}>{l.admin_name || "—"}</div>
+                    <div style={{ color: "var(--muted)", fontSize: 10 }}>{l.admin_email}</div>
+                  </td>
+                  <td>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, fontWeight: 700, color: ACTION_COLOR(l.action) }}>
+                      {l.action}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: 11, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", maxWidth: 300, wordBreak: "break-word" }}>
+                    {l.detail || "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {pages > 1 && (
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 14, flexWrap: "wrap" }}>
+          {Array.from({ length: pages }).map((_, i) => (
+            <button key={i} className={`btn btn-sm ${i === page ? "btn-primary" : "btn-ghost"}`} onClick={() => setPage(i)}>
+              {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
   const getInitialSection = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","cash","purchase-orders","discount-codes","settings"];
+      "contact-admin","messages","cash","purchase-orders","discount-codes","settings","audit-log"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -405,6 +550,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   };
 
   const isMain = cu.role === "admin";
+  const isSuperAdmin = cu.email === SUPERADMIN_EMAIL;
 
   const hasPerm = (p) => isMain || cu.permissions?.includes(p) || cu.permissions?.includes("all");
 
@@ -443,6 +589,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "purchase-orders",   label: "Purchase Orders",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, group: null },
     { id: "discount-codes",    label: "Discount Codes",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>, group: null },
     { id: "settings",          label: "Settings",          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, group: "SYSTEM" },
+    ...(isSuperAdmin ? [{ id: "audit-log", label: "Audit Log", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef9a9a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>, group: null }] : []),
   ];
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -499,23 +646,24 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         </div>
         <div className="admin-content">
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
-          {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} />}
-          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} />}
-          {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned />}
-          {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} />}
-          {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} />}
+          {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} />}
+          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
+          {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
+          {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} cu={cu} />}
+          {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && <AdminRevenue data={data} save={save} showToast={showToast} />}
           {section === "visitor-stats" && <AdminVisitorStats />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
-          {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} />}
-          {section === "staff-admin" && <AdminStaff showToast={showToast} />}
-          {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} />}
+          {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} cu={cu} />}
+          {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}
+          {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} cu={cu} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
-          {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} />}
-          {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} />}
-          {section === "settings" && <AdminSettings showToast={showToast} />}
+          {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} cu={cu} />}
+          {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
+          {section === "settings" && <AdminSettings showToast={showToast} cu={cu} />}
+          {section === "audit-log" && isSuperAdmin && <AdminAuditLog />}
         </div>
       </div>
     </div>
@@ -720,6 +868,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("Booking updated!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking updated", detail: `Booking ID: ${editBooking.id}` });
       setEditBooking(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     finally { setBusy(false); }
@@ -733,6 +882,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("Booking deleted!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking deleted", detail: `Booking ID: ${delConfirm.id} — ${delConfirm.name || ""}` });
       setDelConfirm(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     finally { setBusy(false); }
@@ -918,7 +1068,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
   );
 }
 
-function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast }) {
+function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
   const [waitlistLoading, setWaitlistLoading] = useState(false);
 
@@ -1138,6 +1288,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       const evList = await withTimeout(api.events.getAll());
       save({ events: evList });
       showToast("Event saved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: formToSave.id ? "Event updated" : "Event created", detail: formToSave.title || formToSave.id });
       setModal(null);
     } catch (e) {
       console.error("saveEvent failed:", e);
@@ -1224,6 +1375,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("✓ Event cloned as draft!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Event cloned", detail: ev.title });
     } catch (e) {
       console.error("Clone failed:", e);
       showToast("Clone failed: " + (e.message || String(e)), "red");
@@ -1240,6 +1392,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("Event deleted!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Event deleted", detail: delEventConfirm.title || delEventConfirm.id });
       setDelEventConfirm(null);
     } catch (e) {
       showToast("Delete failed: " + e.message, "red");
@@ -1849,7 +2002,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast })
 // ── Admin Events (alias — kept for any legacy references) ──────
 
 // ── Admin Players ─────────────────────────────────────────
-function AdminPlayers({ data, save, updateUser, showToast }) {
+function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
@@ -1931,6 +2084,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       save({ users: data.users.filter(x => x.id !== deletedId) });
       setDelAccountConfirm(null);
       showToast(`✓ Account permanently deleted: ${deletedName}`, "red");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player account deleted", detail: deletedName });
     } catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setDeletingAccount(false); }
   };
@@ -1987,6 +2141,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       setLocalUsers(updated);
       save({ users: updated });
       showToast("Player updated!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player updated", detail: edit?.name || edit?.id });
       setEdit(null);
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
@@ -2271,6 +2426,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                         <button className="btn btn-sm btn-danger" onClick={async () => {
                           await updateUserAndRefresh(u.id, { vipApplied: false });
                           showToast(`VIP application rejected for ${u.name}`, "red");
+                          logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "VIP application rejected", detail: u.name });
                         }}>✗ Reject</button>
                       </div>
                     </td>
@@ -2637,6 +2793,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 
                   await loadUsers();
                   showToast(`✅ VIP approved for ${vipApproveModal.name}! UKARA: ${vipUkara.trim()}`);
+                  logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "VIP approved", detail: `${vipApproveModal.name} — UKARA: ${vipUkara.trim()}` });
                   setVipApproveModal(null);
                 } catch (e) {
                   showToast("Approval failed: " + e.message, "red");
@@ -2842,7 +2999,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 }
 
 // ── Admin Waivers ─────────────────────────────────────────
-function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned }) {
+function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, cu }) {
   const [view, setView] = useState(null);
   const [localUsers, setLocalUsers] = useState(null);
 
@@ -2861,9 +3018,11 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned })
   const approve = (u) => {
     updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
     showToast("Waiver changes approved!"); setView(null);
+    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver changes approved", detail: u.name });
   };
   const reject = (u) => {
     updateUser(u.id, { waiverPending: null }); showToast("Changes rejected"); setView(null);
+    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver changes rejected", detail: u.name });
   };
 
   const vw = view ? allUsers.find(u => u.id === view) : null;
@@ -2933,6 +3092,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned })
                         const updated = (vw.extraWaivers || []).filter((_, ei) => ei !== i - 1);
                         updateUser(vw.id, { extraWaivers: updated });
                         showToast("Waiver removed");
+                        logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver removed", detail: `Player: ${vw.name}` });
                         setView(null);
                       }} style={{ background:"none", border:"1px solid var(--red)", color:"var(--red)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
                         🗑 REMOVE
@@ -2989,7 +3149,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned })
 }
 
 // ── Admin Orders (inline, used as tab inside AdminShop) ──────────
-function AdminOrdersInline({ showToast }) {
+function AdminOrdersInline({ showToast, cu }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -3012,6 +3172,7 @@ function AdminOrdersInline({ showToast }) {
       setOrders(o => o.map(x => x.id === id ? { ...x, status: isUpdate ? x.status : "dispatched", tracking_number: tracking || null } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status: isUpdate ? d.status : "dispatched", tracking_number: tracking || null }));
       showToast(isUpdate ? "Tracking number updated!" : "Order marked as dispatched!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: isUpdate ? "Order tracking updated" : "Order dispatched", detail: `Order ID: ${id}${tracking ? ` — tracking: ${tracking}` : ""}` });
       const order = orders.find(o => o.id === id);
       const toEmail = order?.customer_email || order?.customerEmail;
       if (toEmail && !isUpdate) {
@@ -3034,6 +3195,7 @@ function AdminOrdersInline({ showToast }) {
       setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
       if (detail?.id === id) setDetail(d => ({ ...d, status }));
       showToast("Status updated!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Order status updated", detail: `Order ID: ${id} → ${status}` });
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
@@ -3081,6 +3243,7 @@ function AdminOrdersInline({ showToast }) {
       }
 
       showToast(returnAction === "approve" ? "✅ Return approved — customer notified." : returnAction === "received" ? "📦 Return marked as received." : "Return request rejected.");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `Return ${returnAction === "approve" ? "approved" : returnAction === "received" ? "marked received" : "rejected"}`, detail: `Order ID: ${order.id} — ${order.customer_name || ""}` });
       setRejectionReason("");
       setReturnModal(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
@@ -3109,6 +3272,7 @@ function AdminOrdersInline({ showToast }) {
       setOrders(o => o.map(x => x.id === order.id ? { ...x, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() } : x));
       if (detail?.id === order.id) setDetail(d => ({ ...d, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() }));
       showToast("✅ Refund of £" + amt.toFixed(2) + " issued via Square!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Order refunded", detail: `Order ID: ${order.id} — £${amt.toFixed(2)}${refundNote ? ` — note: ${refundNote}` : ""}` });
       setRefundModal(null);
     } catch (e) {
       showToast("❌ Refund failed: " + (e.message || String(e)), "red");
@@ -3476,7 +3640,7 @@ function AdminOrdersInline({ showToast }) {
 }
 
 // ── Admin Shop ────────────────────────────────────────────
-function AdminShop({ data, save, showToast }) {
+function AdminShop({ data, save, showToast, cu }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="shop" && ["products","postage","orders"].includes(p[2]) ? p[2] : "products";
@@ -3608,6 +3772,7 @@ function AdminShop({ data, save, showToast }) {
       await api.shop.delete(delProductConfirm.id);
       save({ shop: await api.shop.getAll() });
       showToast("Product deleted");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Product deleted", detail: delProductConfirm.name || delProductConfirm.id });
       setDelProductConfirm(null);
     } catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setDeletingProduct(false); }
@@ -3638,6 +3803,7 @@ function AdminShop({ data, save, showToast }) {
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
       showToast("Product saved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: modal === "new" ? "Product created" : "Product updated", detail: form.name });
       setModal(null);
     } catch (e) {
       console.error("saveItem FAILED at:", e?.message, e);
@@ -3654,14 +3820,17 @@ function AdminShop({ data, save, showToast }) {
       else await api.postage.update(postForm.id, postForm);
       save({ postageOptions: await api.postage.getAll() });
       showToast("Postage saved!"); setPostModal(null);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: postModal === "new" ? "Postage option created" : "Postage option updated", detail: postForm.name });
     } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
   };
 
   const deletePostage = async (id) => {
+    const name = (data.postageOptions || []).find(p => p.id === id)?.name || id;
     try {
       await api.postage.delete(id);
       save({ postageOptions: await api.postage.getAll() });
       showToast("Removed");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Postage option deleted", detail: name });
     } catch (e) { showToast("Delete failed: " + e.message, "red"); }
   };
 
@@ -3826,7 +3995,7 @@ function AdminShop({ data, save, showToast }) {
         </div>
       )}
 
-      {tab === "orders" && <AdminOrdersInline showToast={showToast} />}
+      {tab === "orders" && <AdminOrdersInline showToast={showToast} cu={cu} />}
 
       {/* ── PRODUCT MODAL ── */}
       {modal && (
@@ -4494,6 +4663,7 @@ function AdminRevenue({ data, save, showToast }) {
         save({ events: freshEvents });
       }
       showToast("Transaction deleted.");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Transaction deleted", detail: `ID: ${t.id} — source: ${t.source}` });
       setDelConfirm(null);
       setSelected(null);
     } catch (e) {
@@ -4967,7 +5137,7 @@ function renderInline(text) {
   });
 }
 
-function AdminQA({ data, save, showToast }) {
+function AdminQA({ data, save, showToast, cu }) {
   const blank = { q: "", a: "", image: "" };
   const [form, setForm] = useState(blank);
   const [editId, setEditId] = useState(null);
@@ -5029,6 +5199,7 @@ function AdminQA({ data, save, showToast }) {
       setPreview(false);
       await refreshQA();
       showToast(wasEditing ? "✓ Q&A updated!" : "✓ Q&A added!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: wasEditing ? "Q&A updated" : "Q&A created", detail: form.q?.slice(0, 80) });
     } catch (e) {
       console.error("QA save failed:", e);
       showToast("Save failed: " + (e?.message || JSON.stringify(e)), "red");
@@ -5039,10 +5210,12 @@ function AdminQA({ data, save, showToast }) {
 
   const del = async (id) => {
     if (!window.confirm("Delete this Q&A?")) return;
+    const item = (data?.qa || []).find(q => q.id === id);
     try {
       await api.qa.delete(id);
       await refreshQA();
       showToast("Deleted");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Q&A deleted", detail: item?.question?.slice(0, 80) || id });
     } catch (e) {
       console.error("QA delete failed:", e);
       showToast("Delete failed: " + (e?.message || e?.code || JSON.stringify(e)), "red");
@@ -5556,7 +5729,7 @@ function StaffCard({ member, rank, pips }) {
 }
 
 // ── Admin Staff ────────────────────────────────────────────
-function AdminStaff({ showToast }) {
+function AdminStaff({ showToast, cu }) {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -5621,6 +5794,7 @@ function AdminStaff({ showToast }) {
         await api.staff.update(modal.id, form);
       }
       showToast(modal === "new" ? "Staff member added!" : "Staff member updated!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: modal === "new" ? "Staff member added" : "Staff member updated", detail: form.name });
       setModal(null);
       loadStaff(true); // silent refresh — no loading flash
     } catch (e) {
@@ -5630,7 +5804,12 @@ function AdminStaff({ showToast }) {
 
   const confirmDelete = async () => {
     setBusy(true);
-    try { await api.staff.delete(deleteConfirm.id); showToast("Staff member removed", "red"); setDeleteConfirm(null); loadStaff(true); }
+    try {
+      await api.staff.delete(deleteConfirm.id);
+      showToast("Staff member removed", "red");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Staff member removed", detail: deleteConfirm.name || deleteConfirm.id });
+      setDeleteConfirm(null); loadStaff(true);
+    }
     catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setBusy(false); }
   };
@@ -5939,7 +6118,7 @@ function ContactPage({ data, cu, showToast }) {
 }
 
 // ── Admin Contact Departments ──────────────────────────────
-function AdminContactDepts({ showToast, save }) {
+function AdminContactDepts({ showToast, save, cu }) {
   const [depts, setDepts]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]  = useState(false);
@@ -5962,6 +6141,7 @@ function AdminContactDepts({ showToast, save }) {
       // Refresh global data so ContactPage sees new depts immediately
       save({ contactDepartments: updated });
       showToast("Departments saved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Contact departments saved", detail: `${updated.length} department(s)` });
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSaving(false); }
@@ -6148,7 +6328,7 @@ function EmailTestCard({ showToast, sectionHead }) {
 // ── Admin Settings ────────────────────────────────────────
 
 // ── Admin Purchase Orders ─────────────────────────────────────
-function AdminPurchaseOrders({ data, save, showToast }) {
+function AdminPurchaseOrders({ data, save, showToast, cu }) {
   const [tab, setTab] = useState("orders"); // "orders" | "suppliers"
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -6190,9 +6370,11 @@ function AdminPurchaseOrders({ data, save, showToast }) {
       if (supModal === "new") {
         await api.suppliers.create(supForm);
         showToast("Supplier added!");
+        logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Supplier created", detail: supForm.name });
       } else {
         await api.suppliers.update(supModal.id, supForm);
         showToast("Supplier updated!");
+        logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Supplier updated", detail: supForm.name });
       }
       await loadAll();
       setSupModal(null);
@@ -6202,7 +6384,11 @@ function AdminPurchaseOrders({ data, save, showToast }) {
 
   const deleteSup = async (id) => {
     if (!window.confirm("Delete this supplier?")) return;
-    try { await api.suppliers.delete(id); await loadAll(); showToast("Supplier deleted."); }
+    const name = suppliers.find(s => s.id === id)?.name || id;
+    try {
+      await api.suppliers.delete(id); await loadAll(); showToast("Supplier deleted.");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Supplier deleted", detail: name });
+    }
     catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
@@ -6249,6 +6435,7 @@ function AdminPurchaseOrders({ data, save, showToast }) {
         status: "draft",
       });
       showToast("Purchase order created!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Purchase order created", detail: `Supplier: ${poForm.supplierName || poForm.supplierId} — £${poTotal?.toFixed(2) || "0.00"}` });
       await loadAll();
       setPoModal(null);
       setPoForm(blankPo);
@@ -6287,6 +6474,7 @@ function AdminPurchaseOrders({ data, save, showToast }) {
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
       showToast("✅ Stock received & shop updated!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Stock received", detail: `PO ID: ${detailModal.id}` });
       await loadAll();
       setDetailModal(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
@@ -6295,12 +6483,18 @@ function AdminPurchaseOrders({ data, save, showToast }) {
 
   const deleteOrder = async (id) => {
     if (!window.confirm("Delete this purchase order?")) return;
-    try { await api.purchaseOrders.delete(id); await loadAll(); showToast("Purchase order deleted."); }
+    try {
+      await api.purchaseOrders.delete(id); await loadAll(); showToast("Purchase order deleted.");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Purchase order deleted", detail: `PO ID: ${id}` });
+    }
     catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
   const statusChange = async (id, status) => {
-    try { await api.purchaseOrders.updateStatus(id, status); await loadAll(); showToast("Status updated!"); }
+    try {
+      await api.purchaseOrders.updateStatus(id, status); await loadAll(); showToast("Status updated!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "PO status updated", detail: `PO ID: ${id} → ${status}` });
+    }
     catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
@@ -6707,7 +6901,7 @@ function AdminPurchaseOrders({ data, save, showToast }) {
 // ── Admin Bookkeeping / HMRC ──────────────────────────────────────────
 
 
-function AdminSettings({ showToast }) {
+function AdminSettings({ showToast, cu }) {
   const S = (key, def = "") => {
     const [val, setVal] = useState(def);
     const [loaded, setLoaded] = useState(false);
@@ -6736,6 +6930,7 @@ function AdminSettings({ showToast }) {
       // Access token is stored in Supabase Edge Function secrets, not the DB
       _squareConfigLoaded = false;
       showToast("✅ Square settings saved! Changes take effect on next checkout.");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Square settings saved", detail: `env: ${squareEnv}` });
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSavingSQ(false); }
@@ -6871,8 +7066,9 @@ function AdminSettings({ showToast }) {
           setSavingTrack(true);
           try {
             await api.settings.set("17track_api_key", trackApiKey.trim());
-            trackKeyCache.value = undefined; // force re-read on next tracking check
+            trackKeyCache.value = undefined;
             showToast("✅ 17track API key saved!");
+            logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "17track API key saved", detail: null });
           } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
           finally { setSavingTrack(false); }
         }}>
@@ -6930,6 +7126,7 @@ function AdminMessages({ data, save, showToast }) {
       setBanners(list);
       save({ homeMsg: clean });
       showToast(clean.length ? `${clean.length} banner${clean.length > 1 ? "s" : ""} saved!` : "Banners cleared");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Home banners updated", detail: clean.length ? `${clean.length} banner(s)` : "cleared" });
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSaving(false); }
@@ -6947,6 +7144,7 @@ function AdminMessages({ data, save, showToast }) {
       await api.settings.set("home_message", val);
       save({ homeMsg: val ? [{ text: val, color: "#c8ff00", bg: "#080a06", icon: "⚡" }] : [] });
       showToast(val ? "Message saved!" : "Message cleared");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Site message updated", detail: val ? val.slice(0, 80) : "cleared" });
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSaving(false); }
@@ -6962,6 +7160,7 @@ function AdminMessages({ data, save, showToast }) {
       await upsertSetting("social_whatsapp", whatsapp);
       save({ socialFacebook: facebook, socialInstagram: instagram, socialWhatsapp: whatsapp });
       showToast("Social links saved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Social links saved", detail: null });
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSavingSocial(false); }
@@ -6975,6 +7174,7 @@ function AdminMessages({ data, save, showToast }) {
       await upsertSetting("contact_email", contactEmail);
       save({ contactAddress, contactPhone, contactEmail });
       showToast("Contact details saved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Contact details saved", detail: null });
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
     } finally { setSavingContact(false); }
@@ -7166,6 +7366,7 @@ function AdminCash({ data, cu, showToast }) {
         await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
       }
       showToast(`✅ Sale £${total.toFixed(2)} saved!`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Cash sale recorded", detail: `£${total.toFixed(2)} — ${items.length} item(s)` });
       setItems([]);
       setManual({ name: "", email: "" });
       setPlayerId("manual");
