@@ -9273,10 +9273,14 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const confirmDeleteAccount = async () => {
     setDeletingAccount(true);
     try {
-      await api.profiles.delete(delAccountConfirm.id);
-      save({ users: data.users.filter(x => x.id !== delAccountConfirm.id) });
-      showToast(`Account deleted: ${delAccountConfirm.name}`, "red");
+      const deletedName = delAccountConfirm.name;
+      const deletedId = delAccountConfirm.id;
+      await api.profiles.delete(deletedId);
+      // Remove from all local state immediately
+      setLocalUsers(prev => prev ? prev.filter(x => x.id !== deletedId) : prev);
+      save({ users: data.users.filter(x => x.id !== deletedId) });
       setDelAccountConfirm(null);
+      showToast(`✓ Account permanently deleted: ${deletedName}`, "red");
     } catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setDeletingAccount(false); }
   };
@@ -9633,27 +9637,42 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
           {players.filter(u => u.deleteRequest).length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No deletion requests.</div>
           ) : (
+            <>
+            <div style={{ marginBottom: 12, padding: "10px 14px", background: "rgba(220,50,50,.06)", border: "1px solid rgba(220,50,50,.2)", fontSize: 12, color: "var(--muted)" }}>
+              ⚠️ These players have requested account deletion. Deleting an account is <strong style={{ color: "var(--red)" }}>permanent and cannot be undone</strong> — their profile, waiver, auth account and all personal data will be removed.
+            </div>
             <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Joined</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Player</th><th>Email</th><th>Joined</th><th>Games</th><th>Credits</th><th>Actions</th></tr></thead>
               <tbody>
                 {players.filter(u => u.deleteRequest).map(u => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600 }}>{u.name}</td>
+                  <tr key={u.id} style={{ background: "rgba(220,50,50,.03)" }}>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{u.name}</div>
+                      {u.vipStatus === "active" && <div style={{ fontSize: 10, color: "var(--gold)", marginTop: 2 }}>★ VIP</div>}
+                    </td>
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
+                    <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate ? new Date(u.joinDate).toLocaleDateString("en-GB") : "—"}</td>
+                    <td className="text-muted" style={{ fontSize: 12 }}>{u.gamesAttended || 0}</td>
+                    <td style={{ fontSize: 12, color: u.credits > 0 ? "var(--gold)" : "var(--muted)" }}>
+                      {u.credits > 0 ? `£${Number(u.credits).toFixed(2)}` : "—"}
+                    </td>
                     <td>
                       <div className="gap-2">
-                        <button className="btn btn-sm btn-danger" onClick={() => setDelAccountConfirm(u)}>Delete Account</button>
-                        <button className="btn btn-sm btn-ghost" onClick={() => {
-                          updateUser(u.id, { deleteRequest: false });
+                        <button className="btn btn-sm btn-danger" onClick={() => setDelAccountConfirm(u)}>
+                          🗑 Delete Account
+                        </button>
+                        <button className="btn btn-sm btn-ghost" onClick={async () => {
+                          await updateUser(u.id, { deleteRequest: false });
+                          await loadUsers();
                           showToast("Deletion request cancelled");
-                        }}>Cancel Request</button>
+                        }}>✕ Cancel Request</button>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table></div>
+            </>
           )}
         </div>
       )}
@@ -9865,16 +9884,28 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       {delAccountConfirm && (
         <div className="overlay" onClick={() => !deletingAccount && setDelAccountConfirm(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">🗑 Delete Account?</div>
-            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 4px" }}>
-              Permanently delete the account for <strong style={{ color: "var(--text)" }}>{delAccountConfirm.name}</strong>?
-            </p>
-            <p style={{ fontSize: 12, color: "var(--red)", marginBottom: 20 }}>
-              ⚠️ This will delete their profile, waiver data, and auth account. Their booking history will be unlinked. This cannot be undone.
+            <div className="modal-title" style={{ color: "var(--red)" }}>🗑 Permanently Delete Account?</div>
+
+            {/* Player summary */}
+            <div style={{ background: "var(--bg4)", border: "1px solid var(--border)", borderRadius: 3, padding: "12px 14px", margin: "16px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+              <div><div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>NAME</div><div style={{ fontWeight: 700 }}>{delAccountConfirm.name}</div></div>
+              <div><div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>EMAIL</div><div style={{ fontSize: 13 }}>{delAccountConfirm.email || "—"}</div></div>
+              <div><div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>GAMES ATTENDED</div><div style={{ fontSize: 13 }}>{delAccountConfirm.gamesAttended || 0}</div></div>
+              <div><div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>CREDITS</div><div style={{ fontSize: 13, color: delAccountConfirm.credits > 0 ? "var(--gold)" : "inherit" }}>{delAccountConfirm.credits > 0 ? `£${Number(delAccountConfirm.credits).toFixed(2)}` : "None"}</div></div>
+              {delAccountConfirm.vipStatus === "active" && (
+                <div style={{ gridColumn: "1 / -1" }}><span style={{ fontSize: 11, color: "var(--gold)", fontWeight: 700 }}>★ This player has an active VIP membership</span></div>
+              )}
+              {delAccountConfirm.credits > 0 && (
+                <div style={{ gridColumn: "1 / -1" }}><span style={{ fontSize: 11, color: "var(--gold)" }}>⚠ Player has unused credits — these will be lost on deletion.</span></div>
+              )}
+            </div>
+
+            <p style={{ fontSize: 12, color: "var(--red)", marginBottom: 20, lineHeight: 1.7 }}>
+              ⚠️ This will permanently delete their <strong>profile, waiver, auth login</strong> and all associated personal data. Their booking history will be anonymised. <strong>This cannot be undone.</strong>
             </p>
             <div className="gap-2">
               <button className="btn btn-danger" disabled={deletingAccount} onClick={confirmDeleteAccount}>
-                {deletingAccount ? "Deleting…" : "Yes, Delete Account"}
+                {deletingAccount ? "⏳ Deleting…" : "🗑 Yes, Delete Account Permanently"}
               </button>
               <button className="btn btn-ghost" disabled={deletingAccount} onClick={() => setDelAccountConfirm(null)}>Cancel</button>
             </div>
