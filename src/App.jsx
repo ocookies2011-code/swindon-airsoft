@@ -5882,6 +5882,122 @@ function QAPage({ data }) {
 
 // ── Profile ───────────────────────────────────────────────
 // ── Player Order History ─────────────────────────────────────
+// ── Order Detail (customer view) ─────────────────────────────
+function CustomerOrderDetail({ order: selected }) {
+  const items = Array.isArray(selected.items) ? selected.items : [];
+  const meta = STATUS_META[selected.status] || STATUS_META.pending;
+  const isCancelled = selected.status === "cancelled";
+  const [liveTrackStatus, setLiveTrackStatus] = useState(null);
+  const displayLabel = (selected.status === "dispatched" && liveTrackStatus) ? liveTrackStatus : meta.label;
+  const displayColor = (selected.status === "dispatched" && liveTrackStatus)
+    ? ({ "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800", "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800" }[liveTrackStatus] || meta.color)
+    : meta.color;
+
+  return (
+    <div>
+      {/* Status header */}
+      <div style={{ background: meta.bg, border: `1px solid ${meta.border}`, padding: "18px 22px", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", letterSpacing: ".15em", marginBottom: 4 }}>
+              ORDER #{(selected.id||"").slice(-8).toUpperCase()}
+            </div>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", color: displayColor, textTransform: "uppercase" }}>
+              {meta.icon} {displayLabel}
+            </div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 5 }}>{meta.desc}</div>
+          </div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: "var(--accent)" }}>
+            £{Number(selected.total).toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {/* Progress tracker (skip for cancelled) */}
+      {!isCancelled && (
+        <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "16px 22px", marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>Order Progress</div>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {STEPS.map((s, i) => {
+              const done = meta.step >= s.step;
+              const current = meta.step === s.step;
+              return (
+                <div key={s.step} style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, gap:0 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? "#c8ff00" : "#1a1a1a", border: `2px solid ${done ? "#c8ff00" : current ? "rgba(200,255,0,.4)" : "#2a2a2a"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: done ? "#000" : "var(--muted)", fontWeight: 900, boxShadow: current ? "0 0 12px rgba(200,255,0,.4)" : "none", transition: "all .3s" }}>
+                      {done ? "✓" : s.step}
+                    </div>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: done ? "#c8ff00" : "var(--muted)", marginTop: 6, textAlign: "center", letterSpacing: ".08em", textTransform: "uppercase" }}>{s.label}</div>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div style={{ flex: 2, height: 2, background: meta.step > s.step ? "#c8ff00" : "#1a1a1a", transition: "background .3s", marginBottom: 20 }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Tracking number */}
+      {selected.tracking_number && <TrackingBlock trackingNumber={selected.tracking_number} onStatusResolved={setLiveTrackStatus} />}
+
+      {/* Refund notice */}
+      {selected.refund_amount > 0 && (
+        <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "12px 18px", marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#4fc3f7", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>💳 Refund Issued</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)" }}>
+            £{Number(selected.refund_amount).toFixed(2)} refunded to your original payment method
+            {selected.refund_note ? ` — ${selected.refund_note}` : ""}
+          </div>
+        </div>
+      )}
+
+      {/* Items table */}
+      <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", marginBottom: 14 }}>
+        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", textTransform: "uppercase" }}>
+          Items
+        </div>
+        {items.map((item, idx) => (
+          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderBottom: idx < items.length - 1 ? "1px solid var(--border)" : "none" }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{item.name}</div>
+              {item.variant && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{item.variant}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)" }}>×{item.qty}</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--text)", minWidth: 60, textAlign: "right" }}>£{(Number(item.price) * item.qty).toFixed(2)}</div>
+            </div>
+          </div>
+        ))}
+        <div style={{ padding: "10px 16px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
+          <span style={{ fontSize: 12, color: "var(--muted)" }}>Postage ({selected.postage_name || "Standard"})</span>
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>£{Number(selected.postage || 0).toFixed(2)}</span>
+        </div>
+        <div style={{ padding: "12px 16px", borderTop: "2px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
+          <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: ".08em", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase" }}>Total Paid</span>
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 900, color: "var(--accent)" }}>£{Number(selected.total).toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* Delivery address */}
+      {selected.customer_address && (
+        <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "14px 18px", marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 8, textTransform: "uppercase" }}>📍 Shipping Address</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--text)", whiteSpace: "pre-line", lineHeight: 1.8 }}>{selected.customer_address}</div>
+        </div>
+      )}
+
+      {/* Returns postage notice */}
+      <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.12)", padding: "10px 16px" }}>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", lineHeight: 1.7 }}>
+          ↩ Need to return an item? Please note that <span style={{ color: "var(--text)" }}>return postage is the responsibility of the customer</span>. Contact us before sending anything back.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerOrders({ cu }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -5982,113 +6098,7 @@ function PlayerOrders({ cu }) {
       </div>
 
       {/* ── Order detail ── */}
-      {selected && (() => {
-        const items = Array.isArray(selected.items) ? selected.items : [];
-        const meta = STATUS_META[selected.status] || STATUS_META.pending;
-        const isCancelled = selected.status === "cancelled";
-        const [liveTrackStatus, setLiveTrackStatus] = useState(null);
-        const displayLabel = (selected.status === "dispatched" && liveTrackStatus) ? liveTrackStatus : meta.label;
-        const displayColor = (selected.status === "dispatched" && liveTrackStatus)
-          ? ({ "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800", "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800" }[liveTrackStatus] || meta.color)
-          : meta.color;
-
-        return (
-          <div>
-            {/* Status header */}
-            <div style={{ background: meta.bg, border: `1px solid ${meta.border}`, padding: "18px 22px", marginBottom: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
-                <div>
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", letterSpacing: ".15em", marginBottom: 4 }}>
-                    ORDER #{(selected.id||"").slice(-8).toUpperCase()}
-                  </div>
-                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", color: displayColor, textTransform: "uppercase" }}>
-                    {meta.icon} {displayLabel}
-                  </div>
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 5 }}>{meta.desc}</div>
-                </div>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: "var(--accent)" }}>
-                  £{Number(selected.total).toFixed(2)}
-                </div>
-              </div>
-            </div>
-
-            {/* Progress tracker (skip for cancelled) */}
-            {!isCancelled && (
-              <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "16px 22px", marginBottom: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>Order Progress</div>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  {STEPS.map((s, i) => {
-                    const done = meta.step >= s.step;
-                    const current = meta.step === s.step;
-                    return (
-                      <div key={s.step} style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, gap:0 }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? "#c8ff00" : "#1a1a1a", border: `2px solid ${done ? "#c8ff00" : current ? "rgba(200,255,0,.4)" : "#2a2a2a"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: done ? "#000" : "var(--muted)", fontWeight: 900, boxShadow: current ? "0 0 12px rgba(200,255,0,.4)" : "none", transition: "all .3s" }}>
-                            {done ? "✓" : s.step}
-                          </div>
-                          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: done ? "#c8ff00" : "var(--muted)", marginTop: 6, textAlign: "center", letterSpacing: ".08em", textTransform: "uppercase" }}>{s.label}</div>
-                        </div>
-                        {i < STEPS.length - 1 && (
-                          <div style={{ flex: 2, height: 2, background: meta.step > s.step ? "#c8ff00" : "#1a1a1a", transition: "background .3s", marginBottom: 20 }} />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Tracking number */}
-            {selected.tracking_number && <TrackingBlock trackingNumber={selected.tracking_number} onStatusResolved={setLiveTrackStatus} />}
-
-            {/* Refund notice */}
-            {selected.refund_amount > 0 && (
-              <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "12px 18px", marginBottom: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#4fc3f7", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>💳 Refund Issued</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)" }}>
-                  £{Number(selected.refund_amount).toFixed(2)} refunded to your original payment method
-                  {selected.refund_note ? ` — ${selected.refund_note}` : ""}
-                </div>
-              </div>
-            )}
-
-            {/* Items table */}
-            <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", marginBottom: 14 }}>
-              <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", textTransform: "uppercase" }}>
-                Items
-              </div>
-              {items.map((item, idx) => (
-                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderBottom: idx < items.length - 1 ? "1px solid var(--border)" : "none" }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{item.name}</div>
-                    {item.variant && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{item.variant}</div>}
-                  </div>
-                  <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)" }}>×{item.qty}</div>
-                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--text)", minWidth: 60, textAlign: "right" }}>£{(Number(item.price) * item.qty).toFixed(2)}</div>
-                  </div>
-                </div>
-              ))}
-              <div style={{ padding: "10px 16px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Postage ({selected.postage_name || "Standard"})</span>
-                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>£{Number(selected.postage || 0).toFixed(2)}</span>
-              </div>
-              <div style={{ padding: "12px 16px", borderTop: "2px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
-                <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: ".08em", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase" }}>Total Paid</span>
-                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 900, color: "var(--accent)" }}>£{Number(selected.total).toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Delivery address */}
-            {selected.customer_address && (
-              <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "14px 18px" }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 8, textTransform: "uppercase" }}>📍 Shipping Address</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--text)", whiteSpace: "pre-line", lineHeight: 1.8 }}>{selected.customer_address}</div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {selected && <CustomerOrderDetail order={selected} />}
     </div>
   );
 }
@@ -11585,14 +11595,16 @@ function AdminVisitorStats() {
 
   const rangeToDays = { "1d": 1, "7d": 7, "30d": 30, "90d": 90, "all": 0 };
 
-  // Re-fetch whenever date range changes — filtering happens server-side so no row cap
+  // Re-fetch whenever date range changes — filtering happens server-side
   useEffect(() => {
     setLoading(true);
     setError(null);
     const days = rangeToDays[dateRange] ?? 7;
     Promise.all([
       api.visits.getStats(days),
-      dateRange === "all" ? api.visits.getAllTimeCounts() : Promise.resolve(null),
+      // Always fetch all-time counts so the headline total is always accurate
+      // regardless of the 10k row fetch cap on getStats
+      api.visits.getAllTimeCounts(),
     ])
       .then(([rows, counts]) => {
         setVisitData(rows);

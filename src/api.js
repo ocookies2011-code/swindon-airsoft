@@ -975,10 +975,35 @@ export const staff = wrapWithTimeout({
 //    applied SERVER-SIDE, so the old 5000-row client cap is never hit
 //  - Unique visits = distinct session_ids (one per browser tab session)
 //  - getAllTimeCounts() returns total rows + unique sessions across all time
+// ── Geo lookup cache (session-scoped, never sent to server) ──────────────────
+// One geo lookup per browser session — result reused for all subsequent visits.
+let _geoCache = undefined; // undefined = not yet attempted
+
+async function _lookupGeo() {
+  if (_geoCache !== undefined) return _geoCache;
+  _geoCache = null; // mark as attempted so we never retry on failure
+  const apis = [
+    { url: 'https://ipwho.is/',             parse: g => g.success  ? { country: g.country_code, city: g.city || null, lat: g.latitude || null, lon: g.longitude || null } : null },
+    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode ? { country: g.countryCode, city: g.cityName || null, lat: g.latitude || null, lon: g.longitude || null } : null },
+    { url: 'https://api.country.is/',        parse: g => g.country ? { country: g.country, city: null, lat: null, lon: null } : null },
+  ];
+  for (const { url, parse } of apis) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) continue;
+      const g = await res.json();
+      const result = parse(g);
+      if (result?.country) { _geoCache = result; return _geoCache; }
+    } catch { continue; }
+  }
+  return null; // all failed — leave as null
+}
+
 export const visits = wrapWithTimeout({
   async track({ page, userId, userName, sessionId }) {
     try {
-      await supabase.from('page_visits').insert({
+      // Insert the row immediately (don't block on geo)
+      const { data: row, error } = await supabase.from('page_visits').insert({
         page,
         user_id:    userId    || null,
         user_name:  userName  || null,
@@ -989,18 +1014,32 @@ export const visits = wrapWithTimeout({
         lon:        null,
         user_agent: navigator.userAgent || null,
         referrer:   document.referrer   || null,
-      });
+      }).select('id').single();
+      if (error || !row?.id) return;
+
+      // Fire geo lookup in background — update row when it resolves
+      _lookupGeo().then(geo => {
+        if (!geo) return;
+        supabase.from('page_visits').update({
+          country: geo.country || null,
+          city:    geo.city    || null,
+          lat:     geo.lat     || null,
+          lon:     geo.lon     || null,
+        }).eq('id', row.id).then(() => {}).catch(() => {});
+      }).catch(() => {});
     } catch { /* never break the site */ }
   },
 
-  // Primary stats fetch — date filtered ON THE SERVER, lightweight columns only.
+  // Primary stats fetch — date filtered ON THE SERVER.
+  // Fetches up to 10,000 rows for chart/breakdown data.
+  // For headline totals on "all time", getAllTimeCounts() is used instead.
   // Pass days=0 to get all-time data with no lower date bound.
   async getStats(days = 7) {
     let q = supabase
       .from('page_visits')
-      .select('id, page, user_id, user_name, session_id, referrer, created_at')
+      .select('id, page, user_id, user_name, session_id, referrer, country, city, created_at')
       .order('created_at', { ascending: false })
-      .limit(500000);
+      .limit(10000);
     if (days > 0) {
       const since = new Date();
       since.setDate(since.getDate() - days);
@@ -1011,14 +1050,22 @@ export const visits = wrapWithTimeout({
     return data || [];
   },
 
-  // Two cheap queries for the all-time headline numbers
+  // Two cheap queries for the all-time headline numbers.
+  // Uses server-side COUNT — not affected by row fetch limits.
   async getAllTimeCounts() {
-    const [totalRes, sessionRes] = await Promise.all([
-      supabase.from('page_visits').select('id', { count: 'exact', head: true }),
-      supabase.from('page_visits').select('session_id').not('session_id', 'is', null).limit(2000000),
+    const [totalRes, uniqueRes] = await Promise.all([
+      supabase.from('page_visits').select('*', { count: 'exact', head: true }),
+      supabase.from('page_visits').select('*', { count: 'exact', head: true }).not('session_id', 'is', null),
     ]);
-    const totalRows      = totalRes.count ?? 0;
-    const uniqueSessions = new Set((sessionRes.data || []).map(r => r.session_id)).size;
+    // For unique sessions we do a lightweight fetch to count distinct session_ids
+    // (PostgREST doesn't support COUNT DISTINCT natively via the JS client)
+    const { data: sessionData } = await supabase
+      .from('page_visits')
+      .select('session_id')
+      .not('session_id', 'is', null)
+      .limit(100000);
+    const uniqueSessions = new Set((sessionData || []).map(r => r.session_id)).size;
+    const totalRows = totalRes.count ?? 0;
     return { totalRows, uniqueSessions };
   },
 
