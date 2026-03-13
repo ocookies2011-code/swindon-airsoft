@@ -3091,6 +3091,95 @@ async function sendAdminOrderNotification({ adminEmail, cu, order, items }) {
   await sendEmail({ toEmail: adminEmail, toName: "Swindon Airsoft Admin", subject: `🛒 New Order: ${cu?.name || order.customerName} — £${Number(order.total).toFixed(2)}`, htmlContent });
 }
 
+// ── Admin: Return Request Notification ───────────────────────
+async function sendAdminReturnNotification({ adminEmail, order }) {
+  if (!adminEmail) return;
+  const htmlContent = `
+  <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
+    <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
+      <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
+        <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">Swindon Airsoft · Admin Alert</div>
+        <div style="font-size:22px;font-weight:900;color:#e0a000;letter-spacing:.04em;">&#8617; RETURN REQUESTED</div>
+      </div>
+      <div style="padding:20px 24px;">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;width:30%;">Customer</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${order.customer_name || order.customerName || "—"}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Email</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#4fc3f7;font-size:13px;">${order.customer_email || order.customerEmail || "—"}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Order #</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-family:monospace;">${(order.id || "").slice(0,8).toUpperCase()}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Order Total</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-weight:900;">&#163;${Number(order.total || 0).toFixed(2)}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Return Ref</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#e0a000;font-size:13px;font-family:monospace;font-weight:700;">${order.return_number || "—"}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Reason</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${order.return_reason || "—"}</td></tr>
+          ${order.return_notes ? `<tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Notes</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#ccc;font-size:13px;">${order.return_notes}</td></tr>` : ""}
+        </table>
+        <div style="background:#1a1500;border:1px solid #332800;border-radius:4px;padding:12px 16px;font-size:12px;color:#8a7040;line-height:1.6;">
+          Log in to the admin panel &#8594; Shop &#8594; Orders to approve or reject this return request.
+        </div>
+      </div>
+      <div style="padding:12px 24px;border-top:1px solid #1a2808;text-align:center;font-size:10px;color:#2a3a10;letter-spacing:.15em;text-transform:uppercase;">Swindon Airsoft Admin · Auto-generated notification</div>
+    </div>
+  </div>`;
+  await sendEmail({ toEmail: adminEmail, toName: "Swindon Airsoft Admin", subject: `Return Request: ${order.customer_name || order.customerName} — Order #${(order.id||"").slice(0,8).toUpperCase()}`, htmlContent });
+}
+
+// ── Customer: Return Decision Email ──────────────────────────
+async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejectionReason }) {
+  const orderRef = (order.id || "").slice(0, 8).toUpperCase();
+  const htmlContent = approved ? `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Return Approved</div>
+    </div>
+    <div style="background:#0d1f0a;border:1px solid #1a3a10;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">&#10003;</div>
+      <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.08em;text-transform:uppercase;">Your Return Has Been Approved</div>
+      <div style="font-size:13px;color:#8aaa60;margin-top:8px;">Order #${orderRef}</div>
+    </div>
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+      <div style="font-size:11px;letter-spacing:.15em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:12px;">NEXT STEPS</div>
+      <ol style="color:#ccc;font-size:13px;line-height:2;padding-left:20px;margin:0;">
+        <li>Package your item securely in its <strong style="color:#fff;">original packaging where possible</strong>.</li>
+        <li>Items must be in <strong style="color:#fff;">unused, unopened condition</strong>. Deductions may apply for items that have been opened or used.</li>
+        <li>Write your return reference <strong style="color:#c8ff00;font-family:monospace;">${order.return_number || ""}</strong> clearly on the outside of the package.</li>
+        <li>Post the item back to us — <strong style="color:#fff;">return postage is your responsibility</strong>.</li>
+        <li>Log in and enter your return tracking number on the order page so we can monitor your shipment.</li>
+      </ol>
+    </div>
+    <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.6;">
+      Once we receive and inspect your return, a refund will be processed to your original payment method within 5–10 business days. Deductions may be made for items that are not in original unused condition or are missing packaging.
+    </div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft — reply to this email or use the Contact page if you have questions.</div>
+  </div>` : `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
+      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Return Update</div>
+    </div>
+    <div style="background:#1a0808;border:1px solid #3a1010;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">&#10007;</div>
+      <div style="font-size:22px;font-weight:900;color:#ff6b6b;letter-spacing:.08em;text-transform:uppercase;">Return Request Not Approved</div>
+      <div style="font-size:13px;color:#8a6060;margin-top:8px;">Order #${orderRef}</div>
+    </div>
+    ${rejectionReason ? `<div style="background:#111;border:1px solid #333;border-left:3px solid #ff6b6b;border-radius:4px;padding:14px 20px;margin-bottom:20px;">
+      <div style="font-size:10px;letter-spacing:.15em;color:#ff6b6b;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Reason</div>
+      <div style="font-size:13px;color:#ddd;line-height:1.6;">${rejectionReason}</div>
+    </div>` : ""}
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 20px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.7;">
+      If you believe this decision is incorrect or would like to discuss further, please reply to this email or contact us through the website — we are happy to help.
+    </div>
+    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft — reply to this email or use the Contact page if you have questions.</div>
+  </div>`;
+  await sendEmail({
+    toEmail,
+    toName: toName || "Customer",
+    subject: approved
+      ? `Return Approved — Order #${orderRef}`
+      : `Return Request Update — Order #${orderRef}`,
+    htmlContent,
+  });
+}
+
+
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
   const getInitDetail = () => {
     const p = window.location.hash.replace("#","").split("/");
@@ -5940,6 +6029,16 @@ function ReturnRequestBlock({ order, onUpdate }) {
       setRmaNumber(rma);
       if (onUpdate) onUpdate({ status: "return_requested", return_reason: reason.trim(), return_notes: notes.trim() || null, return_number: rma });
       setStep("submitted");
+      // Notify admin
+      try {
+        const adminEmail = await api.settings.get("contact_email");
+        if (adminEmail) {
+          sendAdminReturnNotification({
+            adminEmail,
+            order: { ...order, return_reason: reason.trim(), return_notes: notes.trim() || null, return_number: rma },
+          }).catch(() => {});
+        }
+      } catch {}
     } catch (e) { console.error(e); }
     finally { setBusy(false); }
   };
@@ -6006,6 +6105,43 @@ function ReturnRequestBlock({ order, onUpdate }) {
           </div>
         </div>
       )}
+    </div>
+  );
+
+  // Rejected state — order reverted to dispatched but rejection reason stored
+  if (order.return_rejection_reason && status === "dispatched") return (
+    <div style={{ background:"rgba(220,50,50,.07)", border:"1px solid rgba(220,50,50,.3)", padding:"14px 18px", marginTop:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:"var(--red)", letterSpacing:".12em", marginBottom:8, textTransform:"uppercase" }}>✗ Return Not Approved</div>
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
+        Your return request was reviewed and could not be approved.
+        <br /><span style={{ color:"var(--text)", fontWeight:700 }}>Reason: </span><span style={{ color:"var(--text)" }}>{order.return_rejection_reason}</span>
+      </div>
+      <div style={{ marginTop:8, fontSize:11, color:"var(--muted)" }}>If you have questions, please contact us through the Contact page.</div>
+    </div>
+  );
+
+  // Return approved state
+  if (isApproved) return (
+    <div style={{ background:"rgba(79,195,247,.07)", border:"1px solid rgba(79,195,247,.3)", padding:"14px 18px", marginTop:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:"#4fc3f7", letterSpacing:".12em", marginBottom:8, textTransform:"uppercase" }}>✅ Return Approved</div>
+      <RmaTag />
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--muted)", lineHeight:1.7, marginBottom:10 }}>
+        Your return has been approved. Please send the item back using the instructions emailed to you.
+      </div>
+      <div style={{ background:"rgba(79,195,247,.05)", border:"1px solid rgba(79,195,247,.2)", padding:"10px 14px", fontSize:11, color:"#8acce0", lineHeight:1.8 }}>
+        <strong style={{ color:"#4fc3f7" }}>Important:</strong> Items must be in <strong style={{ color:"#fff" }}>unused, unopened condition in original packaging where possible.</strong> Deductions may be made for items that have been opened or show signs of use. Return postage is your responsibility.
+      </div>
+    </div>
+  );
+
+  // Return received state
+  if (isReceived) return (
+    <div style={{ background:"rgba(76,175,80,.07)", border:"1px solid rgba(76,175,80,.3)", padding:"14px 18px", marginTop:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:"#4caf50", letterSpacing:".12em", marginBottom:8, textTransform:"uppercase" }}>📦 Return Received</div>
+      <RmaTag />
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
+        We have received your return. A refund will be processed within 5–10 business days once the item has been inspected.
+      </div>
     </div>
   );
 
@@ -8182,7 +8318,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   useEffect(() => {
     const fetchPending = () =>
       api.shopOrders.getAll()
-        .then(orders => setPendingOrders(orders.filter(o => o.status === "pending").length))
+        .then(orders => setPendingOrders(orders.filter(o => o.status === "pending" || o.status === "return_requested").length))
         .catch(() => {});
     fetchPending();
     // Refresh every 2 minutes so badge stays current
@@ -10813,6 +10949,7 @@ function AdminOrdersInline({ showToast }) {
   // Returns
   const [returnModal, setReturnModal] = useState(null); // { order }
   const [returnAction, setReturnAction] = useState(""); // "approve" | "reject" | "received"
+  const [rejectionReason, setRejectionReason] = useState("");
   const [returnsProcessing, setReturnsProcessing] = useState(false);
 
   const handleReturnAction = async () => {
@@ -10824,10 +10961,31 @@ function AdminOrdersInline({ showToast }) {
       if (returnAction === "approve")   newStatus = "return_approved";
       if (returnAction === "reject")    newStatus = order.status === "return_requested" ? "dispatched" : order.status;
       if (returnAction === "received")  newStatus = "return_received";
-      await api.shopOrders.updateStatus(order.id, newStatus);
-      setOrders(o => o.map(x => x.id === order.id ? { ...x, status: newStatus } : x));
-      if (detail?.id === order.id) setDetail(d => ({ ...d, status: newStatus }));
+
+      // Save rejection reason to DB if rejecting
+      if (returnAction === "reject" && rejectionReason.trim()) {
+        await supabase.from("shop_orders").update({ status: newStatus, return_rejection_reason: rejectionReason.trim() }).eq("id", order.id);
+      } else {
+        await api.shopOrders.updateStatus(order.id, newStatus);
+      }
+
+      const updatedOrder = { ...order, status: newStatus, return_rejection_reason: returnAction === "reject" ? rejectionReason.trim() || null : order.return_rejection_reason };
+      setOrders(o => o.map(x => x.id === order.id ? updatedOrder : x));
+      if (detail?.id === order.id) setDetail(d => ({ ...d, ...updatedOrder }));
+
+      // Send customer email for approve/reject
+      const toEmail = order.customer_email || order.customerEmail;
+      const toName  = order.customer_name  || order.customerName || "Customer";
+      if (toEmail && (returnAction === "approve" || returnAction === "reject")) {
+        sendReturnDecisionEmail({
+          toEmail, toName, order,
+          approved: returnAction === "approve",
+          rejectionReason: returnAction === "reject" ? rejectionReason.trim() || null : null,
+        }).then(() => showToast("📧 Customer notified by email.")).catch(() => {});
+      }
+
       showToast(returnAction === "approve" ? "✅ Return approved — customer notified." : returnAction === "received" ? "📦 Return marked as received." : "Return request rejected.");
+      setRejectionReason("");
       setReturnModal(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     finally { setReturnsProcessing(false); }
@@ -11079,6 +11237,11 @@ function AdminOrdersInline({ showToast }) {
                       Notes: <span style={{ color:"var(--text)" }}>{detail.return_notes}</span>
                     </div>
                   )}
+                  {detail.return_rejection_reason && (
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--red)", marginTop:6, paddingTop:6, borderTop:"1px solid rgba(255,60,60,.2)" }}>
+                      <span style={{ color:"var(--muted)" }}>Rejection Reason: </span><span style={{ color:"#ffaaaa" }}>{detail.return_rejection_reason}</span>
+                    </div>
+                  )}
                 </div>
               )}
               {detail.return_tracking && (
@@ -11094,15 +11257,15 @@ function AdminOrdersInline({ showToast }) {
 
       {/* Return action modal */}
       {returnModal && (
-        <div className="overlay" onClick={() => setReturnModal(null)}>
+        <div className="overlay" onClick={() => { setReturnModal(null); setRejectionReason(""); }}>
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="modal-title">
               {returnAction === "approve" ? "✅ Approve Return Request" : returnAction === "received" ? "📦 Mark Return Received" : "✗ Reject Return Request"}
             </div>
             <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 18, lineHeight: 1.6 }}>
-              {returnAction === "approve" && "Approving this return will update the order status to 'Return Approved' and let the customer know they can send the item back. Customers are responsible for return postage."}
+              {returnAction === "approve" && "Approving this return will update the order status to 'Return Approved' and notify the customer by email. Customers are responsible for return postage. Items must be unused and in original packaging where possible — deductions may be made for opened or used items."}
               {returnAction === "received" && "Marking as received confirms you have the returned item in hand. You can then process a refund separately if needed."}
-              {returnAction === "reject" && "Rejecting will revert the order status. The customer will see the return was not approved."}
+              {returnAction === "reject" && "Rejecting will revert the order status and notify the customer by email. Provide a reason below so the customer understands why."}
             </div>
             {(returnModal.order?.return_number || returnModal.order?.return_reason || returnModal.order?.return_notes) && (
               <div style={{ marginBottom: 16, padding: "10px 12px", background: "var(--bg4)", border: "1px solid var(--border)", fontSize: 12, fontFamily: "'Share Tech Mono',monospace" }}>
@@ -11114,7 +11277,7 @@ function AdminOrdersInline({ showToast }) {
                 )}
                 {returnModal.order?.return_reason && (
                   <div style={{ marginBottom: returnModal.order?.return_notes ? 4 : 0 }}>
-                    <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2, letterSpacing: ".1em" }}>REASON</div>
+                    <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2, letterSpacing: ".1em" }}>CUSTOMER REASON</div>
                     {returnModal.order.return_reason}
                   </div>
                 )}
@@ -11126,11 +11289,23 @@ function AdminOrdersInline({ showToast }) {
                 )}
               </div>
             )}
+            {returnAction === "reject" && (
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--red)" }}>Rejection Reason <span style={{ color: "var(--muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(shown to customer)</span></label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={e => setRejectionReason(e.target.value)}
+                  placeholder="e.g. Item has been opened and shows signs of use. Per our returns policy, deductions apply to opened items..."
+                  rows={3}
+                  style={{ fontSize: 12, resize: "vertical", width: "100%", boxSizing: "border-box", borderColor: "rgba(255,60,60,.4)" }}
+                />
+              </div>
+            )}
             <div className="gap-2">
               <button className="btn btn-primary" disabled={returnsProcessing} onClick={handleReturnAction}>
                 {returnsProcessing ? "Processing…" : returnAction === "approve" ? "Approve Return" : returnAction === "received" ? "Mark Received" : "Reject Return"}
               </button>
-              <button className="btn btn-ghost" onClick={() => setReturnModal(null)}>Cancel</button>
+              <button className="btn btn-ghost" onClick={() => { setReturnModal(null); setRejectionReason(""); }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -15339,13 +15514,18 @@ function TermsPage({ setPage }) {
             ]} />
 
             <SectionTitle id="shop-3">3. Returns & Refunds</SectionTitle>
-            <Para>We want you to be happy with your purchase. If you have any issue with an order, please contact us within 14 days of receipt.</Para>
+            <Para>We want you to be happy with your purchase. If you have any issue with an order, please use the return request feature on your order within 14 days of receipt. Do not send any items back until your return has been approved — unapproved returns cannot be processed.</Para>
+
+            <InfoBox type="important">All items submitted for return must be in unused condition and in all original packaging where possible. Deductions will be made from any refund for items that have been opened, used, or are missing original packaging. The deduction amount will reflect the reduction in resale value.</InfoBox>
+
             <BulletList items={[
-              "Faulty or incorrect items will be replaced or refunded in full, including postage costs.",
-              "Change-of-mind returns are accepted within 14 days if items are unopened and in original condition.",
-              "BBs, gas canisters, and consumable items are non-returnable once opened for hygiene and safety reasons.",
+              "Faulty or incorrect items will be replaced or refunded in full, including postage costs — please include a description of the fault when submitting your return request.",
+              "Change-of-mind returns are accepted within 14 days provided items are in unused condition and in their original packaging. Opened or used items may be subject to a partial refund at our discretion.",
+              "BBs, gas canisters, and other consumable items are non-returnable once opened, for hygiene and safety reasons.",
+              "Items showing signs of use, wear, or damage that was not present at the time of dispatch will be subject to a deduction from the refund amount.",
               "Refunds are issued to the original payment method within 5–10 business days of the return being received and inspected.",
               "Return postage costs are the responsibility of the customer unless the item is faulty or incorrect.",
+              "A return reference number (RMA) is generated when you submit a request — include this on the outside of your parcel.",
             ]} />
 
             <SectionTitle id="shop-4">4. VIP Discounts in the Shop</SectionTitle>
