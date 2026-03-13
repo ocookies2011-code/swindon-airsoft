@@ -4198,11 +4198,11 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           <div style={{ flex:1, position:"relative" }}>
             <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#3a5010", fontSize:14, pointerEvents:"none" }}>🔍</span>
             <input value={shopSearch} onChange={e => setShopSearch(e.target.value)} placeholder="SEARCH ARMOURY…"
-              style={{ width:"100%", background:"#0c1009", border:"1px solid #1a2808", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", padding:"10px 36px 10px 36px", outline:"none", boxSizing:"border-box", textTransform:"uppercase" }} />
+              style={{ width:"100%", background:"#111a0a", border:"1px solid #2a4010", color:"#e8f8b0", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:16, letterSpacing:".12em", padding:"12px 40px 12px 40px", outline:"none", boxSizing:"border-box", textTransform:"uppercase", caretColor:"#c8ff00" }} />
             {shopSearch && <button onClick={() => setShopSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#5a7a30", cursor:"pointer", fontSize:16, lineHeight:1 }}>✕</button>}
           </div>
           <select value={shopSort} onChange={e => setShopSort(e.target.value)}
-            style={{ background:"#0c1009", border:"1px solid #1a2808", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".12em", padding:"8px 12px", outline:"none", cursor:"pointer", flexShrink:0, textTransform:"uppercase" }}>
+            style={{ background:"#111a0a", border:"1px solid #2a4010", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", padding:"12px 14px", outline:"none", cursor:"pointer", flexShrink:0, textTransform:"uppercase" }}>
             <option value="default">SORT: DEFAULT</option>
             <option value="price-asc">PRICE: LOW → HIGH</option>
             <option value="price-desc">PRICE: HIGH → LOW</option>
@@ -5739,16 +5739,50 @@ function PlayerOrders({ cu }) {
               </div>
             )}
 
-            {/* Tracking number */}
-            {selected.tracking_number && (
-              <div style={{ background: "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.25)", padding: "14px 22px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "#c8ff00", marginBottom: 4, textTransform: "uppercase" }}>📮 Tracking Number</div>
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 700, color: "#fff" }}>{selected.tracking_number}</div>
+            {/* Tracking number — auto detect courier + link */}
+            {selected.tracking_number && (() => {
+              const tn = selected.tracking_number.trim().replace(/\s/g, "");
+              // Detect courier from tracking number format
+              let courier = null, trackUrl = null;
+              if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(tn) || /^\d{13}$/.test(tn)) {
+                courier = "Royal Mail"; trackUrl = `https://www.royalmail.com/track-your-item#/tracking-results/${tn}`;
+              } else if (/^1Z[A-Z0-9]{16}$/.test(tn)) {
+                courier = "UPS"; trackUrl = `https://www.ups.com/track?tracknum=${tn}`;
+              } else if (/^\d{12}$/.test(tn) || /^\d{15}$/.test(tn) || /^\d{20}$/.test(tn)) {
+                courier = "FedEx"; trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${tn}`;
+              } else if (/^\d{10}$/.test(tn) || /^JD\d{18}$/.test(tn)) {
+                courier = "DPD"; trackUrl = `https://www.dpd.co.uk/apps/tracking/?ref=${tn}`;
+              } else if (/^\d{14}$/.test(tn)) {
+                courier = "Evri (Hermes)"; trackUrl = `https://www.evri.com/track-a-parcel#/tracking/${tn}`;
+              } else if (/^[A-Z]{3}\d{7,8}$/.test(tn) || /^\d{16}$/.test(tn)) {
+                courier = "Parcelforce"; trackUrl = `https://www.parcelforce.com/track-trace?trackNumber=${tn}`;
+              }
+              return (
+                <div style={{ background: "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.25)", padding: "14px 18px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "#c8ff00", marginBottom: 4, textTransform: "uppercase" }}>
+                        📮 Tracking Number{courier ? ` — ${courier}` : ""}
+                      </div>
+                      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: ".08em" }}>{tn}</div>
+                    </div>
+                    {trackUrl && (
+                      <a href={trackUrl} target="_blank" rel="noopener noreferrer"
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.35)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".18em", padding: "8px 16px", textDecoration: "none", whiteSpace: "nowrap", transition: "background .15s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(200,255,0,.2)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "rgba(200,255,0,.1)"}>
+                        ▸ TRACK PARCEL
+                      </a>
+                    )}
+                  </div>
+                  {!courier && (
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 8 }}>
+                      Enter this number on your courier's website to track your parcel.
+                    </div>
+                  )}
                 </div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)" }}>Use this to track your parcel with the courier</div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Refund notice */}
             {selected.refund_amount > 0 && (
@@ -9256,6 +9290,12 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
         designation:    edit.designation || null,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
+      // Role change — direct update (allowed via SECURITY DEFINER trigger for admins)
+      const origUser = (localUsers || data.users || []).find(u => u.id === edit.id);
+      if (edit.role && edit.role !== origUser?.role) {
+        const { error: roleErr } = await supabase.from('profiles').update({ role: edit.role }).eq('id', edit.id);
+        if (roleErr) throw new Error('Role update failed: ' + roleErr.message);
+      }
       // Refresh from DB and update global state
       const allProfiles = await api.profiles.getAll();
       const updated = allProfiles.map(normaliseProfile);
@@ -9604,6 +9644,15 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             </div>
             <div className="form-row">
               <div className="form-group"><label>Credits (£)</label><input type="number" value={edit.credits || 0} onChange={e => setEdit(p => ({ ...p, credits: +e.target.value }))} /></div>
+              <div className="form-group">
+                <label>Role</label>
+                <select value={edit.role || "player"} onChange={e => setEdit(p => ({ ...p, role: e.target.value }))}
+                  style={{ background: "rgba(200,100,0,.08)", border: "1px solid rgba(200,100,0,.35)", color: "var(--text)", padding: "8px 10px", fontSize: 13, width: "100%" }}>
+                  <option value="player">👤 Player</option>
+                  <option value="admin">🔑 Admin</option>
+                </select>
+                <div style={{ fontSize: 10, color: "var(--red)", marginTop: 4 }}>⚠ Admins have full access to all data and controls.</div>
+              </div>
             </div>
 
             {/* ── Disciplinary Card ── */}
