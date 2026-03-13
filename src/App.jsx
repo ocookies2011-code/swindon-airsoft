@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
 import { normaliseProfile, squareRefund, waitlistApi } from "./api";
@@ -3927,7 +3927,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 }
 
 // ── Shop ──────────────────────────────────────────────────
-function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen }) {
+function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen, recentlyViewed = [] }) {
   const [placing, setPlacing] = useState(false);
   const shopSafetyRef = useRef(null);
   const [shopSquareError, setShopSquareError] = useState(null);
@@ -4144,6 +4144,46 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         {cu?.vipStatus === "active" && (
           <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"10px 16px", marginBottom:24, display:"flex", alignItems:"center", gap:10, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"#c8a000" }}>
             ★ VIP OPERATIVE — 10% DISCOUNT APPLIED ON ALL ITEMS
+          </div>
+        )}
+
+        {/* Recently Viewed */}
+        {recentlyViewed.length > 0 && !shopSearch && !shopCatFilter && (
+          <div style={{ marginBottom:32 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>◈ —</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8" }}>
+                RECENTLY <span style={{ color:"#c8ff00" }}>VIEWED</span>
+              </div>
+              <div style={{ flex:1, height:1, background:"linear-gradient(to right,#1a2808,transparent)" }} />
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:8 }}>
+              {recentlyViewed.map(prod => {
+                const hasV = prod.variants?.length > 0;
+                const rvPrice = hasV
+                  ? Math.min(...prod.variants.map(v => Number(v.price)))
+                  : (prod.onSale && prod.salePrice ? prod.salePrice : prod.price);
+                const rvImg = prod.images?.[0] || prod.image || null;
+                return (
+                  <div key={prod.id} onClick={() => onProductClick(prod)}
+                    style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", cursor:"pointer", transition:"border-color .15s, transform .15s", position:"relative" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}>
+                    {/* recently viewed accent strip */}
+                    <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(to right,#4fc3f7,transparent)", zIndex:2 }} />
+                    {rvImg
+                      ? <img src={rvImg} alt={prod.name} onError={e=>{e.target.style.display="none";}} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", background:"#080a06", display:"block" }} />
+                      : <div style={{ aspectRatio:"4/3", background:"#080a06", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, color:"#1a2808" }}>🎯</div>
+                    }
+                    <div style={{ padding:"8px 10px" }}>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".05em", textTransform:"uppercase", color:"#9ab870", lineHeight:1.2, marginBottom:3,
+                        whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{prod.name}</div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8ff00" }}>£{Number(rvPrice).toFixed(2)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -14771,8 +14811,16 @@ function AppInner() {
   const [shopCart, setShopCart] = useState([]);
   const [shopCartOpen, setShopCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
   // Reset product view when navigating away from shop
   useEffect(() => { if (page !== "shop") setSelectedProduct(null); }, [page]);
+  // Track recently viewed products (max 4, no duplicates, most recent first)
+  const trackRecentlyViewed = useCallback((item) => {
+    setRecentlyViewed(prev => {
+      const filtered = prev.filter(p => p.id !== item.id);
+      return [item, ...filtered].slice(0, 4);
+    });
+  }, []);
 
   // Auth — runs in background, never blocks site from rendering
   useEffect(() => {
@@ -15131,9 +15179,10 @@ function AppInner() {
         {page === "shop" && !selectedProduct && (
           <ShopPage
             data={data} cu={cu} showToast={showToast} save={save}
+            recentlyViewed={recentlyViewed} onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); }}
             cart={shopCart} setCart={setShopCart}
             cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
-            onProductClick={(item) => setSelectedProduct(item)}
+            onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); }}
           />
         )}
         {page === "shop" && selectedProduct && (
@@ -15141,7 +15190,7 @@ function AppInner() {
             item={selectedProduct}
             cu={cu}
             shopItems={data.shop || []}
-            onProductClick={(p) => setSelectedProduct(p)}
+            onProductClick={(p) => { setSelectedProduct(p); trackRecentlyViewed(p); }}
             onBack={() => setSelectedProduct(null)}
             cartCount={shopCart.reduce((s, i) => s + i.qty, 0)}
             onCartOpen={() => { setShopCartOpen(true); setSelectedProduct(null); }}
