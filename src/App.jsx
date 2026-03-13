@@ -9368,9 +9368,17 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     setBulkBusy(true);
                     try {
                       for (const u of selected) {
-                        const update = bulkAction === "add-credit" ? { credits: (u.credits||0)+5 }
-                          : bulkAction === "yellow-card" ? { cardStatus:"yellow" }
-                          : { cardStatus:"none" };
+                        let update;
+                        if (bulkAction === "add-credit") {
+                          // Fetch fresh credits from DB to avoid stale local value
+                          const { data: fresh } = await supabase.from("profiles").select("credits").eq("id", u.id).single();
+                          const currentCredits = Number(fresh?.credits) || 0;
+                          update = { credits: currentCredits + 5 };
+                        } else if (bulkAction === "yellow-card") {
+                          update = { cardStatus: "yellow" };
+                        } else {
+                          update = { cardStatus: "none" };
+                        }
                         await updateUserAndRefresh(u.id, update);
                       }
                       showToast(`Updated ${selected.length} players`);
