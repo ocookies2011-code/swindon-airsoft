@@ -927,6 +927,12 @@ async function get17trackKey() {
   return _cachedTrackKey;
 }
 
+// Immediately seed the key from the settings page value if already known
+// (avoids needing a DB round-trip on first load when key is freshly saved)
+function prime17trackKey(key) {
+  if (key) _cachedTrackKey = key;
+}
+
 async function fetchTrackingStatus(tn, courier) {
   if (!tn) return null;
 
@@ -14189,6 +14195,10 @@ function AdminSettings({ showToast }) {
   };
 
   const [squareAppId, setSquareAppId] = S("square_app_id");
+  const [trackApiKey, setTrackApiKey] = S("17track_api_key");
+  // Seed the in-memory key cache as soon as the value loads from DB
+  React.useEffect(() => { if (trackApiKey) prime17trackKey(trackApiKey); }, [trackApiKey]);
+  const [savingTrack, setSavingTrack] = useState(false);
   const [squareLocationId, setSquareLocationId] = S("square_location_id");
   const [squareEnv, setSquareEnv, sqLoaded] = S("square_env", "sandbox");
   const [savingSQ, setSavingSQ] = useState(false);
@@ -14315,6 +14325,46 @@ function AdminSettings({ showToast }) {
           <div>5. Paste all three above, set Environment to <strong style={{ color: "var(--accent)" }}>Production</strong>, and click Save.</div>
           <div>6. Deploy the <strong style={{ color: "var(--text)" }}>square-payment</strong> Supabase Edge Function (see README) to handle server-side payment creation and refunds.</div>
         </div>
+      </div>
+
+      {/* 17track */}
+      <div className="card mb-2">
+        {sectionHead("📦 Parcel Tracking (17track)")}
+        <div className="form-group">
+          <label>17track API Key</label>
+          <div style={{ position: "relative" }}>
+            <input
+              type="password"
+              value={trackApiKey}
+              onChange={e => { setTrackApiKey(e.target.value); _cachedTrackKey = undefined; }}
+              placeholder="Paste your 17track API key here"
+            />
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
+            Get a free key at <a href="https://17track.net/en/api" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>17track.net/en/api</a> — free tier gives 100 tracking requests/month. Once saved, the STATUS column in Orders will show live courier statuses (In Transit, Delivered, etc.).
+          </div>
+        </div>
+        <button className="btn btn-primary" disabled={savingTrack} onClick={async () => {
+          setSavingTrack(true);
+          try {
+            await api.settings.set("17track_api_key", trackApiKey.trim());
+            _cachedTrackKey = undefined; // force re-read on next tracking check
+            showToast("✅ 17track API key saved!");
+          } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
+          finally { setSavingTrack(false); }
+        }}>
+          {savingTrack ? "Saving…" : "Save Tracking Key"}
+        </button>
+        {trackApiKey && (
+          <div className="alert alert-green mt-2" style={{ fontSize: 12 }}>
+            ✅ API key is set. Parcel tracking will show live status in the Orders table.
+          </div>
+        )}
+        {!trackApiKey && (
+          <div className="alert mt-2" style={{ fontSize: 12, background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", color: "var(--muted)" }}>
+            No key set — tracking will attempt Royal Mail's public API as a fallback, but results may be limited.
+          </div>
+        )}
       </div>
 
       {/* EmailJS test */}
