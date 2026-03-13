@@ -110,7 +110,8 @@ export const profiles = wrapWithTimeout({
       },
       body: JSON.stringify({ userId: id }),
     })
-    const result = await res.json()
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
     if (!res.ok || result.error) throw new Error(result.error || 'Delete failed')
   },
 
