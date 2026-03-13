@@ -771,7 +771,22 @@ export const shopOrders = wrapWithTimeout({
       .order('created_at', { ascending: false })
     if (error) throw error
     return data
-  }
+  },
+
+  async requestReturn(id, reason) {
+    const { error } = await supabase.from('shop_orders').update({
+      status: 'return_requested',
+      return_reason: reason || null,
+    }).eq('id', id)
+    if (error) throw error
+  },
+
+  async updateReturnTracking(id, trackingNumber) {
+    const { error } = await supabase.from('shop_orders').update({
+      return_tracking: trackingNumber || null,
+    }).eq('id', id)
+    if (error) throw error
+  },
 })
 
 // ── Suppliers ────────────────────────────────────────────────

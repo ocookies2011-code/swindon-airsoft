@@ -5882,6 +5882,140 @@ function QAPage({ data }) {
 
 // ── Profile ───────────────────────────────────────────────
 // ── Player Order History ─────────────────────────────────────
+// ── Return Request Block (customer-facing) ───────────────────
+function ReturnRequestBlock({ order, onUpdate }) {
+  const [step, setStep] = useState("idle"); // idle | form | submitted | approved | received
+  const [reason, setReason] = useState("");
+  const [returnTracking, setReturnTracking] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const status = order?.status;
+  const canRequest = ["dispatched", "completed"].includes(status);
+  const alreadyRequested = ["return_requested", "return_approved", "return_received"].includes(status);
+  const isApproved = status === "return_approved";
+  const isReceived = status === "return_received";
+
+  const submitRequest = async () => {
+    if (!reason.trim()) return;
+    setBusy(true);
+    try {
+      await supabase.from("shop_orders").update({
+        status: "return_requested",
+        return_reason: reason.trim(),
+      }).eq("id", order.id);
+      if (onUpdate) onUpdate({ status: "return_requested", return_reason: reason.trim() });
+      setStep("submitted");
+    } catch (e) {
+      console.error(e);
+    } finally { setBusy(false); }
+  };
+
+  const submitReturnTracking = async () => {
+    if (!returnTracking.trim()) return;
+    setBusy(true);
+    try {
+      await supabase.from("shop_orders").update({
+        return_tracking: returnTracking.trim(),
+      }).eq("id", order.id);
+      if (onUpdate) onUpdate({ return_tracking: returnTracking.trim() });
+      setStep("tracking_saved");
+    } catch (e) {
+      console.error(e);
+    } finally { setBusy(false); }
+  };
+
+  if (!canRequest && !alreadyRequested) return null;
+
+  const RETURN_REASONS = [
+    "Item not as described",
+    "Wrong item received",
+    "Damaged / faulty on arrival",
+    "Changed my mind",
+    "Ordered wrong size / variant",
+    "Other",
+  ];
+
+  if (isReceived) return (
+    <div style={{ background: "rgba(76,175,80,.08)", border: "1px solid rgba(76,175,80,.25)", padding: "14px 18px", marginTop: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#4caf50", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>📦 Return Received</div>
+      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+        We have received your return. A refund will be processed shortly if applicable.
+      </div>
+    </div>
+  );
+
+  if (isApproved) return (
+    <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "14px 18px", marginTop: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#4fc3f7", letterSpacing: ".12em", marginBottom: 6, textTransform: "uppercase" }}>✅ Return Approved</div>
+      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", lineHeight: 1.7, marginBottom: 12 }}>
+        Your return has been approved. Please send the item back at your own cost — you are responsible for return postage. Once we receive it, we'll process your refund.
+      </div>
+      {order.return_tracking ? (
+        <div style={{ fontSize: 11, color: "#c8ff00", fontFamily: "'Share Tech Mono',monospace" }}>
+          📮 Your return tracking: <strong>{order.return_tracking}</strong>
+        </div>
+      ) : (
+        <div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>Add your return tracking number so we can monitor the shipment:</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={returnTracking} onChange={e => setReturnTracking(e.target.value)}
+              placeholder="e.g. ZI256942439GB" style={{ flex: 1, fontSize: 12 }} />
+            <button className="btn btn-sm btn-primary" disabled={busy || !returnTracking.trim()} onClick={submitReturnTracking}>
+              {busy ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (alreadyRequested || step === "submitted") return (
+    <div style={{ background: "rgba(200,150,0,.08)", border: "1px solid rgba(200,150,0,.3)", padding: "14px 18px", marginTop: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--gold)", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>↩ Return Requested</div>
+      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+        Your return request is being reviewed. We'll update your order status once a decision has been made.
+        {order.return_reason && <><br /><span style={{ color: "var(--text)" }}>Reason: {order.return_reason}</span></>}
+      </div>
+    </div>
+  );
+
+  if (step === "form") return (
+    <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "14px 18px", marginTop: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 10, textTransform: "uppercase" }}>↩ Request a Return</div>
+      <div className="form-group" style={{ marginBottom: 10 }}>
+        <label style={{ fontSize: 11 }}>Reason for return</label>
+        <select value={reason} onChange={e => setReason(e.target.value)} style={{ fontSize: 12 }}>
+          <option value="">— Select a reason —</option>
+          {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12, fontFamily: "'Share Tech Mono',monospace", lineHeight: 1.6 }}>
+        ⚠️ Note: <span style={{ color: "var(--text)" }}>return postage is the customer's responsibility</span>. Do not send any items back until your return is approved.
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn btn-sm btn-primary" disabled={busy || !reason} onClick={submitRequest}>
+          {busy ? "Submitting…" : "Submit Request"}
+        </button>
+        <button className="btn btn-sm btn-ghost" onClick={() => setStep("idle")}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  // idle state — show the prompt
+  return (
+    <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.12)", padding: "10px 16px", marginTop: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", lineHeight: 1.7 }}>
+          ↩ Need to return something? <span style={{ color: "var(--text)" }}>Return postage is the customer's responsibility.</span>
+        </div>
+        <button className="btn btn-sm btn-ghost" onClick={() => setStep("form")} style={{ fontSize: 11, whiteSpace: "nowrap" }}>
+          Request Return
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Order Detail (customer view) ─────────────────────────────
 function CustomerOrderDetail({ order: selected }) {
   const items = Array.isArray(selected.items) ? selected.items : [];
@@ -5988,12 +6122,11 @@ function CustomerOrderDetail({ order: selected }) {
         </div>
       )}
 
-      {/* Returns postage notice */}
-      <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.12)", padding: "10px 16px" }}>
-        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", lineHeight: 1.7 }}>
-          ↩ Need to return an item? Please note that <span style={{ color: "var(--text)" }}>return postage is the responsibility of the customer</span>. Contact us before sending anything back.
-        </div>
-      </div>
+      {/* Return request section */}
+      <ReturnRequestBlock order={selected} onUpdate={(patch) => {
+        // Patch the local order so the UI reflects the request immediately
+        Object.assign(selected, patch);
+      }} />
     </div>
   );
 }
@@ -10585,7 +10718,7 @@ function AdminOrdersInline({ showToast }) {
   const [error, setError] = useState(null);
   const [detail, setDetail] = useState(null);
   const [trackingModal, setTrackingModal] = useState(null); // { id, tracking }
-  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red" };
+  const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red", return_requested: "gold", return_approved: "blue", return_received: "teal" };
 
   const fetchOrders = async () => {
     setLoading(true); setError(null);
@@ -10632,6 +10765,29 @@ function AdminOrdersInline({ showToast }) {
   const [refundNote, setRefundNote] = useState("");
   const [refunding, setRefunding] = useState(false);
 
+  // Returns
+  const [returnModal, setReturnModal] = useState(null); // { order }
+  const [returnAction, setReturnAction] = useState(""); // "approve" | "reject" | "received"
+  const [returnsProcessing, setReturnsProcessing] = useState(false);
+
+  const handleReturnAction = async () => {
+    if (!returnModal) return;
+    const { order } = returnModal;
+    setReturnsProcessing(true);
+    try {
+      let newStatus = order.status;
+      if (returnAction === "approve")   newStatus = "return_approved";
+      if (returnAction === "reject")    newStatus = order.status === "return_requested" ? "dispatched" : order.status;
+      if (returnAction === "received")  newStatus = "return_received";
+      await api.shopOrders.updateStatus(order.id, newStatus);
+      setOrders(o => o.map(x => x.id === order.id ? { ...x, status: newStatus } : x));
+      if (detail?.id === order.id) setDetail(d => ({ ...d, status: newStatus }));
+      showToast(returnAction === "approve" ? "✅ Return approved — customer notified." : returnAction === "received" ? "📦 Return marked as received." : "Return request rejected.");
+      setReturnModal(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setReturnsProcessing(false); }
+  };
+
   const openRefund = (order) => {
     setRefundModal({ order });
     setRefundAmt(Number(order.total || 0).toFixed(2));
@@ -10661,7 +10817,7 @@ function AdminOrdersInline({ showToast }) {
   };
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
   const [statusTab, setStatusTab] = useState("pending");
-  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","all","refunded"];
+  const STATUS_TABS = ["pending","processing","dispatched","completed","cancelled","return_requested","return_approved","return_received","all","refunded"];
   const visibleOrders = statusTab === "all" ? orders : orders.filter(o => o.status === statusTab);
 
   return (
@@ -10847,7 +11003,57 @@ function AdminOrdersInline({ showToast }) {
                 <button className="btn btn-sm" style={{ background:"rgba(255,60,60,.12)", border:"1px solid rgba(255,60,60,.35)", color:"var(--red)" }}
                   onClick={() => openRefund(detail)}>💸 Refund Order</button>
               )}
+              {detail.status === "return_requested" && (
+                <>
+                  <button className="btn btn-sm" style={{ background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00" }}
+                    onClick={() => { setReturnModal({ order: detail }); setReturnAction("approve"); }}>✅ Approve Return</button>
+                  <button className="btn btn-sm" style={{ background:"rgba(255,60,60,.1)", border:"1px solid rgba(255,60,60,.3)", color:"var(--red)" }}
+                    onClick={() => { setReturnModal({ order: detail }); setReturnAction("reject"); }}>✗ Reject Return</button>
+                </>
+              )}
+              {detail.status === "return_approved" && (
+                <button className="btn btn-sm" style={{ background:"rgba(79,195,247,.1)", border:"1px solid rgba(79,195,247,.3)", color:"#4fc3f7" }}
+                  onClick={() => { setReturnModal({ order: detail }); setReturnAction("received"); }}>📦 Mark Return Received</button>
+              )}
+              {detail.return_reason && (
+                <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", padding:"8px 10px", background:"var(--bg4)", border:"1px solid var(--border)", marginTop:4 }}>
+                  ↩ Return reason: <span style={{ color:"var(--text)" }}>{detail.return_reason}</span>
+                </div>
+              )}
+              {detail.return_tracking && (
+                <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", padding:"8px 10px", background:"var(--bg4)", border:"1px solid var(--border)", marginTop:4 }}>
+                  📮 Customer return tracking: <span style={{ color:"#c8ff00" }}>{detail.return_tracking}</span>
+                </div>
+              )}
               <button className="btn btn-ghost" onClick={() => setDetail(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return action modal */}
+      {returnModal && (
+        <div className="overlay" onClick={() => setReturnModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-title">
+              {returnAction === "approve" ? "✅ Approve Return Request" : returnAction === "received" ? "📦 Mark Return Received" : "✗ Reject Return Request"}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 18, lineHeight: 1.6 }}>
+              {returnAction === "approve" && "Approving this return will update the order status to 'Return Approved' and let the customer know they can send the item back. Customers are responsible for return postage."}
+              {returnAction === "received" && "Marking as received confirms you have the returned item in hand. You can then process a refund separately if needed."}
+              {returnAction === "reject" && "Rejecting will revert the order status. The customer will see the return was not approved."}
+            </div>
+            {returnModal.order?.return_reason && (
+              <div style={{ marginBottom: 16, padding: "10px 12px", background: "var(--bg4)", border: "1px solid var(--border)", fontSize: 12, fontFamily: "'Share Tech Mono',monospace" }}>
+                <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 4, letterSpacing: ".1em" }}>CUSTOMER REASON</div>
+                {returnModal.order.return_reason}
+              </div>
+            )}
+            <div className="gap-2">
+              <button className="btn btn-primary" disabled={returnsProcessing} onClick={handleReturnAction}>
+                {returnsProcessing ? "Processing…" : returnAction === "approve" ? "Approve Return" : returnAction === "received" ? "Mark Received" : "Reject Return"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setReturnModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
