@@ -5907,44 +5907,52 @@ const ORDER_STEPS = [
 
 // ── Return Request Block (customer-facing) ───────────────────
 function ReturnRequestBlock({ order, onUpdate }) {
-  const [step, setStep] = useState("idle"); // idle | form | submitted | approved | received
-  const [reason, setReason] = useState("");
+  const [step, setStep]               = useState("idle");
+  const [reason, setReason]           = useState("");
+  const [notes, setNotes]             = useState("");
   const [returnTracking, setReturnTracking] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy]               = useState(false);
+  const [rmaNumber, setRmaNumber]     = useState(order?.return_number || null);
 
-  const status = order?.status;
-  const canRequest = ["dispatched", "completed"].includes(status);
+  const status          = order?.status;
+  const canRequest      = ["dispatched", "completed"].includes(status);
   const alreadyRequested = ["return_requested", "return_approved", "return_received"].includes(status);
-  const isApproved = status === "return_approved";
-  const isReceived = status === "return_received";
+  const isApproved      = status === "return_approved";
+  const isReceived      = status === "return_received";
+
+  // Generate RMA number: RMA- + 8 uppercase alphanumeric chars derived from order id + timestamp
+  const generateRma = () => {
+    const base = ((order.id || "") + Date.now().toString(36)).replace(/[^a-z0-9]/gi, "").toUpperCase();
+    return "RMA-" + base.slice(0, 8).padEnd(8, "0");
+  };
 
   const submitRequest = async () => {
     if (!reason.trim()) return;
     setBusy(true);
     try {
+      const rma = generateRma();
       await supabase.from("shop_orders").update({
-        status: "return_requested",
+        status:        "return_requested",
         return_reason: reason.trim(),
+        return_notes:  notes.trim() || null,
+        return_number: rma,
       }).eq("id", order.id);
-      if (onUpdate) onUpdate({ status: "return_requested", return_reason: reason.trim() });
+      setRmaNumber(rma);
+      if (onUpdate) onUpdate({ status: "return_requested", return_reason: reason.trim(), return_notes: notes.trim() || null, return_number: rma });
       setStep("submitted");
-    } catch (e) {
-      console.error(e);
-    } finally { setBusy(false); }
+    } catch (e) { console.error(e); }
+    finally { setBusy(false); }
   };
 
   const submitReturnTracking = async () => {
     if (!returnTracking.trim()) return;
     setBusy(true);
     try {
-      await supabase.from("shop_orders").update({
-        return_tracking: returnTracking.trim(),
-      }).eq("id", order.id);
+      await supabase.from("shop_orders").update({ return_tracking: returnTracking.trim() }).eq("id", order.id);
       if (onUpdate) onUpdate({ return_tracking: returnTracking.trim() });
       setStep("tracking_saved");
-    } catch (e) {
-      console.error(e);
-    } finally { setBusy(false); }
+    } catch (e) { console.error(e); }
+    finally { setBusy(false); }
   };
 
   if (!canRequest && !alreadyRequested) return null;
@@ -5958,31 +5966,42 @@ function ReturnRequestBlock({ order, onUpdate }) {
     "Other",
   ];
 
+  const rmaDisplay = rmaNumber || order?.return_number;
+
+  const RmaTag = () => rmaDisplay ? (
+    <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", padding:"5px 12px", marginBottom:10 }}>
+      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", letterSpacing:".15em" }}>RETURN REF</span>
+      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, fontWeight:700, color:"#c8ff00", letterSpacing:".12em" }}>{rmaDisplay}</span>
+    </div>
+  ) : null;
+
   if (isReceived) return (
-    <div style={{ background: "rgba(76,175,80,.08)", border: "1px solid rgba(76,175,80,.25)", padding: "14px 18px", marginTop: 14 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#4caf50", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>📦 Return Received</div>
-      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+    <div style={{ background:"rgba(76,175,80,.08)", border:"1px solid rgba(76,175,80,.25)", padding:"14px 18px", marginTop:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:"#4caf50", letterSpacing:".12em", marginBottom:8, textTransform:"uppercase" }}>📦 Return Received</div>
+      <RmaTag />
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
         We have received your return. A refund will be processed shortly if applicable.
       </div>
     </div>
   );
 
   if (isApproved) return (
-    <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "14px 18px", marginTop: 14 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#4fc3f7", letterSpacing: ".12em", marginBottom: 6, textTransform: "uppercase" }}>✅ Return Approved</div>
-      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", lineHeight: 1.7, marginBottom: 12 }}>
-        Your return has been approved. Please send the item back at your own cost — you are responsible for return postage. Once we receive it, we'll process your refund.
+    <div style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.3)", padding:"14px 18px", marginTop:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:"#4fc3f7", letterSpacing:".12em", marginBottom:8, textTransform:"uppercase" }}>✅ Return Approved</div>
+      <RmaTag />
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--muted)", lineHeight:1.7, marginBottom:12 }}>
+        Your return has been approved. Please send the item back at your own cost — <strong style={{ color:"var(--text)" }}>return postage is your responsibility</strong>. Do not send anything until approved. Once we receive it, we'll process your refund.
       </div>
       {order.return_tracking ? (
-        <div style={{ fontSize: 11, color: "#c8ff00", fontFamily: "'Share Tech Mono',monospace" }}>
+        <div style={{ fontSize:11, color:"#c8ff00", fontFamily:"'Share Tech Mono',monospace" }}>
           📮 Your return tracking: <strong>{order.return_tracking}</strong>
         </div>
       ) : (
         <div>
-          <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>Add your return tracking number so we can monitor the shipment:</div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ fontSize:11, color:"var(--muted)", marginBottom:6 }}>Add your return tracking number so we can monitor the shipment:</div>
+          <div style={{ display:"flex", gap:8 }}>
             <input value={returnTracking} onChange={e => setReturnTracking(e.target.value)}
-              placeholder="e.g. ZI256942439GB" style={{ flex: 1, fontSize: 12 }} />
+              placeholder="e.g. ZI256942439GB" style={{ flex:1, fontSize:12 }} />
             <button className="btn btn-sm btn-primary" disabled={busy || !returnTracking.trim()} onClick={submitReturnTracking}>
               {busy ? "Saving…" : "Save"}
             </button>
@@ -5993,45 +6012,61 @@ function ReturnRequestBlock({ order, onUpdate }) {
   );
 
   if (alreadyRequested || step === "submitted") return (
-    <div style={{ background: "rgba(200,150,0,.08)", border: "1px solid rgba(200,150,0,.3)", padding: "14px 18px", marginTop: 14 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--gold)", letterSpacing: ".12em", marginBottom: 4, textTransform: "uppercase" }}>↩ Return Requested</div>
-      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+    <div style={{ background:"rgba(200,150,0,.08)", border:"1px solid rgba(200,150,0,.3)", padding:"14px 18px", marginTop:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:"var(--gold)", letterSpacing:".12em", marginBottom:8, textTransform:"uppercase" }}>↩ Return Requested</div>
+      <RmaTag />
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
         Your return request is being reviewed. We'll update your order status once a decision has been made.
-        {order.return_reason && <><br /><span style={{ color: "var(--text)" }}>Reason: {order.return_reason}</span></>}
+        {order.return_reason && <><br /><span style={{ color:"var(--text)" }}>Reason: {order.return_reason}</span></>}
+        {order.return_notes  && <><br /><span style={{ color:"var(--muted)" }}>Notes: {order.return_notes}</span></>}
       </div>
     </div>
   );
 
   if (step === "form") return (
-    <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "14px 18px", marginTop: 14 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 10, textTransform: "uppercase" }}>↩ Request a Return</div>
-      <div className="form-group" style={{ marginBottom: 10 }}>
-        <label style={{ fontSize: 11 }}>Reason for return</label>
-        <select value={reason} onChange={e => setReason(e.target.value)} style={{ fontSize: 12 }}>
+    <div style={{ background:"#0d0d0d", border:"1px solid var(--border)", padding:"14px 18px", marginTop:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, letterSpacing:".15em", color:"var(--muted)", marginBottom:12, textTransform:"uppercase" }}>↩ Request a Return</div>
+
+      <div className="form-group" style={{ marginBottom:10 }}>
+        <label style={{ fontSize:11 }}>Reason for return <span style={{ color:"var(--red)" }}>*</span></label>
+        <select value={reason} onChange={e => setReason(e.target.value)} style={{ fontSize:12 }}>
           <option value="">— Select a reason —</option>
           {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
-      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12, fontFamily: "'Share Tech Mono',monospace", lineHeight: 1.6 }}>
-        ⚠️ Note: <span style={{ color: "var(--text)" }}>return postage is the customer's responsibility</span>. Do not send any items back until your return is approved.
+
+      <div className="form-group" style={{ marginBottom:12 }}>
+        <label style={{ fontSize:11 }}>Additional notes <span style={{ fontSize:10, color:"var(--muted)" }}>(optional)</span></label>
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Please describe the issue in more detail — include photos if possible via email after submitting. e.g. packaging condition, fault description, order discrepancy…"
+          rows={4}
+          style={{ fontSize:12, resize:"vertical", width:"100%", boxSizing:"border-box" }}
+        />
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn btn-sm btn-primary" disabled={busy || !reason} onClick={submitRequest}>
-          {busy ? "Submitting…" : "Submit Request"}
+
+      <div style={{ fontSize:11, color:"var(--muted)", marginBottom:14, fontFamily:"'Share Tech Mono',monospace", lineHeight:1.7, background:"rgba(255,160,0,.05)", border:"1px solid rgba(255,160,0,.15)", padding:"8px 12px" }}>
+        ⚠️ <span style={{ color:"var(--text)" }}>Return postage is the customer's responsibility.</span> Do not send any items back until your return has been approved. A return reference number will be generated on submission.
+      </div>
+
+      <div style={{ display:"flex", gap:8 }}>
+        <button className="btn btn-sm btn-primary" disabled={busy || !reason.trim()} onClick={submitRequest}>
+          {busy ? "Submitting…" : "Submit Return Request"}
         </button>
         <button className="btn btn-sm btn-ghost" onClick={() => setStep("idle")}>Cancel</button>
       </div>
     </div>
   );
 
-  // idle state — show the prompt
+  // idle — show prompt
   return (
-    <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.12)", padding: "10px 16px", marginTop: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", lineHeight: 1.7 }}>
-          ↩ Need to return something? <span style={{ color: "var(--text)" }}>Return postage is the customer's responsibility.</span>
+    <div style={{ background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.12)", padding:"10px 16px", marginTop:14 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", lineHeight:1.7 }}>
+          ↩ Need to return something? <span style={{ color:"var(--text)" }}>Return postage is the customer's responsibility.</span>
         </div>
-        <button className="btn btn-sm btn-ghost" onClick={() => setStep("form")} style={{ fontSize: 11, whiteSpace: "nowrap" }}>
+        <button className="btn btn-sm btn-ghost" onClick={() => setStep("form")} style={{ fontSize:11, whiteSpace:"nowrap" }}>
           Request Return
         </button>
       </div>
@@ -11028,9 +11063,24 @@ function AdminOrdersInline({ showToast }) {
                 <button className="btn btn-sm" style={{ background:"rgba(79,195,247,.1)", border:"1px solid rgba(79,195,247,.3)", color:"#4fc3f7" }}
                   onClick={() => { setReturnModal({ order: detail }); setReturnAction("received"); }}>📦 Mark Return Received</button>
               )}
-              {detail.return_reason && (
-                <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", padding:"8px 10px", background:"var(--bg4)", border:"1px solid var(--border)", marginTop:4 }}>
-                  ↩ Return reason: <span style={{ color:"var(--text)" }}>{detail.return_reason}</span>
+              {(detail.return_number || detail.return_reason || detail.return_notes) && (
+                <div style={{ marginTop:8, padding:"10px 12px", background:"rgba(200,150,0,.06)", border:"1px solid rgba(200,150,0,.2)", fontSize:12 }}>
+                  {detail.return_number && (
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", letterSpacing:".15em" }}>RETURN REF</span>
+                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, fontWeight:700, color:"#c8ff00" }}>{detail.return_number}</span>
+                    </div>
+                  )}
+                  {detail.return_reason && (
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", marginBottom: detail.return_notes ? 4 : 0 }}>
+                      Reason: <span style={{ color:"var(--text)" }}>{detail.return_reason}</span>
+                    </div>
+                  )}
+                  {detail.return_notes && (
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)" }}>
+                      Notes: <span style={{ color:"var(--text)" }}>{detail.return_notes}</span>
+                    </div>
+                  )}
                 </div>
               )}
               {detail.return_tracking && (
@@ -11056,10 +11106,26 @@ function AdminOrdersInline({ showToast }) {
               {returnAction === "received" && "Marking as received confirms you have the returned item in hand. You can then process a refund separately if needed."}
               {returnAction === "reject" && "Rejecting will revert the order status. The customer will see the return was not approved."}
             </div>
-            {returnModal.order?.return_reason && (
+            {(returnModal.order?.return_number || returnModal.order?.return_reason || returnModal.order?.return_notes) && (
               <div style={{ marginBottom: 16, padding: "10px 12px", background: "var(--bg4)", border: "1px solid var(--border)", fontSize: 12, fontFamily: "'Share Tech Mono',monospace" }}>
-                <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 4, letterSpacing: ".1em" }}>CUSTOMER REASON</div>
-                {returnModal.order.return_reason}
+                {returnModal.order?.return_number && (
+                  <div style={{ marginBottom:6 }}>
+                    <span style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em" }}>RETURN REF  </span>
+                    <span style={{ fontWeight:700, color:"#c8ff00" }}>{returnModal.order.return_number}</span>
+                  </div>
+                )}
+                {returnModal.order?.return_reason && (
+                  <div style={{ marginBottom: returnModal.order?.return_notes ? 4 : 0 }}>
+                    <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2, letterSpacing: ".1em" }}>REASON</div>
+                    {returnModal.order.return_reason}
+                  </div>
+                )}
+                {returnModal.order?.return_notes && (
+                  <div>
+                    <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2, letterSpacing: ".1em", marginTop: 6 }}>CUSTOMER NOTES</div>
+                    {returnModal.order.return_notes}
+                  </div>
+                )}
               </div>
             )}
             <div className="gap-2">
