@@ -905,6 +905,9 @@ function detectCourier(rawTn) {
 function TrackingBlock({ trackingNumber, adminMode = false }) {
   const { tn, courier, trackUrl } = detectCourier(trackingNumber);
   if (!tn) return null;
+  // Fallback: search Royal Mail + Google for unknown formats
+  const fallbackUrl = `https://www.royalmail.com/track-your-item#/tracking-results/${tn}`;
+  const linkUrl = trackUrl || fallbackUrl;
   return (
     <div style={{ background: adminMode ? "rgba(200,255,0,.03)" : "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.25)", padding: adminMode ? "10px 14px" : "14px 18px", marginBottom: adminMode ? 0 : 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
@@ -912,20 +915,24 @@ function TrackingBlock({ trackingNumber, adminMode = false }) {
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "#c8ff00", marginBottom: 3, textTransform: "uppercase" }}>
             📮 Tracking{courier ? ` — ${courier}` : ""}
           </div>
-          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: adminMode ? 13 : 16, fontWeight: 700, color: "#fff", letterSpacing: ".08em" }}>{tn}</div>
-        </div>
-        {trackUrl && (
-          <a href={trackUrl} target="_blank" rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.35)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".18em", padding: adminMode ? "6px 12px" : "8px 16px", textDecoration: "none", whiteSpace: "nowrap" }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(200,255,0,.2)"}
-            onMouseLeave={e => e.currentTarget.style.background = "rgba(200,255,0,.1)"}>
-            ▸ TRACK
+          {/* Tracking number is itself a clickable link */}
+          <a href={linkUrl} target="_blank" rel="noopener noreferrer"
+            style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: adminMode ? 13 : 16, fontWeight: 700, color: "#fff", letterSpacing: ".08em", textDecoration: "none", display: "inline-block", borderBottom: "1px dashed rgba(200,255,0,.4)", paddingBottom: 1, transition: "color .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#c8ff00"; e.currentTarget.style.borderBottomStyle = "solid"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderBottomStyle = "dashed"; }}>
+            {tn}
           </a>
-        )}
+        </div>
+        <a href={linkUrl} target="_blank" rel="noopener noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.35)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".18em", padding: adminMode ? "6px 12px" : "8px 16px", textDecoration: "none", whiteSpace: "nowrap" }}
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(200,255,0,.2)"}
+          onMouseLeave={e => e.currentTarget.style.background = "rgba(200,255,0,.1)"}>
+          ▸ TRACK{!courier ? " (Royal Mail)" : ""}
+        </a>
       </div>
       {!courier && (
         <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 6 }}>
-          Enter this number on your courier's website to track your parcel.
+          Format not recognised — defaulting to Royal Mail. Try your courier's website if this doesn't work.
         </div>
       )}
     </div>
@@ -5731,6 +5738,19 @@ function PlayerOrders({ cu }) {
                 <span>{new Date(o.created_at).toLocaleDateString("en-GB", { day:"numeric", month:"short" })}</span>
                 <span style={{ color: isActive ? meta.color : "var(--muted)", fontWeight: 700 }}>£{Number(o.total).toFixed(2)}</span>
               </div>
+              {o.tracking_number && (() => {
+                const { courier, trackUrl } = detectCourier(o.tracking_number);
+                const url = trackUrl || `https://www.royalmail.com/track-your-item#/tracking-results/${o.tracking_number.trim()}`;
+                return (
+                  <a href={url} target="_blank" rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    style={{ display:"inline-flex", alignItems:"center", gap:4, marginTop:6, fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#c8ff00", textDecoration:"none", letterSpacing:".08em", background:"rgba(200,255,0,.07)", border:"1px solid rgba(200,255,0,.2)", padding:"3px 8px", borderRadius:2 }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(200,255,0,.15)"}
+                    onMouseLeave={e => e.currentTarget.style.background="rgba(200,255,0,.07)"}>
+                    📮 {courier || "TRACK"} ↗
+                  </a>
+                );
+              })()}
             </div>
           );
         })}
