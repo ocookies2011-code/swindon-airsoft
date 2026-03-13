@@ -948,71 +948,28 @@ async function fetchTrackingStatus(tn, courier) {
   const carrierMap = { 'Royal Mail':190, 'UPS':100002, 'FedEx':100003, 'DPD':3011, 'Evri':3011, 'Parcelforce':190 };
   const carrierCode = carrierMap[courier] || 0;
 
-  // ── Attempt 1: 17track API using key from site_settings ──────
-  try {
-    const apiKey = await get17trackKey();
-    if (apiKey) {
-      const res = await fetch('https://api.17track.net/track/v2/gettrackinfo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', '17token': apiKey },
-        body: JSON.stringify({ number: tn, carrier: carrierCode }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const info = data?.data?.accepted?.[0]?.track;
-        if (info != null) {
-          const status = TRACK_STATUS_MAP[info.e] || 'In Transit';
-          const events = (info.z0 || []).slice(0, 5).map(e => ({ time: e.a, desc: e.z, location: e.c || '' }));
-          const result = { status, events, checkedAt: Date.now(), fromCache: false };
-          // Remove any stale null/bad cache entry before writing the good result
-          try { localStorage.removeItem(TRACKING_CACHE_KEY(tn)); localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result)); } catch {}
-          return result;
-        }
-      }
-    }
-  } catch {}
-
-  // ── Attempt 2: track-parcel Edge Function (key stored as Supabase secret) ──
+  // All tracking calls go through the track-parcel Edge Function — it runs
+  // server-side so there are no CORS issues with 17track or Royal Mail APIs.
+  // The Edge Function reads the 17track key from site_settings itself, and
+  // falls back to Royal Mail's public API if the key is missing or fails.
   try {
     const { supabase } = await import('./supabaseClient');
     const { data, error } = await supabase.functions.invoke('track-parcel', {
-      body: { trackingNumber: tn, carrierCode },
+      body: { trackingNumber: tn, courier, carrierCode },
     });
     if (!error && data?.status) {
       const result = { status: data.status, events: data.events || [], checkedAt: Date.now(), fromCache: false };
-      try { localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result)); } catch {}
+      try {
+        localStorage.removeItem(TRACKING_CACHE_KEY(tn));
+        localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
+      } catch {}
       return result;
     }
   } catch {}
 
-  // ── Attempt 3: Royal Mail public tracking API (no key needed) ─
-  // Only tried for Royal Mail tracking numbers
-  if (courier === 'Royal Mail' || !courier) {
-    try {
-      const rmTn = tn.toUpperCase();
-      const res = await fetch(
-        `https://www.royalmail.com/trackingApiProxy/api/trackingData?trackNumber=${rmTn}`,
-        { headers: { 'Accept': 'application/json', 'Referer': 'https://www.royalmail.com/track-your-item' } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const piece = data?.mailPieces?.[0];
-        if (piece) {
-          const summaryText = piece?.summary?.statusDescription || piece?.summary?.description || '';
-          const events = (piece?.events || []).slice(0, 5).map(e => ({
-            time: e.eventDateTime, desc: e.eventDescription, location: e.locationName || '',
-          }));
-          const status = guessRmStatus(summaryText) || 'In Transit';
-          const result = { status, events, checkedAt: Date.now(), fromCache: false };
-          try { localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result)); } catch {}
-          return result;
-        }
-      }
-    } catch {}
-  }
-
   return null;
 }
+
 
 // ── Admin orders — STATUS cell showing ONLY live courier status ──
 function AdminTrackStatusCell({ trackingNumber, courier }) {
