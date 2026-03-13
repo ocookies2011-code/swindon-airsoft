@@ -883,6 +883,53 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .bottom-nav{display:none;}
 }
 `
+// ── Parcel tracking status (uses 17track API via Supabase edge proxy or localStorage cache) ──
+const TRACKING_CACHE_KEY = (tn) => `tracking_status_${tn}`;
+const TRACKING_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours between auto-checks
+
+async function fetchTrackingStatus(tn, courier) {
+  if (!tn) return null;
+  // Check localStorage cache first
+  try {
+    const cached = localStorage.getItem(TRACKING_CACHE_KEY(tn));
+    if (cached) {
+      const { status, events, checkedAt } = JSON.parse(cached);
+      const age = Date.now() - checkedAt;
+      if (age < TRACKING_TTL_MS) return { status, events, checkedAt, fromCache: true };
+    }
+  } catch {}
+
+  // Map courier to 17track carrier code
+  const carrierMap = {
+    "Royal Mail": 190, "UPS": 100002, "FedEx": 100003,
+    "DPD": 3011, "Evri": 3011, "Parcelforce": 190,
+  };
+  const carrierCode = carrierMap[courier] || 0;
+
+  try {
+    // 17track free API — 100 requests/month no key needed for basic status
+    const res = await fetch(`https://api.17track.net/track/v2/gettrackinfo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "17token": "" },
+      body: JSON.stringify({ number: tn, carrier: carrierCode }),
+    });
+    if (!res.ok) throw new Error("API error");
+    const data = await res.json();
+    const info = data?.data?.accepted?.[0]?.track;
+    if (!info) throw new Error("No data");
+
+    const events = (info.z0 || []).map(e => ({ time: e.a, desc: e.z, location: e.c || "" })).slice(0, 5);
+    const statusMap = { 0: "Pending", 10: "In Transit", 20: "Expired", 30: "Pick Up", 35: "Undelivered", 40: "Delivered", 50: "In Transit" };
+    const status = statusMap[info.e] || "In Transit";
+    const result = { status, events, checkedAt: Date.now(), fromCache: false };
+    localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
+    return result;
+  } catch {
+    // Fallback: return null — block will just show the link with no status
+    return null;
+  }
+}
+
 function detectCourier(rawTn) {
   const tn = (rawTn || "").trim().replace(/\s/g, "");
   if (!tn) return { tn, courier: null, trackUrl: null };
@@ -904,10 +951,37 @@ function detectCourier(rawTn) {
 
 function TrackingBlock({ trackingNumber, adminMode = false }) {
   const { tn, courier, trackUrl } = detectCourier(trackingNumber);
+  const [trackStatus, setTrackStatus] = useState(null);
+  const [trackLoading, setTrackLoading] = useState(false);
+
+  useEffect(() => {
+    if (!tn) return;
+    // Auto-check on mount (uses cache if fresh)
+    fetchTrackingStatus(tn, courier).then(result => { if (result) setTrackStatus(result); });
+  }, [tn, courier]);
+
+  const refreshStatus = async () => {
+    if (!tn || trackLoading) return;
+    // Force fresh fetch by clearing cache
+    try { localStorage.removeItem(TRACKING_CACHE_KEY(tn)); } catch {}
+    setTrackLoading(true);
+    const result = await fetchTrackingStatus(tn, courier);
+    if (result) setTrackStatus(result);
+    setTrackLoading(false);
+  };
+
   if (!tn) return null;
   // Fallback: search Royal Mail + Google for unknown formats
   const fallbackUrl = `https://www.royalmail.com/track-your-item#/tracking-results/${tn}`;
   const linkUrl = trackUrl || fallbackUrl;
+
+  const statusColors = {
+    "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800",
+    "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)",
+    "Pick Up": "#ff9800",
+  };
+  const statusColor = trackStatus ? (statusColors[trackStatus.status] || "#c8e878") : null;
+
   return (
     <div style={{ background: adminMode ? "rgba(200,255,0,.03)" : "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.25)", padding: adminMode ? "10px 14px" : "14px 18px", marginBottom: adminMode ? 0 : 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
@@ -934,6 +1008,48 @@ function TrackingBlock({ trackingNumber, adminMode = false }) {
         <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 6 }}>
           Format not recognised — defaulting to Royal Mail. Try your courier's website if this doesn't work.
         </div>
+      )}
+
+      {/* Live tracking status */}
+      {trackStatus && (
+        <div style={{ marginTop: 10, borderTop: "1px solid rgba(200,255,0,.15)", paddingTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, letterSpacing: ".1em", color: statusColor, textTransform: "uppercase" }}>
+              {trackStatus.status === "Delivered" ? "✅" : trackStatus.status === "Out for Delivery" ? "🚚" : "📦"} {trackStatus.status}
+            </span>
+            <button onClick={refreshStatus} disabled={trackLoading}
+              style={{ background: "none", border: "1px solid rgba(200,255,0,.2)", color: "#5a7a30", fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".12em", padding: "3px 8px", cursor: trackLoading ? "wait" : "pointer" }}>
+              {trackLoading ? "⏳" : "↺ REFRESH"}
+            </button>
+          </div>
+          {trackStatus.events?.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {trackStatus.events.map((e, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, fontSize: 11 }}>
+                  <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "var(--muted)", whiteSpace: "nowrap", flexShrink: 0, marginTop: 1 }}>
+                    {e.time ? new Date(e.time).toLocaleDateString("en-GB", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : ""}
+                  </span>
+                  <span style={{ color: i === 0 ? "#e8f0d8" : "var(--muted)" }}>{e.desc}{e.location ? ` — ${e.location}` : ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", marginTop: 6 }}>
+            {trackStatus.fromCache ? "CACHED" : "LIVE"} · CHECKED {new Date(trackStatus.checkedAt).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" })} · AUTO-REFRESHES EVERY 8H
+          </div>
+        </div>
+      )}
+      {!trackStatus && !trackLoading && tn && (
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={refreshStatus}
+            style={{ background: "none", border: "1px solid rgba(200,255,0,.2)", color: "#5a7a30", fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".12em", padding: "3px 10px", cursor: "pointer" }}>
+            ↺ CHECK STATUS
+          </button>
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10" }}>FETCH LIVE TRACKING INFO</span>
+        </div>
+      )}
+      {trackLoading && (
+        <div style={{ marginTop: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#3a5010", letterSpacing: ".12em" }}>⏳ CHECKING TRACKING…</div>
       )}
     </div>
   );
@@ -9634,7 +9750,13 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
 
       {tab === "del" && (
         <div className="card">
-          {players.filter(u => u.deleteRequest).length === 0 ? (
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".1em" }}>
+              {allUsers.filter(u => u.deleteRequest).length} DELETION REQUEST(S) · {allUsers.length} TOTAL USERS LOADED
+            </div>
+            <button className="btn btn-sm btn-ghost" onClick={loadUsers}>↺ Refresh</button>
+          </div>
+          {allUsers.filter(u => u.deleteRequest).length === 0 ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No deletion requests.</div>
           ) : (
             <>
@@ -9644,7 +9766,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
             <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Player</th><th>Email</th><th>Joined</th><th>Games</th><th>Credits</th><th>Actions</th></tr></thead>
               <tbody>
-                {players.filter(u => u.deleteRequest).map(u => (
+                {allUsers.filter(u => u.deleteRequest).map(u => (
                   <tr key={u.id} style={{ background: "rgba(220,50,50,.03)" }}>
                     <td>
                       <div style={{ fontWeight: 600 }}>{u.name}</div>
