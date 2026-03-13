@@ -101,10 +101,11 @@ export const profiles = wrapWithTimeout({
 
   async delete(id) {
     // Deletes auth user via Supabase Edge Function.
-    // Explicitly pass the JWT — supabase.functions.invoke() can sometimes
-    // miss a refreshed token if the session was recently renewed.
-    const { data: { session } } = await supabase.auth.getSession()
+    // Force-refresh the session first — "Invalid JWT" usually means a stale token.
+    const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession()
+    const session = refreshData?.session
     if (!session?.access_token) throw new Error('Not authenticated — please log in again')
+
     const { data, error } = await supabase.functions.invoke('delete-user', {
       body: { userId: id },
       headers: { Authorization: `Bearer ${session.access_token}` },

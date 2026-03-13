@@ -887,6 +887,19 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 const TRACKING_CACHE_KEY = (tn) => `tracking_status_${tn}`;
 const TRACKING_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours between auto-checks
 
+// Cache the 17track API key once loaded from site_settings
+let _17trackKey = null;
+async function get17trackKey() {
+  if (_17trackKey !== null) return _17trackKey;
+  try {
+    // Key stored in Supabase site_settings as "17track_api_key"
+    const { supabase } = await import('./supabaseClient');
+    const { data } = await supabase.from('site_settings').select('value').eq('key', '17track_api_key').single();
+    _17trackKey = data?.value || '';
+  } catch { _17trackKey = ''; }
+  return _17trackKey;
+}
+
 async function fetchTrackingStatus(tn, courier) {
   if (!tn) return null;
   // Check localStorage cache first
@@ -906,11 +919,13 @@ async function fetchTrackingStatus(tn, courier) {
   };
   const carrierCode = carrierMap[courier] || 0;
 
+  // Try 17track API (requires API key stored in site_settings → 17track_api_key)
   try {
-    // 17track free API — 100 requests/month no key needed for basic status
+    const apiKey = await get17trackKey();
+    if (!apiKey) throw new Error("No API key");
     const res = await fetch(`https://api.17track.net/track/v2/gettrackinfo`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "17token": "" },
+      headers: { "Content-Type": "application/json", "17token": apiKey },
       body: JSON.stringify({ number: tn, carrier: carrierCode }),
     });
     if (!res.ok) throw new Error("API error");
@@ -924,10 +939,22 @@ async function fetchTrackingStatus(tn, courier) {
     const result = { status, events, checkedAt: Date.now(), fromCache: false };
     localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
     return result;
-  } catch {
-    // Fallback: return null — block will just show the link with no status
-    return null;
-  }
+  } catch {}
+
+  // Fallback: call our own Supabase Edge Function as a tracking proxy
+  // (Deploy supabase/functions/track-parcel/index.ts — see comment below)
+  try {
+    const { supabase } = await import('./supabaseClient');
+    const { data, error } = await supabase.functions.invoke('track-parcel', {
+      body: { trackingNumber: tn, courier, carrierCode },
+    });
+    if (error || !data?.status) throw new Error("Edge fn failed");
+    const result = { status: data.status, events: data.events || [], checkedAt: Date.now(), fromCache: false };
+    localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
+    return result;
+  } catch {}
+
+  return null;
 }
 
 
