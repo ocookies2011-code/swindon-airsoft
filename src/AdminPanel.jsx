@@ -18,6 +18,7 @@ import {
   sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
   sendReturnDecisionEmail,
   WaiverModal,
+  RankInsignia, DesignationInsignia,
 } from "./utils";
 
 function AdminDiscountCodes({ data, showToast, cu }) {
