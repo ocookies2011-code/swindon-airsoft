@@ -5958,11 +5958,9 @@ function ReturnRequestBlock({ order, onUpdate }) {
   if (!canRequest && !alreadyRequested) return null;
 
   const RETURN_REASONS = [
-    "Item not as described",
     "Wrong item received",
     "Damaged / faulty on arrival",
     "Changed my mind",
-    "Ordered wrong size / variant",
     "Other",
   ];
 
