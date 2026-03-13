@@ -4487,7 +4487,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 }
 
 // ── Product Page ──────────────────────────────────────────
-function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
+function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, shopItems = [] }) {
   const isMobile = useMobile(700);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
@@ -4726,6 +4726,67 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen }) {
           })()}
       </div>
     )}
+
+    {/* Related Products */}
+    {(() => {
+      const related = shopItems
+        .filter(p => p.id !== item.id && p.published !== false && p.category && p.category === item.category)
+        .slice(0, 3);
+      if (related.length === 0) return null;
+      return (
+        <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 16px 60px" }}>
+          <div style={{ borderTop:"1px solid #1a2808", paddingTop:32, marginBottom:20 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>◈ —</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>RELATED <span style={{ color:"#c8ff00" }}>EQUIPMENT</span></div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>— ◈</div>
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#2a3a10", letterSpacing:".15em", marginTop:4 }}>
+              MORE FROM: {(item.category || "").toUpperCase()}
+            </div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:12 }}>
+            {related.map(rel => {
+              const hasV = rel.variants?.length > 0;
+              const relPrice = hasV
+                ? Math.min(...rel.variants.map(v => Number(v.price)))
+                : (rel.onSale && rel.salePrice ? rel.salePrice : rel.price);
+              const relImg = rel.images?.[0] || rel.image || null;
+              const relStock = hasV ? rel.variants.reduce((s,v)=>s+Number(v.stock),0) : rel.stock;
+              const sl = stockLabel(relStock);
+              return (
+                <div key={rel.id} onClick={() => { onBack(); setTimeout(() => onProductClick && onProductClick(rel), 50); }}
+                  style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", cursor:"pointer", transition:"border-color .15s, transform .15s", position:"relative" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}>
+                  {/* Corner brackets */}
+                  {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                    <div key={v+h} style={{ position:"absolute", width:10, height:10, zIndex:3,
+                      top:v==="top"?4:"auto", bottom:v==="bottom"?4:"auto",
+                      left:h==="left"?4:"auto", right:h==="right"?4:"auto",
+                      borderTop:v==="top"?"1px solid rgba(200,255,0,.3)":"none",
+                      borderBottom:v==="bottom"?"1px solid rgba(200,255,0,.3)":"none",
+                      borderLeft:h==="left"?"1px solid rgba(200,255,0,.3)":"none",
+                      borderRight:h==="right"?"1px solid rgba(200,255,0,.3)":"none" }} />
+                  ))}
+                  {relImg
+                    ? <img src={relImg} alt={rel.name} onError={e=>{e.target.style.display="none";}} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", background:"#080a06", display:"block" }} />
+                    : <div style={{ aspectRatio:"4/3", background:"#080a06", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, color:"#1a2808" }}>🎯</div>
+                  }
+                  <div style={{ padding:"10px 12px 12px" }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".06em", textTransform:"uppercase", color:"#c8e878", marginBottom:4, lineHeight:1.2 }}>{rel.name}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, color:"#c8ff00" }}>£{Number(relPrice).toFixed(2)}</div>
+                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:sl.color, letterSpacing:".1em" }}>{sl.text}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })()}
     </>
   );
 }
@@ -15079,6 +15140,8 @@ function AppInner() {
           <ProductPage
             item={selectedProduct}
             cu={cu}
+            shopItems={data.shop || []}
+            onProductClick={(p) => setSelectedProduct(p)}
             onBack={() => setSelectedProduct(null)}
             cartCount={shopCart.reduce((s, i) => s + i.qty, 0)}
             onCartOpen={() => { setShopCartOpen(true); setSelectedProduct(null); }}
