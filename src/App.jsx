@@ -9195,6 +9195,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
   const [playerSearch, setPlayerSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all"); // all | player | admin
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(new Set());
   const [bulkAction, setBulkAction] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -9224,15 +9225,18 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
   const allUsers = localUsers ?? data.users;
   const players = allUsers.filter(u => u.role !== "admin");
   const vipApps = players.filter(u => u.vipApplied && u.vipStatus !== "active");
+  const roleFiltered = roleFilter === "admin" ? allUsers.filter(u => u.role === "admin")
+    : roleFilter === "player" ? allUsers.filter(u => u.role !== "admin")
+    : allUsers;
   const filteredPlayers = playerSearch.trim()
-    ? players.filter(u => {
+    ? roleFiltered.filter(u => {
         const q = playerSearch.toLowerCase();
         return u.name?.toLowerCase().includes(q) ||
                u.email?.toLowerCase().includes(q) ||
                u.phone?.toLowerCase().includes(q) ||
                u.ukara?.toLowerCase().includes(q);
       })
-    : players;
+    : roleFiltered;
 
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -9374,6 +9378,23 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
       {tab === "all" && (
         <div className="card">
           {localUsers === null && <div style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>Loading players…</div>}
+          {/* Role filter tabs */}
+          <div style={{ display:"flex", gap:4, marginBottom:10 }}>
+            {[
+              { key:"all",    label:"ALL",     count: allUsers.length },
+              { key:"player", label:"PLAYERS", count: allUsers.filter(u=>u.role!=="admin").length },
+              { key:"admin",  label:"ADMINS",  count: allUsers.filter(u=>u.role==="admin").length },
+            ].map(({ key, label, count }) => (
+              <button key={key} onClick={() => { setRoleFilter(key); setSelectedPlayerIds(new Set()); }}
+                style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em",
+                  padding:"5px 14px", border:"1px solid", cursor:"pointer", transition:"all .15s",
+                  background: roleFilter===key ? "rgba(200,255,0,.12)" : "transparent",
+                  borderColor: roleFilter===key ? "rgba(200,255,0,.5)" : "var(--border)",
+                  color: roleFilter===key ? "#c8ff00" : "var(--muted)" }}>
+                {label} <span style={{ opacity:.7 }}>({count})</span>
+              </button>
+            ))}
+          </div>
           <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
             <input
               value={playerSearch}
@@ -9385,7 +9406,7 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
               <button className="btn btn-ghost btn-sm" onClick={() => setPlayerSearch("")}>✕ Clear</button>
             )}
             <span style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>
-              {filteredPlayers.length} / {players.length}
+              {filteredPlayers.length} / {roleFiltered.length}
             </span>
           </div>
           {selectedPlayerIds.size > 0 && (
@@ -10400,7 +10421,25 @@ function AdminOrdersInline({ showToast }) {
                     <td style={{ fontSize:12, color:"var(--muted)" }}>{items.map(i => `${i.name} ×${i.qty}`).join(", ")}</td>
                     <td style={{ fontSize:12 }}>{o.postage_name || "—"}</td>
                     <td className="text-green">£{Number(o.total).toFixed(2)}</td>
-                    <td><span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span></td>
+                    <td>
+                      <span className={`tag tag-${STATUS_COLORS[o.status] || "blue"}`}>{o.status}</span>
+                      {o.tracking_number && (() => {
+                        const { courier, trackUrl } = detectCourier(o.tracking_number);
+                        return (
+                          <div style={{ marginTop:4, display:"flex", alignItems:"center", gap:4, flexWrap:"wrap" }}>
+                            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#c8ff00", letterSpacing:".05em" }}>
+                              📮 {o.tracking_number.trim()}
+                            </span>
+                            {courier && <span style={{ fontSize:9, color:"var(--muted)" }}>({courier})</span>}
+                            {trackUrl && (
+                              <a href={trackUrl} target="_blank" rel="noopener noreferrer"
+                                style={{ fontSize:9, color:"#4fc3f7", textDecoration:"none", fontWeight:700, letterSpacing:".05em" }}
+                                onClick={e => e.stopPropagation()}>↗ TRACK</a>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td>
                       <select value={o.status} onChange={e => setStatus(o.id, e.target.value)}
                         style={{ fontSize:12, padding:"4px 8px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:4 }}>
