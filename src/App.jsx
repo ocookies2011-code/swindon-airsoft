@@ -887,35 +887,50 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 const TRACKING_CACHE_KEY = (tn) => `tracking_status_${tn}`;
 const TRACKING_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
-// Status maps for both 17track numeric codes and Royal Mail text descriptions
-const STATUS_MAP_17TRACK = { 0:'Pending', 10:'In Transit', 20:'Expired', 30:'Pick Up', 35:'Undelivered', 40:'Delivered', 50:'In Transit' };
-const RM_STATUS_MAP = {
-  'delivered':           'Delivered',
-  'it is being prepared':'In Transit',
-  'in transit':          'In Transit',
-  'out for delivery':    'Out for Delivery',
-  'we have your item':   'In Transit',
-  'item accepted':       'In Transit',
-  'collected from':      'In Transit',
-  'sorry':               'Undelivered',
-  'unable to deliver':   'Undelivered',
-  'you were not in':     'Undelivered',
-  'available for':       'Pick Up',
-};
-
-function guessStatusFromText(text) {
+const TRACK_STATUS_MAP = { 0:'Pending', 10:'In Transit', 20:'Expired', 30:'Pick Up', 35:'Undelivered', 40:'Delivered', 50:'In Transit' };
+const RM_STATUS_FRAGMENTS = [
+  ['delivered',            'Delivered'],
+  ['out for delivery',     'Out for Delivery'],
+  ['unable to deliver',    'Undelivered'],
+  ['you were not in',      'Undelivered'],
+  ["sorry, we couldn",     'Undelivered'],
+  ['available for',        'Pick Up'],
+  ['collected from',       'In Transit'],
+  ['item accepted',        'In Transit'],
+  ['we have your item',    'In Transit'],
+  ['in transit',           'In Transit'],
+  ['it is being prepared', 'In Transit'],
+];
+function guessRmStatus(text) {
   if (!text) return null;
   const lower = text.toLowerCase();
-  for (const [key, val] of Object.entries(RM_STATUS_MAP)) {
-    if (lower.includes(key)) return val;
+  for (const [frag, label] of RM_STATUS_FRAGMENTS) {
+    if (lower.includes(frag)) return label;
   }
   return null;
+}
+
+// Cache the 17track key so we only hit site_settings once per session.
+// Reset to undefined on module load so a newly saved key is picked up on next page load.
+let _cachedTrackKey = undefined;
+async function get17trackKey() {
+  if (_cachedTrackKey !== undefined) return _cachedTrackKey;
+  try {
+    const { supabase } = await import('./supabaseClient');
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', '17track_api_key')
+      .single();
+    _cachedTrackKey = data?.value || null;
+  } catch { _cachedTrackKey = null; }
+  return _cachedTrackKey;
 }
 
 async function fetchTrackingStatus(tn, courier) {
   if (!tn) return null;
 
-  // Return from localStorage cache if fresh
+  // Return from localStorage cache if still fresh
   try {
     const cached = localStorage.getItem(TRACKING_CACHE_KEY(tn));
     if (cached) {
@@ -927,9 +942,31 @@ async function fetchTrackingStatus(tn, courier) {
   const carrierMap = { 'Royal Mail':190, 'UPS':100002, 'FedEx':100003, 'DPD':3011, 'Evri':3011, 'Parcelforce':190 };
   const carrierCode = carrierMap[courier] || 0;
 
-  // ── Call the track-parcel Supabase Edge Function ─────────────
-  // This function holds the 17track API key as a secret server-side,
-  // so no key is needed in the client. Deploy once and all tracking works.
+  // ── Attempt 1: 17track API using key from site_settings ──────
+  try {
+    const apiKey = await get17trackKey();
+    if (apiKey) {
+      const res = await fetch('https://api.17track.net/track/v2/gettrackinfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', '17token': apiKey },
+        body: JSON.stringify({ number: tn, carrier: carrierCode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const info = data?.data?.accepted?.[0]?.track;
+        if (info != null) {
+          const status = TRACK_STATUS_MAP[info.e] || 'In Transit';
+          const events = (info.z0 || []).slice(0, 5).map(e => ({ time: e.a, desc: e.z, location: e.c || '' }));
+          const result = { status, events, checkedAt: Date.now(), fromCache: false };
+          // Remove any stale null/bad cache entry before writing the good result
+          try { localStorage.removeItem(TRACKING_CACHE_KEY(tn)); localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result)); } catch {}
+          return result;
+        }
+      }
+    }
+  } catch {}
+
+  // ── Attempt 2: track-parcel Edge Function (key stored as Supabase secret) ──
   try {
     const { supabase } = await import('./supabaseClient');
     const { data, error } = await supabase.functions.invoke('track-parcel', {
@@ -941,6 +978,32 @@ async function fetchTrackingStatus(tn, courier) {
       return result;
     }
   } catch {}
+
+  // ── Attempt 3: Royal Mail public tracking API (no key needed) ─
+  // Only tried for Royal Mail tracking numbers
+  if (courier === 'Royal Mail' || !courier) {
+    try {
+      const rmTn = tn.toUpperCase();
+      const res = await fetch(
+        `https://www.royalmail.com/trackingApiProxy/api/trackingData?trackNumber=${rmTn}`,
+        { headers: { 'Accept': 'application/json', 'Referer': 'https://www.royalmail.com/track-your-item' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const piece = data?.mailPieces?.[0];
+        if (piece) {
+          const summaryText = piece?.summary?.statusDescription || piece?.summary?.description || '';
+          const events = (piece?.events || []).slice(0, 5).map(e => ({
+            time: e.eventDateTime, desc: e.eventDescription, location: e.locationName || '',
+          }));
+          const status = guessRmStatus(summaryText) || 'In Transit';
+          const result = { status, events, checkedAt: Date.now(), fromCache: false };
+          try { localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result)); } catch {}
+          return result;
+        }
+      }
+    } catch {}
+  }
 
   return null;
 }
