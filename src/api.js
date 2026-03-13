@@ -101,26 +101,30 @@ export const profiles = wrapWithTimeout({
 
   async delete(id) {
     // Deletes auth user via Supabase Edge Function.
-    // Force-refresh the session first — "Invalid JWT" usually means a stale token.
-    const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession()
-    const session = refreshData?.session
+    // The Edge Function must be deployed with --no-verify-jwt and verify the
+    // caller's admin role itself (see supabase/functions/delete-user/index.ts below).
+    // We pass both the anon key (apikey header) and the user JWT (Authorization)
+    // so the gateway lets the request through, and the function can verify it.
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session?.access_token) throw new Error('Not authenticated — please log in again')
 
-    const { data, error } = await supabase.functions.invoke('delete-user', {
-      body: { userId: id },
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-    if (error) {
-      // Extract the real message from the Edge Function response body if available
-      let msg = error.message || 'Delete failed'
-      try {
-        const ctx = await error.context?.json?.()
-        if (ctx?.error) msg = ctx.error
-        else if (ctx?.message) msg = ctx.message
-      } catch {}
-      throw new Error(msg)
-    }
-    if (data?.error) throw new Error(data.error)
+    // supabase.supabaseKey is the anon key — needed as the gateway apikey header
+    const anonKey = supabase.supabaseKey
+    const res = await fetch(
+      `${supabase.supabaseUrl}/functions/v1/delete-user`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': anonKey,
+        },
+        body: JSON.stringify({ userId: id }),
+      }
+    )
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (!res.ok || result.error) throw new Error(result.error || `Delete failed (${res.status})`)
   },
 
   async uploadProfilePic(userId, file) {
