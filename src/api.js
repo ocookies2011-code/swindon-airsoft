@@ -100,19 +100,14 @@ export const profiles = wrapWithTimeout({
   },
 
   async delete(id) {
-    // Deletes auth user via Edge Function — never use auth.admin client-side (requires service role key)
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch('/api/delete-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
-      },
-      body: JSON.stringify({ userId: id }),
+    // Deletes auth user via Supabase Edge Function.
+    // Uses supabase.functions.invoke() so auth is attached automatically
+    // and it works in all environments (dev + production) without a Vite proxy.
+    const { data, error } = await supabase.functions.invoke('delete-user', {
+      body: { userId: id },
     })
-    const text = await res.text()
-    const result = text ? JSON.parse(text) : {}
-    if (!res.ok || result.error) throw new Error(result.error || 'Delete failed')
+    if (error) throw new Error(error.message || 'Delete failed')
+    if (data?.error) throw new Error(data.error)
   },
 
   async uploadProfilePic(userId, file) {
