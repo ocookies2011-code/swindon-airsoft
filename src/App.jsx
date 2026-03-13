@@ -885,7 +885,8 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 `
 // ── Parcel tracking status ───────────────────────────────────
 const TRACKING_CACHE_KEY = (tn) => `tracking_status_${tn}`;
-const TRACKING_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const TRACKING_TTL_MS       = 8 * 60 * 60 * 1000; // 8 hours — final statuses (Delivered)
+const TRACKING_TTL_SHORT_MS = 30 * 60 * 1000;      // 30 mins  — in-progress statuses
 
 const TRACK_STATUS_MAP = { 0:'Pending', 10:'In Transit', 20:'Expired', 30:'Pick Up', 35:'Undelivered', 40:'Delivered', 50:'In Transit' };
 const RM_STATUS_FRAGMENTS = [
@@ -936,12 +937,16 @@ function prime17trackKey(key) {
 async function fetchTrackingStatus(tn, courier) {
   if (!tn) return null;
 
-  // Return from localStorage cache if still fresh
+  // Return from localStorage cache if still fresh.
+  // Never cache null/failed results — always retry those.
   try {
     const cached = localStorage.getItem(TRACKING_CACHE_KEY(tn));
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Date.now() - parsed.checkedAt < TRACKING_TTL_MS) return { ...parsed, fromCache: true };
+      if (parsed.status) { // only use cached entry if it has real data
+        const ttl = ['Delivered','Expired'].includes(parsed.status) ? TRACKING_TTL_MS : TRACKING_TTL_SHORT_MS;
+        if (Date.now() - parsed.checkedAt < ttl) return { ...parsed, fromCache: true };
+      }
     }
   } catch {}
 
@@ -10849,9 +10854,10 @@ function AdminOrdersInline({ showToast }) {
       <div className="nav-tabs" style={{ marginBottom:12 }}>
         {STATUS_TABS.map(t => {
           const cnt = t === "all" ? orders.length : orders.filter(o => o.status === t).length;
+          const tabLabel = t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
           return (
-            <button key={t} className={`nav-tab${statusTab === t ? " active" : ""}`} onClick={() => setStatusTab(t)} style={{ textTransform:"capitalize" }}>
-              {t}{cnt > 0 && <span style={{ marginLeft:5, background: statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
+            <button key={t} className={`nav-tab${statusTab === t ? " active" : ""}`} onClick={() => setStatusTab(t)}>
+              {tabLabel}{cnt > 0 && <span style={{ marginLeft:5, background: statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
             </button>
           );
         })}
