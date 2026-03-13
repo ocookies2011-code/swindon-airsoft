@@ -949,7 +949,7 @@ function detectCourier(rawTn) {
   return { tn, courier, trackUrl };
 }
 
-function TrackingBlock({ trackingNumber, adminMode = false }) {
+function TrackingBlock({ trackingNumber, adminMode = false, onStatusResolved }) {
   const { tn, courier, trackUrl } = detectCourier(trackingNumber);
   const [trackStatus, setTrackStatus] = useState(null);
   const [trackLoading, setTrackLoading] = useState(false);
@@ -957,7 +957,12 @@ function TrackingBlock({ trackingNumber, adminMode = false }) {
   useEffect(() => {
     if (!tn) return;
     // Auto-check on mount (uses cache if fresh)
-    fetchTrackingStatus(tn, courier).then(result => { if (result) setTrackStatus(result); });
+    fetchTrackingStatus(tn, courier).then(result => {
+      if (result) {
+        setTrackStatus(result);
+        if (onStatusResolved) onStatusResolved(result.status);
+      }
+    });
   }, [tn, courier]);
 
   const refreshStatus = async () => {
@@ -966,7 +971,10 @@ function TrackingBlock({ trackingNumber, adminMode = false }) {
     try { localStorage.removeItem(TRACKING_CACHE_KEY(tn)); } catch {}
     setTrackLoading(true);
     const result = await fetchTrackingStatus(tn, courier);
-    if (result) setTrackStatus(result);
+    if (result) {
+      setTrackStatus(result);
+      if (onStatusResolved) onStatusResolved(result.status);
+    }
     setTrackLoading(false);
   };
 
@@ -5877,6 +5885,11 @@ function PlayerOrders({ cu }) {
         const items = Array.isArray(selected.items) ? selected.items : [];
         const meta = STATUS_META[selected.status] || STATUS_META.pending;
         const isCancelled = selected.status === "cancelled";
+        const [liveTrackStatus, setLiveTrackStatus] = useState(null);
+        const displayLabel = (selected.status === "dispatched" && liveTrackStatus) ? liveTrackStatus : meta.label;
+        const displayColor = (selected.status === "dispatched" && liveTrackStatus)
+          ? ({ "Delivered": "#4caf50", "In Transit": "#c8ff00", "Out for Delivery": "#ff9800", "Pending": "#4fc3f7", "Undelivered": "var(--red)", "Expired": "var(--muted)", "Pick Up": "#ff9800" }[liveTrackStatus] || meta.color)
+          : meta.color;
 
         return (
           <div>
@@ -5887,8 +5900,8 @@ function PlayerOrders({ cu }) {
                   <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", letterSpacing: ".15em", marginBottom: 4 }}>
                     ORDER #{(selected.id||"").slice(-8).toUpperCase()}
                   </div>
-                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", color: meta.color, textTransform: "uppercase" }}>
-                    {meta.icon} {meta.label}
+                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", color: displayColor, textTransform: "uppercase" }}>
+                    {meta.icon} {displayLabel}
                   </div>
                   <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 5 }}>{meta.desc}</div>
                 </div>
@@ -5925,7 +5938,7 @@ function PlayerOrders({ cu }) {
             )}
 
             {/* Tracking number */}
-            {selected.tracking_number && <TrackingBlock trackingNumber={selected.tracking_number} />}
+            {selected.tracking_number && <TrackingBlock trackingNumber={selected.tracking_number} onStatusResolved={setLiveTrackStatus} />}
 
             {/* Refund notice */}
             {selected.refund_amount > 0 && (
