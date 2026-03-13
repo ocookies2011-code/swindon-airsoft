@@ -5882,6 +5882,24 @@ function QAPage({ data }) {
 
 // ── Profile ───────────────────────────────────────────────
 // ── Player Order History ─────────────────────────────────────
+const ORDER_STATUS_META = {
+  pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>, label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
+  processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-9.5"/></svg>, label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
+  dispatched: { color: "#c8ff00", bg: "rgba(200,255,0,.08)",   border: "rgba(200,255,0,.25)",  icon: "▸", label: "Dispatched",        step: 3, desc: "Your order is on its way. Check your tracking number below." },
+  completed:  { color: "#4caf50", bg: "rgba(76,175,80,.1)",    border: "rgba(76,175,80,.3)",   icon: "✅", label: "Delivered",         step: 4, desc: "Order complete. Enjoy your kit!" },
+  cancelled:  { color: "var(--red)", bg: "rgba(220,50,50,.08)", border: "rgba(220,50,50,.25)", icon: "✗",  label: "Cancelled",         step: 0, desc: "This order has been cancelled." },
+  return_requested: { color: "var(--gold)", bg: "rgba(200,150,0,.08)", border: "rgba(200,150,0,.25)", icon: "↩", label: "Return Requested", step: 3, desc: "Your return request is being reviewed." },
+  return_approved:  { color: "#4fc3f7",     bg: "rgba(79,195,247,.08)", border: "rgba(79,195,247,.25)", icon: "✅", label: "Return Approved",  step: 3, desc: "Return approved — please send the item back." },
+  return_received:  { color: "#4caf50",     bg: "rgba(76,175,80,.08)", border: "rgba(76,175,80,.25)",  icon: "📦", label: "Return Received",  step: 4, desc: "We have received your return." },
+};
+
+const ORDER_STEPS = [
+  { step: 1, label: "Order Placed" },
+  { step: 2, label: "Processing" },
+  { step: 3, label: "Dispatched" },
+  { step: 4, label: "Delivered" },
+];
+
 // ── Return Request Block (customer-facing) ───────────────────
 function ReturnRequestBlock({ order, onUpdate }) {
   const [step, setStep] = useState("idle"); // idle | form | submitted | approved | received
@@ -6019,7 +6037,7 @@ function ReturnRequestBlock({ order, onUpdate }) {
 // ── Order Detail (customer view) ─────────────────────────────
 function CustomerOrderDetail({ order: selected }) {
   const items = Array.isArray(selected.items) ? selected.items : [];
-  const meta = STATUS_META[selected.status] || STATUS_META.pending;
+  const meta = ORDER_STATUS_META[selected.status] || ORDER_STATUS_META.pending;
   const isCancelled = selected.status === "cancelled";
   const [liveTrackStatus, setLiveTrackStatus] = useState(null);
   const displayLabel = (selected.status === "dispatched" && liveTrackStatus) ? liveTrackStatus : meta.label;
@@ -6052,7 +6070,7 @@ function CustomerOrderDetail({ order: selected }) {
         <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "16px 22px", marginBottom: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>Order Progress</div>
           <div style={{ display: "flex", alignItems: "center" }}>
-            {STEPS.map((s, i) => {
+            {ORDER_STEPS.map((s, i) => {
               const done = meta.step >= s.step;
               const current = meta.step === s.step;
               return (
@@ -6063,7 +6081,7 @@ function CustomerOrderDetail({ order: selected }) {
                     </div>
                     <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: done ? "#c8ff00" : "var(--muted)", marginTop: 6, textAlign: "center", letterSpacing: ".08em", textTransform: "uppercase" }}>{s.label}</div>
                   </div>
-                  {i < STEPS.length - 1 && (
+                  {i < ORDER_STEPS.length - 1 && (
                     <div style={{ flex: 2, height: 2, background: meta.step > s.step ? "#c8ff00" : "#1a1a1a", transition: "background .3s", marginBottom: 20 }} />
                   )}
                 </div>
@@ -6153,20 +6171,9 @@ function PlayerOrders({ cu }) {
       });
   }, [cu.id]);
 
-  const STATUS_META = {
-    pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>, label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
-    processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-9.5"/></svg>, label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
-    dispatched: { color: "#c8ff00", bg: "rgba(200,255,0,.08)",    border: "rgba(200,255,0,.25)",  icon: "▸", label: "Dispatched",        step: 3, desc: "Your order is on its way. Check your tracking number below." },
-    completed:  { color: "#4caf50", bg: "rgba(76,175,80,.1)",     border: "rgba(76,175,80,.3)",   icon: "✅", label: "Delivered",         step: 4, desc: "Order complete. Enjoy your kit!" },
-    cancelled:  { color: "var(--red)", bg: "rgba(220,50,50,.08)", border: "rgba(220,50,50,.25)",  icon: "✗",  label: "Cancelled",         step: 0, desc: "This order has been cancelled." },
-  };
-
-  const STEPS = [
-    { step: 1, label: "Order Placed" },
-    { step: 2, label: "Processing" },
-    { step: 3, label: "Dispatched" },
-    { step: 4, label: "Delivered" },
-  ];
+  // Use module-level order status constants
+  const STATUS_META = ORDER_STATUS_META;
+  const STEPS = ORDER_STEPS;
 
   if (loading) return (
     <div style={{ textAlign: "center", padding: 60, fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "var(--muted)", letterSpacing: ".1em" }}>
