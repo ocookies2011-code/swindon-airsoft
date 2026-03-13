@@ -9368,19 +9368,25 @@ function AdminPlayers({ data, save, updateUser, showToast }) {
                     setBulkBusy(true);
                     try {
                       for (const u of selected) {
-                        let update;
                         if (bulkAction === "add-credit") {
-                          // Fetch fresh credits from DB to avoid stale local value
-                          const { data: fresh } = await supabase.from("profiles").select("credits").eq("id", u.id).single();
-                          const currentCredits = Number(fresh?.credits) || 0;
-                          update = { credits: currentCredits + 5 };
-                        } else if (bulkAction === "yellow-card") {
-                          update = { cardStatus: "yellow" };
+                          // Direct DB increment — avoids RLS issues and stale local values
+                          const { data: fresh, error: fetchErr } = await supabase
+                            .from("profiles").select("credits").eq("id", u.id).single();
+                          if (fetchErr) throw fetchErr;
+                          const newCredits = (Number(fresh?.credits) || 0) + 5;
+                          const { error: updateErr } = await supabase
+                            .from("profiles").update({ credits: newCredits }).eq("id", u.id);
+                          if (updateErr) throw updateErr;
+                          // Update local state
+                          save({ users: (data.users||[]).map(x => x.id === u.id ? { ...x, credits: newCredits } : x) });
                         } else {
-                          update = { cardStatus: "none" };
+                          const update = bulkAction === "yellow-card"
+                            ? { cardStatus: "yellow" }
+                            : { cardStatus: "none" };
+                          await updateUserAndRefresh(u.id, update);
                         }
-                        await updateUserAndRefresh(u.id, update);
                       }
+                      await loadUsers();
                       showToast(`Updated ${selected.length} players`);
                     } catch(e) { showToast("Bulk action failed: " + e.message, "red"); }
                     finally { setBulkBusy(false); }
