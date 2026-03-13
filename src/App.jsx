@@ -883,6 +883,55 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .bottom-nav{display:none;}
 }
 `
+function detectCourier(rawTn) {
+  const tn = (rawTn || "").trim().replace(/\s/g, "");
+  if (!tn) return { tn, courier: null, trackUrl: null };
+  let courier = null, trackUrl = null;
+  if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(tn) || /^\d{13}$/.test(tn))
+    { courier = "Royal Mail"; trackUrl = `https://www.royalmail.com/track-your-item#/tracking-results/${tn}`; }
+  else if (/^1Z[A-Z0-9]{16}$/.test(tn))
+    { courier = "UPS"; trackUrl = `https://www.ups.com/track?tracknum=${tn}`; }
+  else if (/^\d{12}$/.test(tn) || /^\d{15}$/.test(tn) || /^\d{20}$/.test(tn))
+    { courier = "FedEx"; trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${tn}`; }
+  else if (/^\d{10}$/.test(tn) || /^JD\d{18}$/.test(tn))
+    { courier = "DPD"; trackUrl = `https://www.dpd.co.uk/apps/tracking/?ref=${tn}`; }
+  else if (/^\d{14}$/.test(tn))
+    { courier = "Evri"; trackUrl = `https://www.evri.com/track-a-parcel#/tracking/${tn}`; }
+  else if (/^[A-Z]{3}\d{7,8}$/.test(tn) || /^\d{16}$/.test(tn))
+    { courier = "Parcelforce"; trackUrl = `https://www.parcelforce.com/track-trace?trackNumber=${tn}`; }
+  return { tn, courier, trackUrl };
+}
+
+function TrackingBlock({ trackingNumber, adminMode = false }) {
+  const { tn, courier, trackUrl } = detectCourier(trackingNumber);
+  if (!tn) return null;
+  return (
+    <div style={{ background: adminMode ? "rgba(200,255,0,.03)" : "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.25)", padding: adminMode ? "10px 14px" : "14px 18px", marginBottom: adminMode ? 0 : 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "#c8ff00", marginBottom: 3, textTransform: "uppercase" }}>
+            📮 Tracking{courier ? ` — ${courier}` : ""}
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: adminMode ? 13 : 16, fontWeight: 700, color: "#fff", letterSpacing: ".08em" }}>{tn}</div>
+        </div>
+        {trackUrl && (
+          <a href={trackUrl} target="_blank" rel="noopener noreferrer"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.35)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".18em", padding: adminMode ? "6px 12px" : "8px 16px", textDecoration: "none", whiteSpace: "nowrap" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(200,255,0,.2)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(200,255,0,.1)"}>
+            ▸ TRACK
+          </a>
+        )}
+      </div>
+      {!courier && (
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 6 }}>
+          Enter this number on your courier's website to track your parcel.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SkeletonCard({ height = 280, style = {} }) {
   return (
     <div style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", position:"relative", height, ...style }}>
@@ -5739,50 +5788,8 @@ function PlayerOrders({ cu }) {
               </div>
             )}
 
-            {/* Tracking number — auto detect courier + link */}
-            {selected.tracking_number && (() => {
-              const tn = selected.tracking_number.trim().replace(/\s/g, "");
-              // Detect courier from tracking number format
-              let courier = null, trackUrl = null;
-              if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(tn) || /^\d{13}$/.test(tn)) {
-                courier = "Royal Mail"; trackUrl = `https://www.royalmail.com/track-your-item#/tracking-results/${tn}`;
-              } else if (/^1Z[A-Z0-9]{16}$/.test(tn)) {
-                courier = "UPS"; trackUrl = `https://www.ups.com/track?tracknum=${tn}`;
-              } else if (/^\d{12}$/.test(tn) || /^\d{15}$/.test(tn) || /^\d{20}$/.test(tn)) {
-                courier = "FedEx"; trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${tn}`;
-              } else if (/^\d{10}$/.test(tn) || /^JD\d{18}$/.test(tn)) {
-                courier = "DPD"; trackUrl = `https://www.dpd.co.uk/apps/tracking/?ref=${tn}`;
-              } else if (/^\d{14}$/.test(tn)) {
-                courier = "Evri (Hermes)"; trackUrl = `https://www.evri.com/track-a-parcel#/tracking/${tn}`;
-              } else if (/^[A-Z]{3}\d{7,8}$/.test(tn) || /^\d{16}$/.test(tn)) {
-                courier = "Parcelforce"; trackUrl = `https://www.parcelforce.com/track-trace?trackNumber=${tn}`;
-              }
-              return (
-                <div style={{ background: "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.25)", padding: "14px 18px", marginBottom: 14 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", color: "#c8ff00", marginBottom: 4, textTransform: "uppercase" }}>
-                        📮 Tracking Number{courier ? ` — ${courier}` : ""}
-                      </div>
-                      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: ".08em" }}>{tn}</div>
-                    </div>
-                    {trackUrl && (
-                      <a href={trackUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.35)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".18em", padding: "8px 16px", textDecoration: "none", whiteSpace: "nowrap", transition: "background .15s" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(200,255,0,.2)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(200,255,0,.1)"}>
-                        ▸ TRACK PARCEL
-                      </a>
-                    )}
-                  </div>
-                  {!courier && (
-                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 8 }}>
-                      Enter this number on your courier's website to track your parcel.
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {/* Tracking number */}
+            {selected.tracking_number && <TrackingBlock trackingNumber={selected.tracking_number} />}
 
             {/* Refund notice */}
             {selected.refund_amount > 0 && (
@@ -10271,15 +10278,15 @@ function AdminOrdersInline({ showToast }) {
 
   useEffect(() => { const ordersTimeout = setTimeout(fetchOrders, 400); return () => clearTimeout(ordersTimeout); }, []);
 
-  const doDispatch = async (id, tracking) => {
+  const doDispatch = async (id, tracking, isUpdate = false) => {
     try {
-      await api.shopOrders.updateStatus(id, "dispatched", tracking || null);
-      setOrders(o => o.map(x => x.id === id ? { ...x, status: "dispatched" } : x));
-      if (detail?.id === id) setDetail(d => ({ ...d, status: "dispatched" }));
-      showToast("Order marked as dispatched!");
+      await api.shopOrders.updateStatus(id, isUpdate ? (orders.find(o=>o.id===id)?.status || "dispatched") : "dispatched", tracking || null);
+      setOrders(o => o.map(x => x.id === id ? { ...x, status: isUpdate ? x.status : "dispatched", tracking_number: tracking || null } : x));
+      if (detail?.id === id) setDetail(d => ({ ...d, status: isUpdate ? d.status : "dispatched", tracking_number: tracking || null }));
+      showToast(isUpdate ? "Tracking number updated!" : "Order marked as dispatched!");
       const order = orders.find(o => o.id === id);
       const toEmail = order?.customer_email || order?.customerEmail;
-      if (toEmail) {
+      if (toEmail && !isUpdate) {
         sendDispatchEmail({
           toEmail,
           toName:  order.customer_name || order.customerName || "Customer",
@@ -10436,8 +10443,20 @@ function AdminOrdersInline({ showToast }) {
               )}
               {detail.tracking_number && (
                 <div style={{ gridColumn:"1 / -1" }}>
-                  <div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>📮 TRACKING NUMBER</div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:14, fontWeight:700, background:"#0c1009", padding:"8px 12px", borderRadius:3, border:"1px solid var(--accent)", color:"var(--accent)" }}>{detail.tracking_number}</div>
+                  <div style={{ fontSize:11, color:"var(--muted)", marginBottom:6 }}>📮 TRACKING NUMBER</div>
+                  <TrackingBlock trackingNumber={detail.tracking_number} adminMode />
+                  <button className="btn btn-sm btn-ghost" style={{ marginTop:6 }}
+                    onClick={() => setTrackingModal({ id: detail.id, tracking: detail.tracking_number || "", isUpdate: true })}>
+                    ✏️ Update tracking number
+                  </button>
+                </div>
+              )}
+              {!detail.tracking_number && detail.status === "dispatched" && (
+                <div style={{ gridColumn:"1 / -1" }}>
+                  <button className="btn btn-sm btn-ghost"
+                    onClick={() => setTrackingModal({ id: detail.id, tracking: "", isUpdate: true })}>
+                    📮 Add tracking number
+                  </button>
                 </div>
               )}
               <div><div style={{ fontSize:11, color:"var(--muted)", marginBottom:3 }}>STATUS</div>
@@ -10492,9 +10511,11 @@ function AdminOrdersInline({ showToast }) {
       {trackingModal && (
         <div className="overlay" onClick={() => setTrackingModal(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">📦 Mark as Dispatched</div>
+            <div className="modal-title">{trackingModal.isUpdate ? "📮 Update Tracking Number" : "📦 Mark as Dispatched"}</div>
             <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 16px" }}>
-              Optionally enter a tracking number — it will be included in the dispatch email to the customer.
+              {trackingModal.isUpdate
+                ? "Update the tracking number for this order. No email will be sent."
+                : "Optionally enter a tracking number — it will be included in the dispatch email to the customer."}
             </p>
             <div className="form-group">
               <label>Tracking Number <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
@@ -10507,8 +10528,8 @@ function AdminOrdersInline({ showToast }) {
               />
             </div>
             <div className="gap-2 mt-2">
-              <button className="btn btn-primary" onClick={() => doDispatch(trackingModal.id, trackingModal.tracking)}>
-                ✓ Confirm Dispatch &amp; Send Email
+              <button className="btn btn-primary" onClick={() => doDispatch(trackingModal.id, trackingModal.tracking, trackingModal.isUpdate)}>
+                {trackingModal.isUpdate ? "💾 Save Tracking Number" : "✓ Confirm Dispatch & Send Email"}
               </button>
               <button className="btn btn-ghost" onClick={() => setTrackingModal(null)}>Cancel</button>
             </div>
