@@ -3806,7 +3806,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
 function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
-    return p[0]==="profile" && ["profile","waiver","bookings","orders","waitlist","vip","loadout"].includes(p[1]) ? p[1] : "profile";
+    return p[0]==="profile" && ["profile","waiver","bookings","orders","waitlist","vip","loadout","report"].includes(p[1]) ? p[1] : "profile";
   };
   const [tab, setTabState] = useState(getInitTab);
   const setTab = (t) => { setTabState(t); window.location.hash = "profile/" + t; };
@@ -4798,9 +4798,19 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 // ── Report a Cheater tab (inside ProfilePage) ──────────────
 function ReportCheatTab({ cu, showToast }) {
   const BLANK = { reportedName: "", videoUrl: "", description: "" };
-  const [form, setForm]       = useState(BLANK);
+  const SS_KEY = "report_cheat_form";
+
+  // Restore from sessionStorage on mount — form survives tab/page switches
+  const [form, setForm] = useState(() => {
+    try { const s = sessionStorage.getItem(SS_KEY); return s ? JSON.parse(s) : BLANK; } catch { return BLANK; }
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted]   = useState(false);
+
+  // Persist form to sessionStorage on every change
+  useEffect(() => {
+    try { sessionStorage.setItem(SS_KEY, JSON.stringify(form)); } catch {}
+  }, [form]);
 
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -4847,6 +4857,7 @@ function ReportCheatTab({ cu, showToast }) {
         }
       } catch {} // email failure is silent — report is still submitted
 
+      try { sessionStorage.removeItem(SS_KEY); } catch {}
       setSubmitted(true);
       setForm(BLANK);
     } catch (e) {

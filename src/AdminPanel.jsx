@@ -448,8 +448,10 @@ function AdminAuditLog() {
   const [filter, setFilter]   = useState("");
   const [page, setPage]       = useState(0);
   const PAGE_SIZE = 50;
+  const isMounted = useRef(true);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!isMounted.current) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -458,15 +460,21 @@ function AdminAuditLog() {
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      setLogs(data || []);
+      if (isMounted.current) setLogs(data || []);
     } catch (e) {
       console.error("Audit log load failed:", e.message);
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    isMounted.current = true;
+    load();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [load]);
 
   const filtered = logs.filter(l => {
     if (!filter.trim()) return true;
@@ -2097,8 +2105,10 @@ function AdminCheatReports({ data, showToast, cu }) {
   const [cardColor, setCardColor]     = useState("green");
   const [cardReason, setCardReason]   = useState("");
   const [issuingCard, setIssuingCard] = useState(false);
+  const isMounted = useRef(true);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!isMounted.current) return;
     setLoading(true);
     try {
       const { data: rows, error } = await supabase
@@ -2106,12 +2116,18 @@ function AdminCheatReports({ data, showToast, cu }) {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setReports(rows || []);
-    } catch (e) { showToast("Failed to load reports: " + e.message, "red"); }
-    finally { setLoading(false); }
-  };
+      if (isMounted.current) setReports(rows || []);
+    } catch (e) { if (isMounted.current) showToast("Failed to load reports: " + e.message, "red"); }
+    finally { if (isMounted.current) setLoading(false); }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    isMounted.current = true;
+    load();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [load]);
 
   const openReport = (r) => {
     setSelected(r);
@@ -3571,17 +3587,31 @@ function AdminOrdersInline({ showToast, cu }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [detail, setDetail] = useState(null);
-  const [trackingModal, setTrackingModal] = useState(null); // { id, tracking }
+  const [trackingModal, setTrackingModal] = useState(null);
   const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red", return_requested: "gold", return_approved: "blue", return_received: "teal" };
+  const isMounted = useRef(true);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
+    if (!isMounted.current) return;
     setLoading(true); setError(null);
-    try { setOrders(await api.shopOrders.getAll()); }
-    catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  };
+    try {
+      const result = await api.shopOrders.getAll();
+      if (isMounted.current) setOrders(result);
+    } catch (e) {
+      if (isMounted.current) setError(e.message);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { const ordersTimeout = setTimeout(fetchOrders, 400); return () => clearTimeout(ordersTimeout); }, []);
+  useEffect(() => {
+    isMounted.current = true;
+    fetchOrders();
+    // Re-fetch automatically when user returns to this tab after backgrounding
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) fetchOrders(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [fetchOrders]);
 
   const doDispatch = async (id, tracking, isUpdate = false) => {
     try {
@@ -6334,7 +6364,12 @@ function AdminStaff({ showToast, cu }) {
       .catch(e => { setLoadError(e.message || "Failed to load staff"); showToast("Failed to load staff: " + e.message, "red"); })
       .finally(() => setLoading(false));
   }, []);
-  useEffect(() => { loadStaff(); }, []);
+  useEffect(() => {
+    loadStaff();
+    const onVisible = () => { if (document.visibilityState === "visible") loadStaff(true); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadStaff]);
 
   const openNew = () => { setForm(blank); setModal("new"); };
   const openEdit = (m) => { setForm({ name: m.name, jobTitle: m.job_title, bio: m.bio || "", photo: m.photo || "", rankOrder: m.rank_order, _orig: { name: m.name, jobTitle: m.job_title, bio: m.bio || "", rankOrder: m.rank_order } }); setModal(m); };
@@ -6941,15 +6976,23 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
   const STATUS_COLORS = { draft: "muted", ordered: "blue", partial: "gold", received: "green", cancelled: "red" };
   const STATUS_LABELS = { draft: "Draft", ordered: "Ordered", partial: "Part Received", received: "Fully Received", cancelled: "Cancelled" };
 
-  const loadAll = async () => {
+  const isMountedPO = useRef(true);
+  const loadAll = useCallback(async () => {
+    if (!isMountedPO.current) return;
     setLoading(true);
     try {
       const [ords, sups] = await Promise.all([api.purchaseOrders.getAll(), api.suppliers.getAll()]);
-      setOrders(ords); setSuppliers(sups);
-    } catch (e) { showToast("Load failed: " + e.message, "red"); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { loadAll(); }, []);
+      if (isMountedPO.current) { setOrders(ords); setSuppliers(sups); }
+    } catch (e) { if (isMountedPO.current) showToast("Load failed: " + e.message, "red"); }
+    finally { if (isMountedPO.current) setLoading(false); }
+  }, []);
+  useEffect(() => {
+    isMountedPO.current = true;
+    loadAll();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMountedPO.current) loadAll(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMountedPO.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [loadAll]);
 
   // ── Suppliers CRUD ──
   const saveSup = async () => {
