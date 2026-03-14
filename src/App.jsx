@@ -5060,9 +5060,12 @@ function ReportCheatTab({ cu, showToast }) {
 
 // ── Error Boundary ────────────────────────────────────────────
 class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  constructor(props) { super(props); this.state = { hasError: false, error: null, errorInfo: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, info) { console.error("App error caught:", error, info); }
+  componentDidCatch(error, info) {
+    console.error("App error caught:", error, info);
+    this.setState({ errorInfo: info });
+  }
   render() {
     if (this.state.hasError) return (
       <div style={{ background:"#080a06", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
@@ -5073,8 +5076,23 @@ class ErrorBoundary extends React.Component {
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#ef4444", marginBottom:12 }}>⚠ SYSTEM FAULT DETECTED</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".1em", color:"#e8f0d8", marginBottom:8 }}>SOMETHING WENT WRONG</div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#5a7a30", lineHeight:1.7, marginBottom:20 }}>An unexpected error has occurred. Your session data is safe.</div>
-          {this.state.error && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a3a3a", background:"#080a06", border:"1px solid #1a1a1a", padding:"8px 10px", marginBottom:20, wordBreak:"break-all", lineHeight:1.6 }}>{this.state.error.message}</div>}
-          <button onClick={() => window.location.reload()} style={{ background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", padding:"10px 24px", cursor:"pointer", width:"100%" }}>↺ RELOAD SYSTEM</button>
+          {this.state.error && (
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a3a3a", background:"#080a06", border:"1px solid #1a1a1a", padding:"8px 10px", marginBottom:20, wordBreak:"break-all", lineHeight:1.6 }}>
+              {this.state.error.message}
+            </div>
+          )}
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
+              style={{ background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", padding:"10px 24px", cursor:"pointer", width:"100%" }}>
+              ↩ TRY AGAIN
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ background:"transparent", border:"1px solid #1a2808", color:"#3a5010", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", padding:"10px 24px", cursor:"pointer", width:"100%" }}>
+              ↺ FULL RELOAD
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -5323,25 +5341,30 @@ function AppInner() {
       // For legally binding geo-restriction, enforce it server-side:
       //   - Supabase Edge Function: check CF-IPCountry header
       //   - Or your hosting provider's edge rules (Vercel, Netlify, Cloudflare)
-      // Try three geo APIs in sequence
+
       const apis = [
-        { url: "https://ipwho.is/",              getCode: g => g.success ? g.country_code : null },
-        { url: "https://freeipapi.com/api/json",  getCode: g => g.countryCode || null },
-        { url: "https://api.country.is/",         getCode: g => g.country || null },
+        { url: "https://ipwho.is/",             getCode: g => g.success ? g.country_code : null },
+        { url: "https://freeipapi.com/api/json", getCode: g => g.countryCode || null },
+        { url: "https://api.country.is/",        getCode: g => g.country || null },
       ];
-      for (const { url, getCode } of apis) {
-        try {
-          const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-          if (!res.ok) continue;
-          const g = await res.json();
-          const code = (getCode(g) || "").toUpperCase();
-          if (!code) continue;
-          if (!cancelled) setGeoStatus(ALLOWED_COUNTRY_CODES.has(code) ? "allowed" : "blocked");
-          return; // got a valid result — stop
-        } catch { continue; }
+
+      // Race all three APIs in parallel — use whichever responds first with a valid code
+      const tryApi = async ({ url, getCode }) => {
+        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error("non-ok");
+        const g = await res.json();
+        const code = (getCode(g) || "").toUpperCase();
+        if (!code) throw new Error("no code");
+        return code;
+      };
+
+      try {
+        const code = await Promise.any(apis.map(tryApi));
+        if (!cancelled) setGeoStatus(ALLOWED_COUNTRY_CODES.has(code) ? "allowed" : "blocked");
+      } catch {
+        // All APIs failed (network issue) — fail open so real UK/EU visitors aren't locked out
+        if (!cancelled) setGeoStatus("allowed");
       }
-      // All APIs failed (network issue) — fail open so real UK/EU visitors aren't locked out
-      if (!cancelled) setGeoStatus("allowed");
     };
     check();
     return () => { cancelled = true; };
