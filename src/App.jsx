@@ -3199,23 +3199,34 @@ function PlayerOrders({ cu }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeOrder, setActiveOrder] = useState(null);
+  const isMounted = useRef(true);
+
+  const loadOrders = useCallback(async () => {
+    if (!cu?.id || !isMounted.current) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from('shop_orders').select('*')
+        .eq('user_id', cu.id)
+        .order('created_at', { ascending: false });
+      if (!isMounted.current) return;
+      if (!error) {
+        const loaded = data || [];
+        setOrders(loaded);
+        const active = loaded.find(o => !["completed","cancelled"].includes(o.status));
+        if (active) setActiveOrder(active.id);
+        else if (loaded.length > 0) setActiveOrder(loaded[0].id);
+      }
+    } catch (e) { console.warn("PlayerOrders fetch:", e.message); }
+    finally { if (isMounted.current) setLoading(false); }
+  }, [cu?.id]);
 
   useEffect(() => {
-    supabase.from('shop_orders').select('*')
-      .eq('user_id', cu.id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!error) {
-          const loaded = data || [];
-          setOrders(loaded);
-          // Auto-open most recent active order
-          const active = loaded.find(o => !["completed","cancelled"].includes(o.status));
-          if (active) setActiveOrder(active.id);
-          else if (loaded.length > 0) setActiveOrder(loaded[0].id);
-        }
-        setLoading(false);
-      });
-  }, [cu.id]);
+    isMounted.current = true;
+    loadOrders();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) loadOrders(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [loadOrders]);
 
   // Use module-level order status constants
   const STATUS_META = ORDER_STATUS_META;
@@ -3319,17 +3330,25 @@ function LoadoutTab({ cu, showToast }) {
     notes: "",
   };
   const [draft, setDraft] = useState(defaultLoadout);
+  const isMounted = useRef(true);
+
+  const loadLoadout = useCallback(async () => {
+    if (!cu?.id || !isMounted.current) return;
+    setLoading(true);
+    try {
+      const data = await api.loadouts.getMyLoadout(cu.id);
+      if (isMounted.current && data) setDraft(prev => ({ ...prev, ...data }));
+    } catch (e) { console.warn("Loadout fetch:", e.message); }
+    finally { if (isMounted.current) setLoading(false); }
+  }, [cu?.id]);
 
   useEffect(() => {
-    if (!cu?.id) return;
-    (async () => {
-      try {
-        const data = await api.loadouts.getMyLoadout(cu.id);
-        if (data) setDraft(prev => ({ ...prev, ...data }));
-      } catch (e) { console.warn("Loadout fetch:", e.message); }
-      finally { setLoading(false); }
-    })();
-  }, [cu?.id]);
+    isMounted.current = true;
+    loadLoadout();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) loadLoadout(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [loadLoadout]);
 
   const set = (field, val) => setDraft(p => ({ ...p, [field]: val }));
 
@@ -3535,18 +3554,28 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const isMounted = useRef(true);
+
+  const loadProfile = useCallback(async () => {
+    if (!isMounted.current) return;
+    if (!userId) { setNotFound(true); setLoading(false); return; }
+    setLoading(true);
+    try {
+      const data = await api.loadouts.getPublic(userId);
+      if (!isMounted.current) return;
+      if (!data) setNotFound(true);
+      else setProfile(data);
+    } catch { if (isMounted.current) setNotFound(true); }
+    finally { if (isMounted.current) setLoading(false); }
+  }, [userId]);
 
   useEffect(() => {
-    if (!userId) { setNotFound(true); setLoading(false); return; }
-    (async () => {
-      try {
-        const data = await api.loadouts.getPublic(userId);
-        if (!data) setNotFound(true);
-        else setProfile(data);
-      } catch { setNotFound(true); }
-      finally { setLoading(false); }
-    })();
-  }, [userId]);
+    isMounted.current = true;
+    loadProfile();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current && !profile) loadProfile(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [loadProfile]);
 
   if (loading) return (
     <div style={{ background: "#080a06", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
