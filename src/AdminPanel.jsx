@@ -3797,7 +3797,9 @@ function AdminShop({ data, save, showToast, cu }) {
     return list;
   }, [shopOrder, productSearch, categoryFilter]);
 
-  // Drag-to-reorder ref for variants (inside modal)
+  // Collapsed category state - all expanded by default
+  const [collapsedCats, setCollapsedCats] = useState({});
+  const toggleCat = (cat) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
   const dragVariantIdx = useRef(null);
   const [form, setForm] = useState(blank);
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
@@ -4126,30 +4128,46 @@ function AdminShop({ data, save, showToast, cu }) {
 
                 return (
                   <>
-                    {sortedCats.map(cat => (
-                      <React.Fragment key={cat}>
-                        <tr style={{userSelect:"none"}}>
-                          <td colSpan={12} style={{ background:"rgba(200,255,0,.04)", borderTop:"2px solid rgba(200,255,0,.15)", borderBottom:"1px solid rgba(200,255,0,.08)", padding:"5px 12px" }}>
-                            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>▸ {cat}</span>
-                            <span style={{ marginLeft:8, fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{groups[cat].length} item{groups[cat].length !== 1 ? "s" : ""}</span>
-                          </td>
-                        </tr>
-                        {groups[cat].map(item => renderRow(item))}
-                      </React.Fragment>
-                    ))}
-                    {uncategorised.length > 0 && (
-                      <React.Fragment key="__none">
-                        {sortedCats.length > 0 && (
-                          <tr style={{userSelect:"none"}}>
-                            <td colSpan={12} style={{ background:"rgba(120,120,120,.04)", borderTop:"2px solid rgba(150,150,150,.12)", borderBottom:"1px solid rgba(150,150,150,.07)", padding:"5px 12px" }}>
-                              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>▸ Uncategorised</span>
-                              <span style={{ marginLeft:8, fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{uncategorised.length} item{uncategorised.length !== 1 ? "s" : ""}</span>
+                    {sortedCats.map(cat => {
+                      const isCatCollapsed = !!collapsedCats[cat];
+                      return (
+                        <React.Fragment key={cat}>
+                          <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat(cat)}>
+                            <td colSpan={12} style={{ background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px" }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>
+                                  {isCatCollapsed ? "▶" : "▼"} {cat}
+                                </span>
+                                <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{groups[cat].length} item{groups[cat].length !== 1 ? "s" : ""}</span>
+                                <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(200,255,0,.3)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{isCatCollapsed ? "▸ EXPAND" : "▾ COLLAPSE"}</span>
+                              </div>
                             </td>
                           </tr>
-                        )}
-                        {uncategorised.map(item => renderRow(item))}
-                      </React.Fragment>
-                    )}
+                          {!isCatCollapsed && groups[cat].map(item => renderRow(item))}
+                        </React.Fragment>
+                      );
+                    })}
+                    {uncategorised.length > 0 && (() => {
+                      const isUncatCollapsed = !!collapsedCats["__none"];
+                      return (
+                        <React.Fragment key="__none">
+                          {sortedCats.length > 0 && (
+                            <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat("__none")}>
+                              <td colSpan={12} style={{ background:"rgba(120,120,120,.05)", borderTop:"2px solid rgba(150,150,150,.14)", borderBottom:"1px solid rgba(150,150,150,.08)", padding:"7px 12px" }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>
+                                    {isUncatCollapsed ? "▶" : "▼"} Uncategorised
+                                  </span>
+                                  <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{uncategorised.length} item{uncategorised.length !== 1 ? "s" : ""}</span>
+                                  <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(150,150,150,.4)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{isUncatCollapsed ? "▸ EXPAND" : "▾ COLLAPSE"}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {!isUncatCollapsed && uncategorised.map(item => renderRow(item))}
+                        </React.Fragment>
+                      );
+                    })()}
                   </>
                 );
               })()}
