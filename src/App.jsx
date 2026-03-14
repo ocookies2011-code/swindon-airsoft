@@ -4861,10 +4861,9 @@ function ReportCheatTab({ cu, showToast }) {
       });
       if (error) throw error;
 
-      // Notify admin by email (fire-and-forget)
+      // Notify admin by email
       try {
-        const { data: setting } = await supabase.from("site_settings").select("value").eq("key", "contact_email").single();
-        const adminEmail = setting?.value;
+        const adminEmail = await api.settings.get("contact_email");
         if (adminEmail) {
           await sendEmail({
             toEmail:     adminEmail,
@@ -4877,14 +4876,19 @@ function ReportCheatTab({ cu, showToast }) {
                   <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px;width:140px">REPORTED BY</td><td style="padding:8px;background:#0d0d0d;color:#fff">${cu.name}</td></tr>
                   <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">ACCUSED PLAYER</td><td style="padding:8px;background:#0d0d0d;color:#ef5350">${form.reportedName.trim() || "Not specified"}</td></tr>
                   <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">VIDEO EVIDENCE</td><td style="padding:8px;background:#0d0d0d"><a href="${form.videoUrl.trim()}" style="color:#c8ff00">${form.videoUrl.trim()}</a></td></tr>
+                  <tr><td style="padding:8px;background:#1a1a1a;color:#888;font-size:12px">DESCRIPTION</td><td style="padding:8px;background:#0d0d0d;color:#ccc;white-space:pre-wrap">${form.description.trim()}</td></tr>
                 </table>
-                <div style="background:#0d0d0d;border-left:3px solid #ef5350;padding:16px;white-space:pre-wrap;color:#ccc;line-height:1.6;font-size:14px">${form.description.trim()}</div>
                 <p style="margin-top:20px;font-size:12px;color:#666">Review this report in the admin panel under <strong style="color:#aaa">Cheat Reports</strong>. The reporter has not been told anything about the outcome.</p>
               </div>
             `,
           });
+        } else {
+          console.warn("Cheat report email: no contact_email configured in site settings");
         }
-      } catch {} // email failure is silent — report is still submitted
+      } catch (emailErr) {
+        console.error("Cheat report email failed:", emailErr?.message || emailErr);
+        // Report is still submitted — email failure is non-fatal
+      }
 
       try { sessionStorage.removeItem(SS_KEY); } catch {}
       setSubmitted(true);
