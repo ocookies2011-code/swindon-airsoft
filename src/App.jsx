@@ -5279,7 +5279,7 @@ function AppInner() {
         {page === "shop" && !selectedProduct && (
           <ShopPage
             data={data} cu={cu} showToast={showToast} save={save}
-            recentlyViewed={recentlyViewed} onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); }}
+            recentlyViewed={recentlyViewed}
             cart={shopCart} setCart={setShopCart}
             cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
             onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); }}
