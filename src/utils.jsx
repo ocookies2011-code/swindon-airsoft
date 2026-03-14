@@ -2346,17 +2346,17 @@ function HomePage({ data, setPage }) {
       </div>
 
       {/* PARTNER SHOP + TECH SERVICES — two column banner */}
-      <div style={{ background:"#0a0d08", borderTop:"1px solid #1a2808", borderBottom:"1px solid #1a2808", padding:"36px 20px" }}>
-        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, background:"#1a2808" }}>
+      <div style={{ background:"#0a0d08", borderTop:"1px solid #1a2808", borderBottom:"1px solid #1a2808", padding:"36px 16px" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,480px),1fr))", gap:1, background:"#1a2808" }}>
 
           {/* ── Column 1: Airsoft Armoury UK ── */}
-          <div style={{ background:"#0a0d08", padding:"28px", display:"flex", flexDirection:"column", gap:18 }}>
+          <div style={{ background:"#0a0d08", padding:"24px", display:"flex", flexDirection:"column", gap:16 }}>
             {/* Header */}
-            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-              <div style={{ width:44, height:44, border:"2px solid rgba(200,255,0,.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🤝</div>
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:40, height:40, border:"2px solid rgba(200,255,0,.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>🤝</div>
               <div>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", textTransform:"uppercase", marginBottom:3 }}>OFFICIAL FIELD PARTNER</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(16px,4vw,20px)", letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
                   AIRSOFT <span style={{ color:"#c8ff00" }}>ARMOURY UK</span>
                 </div>
               </div>
@@ -2368,16 +2368,16 @@ function HomePage({ data, setPage }) {
             </p>
 
             {/* Category chips */}
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
               {["AEGs & GBBs","Pistols & Sidearms","BBs & Ammo","Eye Pro & Helmets","Tactical Vests","Magazines","Accessories","Batteries & Chargers"].map(cat => (
-                <span key={cat} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", color:"#5a8030", border:"1px solid #1e2e0a", padding:"3px 9px", textTransform:"uppercase" }}>
+                <span key={cat} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", color:"#5a8030", border:"1px solid #1e2e0a", padding:"3px 8px", textTransform:"uppercase" }}>
                   {cat}
                 </span>
               ))}
             </div>
 
             {/* Key perks */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 12px" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,200px),1fr))", gap:6 }}>
               {[
                 ["🚚","Click & Collect", "Order online, pick up at the field — no postage cost"],
                 ["💸","Exclusive Discount", "Use code COLLECTION at checkout for your deal"],
@@ -2392,12 +2392,12 @@ function HomePage({ data, setPage }) {
             </div>
 
             {/* Collection code callout */}
-            <div style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", padding:"12px 16px", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
-              <div>
+            <div style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", padding:"12px 16px", display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
+              <div style={{ flexShrink:0 }}>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010", marginBottom:4 }}>FIELD COLLECTION CODE</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#c8ff00", letterSpacing:".15em" }}>COLLECTION</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(20px,5vw,26px)", color:"#c8ff00", letterSpacing:".15em" }}>COLLECTION</div>
               </div>
-              <div style={{ fontSize:12, color:"#5a8030", lineHeight:1.6, flex:1, minWidth:160 }}>
+              <div style={{ fontSize:12, color:"#5a8030", lineHeight:1.6, flex:"1 1 140px" }}>
                 Enter at checkout to flag your order for field collection. We'll bring it to game day — saving you postage and getting gear in your hands faster.
               </div>
             </div>
@@ -2407,7 +2407,7 @@ function HomePage({ data, setPage }) {
               href="https://www.airsoftarmoury.uk"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ display:"inline-flex", alignItems:"center", gap:8, background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".15em", padding:"11px 22px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s, color .15s", alignSelf:"flex-start" }}
+              style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:8, background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".15em", padding:"12px 22px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s, color .15s", alignSelf:"stretch" }}
               onMouseEnter={e => { e.currentTarget.style.background="#c8ff00"; e.currentTarget.style.color="#000"; }}
               onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#c8ff00"; }}
             >
@@ -2415,24 +2415,24 @@ function HomePage({ data, setPage }) {
             </a>
           </div>
 
-                    {/* ── Column 2: Independent Tech Services ── */}
-          <div style={{ background:"#0a0d08", padding:"28px 28px 28px 28px", display:"flex", flexDirection:"column", gap:16, position:"relative" }}>
-            {/* Corner accent */}
-            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(79,195,247,.4),transparent)" }}/>
-            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-              <div style={{ width:44, height:44, border:"2px solid rgba(79,195,247,.3)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="#4fc3f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          {/* ── Column 2: Independent Tech Services ── */}
+          <div style={{ background:"#0a0d08", padding:"24px", display:"flex", flexDirection:"column", gap:14, position:"relative" }}>
+            {/* Top accent line */}
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(79,195,247,.4),transparent)"}}/> 
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:40, height:40, border:"2px solid rgba(79,195,247,.3)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="#4fc3f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <div>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#1a4a5a", textTransform:"uppercase", marginBottom:3 }}>INDEPENDENT TECHNICIAN</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(15px,3.5vw,20px)", letterSpacing:".08em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
                   AIRSOFT <span style={{ color:"#4fc3f7" }}>TECH SERVICES (GBB/AEG)</span>
                 </div>
               </div>
             </div>
 
             {/* Services grid */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 12px" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,200px),1fr))", gap:"4px 12px" }}>
               {[
                 "Repairs & full diagnostics","Spring / FPS / air-seal work",
                 "Inner barrel & hop-up upgrades","Feeding & power issue fixes",
@@ -2450,18 +2450,18 @@ function HomePage({ data, setPage }) {
               Whether your replica is shooting weak, misfeeding, or making odd noises — it gets a full strip and inspection. You'll be contacted straight away to discuss findings before any work begins.
             </p>
 
-            {/* Rate + disclaimer */}
-            <div style={{ background:"rgba(79,195,247,.05)", border:"1px solid rgba(79,195,247,.15)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:6 }}>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+            {/* Rate + CTA */}
+            <div style={{ background:"rgba(79,195,247,.05)", border:"1px solid rgba(79,195,247,.15)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
                 <div>
-                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:"#4fc3f7", letterSpacing:".04em" }}>£40</span>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(18px,4vw,22px)", color:"#4fc3f7", letterSpacing:".04em" }}>£40</span>
                   <span style={{ fontSize:11, color:"#4a7a8a", marginLeft:6, letterSpacing:".1em" }}>/ HOUR + PARTS</span>
                 </div>
                 <a
                   href="https://wa.me/447877731973"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display:"inline-flex", alignItems:"center", gap:7, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".12em", padding:"8px 16px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s", borderRadius:2 }}
+                  style={{ display:"inline-flex", alignItems:"center", gap:7, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".12em", padding:"9px 16px", textDecoration:"none", textTransform:"uppercase", transition:"background .15s", borderRadius:2 }}
                   onMouseEnter={e => e.currentTarget.style.background="rgba(37,211,102,.22)"}
                   onMouseLeave={e => e.currentTarget.style.background="rgba(37,211,102,.12)"}
                 >
@@ -2478,6 +2478,7 @@ function HomePage({ data, setPage }) {
             <div style={{ fontSize:10, color:"#2a3a3a", letterSpacing:".05em", lineHeight:1.6, borderTop:"1px solid #0d1a1a", paddingTop:10 }}>
               ⚠ This technician operates independently and is not affiliated with, employed by, or acting on behalf of Swindon Airsoft. All work is arranged directly between the customer and the technician.
             </div>
+
           </div>
 
         </div>
