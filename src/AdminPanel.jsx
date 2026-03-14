@@ -28,6 +28,7 @@ function AdminDiscountCodes({ data, showToast, cu }) {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
+  const isMounted = useRef(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [userSearch, setUserSearch] = useState('');
@@ -43,13 +44,15 @@ function AdminDiscountCodes({ data, showToast, cu }) {
 
   const allUsers = data?.users || [];
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!isMounted.current) return;
     try {
       setLoading(true);
       const [d, r] = await Promise.all([
         api.discountCodes.getAll(),
         api.discountCodes.getRedemptions(),
       ]);
+      if (!isMounted.current) return;
       // Auto-deactivate any codes that have expired but are still marked active
       const now = new Date();
       const toDeactivate = d.filter(c => c.active && c.expires_at && new Date(c.expires_at) < now);
@@ -62,18 +65,24 @@ function AdminDiscountCodes({ data, showToast, cu }) {
             scope: c.scope, active: false,
           }).catch(() => {})
         ));
-        // Refresh after deactivation
+        if (!isMounted.current) return;
         const refreshed = await api.discountCodes.getAll();
-        setCodes(refreshed);
+        if (isMounted.current) setCodes(refreshed);
       } else {
-        setCodes(d);
+        if (isMounted.current) setCodes(d);
       }
-      setRedemptions(r);
-    } catch (e) { showToast(fmtErr(e), 'error'); }
-    finally { setLoading(false); }
-  };
+      if (isMounted.current) setRedemptions(r);
+    } catch (e) { if (isMounted.current) showToast(fmtErr(e), 'error'); }
+    finally { if (isMounted.current) setLoading(false); }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    isMounted.current = true;
+    load();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [load]);
 
   const resetForm = () => { setForm(EMPTY); setEditId(null); setUserSearch(''); setShowForm(false); };
 
@@ -632,9 +641,15 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
   const [pendingReports, setPendingReports] = useState(0);
   useEffect(() => {
-    supabase.from("cheat_reports").select("id", { count: "exact", head: true }).eq("status", "pending")
-      .then(({ count }) => setPendingReports(count || 0))
-      .catch(() => {});
+    const fetchReports = () => {
+      supabase.from("cheat_reports").select("id", { count: "exact", head: true }).eq("status", "pending")
+        .then(({ count }) => setPendingReports(count || 0))
+        .catch(() => {});
+    };
+    fetchReports();
+    const onVisible = () => { if (document.visibilityState === "visible") fetchReports(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
@@ -1083,7 +1098,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
               <div className="modal-title">🎟 Booking Details</div>
 
               {/* Header info */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
                 <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{currentBooking.userName}</div></div>
                 <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{currentBooking.eventTitle}</div></div>
                 <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(currentBooking.date)}</div></div>
@@ -3141,7 +3156,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
             <div className="modal-title" style={{ color: "var(--red)" }}>🗑 Permanently Delete Account?</div>
 
             {/* Player summary */}
-            <div style={{ background: "var(--bg4)", border: "1px solid var(--border)", borderRadius: 3, padding: "12px 14px", margin: "16px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+            <div style={{ background: "var(--bg4)", border: "1px solid var(--border)", borderRadius: 3, padding: "12px 14px", margin: "16px 0", display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,160px),1fr))", gap: "8px 16px" }}>
               <div><div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>NAME</div><div style={{ fontWeight: 700 }}>{delAccountConfirm.name}</div></div>
               <div><div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>EMAIL</div><div style={{ fontSize: 13 }}>{delAccountConfirm.email || "—"}</div></div>
               <div><div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>GAMES ATTENDED</div><div style={{ fontSize: 13 }}>{delAccountConfirm.gamesAttended || 0}</div></div>
@@ -5084,7 +5099,7 @@ function AdminVisitorStats() {
             </div>
 
             {/* Top pages + referrers */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,300px),1fr))", gap:16 }}>
               <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>TOP PAGES</div>
                 {pageRows.slice(0, 6).map(([pg, cnt]) => barRow(`${PAGE_ICONS[pg] || "▸"} ${pg}`, cnt, totalVisits))}
@@ -5127,7 +5142,7 @@ function AdminVisitorStats() {
 
         {/* ── LOCATIONS ── */}
         {activeTab === "locations" && (
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,300px),1fr))", gap:16 }}>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>BY COUNTRY</div>
               {countryRows.map(([countryName, cnt]) => barRow(countryName, cnt, totalVisits))}
@@ -5403,7 +5418,7 @@ function AdminRevenue({ data, save, showToast }) {
               {selected.source === "cash" ? "💵 Cash Sale" : selected.source === "shop" ? "🛒 Shop Order" : "🌐 Online Booking"} — Detail
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,180px),1fr))", gap: 8, marginBottom: 16 }}>
               {[
                 ["Customer", selected.userName],
                 ["Date & Time (GMT)", gmtFull(selected.date)],
@@ -8166,16 +8181,24 @@ function PlayerWaitlist({ cu, showToast }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(null); // id being removed
+  const isMounted = useRef(true);
 
-  const load = () => {
+  const load = useCallback(() => {
+    if (!isMounted.current) return;
     setLoading(true);
     waitlistApi.getByUser(cu.id)
-      .then(setEntries)
+      .then(data => { if (isMounted.current) setEntries(data); })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
+      .finally(() => { if (isMounted.current) setLoading(false); });
+  }, [cu.id]);
 
-  useEffect(() => { load(); }, [cu.id]);
+  useEffect(() => {
+    isMounted.current = true;
+    load();
+    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+  }, [load]);
 
   const leave = async (entry) => {
     setBusy(entry.id);
@@ -8462,7 +8485,7 @@ function TermsPage({ setPage }) {
             <SectionTitle id="booking-2">2. Cancellation Policy</SectionTitle>
             <InfoBox type="important">Cancellations are managed through your Profile → Bookings tab. You can cancel any upcoming booking that has not yet been checked in.</InfoBox>
 
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,280px),1fr))", gap:12, marginBottom:20 }}>
               {[
                 { title:"More than 48 hours before event", icon:"✅", color:"#c8ff00", bg:"rgba(200,255,0,.05)", border:"rgba(200,255,0,.2)", items:["Walk-on bookings: full refund to original payment method", "Rental bookings: 90% refund (10% rental processing fee retained)", "Refund issued to original payment method within 3–5 business days"] },
                 { title:"Within 48 hours of event", icon:"⏱", color:"var(--gold)", bg:"rgba(200,150,0,.06)", border:"rgba(200,150,0,.25)", items:["Walk-on bookings: full amount issued as Game Day Credits", "Rental bookings: 90% issued as Game Day Credits (10% fee retained)", "Credits are added to your account instantly and can be used on future bookings"] },
