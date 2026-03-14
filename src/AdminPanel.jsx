@@ -34,6 +34,13 @@ function AdminDiscountCodes({ data, showToast, cu }) {
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState('codes');
 
+  // Reset busy state if tab was backgrounded while async was in flight
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") { setSaving(false); setDeleting(null); } };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   const allUsers = data?.users || [];
 
   const load = async () => {
@@ -896,6 +903,11 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
   const [delConfirm, setDelConfirm] = useState(null);
   const [viewBooking, setViewBooking] = useState(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
   const [search, setSearch] = useState("");
 
   const filtered = allBookings.filter(b =>
@@ -4006,96 +4018,141 @@ function AdminShop({ data, save, showToast, cu }) {
           <div className="table-wrap"><table className="data-table">
             <thead><tr><th style={{width:28}}></th><th>Product</th><th>Category</th><th>Base Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
             <tbody>
-              {filteredShopOrder.map((item) => {
-                const idx = shopOrder.findIndex(p => p.id === item.id);
-                return (
-                <tr key={item.id}
-                  draggable
-                  onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragProductIdx.current = idx; }}
-                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect="move"; }}
-                  onDrop={e => {
-                    e.preventDefault();
-                    const from = dragProductIdx.current;
-                    if (from === idx) return;
-                    const next = [...shopOrder];
-                    const [moved] = next.splice(from, 1);
-                    next.splice(idx, 0, moved);
-                    setShopOrder(next);
-                    dragProductIdx.current = null;
-                    // Persist to DB
-                    api.shop.reorder(next.map(p => p.id))
-                      .then(() => save({ shop: next }))
-                      .catch(() => showToast("Reorder failed", "red"));
-                  }}
-                  style={{cursor:"grab"}}
-                >
-                  <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
-                  <td style={{ fontWeight:600 }}>{item.name}</td>
-                  <td>{item.category ? <span className="tag tag-blue" style={{fontSize:10}}>{item.category}</span> : <span style={{color:"var(--muted)"}}>—</span>}</td>
-                  <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
-                  <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
-                    {item.variants?.length > 0
-                      ? item.variants.some(v => v.costPrice)
-                        ? item.variants.map(v => (
-                            <div key={v.id} style={{whiteSpace:"nowrap"}}>
-                              {v.name}: {v.costPrice ? `£${Number(v.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>}
-                            </div>
-                          ))
-                        : <span style={{color:"var(--muted)"}}>—</span>
-                      : item.costPrice ? `£${Number(item.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>
-                    }
-                  </td>
-                  <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
-                    {item.variants?.length > 0
-                      ? item.variants.some(v => v.costPrice && v.price > 0)
-                        ? item.variants.filter(v => v.costPrice && v.price > 0).map(v => {
-                            const m = v.price - v.costPrice;
-                            const pct = ((m / v.price) * 100).toFixed(0);
-                            return (
-                              <div key={v.id} style={{whiteSpace:"nowrap",color: m >= 0 ? "var(--accent)" : "var(--red)"}}>
-                                {v.name}: £{m.toFixed(2)} ({pct}%)
+              {(() => {
+                const renderRow = (item) => {
+                  const idx = shopOrder.findIndex(p => p.id === item.id);
+                  return (
+                    <tr key={item.id}
+                      draggable
+                      onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragProductIdx.current = idx; }}
+                      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect="move"; }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        const from = dragProductIdx.current;
+                        if (from === idx) return;
+                        const next = [...shopOrder];
+                        const [moved] = next.splice(from, 1);
+                        next.splice(idx, 0, moved);
+                        setShopOrder(next);
+                        dragProductIdx.current = null;
+                        api.shop.reorder(next.map(p => p.id))
+                          .then(() => save({ shop: next }))
+                          .catch(() => showToast("Reorder failed", "red"));
+                      }}
+                      style={{cursor:"grab"}}
+                    >
+                      <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
+                      <td style={{ fontWeight:600 }}>{item.name}</td>
+                      <td>{item.category ? <span className="tag tag-blue" style={{fontSize:10}}>{item.category}</span> : <span style={{color:"var(--muted)"}}>—</span>}</td>
+                      <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
+                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                        {item.variants?.length > 0
+                          ? item.variants.some(v => v.costPrice)
+                            ? item.variants.map(v => (
+                                <div key={v.id} style={{whiteSpace:"nowrap"}}>
+                                  {v.name}: {v.costPrice ? `£${Number(v.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>}
+                                </div>
+                              ))
+                            : <span style={{color:"var(--muted)"}}>—</span>
+                          : item.costPrice ? `£${Number(item.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>
+                        }
+                      </td>
+                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                        {item.variants?.length > 0
+                          ? item.variants.some(v => v.costPrice && v.price > 0)
+                            ? item.variants.filter(v => v.costPrice && v.price > 0).map(v => {
+                                const m = v.price - v.costPrice;
+                                const pct = ((m / v.price) * 100).toFixed(0);
+                                return (
+                                  <div key={v.id} style={{whiteSpace:"nowrap",color: m >= 0 ? "var(--accent)" : "var(--red)"}}>
+                                    {v.name}: £{m.toFixed(2)} ({pct}%)
+                                  </div>
+                                );
+                              })
+                            : <span style={{color:"var(--muted)"}}>—</span>
+                          : item.costPrice && item.price > 0 ? (() => {
+                              const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
+                              const m = sell - item.costPrice;
+                              const pct = ((m / sell) * 100).toFixed(0);
+                              return <span style={{color: m >= 0 ? "var(--accent)" : "var(--red)"}}>£{m.toFixed(2)} ({pct}%)</span>;
+                            })()
+                          : <span style={{color:"var(--muted)"}}>—</span>
+                        }
+                      </td>
+                      <td>
+                        {item.variants?.length > 0
+                          ? <span className="tag tag-blue">{item.variants.length} variants</span>
+                          : <span style={{color:"var(--muted)"}}>—</span>
+                        }
+                      </td>
+                      <td>
+                        {item.variants?.length > 0
+                          ? item.variants.map(v => (
+                              <div key={v.id} style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>
+                                {v.name}: <span style={{color:Number(v.stock)>0?"var(--accent)":"var(--red)"}}>{v.stock}</span>
                               </div>
-                            );
-                          })
-                        : <span style={{color:"var(--muted)"}}>—</span>
-                      : item.costPrice && item.price > 0 ? (() => {
-                          const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
-                          const m = sell - item.costPrice;
-                          const pct = ((m / sell) * 100).toFixed(0);
-                          return <span style={{color: m >= 0 ? "var(--accent)" : "var(--red)"}}>£{m.toFixed(2)} ({pct}%)</span>;
-                        })()
-                      : <span style={{color:"var(--muted)"}}>—</span>
-                    }
-                  </td>
-                  <td>
-                    {item.variants?.length > 0
-                      ? <span className="tag tag-blue">{item.variants.length} variants</span>
-                      : <span style={{color:"var(--muted)"}}>—</span>
-                    }
-                  </td>
-                  <td>
-                    {item.variants?.length > 0
-                      ? item.variants.map(v => (
-                          <div key={v.id} style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>
-                            {v.name}: <span style={{color:Number(v.stock)>0?"var(--accent)":"var(--red)"}}>{v.stock}</span>
-                          </div>
-                        ))
-                      : item.stock
-                    }
-                  </td>
-                  <td>{item.onSale ? <span className="tag tag-red">£{item.salePrice}</span> : "—"}</td>
-                  <td>{item.noPost ? <span className="tag tag-gold">Yes</span> : "—"}</td>
-                  <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
-                  <td>
-                    <div className="gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
-                      <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
-                    </div>
-                  </td>
-                </tr>
-              );
-              })}
-              {filteredShopOrder.length === 0 && <tr><td colSpan={12} style={{textAlign:"center",color:"var(--muted)",padding:30}}>{productSearch || categoryFilter ? "No matching products" : "No products yet"}</td></tr>}
+                            ))
+                          : item.stock
+                        }
+                      </td>
+                      <td>{item.onSale ? <span className="tag tag-red">£{item.salePrice}</span> : "—"}</td>
+                      <td>{item.noPost ? <span className="tag tag-gold">Yes</span> : "—"}</td>
+                      <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
+                      <td>
+                        <div className="gap-2">
+                          <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
+                          <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                };
+
+                if (filteredShopOrder.length === 0) {
+                  return <tr><td colSpan={12} style={{textAlign:"center",color:"var(--muted)",padding:30}}>{productSearch || categoryFilter ? "No matching products" : "No products yet"}</td></tr>;
+                }
+
+                // When filtering/searching show flat list; otherwise group by category
+                if (productSearch.trim() || categoryFilter) {
+                  return filteredShopOrder.map(item => renderRow(item));
+                }
+
+                const uncategorised = filteredShopOrder.filter(p => !p.category);
+                const groups = {};
+                filteredShopOrder.filter(p => p.category).forEach(p => {
+                  (groups[p.category] = groups[p.category] || []).push(p);
+                });
+                const sortedCats = Object.keys(groups).sort();
+
+                return (
+                  <>
+                    {sortedCats.map(cat => (
+                      <React.Fragment key={cat}>
+                        <tr style={{userSelect:"none"}}>
+                          <td colSpan={12} style={{ background:"rgba(200,255,0,.04)", borderTop:"2px solid rgba(200,255,0,.15)", borderBottom:"1px solid rgba(200,255,0,.08)", padding:"5px 12px" }}>
+                            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>▸ {cat}</span>
+                            <span style={{ marginLeft:8, fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{groups[cat].length} item{groups[cat].length !== 1 ? "s" : ""}</span>
+                          </td>
+                        </tr>
+                        {groups[cat].map(item => renderRow(item))}
+                      </React.Fragment>
+                    ))}
+                    {uncategorised.length > 0 && (
+                      <React.Fragment key="__none">
+                        {sortedCats.length > 0 && (
+                          <tr style={{userSelect:"none"}}>
+                            <td colSpan={12} style={{ background:"rgba(120,120,120,.04)", borderTop:"2px solid rgba(150,150,150,.12)", borderBottom:"1px solid rgba(150,150,150,.07)", padding:"5px 12px" }}>
+                              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>▸ Uncategorised</span>
+                              <span style={{ marginLeft:8, fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{uncategorised.length} item{uncategorised.length !== 1 ? "s" : ""}</span>
+                            </td>
+                          </tr>
+                        )}
+                        {uncategorised.map(item => renderRow(item))}
+                      </React.Fragment>
+                    )}
+                  </>
+                );
+              })()}
             </tbody>
           </table></div>
         </div>
@@ -5113,15 +5170,31 @@ function AdminRevenue({ data, save, showToast }) {
 
 // ── Admin Gallery ─────────────────────────────────────────
 function AdminGallery({ data, save, showToast }) {
-  const [urlInput, setUrlInput] = useState({});
-  const [uploading, setUploading] = useState({}); // { albumId: { done, total } }
+  const [urlInput, setUrlInput]     = useState({});
+  const [uploading, setUploading]   = useState({});
+  const [expanded, setExpanded]     = useState({}); // { albumId: bool }
+  const [delConfirm, setDelConfirm] = useState(null); // albumId
+
+  const toggleExpand = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
 
   const addAlbum = async () => {
     const name = prompt("Album name:"); if (!name) return;
     try {
-      await api.gallery.createAlbum(name);
-      save({ albums: await api.gallery.getAll() });
+      const created = await api.gallery.createAlbum(name);
+      const albums = await api.gallery.getAll();
+      save({ albums });
       showToast("Album created!");
+      // Auto-expand the new album
+      setExpanded(p => ({ ...p, [created?.id || name]: true }));
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  const deleteAlbum = async (albumId) => {
+    try {
+      await api.gallery.deleteAlbum(albumId);
+      save({ albums: await api.gallery.getAll() });
+      showToast("Album deleted.", "red");
+      setDelConfirm(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
@@ -5135,16 +5208,14 @@ function AdminGallery({ data, save, showToast }) {
   const handleFiles = async (albumId, e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    e.target.value = ""; // reset so same files can be re-selected
+    e.target.value = "";
     setUploading(prev => ({ ...prev, [albumId]: { done: 0, total: files.length, errors: 0 } }));
     let done = 0, errors = 0;
     for (const file of files) {
       try {
         await api.gallery.uploadImage(albumId, file);
         done++;
-      } catch {
-        errors++;
-      }
+      } catch { errors++; }
       setUploading(prev => ({ ...prev, [albumId]: { done, total: files.length, errors } }));
     }
     save({ albums: await api.gallery.getAll() });
@@ -5162,45 +5233,103 @@ function AdminGallery({ data, save, showToast }) {
 
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">Gallery</div></div><button className="btn btn-primary" onClick={addAlbum}>+ New Album</button></div>
+      <div className="page-header">
+        <div><div className="page-title">Gallery</div></div>
+        <button className="btn btn-primary" onClick={addAlbum}>+ New Album</button>
+      </div>
+
+      {data.albums.length === 0 && (
+        <div className="card" style={{ textAlign: "center", padding: 40, color: "var(--muted)", fontSize: 13 }}>
+          No albums yet. Click <strong>+ New Album</strong> to create one.
+        </div>
+      )}
+
       {data.albums.map(album => {
-        const upState = uploading[album.id];
+        const upState  = uploading[album.id];
+        const isOpen   = !!expanded[album.id];
+        const cover    = album.images[0];
+
         return (
           <div key={album.id} className="card mb-2">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div style={{ fontWeight: 700 }}>{album.title} <span className="text-muted" style={{ fontSize: 12 }}>({album.images.length} photos)</span></div>
-              <label className="btn btn-sm btn-primary" style={{ cursor: upState ? "default" : "pointer", opacity: upState ? .7 : 1 }}>
-                {upState ? `Uploading ${upState.done}/${upState.total}…` : "📷 Upload Images"}
-                <input type="file" accept="image/*" multiple style={{ display: "none" }} disabled={!!upState} onChange={e => handleFiles(album.id, e)} />
-              </label>
+            {/* Album header row — always visible */}
+            <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => toggleExpand(album.id)}>
+              {/* Cover thumbnail */}
+              <div style={{ width:52, height:52, flexShrink:0, background:"#0a0c08", border:"1px solid #1a2808", overflow:"hidden", borderRadius:3 }}>
+                {cover
+                  ? <img src={cover} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", filter:"saturate(.7)" }} />
+                  : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, color:"#2a3a10" }}>🖼</div>
+                }
+              </div>
+              {/* Title + count */}
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:700, fontSize:14, color:"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{album.title}</div>
+                <div style={{ fontSize:11, color:"var(--muted)", marginTop:2 }}>{album.images.length} photo{album.images.length !== 1 ? "s" : ""}</div>
+              </div>
+              {/* Controls */}
+              <div style={{ display:"flex", gap:6, alignItems:"center" }} onClick={e => e.stopPropagation()}>
+                <label className="btn btn-sm btn-primary" style={{ cursor: upState ? "default" : "pointer", opacity: upState ? .7 : 1, whiteSpace:"nowrap" }}>
+                  {upState ? `${upState.done}/${upState.total}…` : "📷 Upload"}
+                  <input type="file" accept="image/*" multiple style={{ display:"none" }} disabled={!!upState} onChange={e => handleFiles(album.id, e)} />
+                </label>
+                <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(album.id)}>🗑 Delete</button>
+              </div>
+              {/* Chevron */}
+              <div style={{ color:"var(--muted)", fontSize:12, flexShrink:0, transition:"transform .2s", transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}>▾</div>
             </div>
 
-            {/* Progress bar */}
+            {/* Upload progress */}
             {upState && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ height: 4, background: "var(--bg4)", borderRadius: 2, overflow: "hidden", marginBottom: 4 }}>
-                  <div style={{ height: "100%", width: (upState.done / upState.total * 100) + "%", background: "var(--accent)", borderRadius: 2, transition: "width .2s" }} />
+              <div style={{ marginTop:10 }}>
+                <div style={{ height:4, background:"var(--bg4)", borderRadius:2, overflow:"hidden", marginBottom:4 }}>
+                  <div style={{ height:"100%", width:(upState.done/upState.total*100)+"%", background:"var(--accent)", borderRadius:2, transition:"width .2s" }} />
                 </div>
-                <div style={{ fontSize: 11, color: "var(--muted)" }}>{upState.done} of {upState.total} uploaded{upState.errors > 0 ? ` · ${upState.errors} failed` : ""}</div>
+                <div style={{ fontSize:11, color:"var(--muted)" }}>{upState.done} of {upState.total} uploaded{upState.errors > 0 ? ` · ${upState.errors} failed` : ""}</div>
               </div>
             )}
 
-            <div className="gap-2 mb-2">
-              <input value={urlInput[album.id] || ""} onChange={e => setUrlInput(p => ({ ...p, [album.id]: e.target.value }))} placeholder="Or paste image URL" style={{ flex: 1 }} />
-              <button className="btn btn-sm btn-ghost" onClick={() => { if (urlInput[album.id]) { addImg(album.id, urlInput[album.id]); setUrlInput(p => ({ ...p, [album.id]: "" })); } }}>Add URL</button>
-            </div>
-            <div className="photo-grid">
-              {album.images.map((img, i) => (
-                <div key={i} className="photo-cell">
-                  <img src={img} alt="" />
-                  <button style={{ position: "absolute", top: 4, right: 4, background: "var(--red)", border: "none", color: "#fff", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}
-                    onClick={() => removeImg(album.id, img)}>✕</button>
+            {/* Expanded content */}
+            {isOpen && (
+              <div style={{ marginTop:14, borderTop:"1px solid var(--border)", paddingTop:14 }}>
+                <div className="gap-2 mb-2">
+                  <input value={urlInput[album.id] || ""} onChange={e => setUrlInput(p => ({ ...p, [album.id]: e.target.value }))} placeholder="Or paste image URL…" style={{ flex:1 }} />
+                  <button className="btn btn-sm btn-ghost" onClick={() => { if (urlInput[album.id]) { addImg(album.id, urlInput[album.id]); setUrlInput(p => ({ ...p, [album.id]:"" })); } }}>Add URL</button>
                 </div>
-              ))}
-            </div>
+                {album.images.length === 0
+                  ? <div style={{ padding:"24px", textAlign:"center", border:"1px dashed #2a3a10", color:"var(--muted)", fontSize:12 }}>No photos yet — upload some above.</div>
+                  : <div className="photo-grid">
+                      {album.images.map((img, i) => (
+                        <div key={i} className="photo-cell">
+                          <img src={img} alt="" />
+                          <button style={{ position:"absolute", top:4, right:4, background:"var(--red)", border:"none", color:"#fff", borderRadius:"50%", width:22, height:22, cursor:"pointer", fontSize:12, display:"flex", alignItems:"center", justifyContent:"center" }}
+                            onClick={() => removeImg(album.id, img)}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                }
+              </div>
+            )}
           </div>
         );
       })}
+
+      {/* Delete album confirmation overlay */}
+      {delConfirm && (() => {
+        const album = data.albums.find(a => a.id === delConfirm);
+        return (
+          <div className="overlay" onClick={() => setDelConfirm(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth:400 }}>
+              <div style={{ fontWeight:700, fontSize:16, marginBottom:12, color:"var(--red)" }}>Delete Album?</div>
+              <p style={{ fontSize:13, color:"var(--muted)", marginBottom:20 }}>
+                This will permanently delete <strong style={{ color:"var(--text)" }}>{album?.title}</strong> and all {album?.images.length} image{album?.images.length !== 1 ? "s" : ""} in it. This cannot be undone.
+              </p>
+              <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+                <button className="btn btn-ghost" onClick={() => setDelConfirm(null)}>Cancel</button>
+                <button className="btn btn-danger" onClick={() => deleteAlbum(delConfirm)}>Delete Album</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -5865,6 +5994,11 @@ function AdminStaff({ showToast, cu }) {
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   const RANK_OPTIONS = [
     { value: 1, label: "1 — Owner" },
@@ -6473,6 +6607,11 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
   const [detailModal, setDetailModal] = useState(null);
   const [viewModal, setViewModal] = useState(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   // New PO form state
   const blankPo = { supplierId: "", notes: "", items: [] };
@@ -7255,6 +7394,11 @@ function AdminMessages({ data, save, showToast }) {
   const [contactEmail, setContactEmail] = useState(data.contactEmail || "swindonairsoftfield@gmail.com");
   const [saving, setSaving] = useState(false);
   const [savingSocial, setSavingSocial] = useState(false);
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") { setSaving(false); setSavingSocial(false); } };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
   const [savingContact, setSavingContact] = useState(false);
 
   const saveBanners = async (list) => {
@@ -7462,6 +7606,11 @@ function AdminCash({ data, cu, showToast }) {
   const [lastError, setLastError] = useState(null);
   const [diagResult, setDiagResult] = useState(null);
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   useEffect(() => {
     api.shop.getAll()

@@ -962,13 +962,24 @@ async function fetchTrackingStatus(tn, courier) {
     const { data, error } = await supabase.functions.invoke('track-parcel', {
       body: { trackingNumber: tn, courier, carrierCode },
     });
-    if (!error && data?.status) {
-      const result = { status: data.status, events: data.events || [], checkedAt: Date.now(), fromCache: false };
-      try {
-        localStorage.removeItem(TRACKING_CACHE_KEY(tn));
-        localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
-      } catch {}
-      return result;
+    if (!error && data) {
+      // Edge function may return a numeric status code (17track format) or a string
+      let statusStr = data.status;
+      if (typeof statusStr === 'number' || (typeof statusStr === 'string' && /^\d+$/.test(statusStr))) {
+        statusStr = TRACK_STATUS_MAP[Number(statusStr)] || statusStr;
+      }
+      // Also handle 17track nested format: data.accepted[0].track.e
+      if (!statusStr && data.accepted?.[0]?.track?.e !== undefined) {
+        statusStr = TRACK_STATUS_MAP[data.accepted[0].track.e] || String(data.accepted[0].track.e);
+      }
+      if (statusStr) {
+        const result = { status: statusStr, events: data.events || data.accepted?.[0]?.track?.z?.map(z => ({ desc: z.z, time: z.a, location: z.c })) || [], checkedAt: Date.now(), fromCache: false };
+        try {
+          localStorage.removeItem(TRACKING_CACHE_KEY(tn));
+          localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
+        } catch {}
+        return result;
+      }
     }
   } catch {}
 
