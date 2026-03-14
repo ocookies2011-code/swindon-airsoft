@@ -8487,6 +8487,34 @@ function TermsPage({ setPage }) {
             <SectionTitle id="booking-5">5. Event Cancellations by Swindon Airsoft</SectionTitle>
             <Para>In the unlikely event that Swindon Airsoft must cancel an event, all players with confirmed bookings will be notified by email as soon as possible. You will be offered either a full refund to your original payment method or the option to transfer your booking to the next available event date.</Para>
             <InfoBox type="warning">Swindon Airsoft cannot be held responsible for travel costs, accommodation, or other expenses incurred by players in connection with an event that is subsequently cancelled or rescheduled.</InfoBox>
+
+            <SectionTitle id="booking-6">6. Event Waitlist</SectionTitle>
+            <Para>When an event is fully booked, registered players can join the waitlist through the Events page. The waitlist operates on a strict first-come, first-served basis. Joining the waitlist does not constitute a booking and does not guarantee a place at the event.</Para>
+
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,220px),1fr))", gap:12, marginBottom:20 }}>
+              {[
+                { icon:"🔔", title:"How It Works", desc:"When a spot becomes available — due to a cancellation or added capacity — all waitlisted players for that ticket type are notified by email simultaneously. The first player to complete their booking secures the slot." },
+                { icon:"⏱", title:"Slot Hold Time", desc:"Once notified, the available slot is held on a first-come, first-served basis. There is no reserved hold time per individual player — the first to complete checkout takes the place." },
+                { icon:"📧", title:"Notification", desc:"Waitlist notifications are sent to your registered email address only. It is your responsibility to ensure your email address is correct and that notifications are not filtered to spam." },
+                { icon:"🚫", title:"Waiver Required", desc:"You must have a valid waiver signed for the current year to join or be offered a waitlist place. Players with a Red Card or Black Card suspension cannot join the waitlist." },
+              ].map(c => (
+                <div key={c.title} style={{ background:"rgba(79,195,247,.05)", border:"1px solid rgba(79,195,247,.18)", padding:"16px", borderRadius:4 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#4fc3f7", marginBottom:8 }}>{c.icon} {c.title}</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.8 }}>{c.desc}</div>
+                </div>
+              ))}
+            </div>
+
+            <BulletList items={[
+              "You can join the waitlist for both Walk-On and Rental ticket types independently.",
+              "You may only hold one waitlist position per ticket type per event.",
+              "You can leave the waitlist at any time via the Waitlist tab in your profile.",
+              "Being on the waitlist for one event does not affect your ability to book other events.",
+              "Swindon Airsoft does not guarantee that a waitlisted player will ever receive a slot — this depends entirely on cancellations and capacity.",
+              "Waitlist notifications are sent in good faith. Swindon Airsoft accepts no liability if a notification is not received due to spam filters or incorrect email details.",
+            ]} />
+
+            <InfoBox type="important">Receiving a waitlist notification email does not reserve a slot for you. The place goes to the first player who completes payment. We recommend acting on any notification as quickly as possible.</InfoBox>
           </div>
         )}
 
