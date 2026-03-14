@@ -2129,11 +2129,11 @@ function AdminCheatReports({ data, showToast, cu }) {
   const setStatus = (status) => updateReport(selected.id, { status });
 
   const linkPlayer = (player) => {
-    updateReport(selected.id, { linked_player_id: player.id, linked_player_name: player.name });
+    updateReport(selected.id, { linked_player_id: player.id });
     setLinking(false);
   };
 
-  const unlinkPlayer = () => updateReport(selected.id, { linked_player_id: null, linked_player_name: null });
+  const unlinkPlayer = () => updateReport(selected.id, { linked_player_id: null });
 
   const filtered  = reports.filter(r => statusFilter === "all" || r.status === statusFilter);
   const pending   = reports.filter(r => r.status === "pending").length;
@@ -2190,7 +2190,7 @@ function AdminCheatReports({ data, showToast, cu }) {
                   </div>
                 </div>
                 <div style={{ fontSize:11, color:"var(--muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.description}</div>
-                {r.linked_player_id && <div style={{ marginTop:6, fontSize:10, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>🔗 Linked: {r.linked_player_name}</div>}
+                {r.linked_player_id && <div style={{ marginTop:6, fontSize:10, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>🔗 Linked: {data.users.find(u => u.id === r.linked_player_id)?.name || "Player"}</div>}
               </div>
             );
           })}
@@ -2238,7 +2238,7 @@ function AdminCheatReports({ data, showToast, cu }) {
               <div style={{ fontWeight:700, fontSize:12, letterSpacing:".1em", textTransform:"uppercase", color:"var(--muted)", marginBottom:8 }}>Link to Player Profile</div>
               {selected.linked_player_id ? (
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:13, color:"var(--accent)", fontWeight:600 }}>🔗 {selected.linked_player_name}</span>
+                  <span style={{ fontSize:13, color:"var(--accent)", fontWeight:600 }}>🔗 {data.users.find(u => u.id === selected.linked_player_id)?.name || "Player"}</span>
                   <button className="btn btn-sm btn-danger" onClick={unlinkPlayer} disabled={busy}>Unlink</button>
                 </div>
               ) : linking ? (
@@ -8265,36 +8265,7 @@ function TermsPage({ setPage }) {
             </div>
             <InfoBox type="important">Players who have been issued a Red Card or Black Card will be unable to make event bookings. The reason for any card issued will always be communicated to the player. To appeal a card, please contact us directly.</InfoBox>
 
-            <SectionTitle id="terms-reporting">10. Player Reporting System</SectionTitle>
-            <Para>Swindon Airsoft provides a confidential player reporting system that allows registered players to report suspected cheating or deliberate rule-breaking by other players. Reports are submitted through the player profile area and are reviewed exclusively by our admin team.</Para>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:12, marginBottom:20 }}>
-              {[
-                { icon:"🎥", title:"Video Evidence Required", desc:"All reports must include a link to clear video evidence demonstrating deliberate hit-not-calling or cheating behaviour. Reports without adequate video evidence will be dismissed without further action." },
-                { icon:"🔒", title:"Strictly Confidential", desc:"The identity of the reporting player is known only to the admin team and will never be shared with the reported player or any other players. Reporters will not receive an update on the outcome of their report." },
-                { icon:"⚖️", title:"Fair Review Process", desc:"All reports are reviewed fairly and objectively by our admin team. Video evidence is examined thoroughly before any action is taken. A report does not guarantee disciplinary action." },
-                { icon:"🚩", title:"False Reports", desc:"Submitting a false or malicious report is itself a breach of our Code of Conduct. Players found to have submitted dishonest reports may themselves be subject to disciplinary action including card issuance." },
-              ].map(c => (
-                <div key={c.title} style={{ background:"rgba(239,83,80,.07)", border:"1px solid rgba(239,83,80,.25)", padding:"16px", borderRadius:4 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#ef9a9a", marginBottom:8 }}>{c.icon} {c.title}</div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.8 }}>{c.desc}</div>
-                </div>
-              ))}
-            </div>
-
-            <InfoBox type="warning">The reporting system exists to protect the fairness and integrity of our games. It is not a means of settling personal disputes. Reports relating to off-field disputes, social media conduct, or matters unrelated to gameplay rules will not be investigated through this system — please contact us directly for other concerns.</InfoBox>
-
-            <BulletList items={[
-              "You must be a registered player and logged in to submit a report.",
-              "Reports can be submitted at any time through the 🚩 Report Player tab in your profile.",
-              "Only one report per incident — please do not submit duplicate reports for the same event.",
-              "Video evidence must clearly show the specific incident and must be accessible via the link provided.",
-              "Outcomes of investigations are confidential and will not be disclosed to the reporting player.",
-              "Admins may link a report to a player profile when issuing a card warning for documentary purposes.",
-              "Swindon Airsoft reserves the right to dismiss any report that does not meet evidence requirements.",
-            ]} />
-
-            <SectionTitle id="terms-9">11. Governing Law</SectionTitle>
+            <SectionTitle id="terms-9">10. Governing Law</SectionTitle>
             <InfoBox type="info">These terms are governed by the laws of England and Wales. Any disputes shall be subject to the exclusive jurisdiction of the courts of England and Wales.</InfoBox>
           </div>
         )}
