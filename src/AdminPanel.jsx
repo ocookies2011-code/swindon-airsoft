@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
-import { squareRefund, waitlistApi, normaliseProfile } from "./api";
+import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "./api";
 import {
   renderMd, stockLabel, fmtErr,
   gmtShort, fmtDate, uid,
@@ -1169,14 +1169,23 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     if (!entries.length) return;
     showToast("Emailing waitlist…", "gold");
     let sent = 0, failed = 0;
+    // Group by ticket type — only notify + hold first person per type
+    const byType = {};
     for (const w of entries) {
-      if (!w.user_email) { failed++; continue; }
+      if (!byType[w.ticket_type]) byType[w.ticket_type] = [];
+      byType[w.ticket_type].push(w);
+    }
+    for (const [ticketType, group] of Object.entries(byType)) {
+      const first = group[0];
+      if (!first.user_email) { failed++; continue; }
       try {
-        await sendWaitlistNotifyEmail({ toEmail: w.user_email, toName: w.user_name, ev, ticketType: w.ticket_type });
+        // Create a 30-min hold for the first person in each ticket type
+        await holdApi.createHold({ eventId: ev.id, ticketType, userId: first.user_id, userName: first.user_name, userEmail: first.user_email });
+        await sendWaitlistNotifyEmail({ toEmail: first.user_email, toName: first.user_name, ev, ticketType });
         sent++;
       } catch { failed++; }
     }
-    showToast(`📧 Waitlist emailed: ${sent} sent${failed > 0 ? `, ${failed} failed` : ""}`);
+    showToast(`📧 Waitlist emailed: ${sent} sent${failed > 0 ? `, ${failed} failed` : ""}. Slots held for 30 mins.`);
   };
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");

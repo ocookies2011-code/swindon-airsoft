@@ -1328,3 +1328,42 @@ export const loadouts = wrapWithTimeout({
   },
 })
 
+
+// ── Waitlist Holds (30-min slot reservation) ─────────────────
+export const holdApi = {
+  async createHold({ eventId, ticketType, userId, userName, userEmail }) {
+    // Clear any expired or existing hold for this event+type first
+    await supabase.from('waitlist_holds')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('ticket_type', ticketType);
+    const heldUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const { data, error } = await supabase.from('waitlist_holds')
+      .insert({ event_id: eventId, ticket_type: ticketType, user_id: userId, user_name: userName, user_email: userEmail, held_until: heldUntil })
+      .select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+  async getHold(eventId, ticketType) {
+    const { data, error } = await supabase.from('waitlist_holds')
+      .select('*')
+      .eq('event_id', eventId)
+      .eq('ticket_type', ticketType)
+      .maybeSingle();
+    if (error) return null;
+    if (!data) return null;
+    // If expired, treat as no hold
+    if (new Date(data.held_until) < new Date()) {
+      // Clean it up silently
+      supabase.from('waitlist_holds').delete().eq('id', data.id).then(() => {}).catch(() => {});
+      return null;
+    }
+    return data;
+  },
+  async clearHold(eventId, ticketType) {
+    await supabase.from('waitlist_holds')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('ticket_type', ticketType);
+  },
+};

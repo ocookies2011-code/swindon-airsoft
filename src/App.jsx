@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
-import { normaliseProfile, squareRefund, waitlistApi } from "./api";
+import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "./api";
 import {
   renderMd, stockLabel, fmtErr,
   gmtNow, gmtDate, gmtShort, fmtDate, uid,
@@ -76,12 +76,19 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
   // Waitlist state
   const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
+  const [holdMap, setHoldMap]         = useState({}); // "eventId:ticketType" -> hold | null
   const [waitlistBusy, setWaitlistBusy] = useState(false);
 
   const loadWaitlist = (eventId) => {
     waitlistApi.getByEvent(eventId).then(list => {
       setWaitlistMap(prev => ({ ...prev, [eventId]: list }));
     }).catch(() => {});
+    // Also refresh any active holds for this event
+    ["walkOn","rental"].forEach(type => {
+      holdApi.getHold(eventId, type).then(hold => {
+        setHoldMap(prev => ({ ...prev, [`${eventId}:${type}`]: hold }));
+      }).catch(() => {});
+    });
   };
 
   useEffect(() => {
@@ -217,6 +224,26 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       try {
         const extrasSnapshot = Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0));
 
+        // ── Waitlist hold check: if a hold exists for this event+ticketType and it's not for this user, block ──
+        if (bCart.walkOn > 0) {
+          const woHold = await holdApi.getHold(ev.id, "walkOn");
+          if (woHold && woHold.user_id !== cu.id) {
+            const minsLeft = Math.ceil((new Date(woHold.held_until) - Date.now()) / 60000);
+            clearTimeout(safety); setBookingBusy(false);
+            setSquareError(`This Walk-On slot is currently reserved for a waitlisted player for ${minsLeft} more minute${minsLeft !== 1 ? "s" : ""}. If they don't book in time, it will open to everyone.`);
+            return;
+          }
+        }
+        if (bCart.rental > 0) {
+          const rnHold = await holdApi.getHold(ev.id, "rental");
+          if (rnHold && rnHold.user_id !== cu.id) {
+            const minsLeft = Math.ceil((new Date(rnHold.held_until) - Date.now()) / 60000);
+            clearTimeout(safety); setBookingBusy(false);
+            setSquareError(`This Rental slot is currently reserved for a waitlisted player for ${minsLeft} more minute${minsLeft !== 1 ? "s" : ""}. If they don't book in time, it will open to everyone.`);
+            return;
+          }
+        }
+
         // ── Duplicate booking guard: check DB for existing booking by this user for this event ──
         const { data: existingBookings } = await supabase
           .from('bookings').select('id').eq('event_id', ev.id).eq('user_id', cu.id).limit(1);
@@ -293,6 +320,21 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           }));
         }
         await Promise.all(bookingPromises);
+
+        // Clear any waitlist hold for the booked ticket types, then offer slot to next person
+        try {
+          const typesBooked = [];
+          if (bCart.walkOn > 0) typesBooked.push("walkOn");
+          if (bCart.rental > 0) typesBooked.push("rental");
+          for (const type of typesBooked) {
+            // Remove the booker from the waitlist (in case they were next)
+            await waitlistApi.leave({ eventId: ev.id, userId: cu.id, ticketType: type }).catch(() => {});
+            // Clear the hold
+            await holdApi.clearHold(ev.id, type);
+            // Cascade: find the new first person on the waitlist (the slot is gone, so only if another slot exists)
+            // Since the slot was just taken, no need to offer to next person — slot is filled.
+          }
+        } catch { /* non-fatal */ }
 
         // Deduct credits if used
         if (creditsApplied > 0) {
@@ -586,23 +628,46 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   </div>
                 )}
                 {(!ev.vipOnly || cu?.vipStatus === "active") && (() => {
-                  const wlEntries = waitlistMap[ev.id] || [];
-                  const onWalkOnWl = cu && wlEntries.some(w => w.user_id === cu.id && w.ticket_type === "walkOn");
+                  const wlEntries   = waitlistMap[ev.id] || [];
+                  const onWalkOnWl  = cu && wlEntries.some(w => w.user_id === cu.id && w.ticket_type === "walkOn");
+                  const woHold      = holdMap[`${ev.id}:walkOn`];
+                  const woHeldForMe = woHold && cu && woHold.user_id === cu.id;
+                  const woHeldForOther = woHold && cu && woHold.user_id !== cu.id;
+                  const woMinsLeft  = woHold ? Math.max(0, Math.ceil((new Date(woHold.held_until) - Date.now()) / 60000)) : 0;
                   return (
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #2a3a10", background:"rgba(200,255,0,.02)" }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #2a3a10", background: woHeldForMe ? "rgba(200,255,0,.05)" : "rgba(200,255,0,.02)" }}>
                       <div>
                         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
                         <div style={{ fontSize:11, color: walkOnLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
                           £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft === 0 ? "FULL" : walkOnLeft + " slots left"}
                         </div>
-                        {walkOnLeft === 0 && wlEntries.filter(w => w.ticket_type === "walkOn").length > 0 && (
+                        {woHeldForMe && (
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--accent)", marginTop:3 }}>
+                            ⏱ YOUR SLOT — RESERVED {woMinsLeft} MIN LEFT
+                          </div>
+                        )}
+                        {woHeldForOther && walkOnLeft === 0 && (
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", marginTop:3 }}>
+                            🔒 HELD FOR WAITLIST — {woMinsLeft} MIN
+                          </div>
+                        )}
+                        {!woHold && walkOnLeft === 0 && wlEntries.filter(w => w.ticket_type === "walkOn").length > 0 && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", marginTop:2 }}>
                             {wlEntries.filter(w => w.ticket_type === "walkOn").length} on waitlist
                           </div>
                         )}
                       </div>
                       {walkOnLeft === 0 ? (
-                        cu ? (
+                        woHeldForMe ? (
+                          // This is the waitlisted player whose slot is being held — show booking controls
+                          <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
+                            <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
+                            <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
+                            <button onClick={() => setWalkOn(bCart.walkOn + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
+                          </div>
+                        ) : woHeldForOther ? (
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", textAlign:"right" }}>🔒 SLOT HELD</span>
+                        ) : cu ? (
                           onWalkOnWl ? (
                             <button className="btn btn-sm" onClick={() => leaveWaitlist(ev.id, "walkOn")} disabled={waitlistBusy}
                               style={{ fontSize:10, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.4)", color:"var(--gold)", letterSpacing:".1em" }}>
@@ -630,23 +695,45 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
                 {/* Rental row */}
                 {(!ev.vipOnly || cu?.vipStatus === "active") && (() => {
-                  const wlEntries = waitlistMap[ev.id] || [];
-                  const onRentalWl = cu && wlEntries.some(w => w.user_id === cu.id && w.ticket_type === "rental");
+                  const wlEntries    = waitlistMap[ev.id] || [];
+                  const onRentalWl   = cu && wlEntries.some(w => w.user_id === cu.id && w.ticket_type === "rental");
+                  const rnHold       = holdMap[`${ev.id}:rental`];
+                  const rnHeldForMe  = rnHold && cu && rnHold.user_id === cu.id;
+                  const rnHeldForOther = rnHold && cu && rnHold.user_id !== cu.id;
+                  const rnMinsLeft   = rnHold ? Math.max(0, Math.ceil((new Date(rnHold.held_until) - Date.now()) / 60000)) : 0;
                   return (
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none" }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #1a1a1a" : "none", background: rnHeldForMe ? "rgba(200,255,0,.05)" : undefined }}>
                       <div>
                         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
                         <div style={{ fontSize:11, color: rentalLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
                           £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft === 0 ? "FULL" : rentalLeft + " slots left"}
                         </div>
-                        {rentalLeft === 0 && wlEntries.filter(w => w.ticket_type === "rental").length > 0 && (
+                        {rnHeldForMe && (
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--accent)", marginTop:3 }}>
+                            ⏱ YOUR SLOT — RESERVED {rnMinsLeft} MIN LEFT
+                          </div>
+                        )}
+                        {rnHeldForOther && rentalLeft === 0 && (
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", marginTop:3 }}>
+                            🔒 HELD FOR WAITLIST — {rnMinsLeft} MIN
+                          </div>
+                        )}
+                        {!rnHold && rentalLeft === 0 && wlEntries.filter(w => w.ticket_type === "rental").length > 0 && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", marginTop:2 }}>
                             {wlEntries.filter(w => w.ticket_type === "rental").length} on waitlist
                           </div>
                         )}
                       </div>
                       {rentalLeft === 0 ? (
-                        cu ? (
+                        rnHeldForMe ? (
+                          <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
+                            <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
+                            <span style={{ padding:"0 14px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
+                            <button onClick={() => setRental(bCart.rental + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
+                          </div>
+                        ) : rnHeldForOther ? (
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", textAlign:"right" }}>🔒 SLOT HELD</span>
+                        ) : cu ? (
                           onRentalWl ? (
                             <button className="btn btn-sm" onClick={() => leaveWaitlist(ev.id, "rental")} disabled={waitlistBusy}
                               style={{ fontSize:10, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.4)", color:"var(--gold)", letterSpacing:".1em" }}>
@@ -3931,12 +4018,20 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       await api.bookings.delete(b.id);
       save({ events: data.events.map(ev => ({ ...ev, bookings: ev.bookings.filter(bk => bk.id !== b.id) })) });
 
-      // Notify first person on waitlist for this ticket type (fire & forget)
+      // Create a 30-min hold for the first person on the waitlist for this ticket type
       try {
         const freedType = b.type;
         const wl = await waitlistApi.getByEvent(b.eventObj.id);
         const first = wl.find(w => w.ticket_type === freedType);
         if (first?.user_email) {
+          // Create the hold so the slot is reserved for them for 30 minutes
+          await holdApi.createHold({
+            eventId: b.eventObj.id,
+            ticketType: freedType,
+            userId: first.user_id,
+            userName: first.user_name,
+            userEmail: first.user_email,
+          });
           sendWaitlistNotifyEmail({ toEmail: first.user_email, toName: first.user_name, ev: b.eventObj, ticketType: freedType }).catch(() => {});
         }
       } catch { /* non-fatal */ }
