@@ -2086,14 +2086,17 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
 // ── Admin Cheat Reports ────────────────────────────────────
 function AdminCheatReports({ data, showToast, cu }) {
-  const [reports, setReports]       = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [selected, setSelected]     = useState(null);
-  const [statusFilter, setFilter]   = useState("pending");
-  const [adminNotes, setAdminNotes] = useState("");
-  const [linking, setLinking]       = useState(false);
-  const [linkSearch, setLinkSearch] = useState("");
-  const [busy, setBusy]             = useState(false);
+  const [reports, setReports]         = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [selected, setSelected]       = useState(null);
+  const [statusFilter, setFilter]     = useState("pending");
+  const [adminNotes, setAdminNotes]   = useState("");
+  const [linking, setLinking]         = useState(false);
+  const [linkSearch, setLinkSearch]   = useState("");
+  const [busy, setBusy]               = useState(false);
+  const [cardColor, setCardColor]     = useState("green");
+  const [cardReason, setCardReason]   = useState("");
+  const [issuingCard, setIssuingCard] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -2110,7 +2113,15 @@ function AdminCheatReports({ data, showToast, cu }) {
 
   useEffect(() => { load(); }, []);
 
-  const openReport = (r) => { setSelected(r); setAdminNotes(r.admin_notes || ""); setLinking(false); setLinkSearch(""); };
+  const openReport = (r) => {
+    setSelected(r);
+    setAdminNotes(r.admin_notes || "");
+    setLinking(false);
+    setLinkSearch("");
+    setCardColor("green");
+    setCardReason("");
+    setIssuingCard(false);
+  };
 
   const updateReport = async (id, patch) => {
     setBusy(true);
@@ -2134,6 +2145,31 @@ function AdminCheatReports({ data, showToast, cu }) {
   };
 
   const unlinkPlayer = () => updateReport(selected.id, { linked_player_id: null });
+
+  const issueCard = async () => {
+    if (!selected?.linked_player_id) { showToast("Link a player first before issuing a card", "red"); return; }
+    if (cardColor !== "green" && !cardReason.trim()) { showToast("Please enter a reason for the card", "red"); return; }
+    setIssuingCard(true);
+    try {
+      const { error } = await supabase.from("profiles").update({
+        card_status:    cardColor === "green" ? "none" : cardColor,
+        card_reason:    cardColor === "green" ? null : cardReason.trim(),
+        card_issued_at: cardColor === "green" ? null : new Date().toISOString(),
+      }).eq("id", selected.linked_player_id);
+      if (error) throw error;
+      // Mark report as reviewed automatically
+      await updateReport(selected.id, { status: "reviewed", admin_notes: (adminNotes ? adminNotes + "\n\n" : "") + `Card issued: ${cardColor === "green" ? "Cleared (no action)" : cardColor.toUpperCase()} — ${cardReason.trim() || "No reason given"} (${new Date().toLocaleDateString("en-GB")})` });
+      setAdminNotes(prev => (prev ? prev + "\n\n" : "") + `Card issued: ${cardColor === "green" ? "Cleared (no action)" : cardColor.toUpperCase()} — ${cardReason.trim() || "No reason given"} (${new Date().toLocaleDateString("en-GB")})`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `Card issued via cheat report`, detail: `Player: ${data.users.find(u => u.id === selected.linked_player_id)?.name || selected.linked_player_id} | Card: ${cardColor === "green" ? "cleared" : cardColor} | Reason: ${cardReason.trim() || "none"} | Report #${selected.id}` });
+      showToast(cardColor === "green" ? "✅ Player cleared — no action taken." : `✅ ${cardColor.charAt(0).toUpperCase() + cardColor.slice(1)} card issued!`);
+      setCardReason("");
+      setCardColor("green");
+    } catch (e) {
+      showToast("Failed to issue card: " + e.message, "red");
+    } finally {
+      setIssuingCard(false);
+    }
+  };
 
   const filtered  = reports.filter(r => statusFilter === "all" || r.status === statusFilter);
   const pending   = reports.filter(r => r.status === "pending").length;
@@ -2264,6 +2300,65 @@ function AdminCheatReports({ data, showToast, cu }) {
                 <div style={{ marginTop:8, fontSize:11, color:"var(--muted)" }}>
                   This report will appear in the player's card warning history when you issue a card.
                 </div>
+              )}
+            </div>
+
+            {/* Issue Card */}
+            <div style={{ borderTop:"1px solid var(--border)", paddingTop:14, marginBottom:14 }}>
+              <div style={{ fontWeight:700, fontSize:12, letterSpacing:".1em", textTransform:"uppercase", color:"var(--muted)", marginBottom:10 }}>Issue Card to Linked Player</div>
+              {!selected.linked_player_id ? (
+                <div style={{ fontSize:12, color:"var(--muted)", fontStyle:"italic" }}>Link a player above to issue a card.</div>
+              ) : (
+                <>
+                  {/* Current card status */}
+                  {(() => {
+                    const p = data.users.find(u => u.id === selected.linked_player_id);
+                    const cs = p?.cardStatus || "none";
+                    const CARD_LABELS = { none:"✅ Clear", yellow:"🟡 Yellow Card", red:"🔴 Red Card", black:"⚫ Black Card" };
+                    const CARD_COLORS = { none:"var(--accent)", yellow:"var(--gold)", red:"var(--red)", black:"#bbb" };
+                    return (
+                      <div style={{ fontSize:11, color:"var(--muted)", marginBottom:10 }}>
+                        Current status: <strong style={{ color: CARD_COLORS[cs] }}>{CARD_LABELS[cs] || cs}</strong>
+                        {p?.cardReason && <span style={{ color:"var(--muted)" }}> — {p.cardReason}</span>}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Card selector */}
+                  <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+                    {[
+                      { val:"green",  label:"🟢 Clear",        bg:"rgba(100,200,50,.15)",  border:"rgba(100,200,50,.4)",  textColor:"var(--accent)" },
+                      { val:"yellow", label:"🟡 Yellow Card",   bg:"rgba(200,160,0,.15)",   border:"rgba(200,160,0,.4)",   textColor:"var(--gold)" },
+                      { val:"red",    label:"🔴 Red Card",      bg:"rgba(220,30,30,.12)",   border:"rgba(220,30,30,.4)",   textColor:"var(--red)" },
+                      { val:"black",  label:"⚫ Black Card",    bg:"rgba(60,60,60,.25)",    border:"#555",                textColor:"#ccc" },
+                    ].map(c => (
+                      <button key={c.val} onClick={() => setCardColor(c.val)}
+                        style={{ padding:"6px 12px", border:`2px solid ${cardColor === c.val ? c.border : "transparent"}`, background: cardColor === c.val ? c.bg : "transparent", color: cardColor === c.val ? c.textColor : "var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".1em", cursor:"pointer", borderRadius:3, transition:"all .15s" }}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Reason — not required for green */}
+                  {cardColor !== "green" && (
+                    <div style={{ marginBottom:10 }}>
+                      <label style={{ fontSize:10, letterSpacing:".12em", color:"var(--muted)", textTransform:"uppercase", display:"block", marginBottom:4 }}>Reason <span style={{ color:"var(--red)" }}>*</span></label>
+                      <input value={cardReason} onChange={e => setCardReason(e.target.value)} placeholder={`Reason for ${cardColor} card…`} style={{ width:"100%" }} />
+                    </div>
+                  )}
+
+                  <button
+                    className={`btn btn-sm ${cardColor === "green" ? "btn-ghost" : cardColor === "yellow" ? "btn-primary" : "btn-danger"}`}
+                    onClick={issueCard}
+                    disabled={issuingCard || busy || (cardColor !== "green" && !cardReason.trim())}
+                    style={{ fontWeight:700 }}>
+                    {issuingCard ? "Issuing…" : cardColor === "green" ? "✅ Clear Player" : `Issue ${cardColor.charAt(0).toUpperCase() + cardColor.slice(1)} Card`}
+                  </button>
+
+                  <div style={{ marginTop:8, fontSize:10, color:"var(--muted)", lineHeight:1.6 }}>
+                    Issuing a card will update the player's profile immediately. The report will be automatically marked as <strong>Reviewed</strong>.
+                  </div>
+                </>
               )}
             </div>
 
