@@ -595,7 +595,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","cash","purchase-orders","discount-codes","settings","audit-log"];
+      "contact-admin","messages","cash","purchase-orders","discount-codes","settings","audit-log","cheat-reports"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -618,10 +618,17 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         .then(orders => setPendingOrders(orders.filter(o => o.status === "pending" || o.status === "return_requested").length))
         .catch(() => {});
     fetchPending();
-    // Refresh every 2 minutes so badge stays current
     const interval = setInterval(fetchPending, 120000);
     return () => clearInterval(interval);
   }, []);
+
+  const [pendingReports, setPendingReports] = useState(0);
+  useEffect(() => {
+    supabase.from("cheat_reports").select("id", { count: "exact", head: true }).eq("status", "pending")
+      .then(({ count }) => setPendingReports(count || 0))
+      .catch(() => {});
+  }, []);
+
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
   const upcomingEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
   const totalBookings = data.events.flatMap(e => e.bookings).length;
@@ -631,6 +638,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "dashboard",        label: "Dashboard",        icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8ff00" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>, group: "OPERATIONS" },
     { id: "events",            label: "Events & Bookings", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "players",           label: "Players",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>, badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: null },
+    { id: "cheat-reports",    label: "Cheat Reports",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, badge: pendingReports || null, badgeColor: "red", group: null },
     { id: "shop",              label: "Shop",              icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>, badge: pendingOrders, badgeColor: "red", group: null },
     { id: "leaderboard-admin", label: "Leaderboard",       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>, group: null },
     { id: "revenue",           label: "Revenue",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, group: "ANALYTICS" },
@@ -705,6 +713,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
           {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
           {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} cu={cu} />}
+          {section === "cheat-reports" && <AdminCheatReports data={data} showToast={showToast} cu={cu} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && <AdminRevenue data={data} save={save} showToast={showToast} />}
@@ -1312,9 +1321,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     if (!form.title || !form.date) { showToast("Title and date required", "red"); return; }
     setSavingEvent(true);
     try {
+      const { _descTab, _emailUsers, ...formToSave } = form;
       if (modal === "new") {
-        const { _descTab: _dt, _emailUsers, ...createForm } = form;
-        const created = await withTimeout(api.events.create(createForm));
+        const created = await withTimeout(api.events.create(formToSave));
         // Upload banner using the resized File stored in bannerFileRef
         if (created?.id && bannerFileRef.current) {
           try {
@@ -1328,7 +1337,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         }
         // Email all users if checkbox was ticked
         if (form._emailUsers && created) {
-          const evToSend = { ...createForm, id: created.id };
+          const evToSend = { ...formToSave, id: created.id };
           showToast("Sending announcement emails…", "gold");
           try {
             const results = await sendNewEventEmail({ ev: evToSend, users: data.users });
@@ -1338,7 +1347,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           }
         }
       } else {
-        const { _descTab, ...formToSave } = form;
         await withTimeout(api.events.update(formToSave.id, formToSave));
         // Upload banner using the resized File stored in bannerFileRef
         if (form.id && bannerFileRef.current) {
@@ -2075,7 +2083,202 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   );
 }
 
-// ── Admin Events (alias — kept for any legacy references) ──────
+
+// ── Admin Cheat Reports ────────────────────────────────────
+function AdminCheatReports({ data, showToast, cu }) {
+  const [reports, setReports]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [selected, setSelected]     = useState(null);
+  const [statusFilter, setFilter]   = useState("pending");
+  const [adminNotes, setAdminNotes] = useState("");
+  const [linking, setLinking]       = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
+  const [busy, setBusy]             = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from("cheat_reports")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setReports(rows || []);
+    } catch (e) { showToast("Failed to load reports: " + e.message, "red"); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const openReport = (r) => { setSelected(r); setAdminNotes(r.admin_notes || ""); setLinking(false); setLinkSearch(""); };
+
+  const updateReport = async (id, patch) => {
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("cheat_reports").update(patch).eq("id", id);
+      if (error) throw error;
+      setReports(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+      if (selected?.id === id) setSelected(prev => ({ ...prev, ...patch }));
+      showToast("Report updated.");
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(false); }
+  };
+
+  const saveNotes = () => updateReport(selected.id, { admin_notes: adminNotes });
+
+  const setStatus = (status) => updateReport(selected.id, { status });
+
+  const linkPlayer = (player) => {
+    updateReport(selected.id, { linked_player_id: player.id, linked_player_name: player.name });
+    setLinking(false);
+  };
+
+  const unlinkPlayer = () => updateReport(selected.id, { linked_player_id: null, linked_player_name: null });
+
+  const filtered  = reports.filter(r => statusFilter === "all" || r.status === statusFilter);
+  const pending   = reports.filter(r => r.status === "pending").length;
+  const reviewed  = reports.filter(r => r.status === "reviewed").length;
+  const dismissed = reports.filter(r => r.status === "dismissed").length;
+
+  const STATUS_BADGE = { pending: { bg: "rgba(200,160,0,.15)", color: "var(--gold)", border: "rgba(200,160,0,.35)", label: "Pending" }, reviewed: { bg: "rgba(200,255,0,.08)", color: "var(--accent)", border: "rgba(200,255,0,.25)", label: "Reviewed" }, dismissed: { bg: "rgba(120,120,120,.12)", color: "var(--muted)", border: "rgba(120,120,120,.2)", label: "Dismissed" } };
+
+  const matchingPlayers = data.users.filter(u =>
+    u.role === "player" && linkSearch.trim() &&
+    (u.name?.toLowerCase().includes(linkSearch.toLowerCase()) || u.email?.toLowerCase().includes(linkSearch.toLowerCase()))
+  ).slice(0, 8);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Cheat Reports</div>
+          <div className="page-sub">Confidential — not visible to players</div>
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={load}>↺ Refresh</button>
+      </div>
+
+      {/* Summary bar */}
+      <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+        {[["all","All",reports.length,"var(--muted)"],["pending","Pending",pending,"var(--gold)"],["reviewed","Reviewed",reviewed,"var(--accent)"],["dismissed","Dismissed",dismissed,"var(--muted)"]].map(([val,label,count,color]) => (
+          <button key={val} onClick={() => setFilter(val)} style={{ background: statusFilter===val ? "var(--bg4)" : "transparent", border:`1px solid ${statusFilter===val ? "var(--border)" : "transparent"}`, color, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".1em", padding:"6px 14px", cursor:"pointer", borderRadius:4 }}>
+            {label} <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11 }}>({count})</span>
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns: selected ? "1fr 1.4fr" : "1fr", gap:16 }}>
+        {/* Report list */}
+        <div>
+          {loading ? <div style={{ textAlign:"center", padding:40, color:"var(--muted)", fontSize:12 }}>Loading…</div>
+          : filtered.length === 0 ? <div className="card" style={{ textAlign:"center", padding:40, color:"var(--muted)", fontSize:13 }}>No {statusFilter !== "all" ? statusFilter : ""} reports.</div>
+          : filtered.map(r => {
+            const sb = STATUS_BADGE[r.status] || STATUS_BADGE.pending;
+            const isActive = selected?.id === r.id;
+            return (
+              <div key={r.id} onClick={() => openReport(r)} className="card mb-1" style={{ cursor:"pointer", border:`1px solid ${isActive ? "var(--accent)" : "var(--border)"}`, background: isActive ? "rgba(200,255,0,.04)" : undefined, padding:"12px 14px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:13 }}>Report #{r.id}</div>
+                    <div style={{ fontSize:11, color:"var(--muted)", marginTop:2 }}>
+                      Reported by: <strong style={{ color:"var(--text)" }}>{r.reporter_name || "Anonymous"}</strong>
+                    </div>
+                    {r.reported_name && <div style={{ fontSize:11, color:"var(--muted)" }}>Accused: <strong style={{ color:"#ef5350" }}>{r.reported_name}</strong></div>}
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
+                    <span style={{ background:sb.bg, color:sb.color, border:`1px solid ${sb.border}`, fontSize:10, fontWeight:700, letterSpacing:".1em", padding:"2px 8px", borderRadius:3, fontFamily:"'Barlow Condensed',sans-serif", textTransform:"uppercase" }}>{sb.label}</span>
+                    <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{new Date(r.created_at).toLocaleDateString("en-GB")}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize:11, color:"var(--muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.description}</div>
+                {r.linked_player_id && <div style={{ marginTop:6, fontSize:10, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>🔗 Linked: {r.linked_player_name}</div>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Detail panel */}
+        {selected && (
+          <div className="card" style={{ position:"sticky", top:16, alignSelf:"start" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".1em" }}>REPORT #{selected.id}</div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>✕ Close</button>
+            </div>
+
+            {/* Status controls */}
+            <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+              {["pending","reviewed","dismissed"].map(s => (
+                <button key={s} className={`btn btn-sm ${selected.status === s ? "btn-primary" : "btn-ghost"}`} onClick={() => setStatus(s)} disabled={busy || selected.status === s} style={{ textTransform:"capitalize" }}>{s}</button>
+              ))}
+            </div>
+
+            <div style={{ display:"grid", gap:10, marginBottom:16 }}>
+              <div className="form-group" style={{ margin:0 }}>
+                <label style={{ fontSize:10, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>Reporter</label>
+                <div style={{ fontWeight:600, padding:"6px 0" }}>{selected.reporter_name || "Anonymous"}</div>
+              </div>
+              {selected.reported_name && (
+                <div className="form-group" style={{ margin:0 }}>
+                  <label style={{ fontSize:10, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>Accused Player Name</label>
+                  <div style={{ fontWeight:600, color:"#ef5350", padding:"6px 0" }}>{selected.reported_name}</div>
+                </div>
+              )}
+              <div className="form-group" style={{ margin:0 }}>
+                <label style={{ fontSize:10, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>Video Evidence</label>
+                <a href={selected.video_url} target="_blank" rel="noopener noreferrer" style={{ display:"block", color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", fontSize:11, wordBreak:"break-all", padding:"6px 0", textDecoration:"underline" }}>{selected.video_url}</a>
+              </div>
+              <div className="form-group" style={{ margin:0 }}>
+                <label style={{ fontSize:10, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>Description</label>
+                <div style={{ fontSize:13, lineHeight:1.7, color:"var(--text)", padding:"8px 0", whiteSpace:"pre-wrap" }}>{selected.description}</div>
+              </div>
+              <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>Submitted: {new Date(selected.created_at).toLocaleString("en-GB")}</div>
+            </div>
+
+            {/* Link to player profile */}
+            <div style={{ borderTop:"1px solid var(--border)", paddingTop:14, marginBottom:14 }}>
+              <div style={{ fontWeight:700, fontSize:12, letterSpacing:".1em", textTransform:"uppercase", color:"var(--muted)", marginBottom:8 }}>Link to Player Profile</div>
+              {selected.linked_player_id ? (
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:13, color:"var(--accent)", fontWeight:600 }}>🔗 {selected.linked_player_name}</span>
+                  <button className="btn btn-sm btn-danger" onClick={unlinkPlayer} disabled={busy}>Unlink</button>
+                </div>
+              ) : linking ? (
+                <div>
+                  <input autoFocus value={linkSearch} onChange={e => setLinkSearch(e.target.value)} placeholder="Search player name or email…" style={{ width:"100%", marginBottom:8 }} />
+                  {matchingPlayers.length > 0 && (
+                    <div style={{ border:"1px solid var(--border)", borderRadius:4, overflow:"hidden" }}>
+                      {matchingPlayers.map(p => (
+                        <div key={p.id} onClick={() => linkPlayer(p)} style={{ padding:"8px 12px", cursor:"pointer", fontSize:13, borderBottom:"1px solid var(--border)" }}
+                          onMouseEnter={e => e.currentTarget.style.background="var(--bg4)"}
+                          onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                          <strong>{p.name}</strong> <span style={{ color:"var(--muted)", fontSize:11 }}>{p.email}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button className="btn btn-ghost btn-sm" style={{ marginTop:8 }} onClick={() => setLinking(false)}>Cancel</button>
+                </div>
+              ) : (
+                <button className="btn btn-sm btn-ghost" onClick={() => setLinking(true)}>🔗 Link to Player</button>
+              )}
+              {selected.linked_player_id && (
+                <div style={{ marginTop:8, fontSize:11, color:"var(--muted)" }}>
+                  This report will appear in the player's card warning history when you issue a card.
+                </div>
+              )}
+            </div>
+
+            {/* Admin notes */}
+            <div style={{ borderTop:"1px solid var(--border)", paddingTop:14 }}>
+              <label style={{ fontSize:10, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase", display:"block", marginBottom:6 }}>Admin Notes (confidential)</label>
+              <textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} rows={4} placeholder="Internal notes about this report…" style={{ width:"100%", resize:"vertical" }} />
+              <button className="btn btn-primary btn-sm" style={{ marginTop:8 }} onClick={saveNotes} disabled={busy}>{busy ? "Saving…" : "Save Notes"}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ── Admin Players ─────────────────────────────────────────
 function AdminPlayers({ data, save, updateUser, showToast, cu }) {
