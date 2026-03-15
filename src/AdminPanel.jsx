@@ -7645,7 +7645,7 @@ function AdminSettings({ showToast, cu }) {
           </button>
 
           <a
-            href="https://login.xero.com/identity/connect/authorize?response_type=code&client_id=185BA8393B33423899C83D8B327A058B&redirect_uri=https://bnlndgjbcthxyodgstaa.supabase.co/functions/v1/xero-auth-callback&scope=openid+profile+email+accounting.transactions+accounting.contacts+offline_access&state=swindon-airsoft"
+            href="https://login.xero.com/identity/connect/authorize?response_type=code&client_id=185BA8393B33423899C83D8B327A058B&redirect_uri=https://bnlndgjbcthxyodgstaa.supabase.co/functions/v1/xero-auth-callback&scope=openid+profile+email+accounting.invoices+accounting.payments+accounting.contacts+offline_access&state=swindon-airsoft"
             target="_blank" rel="noopener noreferrer"
             className="btn btn-ghost btn-sm">
             🔗 {xeroConnected ? "Re-authorise Xero" : "Connect Xero"}
