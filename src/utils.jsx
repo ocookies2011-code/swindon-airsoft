@@ -1432,12 +1432,21 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     try {
       await api.auth.signUp({ email: form.email, password: form.password, name: form.name, phone: form.phone });
       showToast("Account created! Check your email to confirm.");
-      // Send welcome email
-      sendWelcomeEmail({ name: form.name, email: form.email }).catch(() => {});
+      // Send welcome email fire-and-forget — only on confirmed success, never blocks
+      setTimeout(() => {
+        sendWelcomeEmail({ name: form.name, email: form.email }).catch(() => {});
+      }, 500);
       onClose();
     } catch (e) {
       console.error("Registration error:", e);
-      showToast(e.message || "Registration failed", "red");
+      const msg = e.message || "";
+      if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("too many") || msg.toLowerCase().includes("exceeded")) {
+        showToast("Too many sign-up attempts — please wait a few minutes and try again.", "red");
+      } else if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("already exists") || msg.toLowerCase().includes("user already")) {
+        showToast("An account with this email already exists. Try logging in instead.", "red");
+      } else {
+        showToast(msg || "Registration failed — please try again.", "red");
+      }
     } finally { setBusy(false); }
   };
 
