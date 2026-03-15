@@ -208,50 +208,26 @@ async function loadShopifyConfig() {
   if (loadShopifyConfig._cache) return loadShopifyConfig._cache;
   try {
     const { supabase } = await import('./supabaseClient');
-    const [{ data: d }, { data: s }] = await Promise.all([
-      supabase.from('site_settings').select('value').eq('key', 'shopify_store_domain').single(),
-      supabase.from('site_settings').select('value').eq('key', 'shopify_storefront_token').single(),
-    ]);
-    loadShopifyConfig._cache = { domain: d?.value || null, token: s?.value || null };
-  } catch { loadShopifyConfig._cache = { domain: null, token: null }; }
+    const { data: d } = await supabase
+      .from('site_settings').select('value').eq('key', 'shopify_store_domain').single();
+    loadShopifyConfig._cache = { domain: d?.value || null };
+  } catch { loadShopifyConfig._cache = { domain: null }; }
   return loadShopifyConfig._cache;
 }
 loadShopifyConfig._cache = null;
 
-async function buildShopifyCheckoutUrl({ domain, token, lineItems, note }) {
-  // Shopify Storefront API — create a checkout
-  const mutation = `
-    mutation checkoutCreate($input: CheckoutCreateInput!) {
-      checkoutCreate(input: $input) {
-        checkout { webUrl }
-        checkoutUserErrors { message }
-      }
-    }`;
-  const variables = {
-    input: {
-      lineItems: lineItems.map(({ variantId, quantity }) => ({
-        variantId: `gid://shopify/ProductVariant/${variantId}`,
-        quantity,
-      })),
-      note: note || "",
-    },
-  };
-  const res = await fetch(`https://${domain}/api/2024-01/graphql.json`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Storefront-Access-Token": token,
-    },
-    body: JSON.stringify({ query: mutation, variables }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error("Shopify API error: " + res.status);
-  const json = await res.json();
-  const errs = json?.data?.checkoutCreate?.checkoutUserErrors;
-  if (errs?.length) throw new Error(errs[0].message);
-  const url = json?.data?.checkoutCreate?.checkout?.webUrl;
-  if (!url) throw new Error("No checkout URL returned from Shopify.");
-  return url;
+// Builds a Shopify cart permalink — no API token required.
+// Uses the /cart/{variantId}:{qty} URL format which is fully public.
+// Booking metadata is passed via the cart note so the webhook Edge Function
+// can read it and auto-create the booking record after payment.
+function buildShopifyCartUrl({ domain, lineItems, note }) {
+  const items = lineItems
+    .map(({ variantId, quantity }) => `${variantId}:${quantity}`)
+    .join(",");
+  const params = new URLSearchParams();
+  if (note) params.set("note", note);
+  params.set("return_to", window.location.href);
+  return `https://${domain}/cart/${items}?${params.toString()}`;
 }
 
 function ShopifyCheckoutButton({ lineItems, note, amount, description, disabled, onError }) {
@@ -262,14 +238,14 @@ function ShopifyCheckoutButton({ lineItems, note, amount, description, disabled,
     loadShopifyConfig().then(setConfig);
   }, []);
 
-  const handleClick = async () => {
-    if (!config?.domain || !config?.token) {
+  const handleClick = () => {
+    if (!config?.domain) {
       onError?.("Shopify is not configured. Please contact admin.");
       return;
     }
     setLoading(true);
     try {
-      const url = await buildShopifyCheckoutUrl({ domain: config.domain, token: config.token, lineItems, note });
+      const url = buildShopifyCartUrl({ domain: config.domain, lineItems, note });
       window.location.href = url;
     } catch (e) {
       onError?.(e.message || "Failed to open checkout. Please try again.");
@@ -281,7 +257,7 @@ function ShopifyCheckoutButton({ lineItems, note, amount, description, disabled,
     <div style={{ color:"var(--muted)", fontSize:12, padding:8, marginTop:12 }}>Loading checkout…</div>
   );
 
-  if (!config.domain || !config.token) return (
+  if (!config.domain) return (
     <div className="alert alert-red" style={{ marginTop:12, fontSize:12 }}>
       ⚠ Shopify checkout is not configured. Contact the site admin.
     </div>
