@@ -6296,9 +6296,9 @@ function StaffCard({ member, rank, pips }) {
       </div>
 
       {/* Photo */}
-      <div style={{ width:"100%", height:195, background:"#06080500", overflow:"hidden", position:"relative" }}>
+      <div style={{ width:"100%", height:195, background:"#060805", overflow:"hidden", position:"relative" }}>
         {member.photo
-          ? <img src={member.photo} alt={member.name} onError={e=>{e.target.style.display='none';}} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"top", filter:"contrast(1.05) saturate(0.85)" }} />
+          ? <img src={member.photo} alt={member.name} onError={e=>{e.target.style.display='none';}} style={{ width:"100%", height:"100%", objectFit:"contain", objectPosition:"center", filter:"contrast(1.05) saturate(0.85)" }} />
           : <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#0a0c08", gap:8 }}>
               <div style={{ fontSize:52, opacity:.08 }}>👤</div>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#1e2c0a" }}>NO PHOTO ON FILE</div>
