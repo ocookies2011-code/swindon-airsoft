@@ -7581,6 +7581,14 @@ function AdminSettings({ showToast, cu }) {
   const [savingSQ, setSavingSQ] = useState(false);
   const [showAppId, setShowAppId] = useState(false);
 
+  // Xero settings
+  const [xeroAccountCode, setXeroAccountCode] = S("xero_account_code");
+  const [savingXero, setSavingXero] = useState(false);
+  const [xeroConnected, setXeroConnected] = useState(false);
+  React.useEffect(() => {
+    api.settings.get("xero_refresh_token").then(v => setXeroConnected(!!v)).catch(() => {});
+  }, []);
+
   const saveSquare = async () => {
     setSavingSQ(true);
     try {
@@ -7607,6 +7615,52 @@ function AdminSettings({ showToast, cu }) {
           <div className="page-title">Settings</div>
           <div className="page-sub">Payment configuration and API keys</div>
         </div>
+      </div>
+
+      {/* Xero */}
+      <div className="card mb-2">
+        {sectionHead("📊 Xero Accounting")}
+        <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.8, marginBottom:14 }}>
+          When connected, a sales receipt is automatically created in Xero for every confirmed ticket booking. Fires fire-and-forget — never affects the booking flow.
+        </div>
+
+        <div className="form-group">
+          <label>Revenue Account Code</label>
+          <input value={xeroAccountCode} onChange={e => setXeroAccountCode(e.target.value.trim())} placeholder="e.g. 200" style={{ maxWidth:160 }} />
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
+            Xero → Accounting → Chart of Accounts → find your sales/revenue account → copy the code number.
+          </div>
+        </div>
+
+        <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap", marginBottom:12 }}>
+          <button className="btn btn-primary btn-sm" disabled={savingXero} onClick={async () => {
+            setSavingXero(true);
+            try {
+              await api.settings.set("xero_account_code", xeroAccountCode.trim());
+              showToast("✅ Xero account code saved!");
+            } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
+            finally { setSavingXero(false); }
+          }}>
+            {savingXero ? "Saving…" : "Save Account Code"}
+          </button>
+
+          <a
+            href="https://login.xero.com/identity/connect/authorize?response_type=code&client_id=D3C3F91327E0473EA7D4E90F6FE73DBC&redirect_uri=https://bnlndgjbcthxyodgstaa.supabase.co/functions/v1/xero-auth-callback&scope=accounting.transactions+accounting.contacts+offline_access&state=swindon-airsoft"
+            target="_blank" rel="noopener noreferrer"
+            className="btn btn-ghost btn-sm">
+            🔗 {xeroConnected ? "Re-authorise Xero" : "Connect Xero"}
+          </a>
+        </div>
+
+        {xeroConnected ? (
+          <div className="alert alert-green" style={{ fontSize:12 }}>
+            ✅ Xero is connected. Sales receipts will be created automatically after each booking.
+          </div>
+        ) : (
+          <div className="alert" style={{ fontSize:12, background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", color:"var(--muted)" }}>
+            Click "Connect Xero" above to authorise. You'll be redirected to Xero and back automatically.
+          </div>
+        )}
       </div>
 
       {/* Square */}
