@@ -5793,7 +5793,7 @@ function AppInner() {
               <div className="pub-footer-col-title">QUICK LINKS</div>
               {[
                 ["Upcoming Events", "events"],
-                ...(!data.shopClosed ? [["Shop", "shop"]] : []),
+                ["Shop", "shop"],
                 ["VIP Membership", "vip"],
                 ["Gallery", "gallery"],
                 ["Meet the Staff", "staff"],
