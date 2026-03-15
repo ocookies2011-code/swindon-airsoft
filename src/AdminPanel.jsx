@@ -2858,7 +2858,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                     <td style={{ color: u.gamesAttended >= 3 ? "var(--accent)" : "var(--red)" }}>{u.gamesAttended} / 3</td>
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
                     <td>
-                      <span className="tag tag-green" style={{ fontSize:11 }}>✓ £30 paid</span>
+                      <span className="tag tag-green" style={{ fontSize:11 }}>✓ £50 paid</span>
                     </td>
                     <td>
                       {u.vipIdImages?.length > 0 ? (
@@ -8540,7 +8540,7 @@ function TermsPage({ setPage }) {
             </div>
 
             <SectionTitle id="terms-8">8. VIP Membership</SectionTitle>
-            <Para>VIP membership is an annual subscription providing discounts and benefits as described on the VIP page. Membership fees are non-refundable once activated. Membership is personal and non-transferable. Swindon Airsoft reserves the right to revoke VIP status for breach of these terms without refund of the membership fee.</Para>
+            <Para>VIP membership is an annual subscription providing discounts and benefits as described on the VIP page. Membership fees are non-refundable once activated. Membership is personal and non-transferable. Swindon Airsoft reserves the right to revoke VIP status for breach of these terms without refund of the membership fee. Annual membership costs £50.</Para>
 
             <SectionTitle id="terms-card">9. Disciplinary Card System</SectionTitle>
             <Para>Swindon Airsoft operates a three-tier disciplinary card system to maintain a safe and fair playing environment for all participants. Cards may be issued by staff on game days or by admins for conduct off the field.</Para>
@@ -8635,7 +8635,7 @@ function TermsPage({ setPage }) {
               "Valid for use on future Swindon Airsoft event bookings only.",
               "Non-transferable and have no cash value.",
               "Applied automatically at checkout when booking your next event.",
-              "Not applicable to shop purchases or VIP membership fees.",
+              "Not applicable to VIP membership fees.",
               "Valid for 12 months from the date of issue — please contact us if credits are nearing expiry.",
             ]} />
 
@@ -8707,7 +8707,7 @@ function TermsPage({ setPage }) {
             ]} />
 
             <SectionTitle id="shop-4">4. VIP Discounts in the Shop</SectionTitle>
-            <Para>Active VIP members receive a 10% discount on all eligible shop purchases. This discount is applied automatically at checkout when you are logged in with an active VIP membership. The discount applies to the item price only and does not reduce postage costs.</Para>
+            <Para>Active VIP members receive a 10% discount on all game day bookings and a 10% discount at Airsoft Armoury UK (airsoftarmoury.uk). The game day discount is applied automatically at checkout when logged in with an active VIP membership. The Airsoft Armoury UK discount is available via a code provided to VIP members.</Para>
 
             <InfoBox type="info">If you experience any issues with an order, please use the Contact page to get in touch. Include your order reference number for the fastest resolution.</InfoBox>
           </div>

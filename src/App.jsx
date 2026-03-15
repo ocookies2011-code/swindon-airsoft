@@ -2779,7 +2779,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
 
   const benefits = [
     "10% discount on all game day bookings",
-    "10% discount on all shop purchases",
+    "10% discount at Airsoft Armoury UK (airsoftarmoury.uk)",
     "Free game day on your birthday 🎂",
     "Access to exclusive VIP-only events",
     "Private game day bookings",
@@ -2857,7 +2857,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
           <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px" }}>
             {/* Price */}
             <div style={{ textAlign:"center", marginBottom:24 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:64, color:"var(--accent)", lineHeight:1 }}>£30</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:64, color:"var(--accent)", lineHeight:1 }}>£50</div>
               <div style={{ fontSize:13, color:"var(--muted)", marginTop:4 }}>per year</div>
             </div>
 
@@ -2905,7 +2905,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             {cu && canApply && !idStep && !showPayment && (
               <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }}
                 onClick={() => { setIdStep(true); setVipPayError(null); setIdImages([]); }}>
-                {isExpired ? "RENEW VIP — £30/YEAR" : "APPLY & PAY — £30/YEAR"}
+                {isExpired ? "RENEW VIP — £50/YEAR" : "APPLY & PAY — £50/YEAR"}
               </button>
             )}
 
@@ -2986,7 +2986,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             {cu && !isVip && !hasPending && !canApply && (
               <div>
                 <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14, opacity:.5, cursor:"not-allowed" }} disabled>
-                  APPLY &amp; PAY — £30/YEAR
+                  APPLY &amp; PAY — £50/YEAR
                 </button>
                 <div style={{ fontSize:12, color:"var(--muted)", textAlign:"center", marginTop:8 }}>
                   Complete {gamesNeeded} more game day{gamesNeeded !== 1 ? "s" : ""} to unlock
@@ -2995,7 +2995,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             )}
 
             <div style={{ marginTop:16, fontSize:11, color:"var(--muted)", lineHeight:1.6, textAlign:"center" }}>
-              Pay the £30 annual fee now. Admin will review your ID and activate your VIP status — usually within 24 hours.
+              Pay the £50 annual fee now. Admin will review your ID and activate your VIP status — usually within 24 hours.
             </div>
           </div>
         </div>
@@ -3007,7 +3007,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             {[
               { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
               { num:"02", title:"UPLOAD ID", desc:"Upload a clear photo of your government-issued ID (passport, driving licence, or national ID card). Up to 2 images accepted." },
-              { num:"03", title:"PAY & APPLY", desc:"Pay the £30 annual fee. Your application and ID are submitted instantly for admin review." },
+              { num:"03", title:"PAY & APPLY", desc:"Pay the £50 annual fee. Your application and ID are submitted instantly for admin review." },
               { num:"04", title:"ADMIN ACTIVATES", desc:"Admin reviews your ID and activates your VIP status — usually within 24 hours of payment." },
             ].map(step => (
               <div key={step.num} style={{ padding:16, background:"#0d0d0d", border:"1px solid #1a1a1a" }}>
@@ -4986,13 +4986,13 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           )}
 
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
-          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days{!data.shopClosed ? " and shop purchases" : ""}, a free game day on their birthday, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
+          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and 10% off at Airsoft Armoury UK (airsoftarmoury.uk), a free game day on their birthday, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£50/year</strong>.</p>
           {[
             { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
             cu.vipStatus === "active" && expiry && { label: "Expires", value: expiry.toLocaleDateString("en-GB"), ok: !isExpired },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
-            { label: "VIP Discount", value: data.shopClosed ? "10% off game days" : "10% off game days & shop", ok: cu.vipStatus === "active" },
+            { label: "VIP Discount", value: "10% off game days & Airsoft Armoury UK", ok: cu.vipStatus === "active" },
             cu.vipStatus === "active" && bd && { label: "Birthday Perk", value: birthdayCreditAwarded ? `Free game day awarded ${thisYear} 🎂` : `Free game day in birthday week`, ok: true },
           ].filter(Boolean).map(({ label, value, ok }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg4)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
@@ -5008,7 +5008,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Renew now to keep your discount and UKARA registration.</div>
               <button className="btn btn-gold" style={{ width: "100%" }} onClick={() => setPage("vip")}>
-                Renew VIP — £30/year →
+                Renew VIP — £50/year →
               </button>
             </div>
           )}
@@ -5022,7 +5022,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 14, color: "var(--red)", marginBottom: 6 }}>✗ VIP Membership Expired</div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Your membership has lapsed. Renew to restore your benefits.</div>
               <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setPage("vip")}>
-                Renew VIP — £30/year →
+                Renew VIP — £50/year →
               </button>
             </div>
           )}
@@ -5050,7 +5050,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
           {canApplyVip && cu.vipStatus !== "expired" && (
             <button className="btn btn-gold mt-2" style={{ width:"100%" }} onClick={() => setPage("vip")}>
-              Apply &amp; Pay for VIP Membership — £30/year →
+              Apply &amp; Pay for VIP Membership — £50/year →
             </button>
           )}
           {cu.vipApplied && cu.vipStatus !== "active" && <div className="alert alert-blue mt-2">⏳ Application pending admin review</div>}
