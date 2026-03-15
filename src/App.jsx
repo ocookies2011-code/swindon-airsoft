@@ -355,8 +355,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         resetCart();
         showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
 
-        // Fire-and-forget Xero sale record — never blocks or breaks the booking flow
-        // Requires xero-sale Edge Function to be deployed and Xero authorised
+        // Fire-and-forget Xero sales receipt — never blocks or breaks the booking flow
         try {
           const xeroAccountCode = await api.settings.get("xero_account_code").catch(() => "200");
           const xeroBookings = [];
@@ -371,19 +370,19 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               },
               body: JSON.stringify({
-                userId:       cu.id,
-                userName:     cu.name,
-                userEmail:    cu.email,
-                eventTitle:   ev.title,
-                eventDate:    ev.date,
-                bookings:     xeroBookings,
+                userId:        cu.id,
+                userName:      cu.name,
+                userEmail:     cu.email,
+                eventTitle:    ev.title,
+                eventDate:     ev.date,
+                bookings:      xeroBookings,
                 squareOrderId: squarePayment.id,
-                accountCode:  xeroAccountCode || "200",
+                accountCode:   xeroAccountCode || "200",
               }),
-            }).catch(e => console.warn("Xero sale fire-and-forget error:", e.message));
+            }).catch(e => console.warn("Xero fire-and-forget error:", e.message));
           }
         } catch (xeroErr) {
-          console.warn("Xero sale setup error (non-fatal):", xeroErr.message);
+          console.warn("Xero setup error (non-fatal):", xeroErr.message);
         }
 
         // Send ticket email with real booking IDs
