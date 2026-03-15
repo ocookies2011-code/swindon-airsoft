@@ -7671,7 +7671,7 @@ function AdminSettings({ showToast, cu }) {
 
         <div className="form-group">
           <label>Client ID</label>
-          <input value={xeroClientId} onChange={e => setXeroClientId(e.target.value.trim())} placeholder="e.g. 185BA8393B33423899C83D8B327A058B" />
+          <input value={xeroClientId} onChange={e => setXeroClientId(e.target.value.trim())} placeholder="e.g. C77D10B2CEA848A6B015006D9ACB6FC8" />
           <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
             Xero Developer Portal → My Apps → your app → Configuration → Client ID.
           </div>
