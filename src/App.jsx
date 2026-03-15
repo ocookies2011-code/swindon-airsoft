@@ -4986,13 +4986,13 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
           )}
 
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
-          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and shop purchases, a free game day on their birthday, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
+          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days{!data.shopClosed ? " and shop purchases" : ""}, a free game day on their birthday, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£30/year</strong>.</p>
           {[
             { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
             cu.vipStatus === "active" && expiry && { label: "Expires", value: expiry.toLocaleDateString("en-GB"), ok: !isExpired },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
-            { label: "VIP Discount", value: "10% off game days & shop", ok: cu.vipStatus === "active" },
+            { label: "VIP Discount", value: data.shopClosed ? "10% off game days" : "10% off game days & shop", ok: cu.vipStatus === "active" },
             cu.vipStatus === "active" && bd && { label: "Birthday Perk", value: birthdayCreditAwarded ? `Free game day awarded ${thisYear} 🎂` : `Free game day in birthday week`, ok: true },
           ].filter(Boolean).map(({ label, value, ok }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg4)", borderRadius: 6, marginBottom: 8, fontSize: 13 }}>
@@ -5700,7 +5700,7 @@ function AppInner() {
           <span>NO SIGNAL — YOU ARE OFFLINE. SOME FEATURES MAY NOT WORK.</span>
         </div>
       )}
-      <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} />
+      <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} />
 
       <div className="pub-page-wrap">
         {page === "home"        && <HomePage data={data} setPage={setPage} />}
@@ -5793,7 +5793,7 @@ function AppInner() {
               <div className="pub-footer-col-title">QUICK LINKS</div>
               {[
                 ["Upcoming Events", "events"],
-                ["Shop", "shop"],
+                ...(!data.shopClosed ? [["Shop", "shop"]] : []),
                 ["VIP Membership", "vip"],
                 ["Gallery", "gallery"],
                 ["Meet the Staff", "staff"],
