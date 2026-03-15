@@ -982,9 +982,15 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </button>
               )}
               {!bookingBlocked && payTotal > 0 && (() => {
-                // Use Shopify checkout if this event has variant IDs configured
-                const woVariant = ev.shopifyWalkOnVariantId;
-                const rnVariant = ev.shopifyRentalVariantId;
+                // Use Shopify checkout if this event has variant IDs configured.
+                // VIP players get routed to the discounted VIP variant if set,
+                // falling back to the standard variant if VIP variant isn't configured.
+                const woVariant = (vipIsActive && ev.shopifyWalkOnVipVariantId)
+                  ? ev.shopifyWalkOnVipVariantId
+                  : ev.shopifyWalkOnVariantId;
+                const rnVariant = (vipIsActive && ev.shopifyRentalVipVariantId)
+                  ? ev.shopifyRentalVipVariantId
+                  : ev.shopifyRentalVariantId;
                 const hasShopify = (bCart.walkOn > 0 && woVariant) || (bCart.rental > 0 && rnVariant);
 
                 if (hasShopify) {

@@ -1212,7 +1212,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   // ── Events state ──
   const [modal, setModal] = useState(null);
   const [viewId, setViewId] = useState(null);
-  const blank = { title: "", date: "", time: "09:00", endTime: "17:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false, shopifyWalkOnVariantId: "", shopifyRentalVariantId: "" };
+  const blank = { title: "", date: "", time: "09:00", endTime: "17:00", location: "", description: "", walkOnSlots: 40, rentalSlots: 20, walkOnPrice: 25, rentalPrice: 35, banner: "", mapEmbed: "", extras: [], published: true, vipOnly: false, shopifyWalkOnVariantId: "", shopifyRentalVariantId: "", shopifyWalkOnVipVariantId: "", shopifyRentalVipVariantId: "" };
   const [form, setForm] = useState(blank);
   const bannerFileRef = useRef(null); // holds the raw File object so we don't rely on fetch(data:URL)
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
@@ -1811,9 +1811,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             <div style={{ background:"rgba(150,80,255,.06)", border:"1px solid rgba(150,80,255,.2)", borderRadius:4, padding:"12px 14px", marginBottom:16 }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".12em", color:"#b87fff", marginBottom:10, textTransform:"uppercase" }}>🛒 Shopify Variant IDs</div>
               <div style={{ fontSize:11, color:"var(--muted)", lineHeight:1.6, marginBottom:10 }}>
-                Set these to enable Shopify checkout for this event. Create a product in Shopify with two variants (Walk-On and Rental), then paste each variant's numeric ID here. Leave blank to use credits-only booking.
+                Set these to enable Shopify checkout for this event. Create a product in Shopify with four variants (Standard and VIP for each ticket type), then paste each variant's numeric ID here. Leave blank to use credits-only booking.
               </div>
-              <div className="form-row">
+              <div style={{ fontSize:10, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".1em", color:"var(--muted)", textTransform:"uppercase", marginBottom:6 }}>Standard Pricing</div>
+              <div className="form-row" style={{ marginBottom:10 }}>
                 <div className="form-group" style={{ margin:0 }}>
                   <label>Walk-On Variant ID</label>
                   <input value={form.shopifyWalkOnVariantId || ""} onChange={e => f("shopifyWalkOnVariantId", e.target.value.trim())} placeholder="e.g. 12345678901234" />
@@ -1823,8 +1824,19 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                   <input value={form.shopifyRentalVariantId || ""} onChange={e => f("shopifyRentalVariantId", e.target.value.trim())} placeholder="e.g. 98765432109876" />
                 </div>
               </div>
+              <div style={{ fontSize:10, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".1em", color:"var(--gold)", textTransform:"uppercase", marginBottom:6 }}>⭐ VIP Pricing (discounted variants)</div>
+              <div className="form-row">
+                <div className="form-group" style={{ margin:0 }}>
+                  <label>Walk-On VIP Variant ID</label>
+                  <input value={form.shopifyWalkOnVipVariantId || ""} onChange={e => f("shopifyWalkOnVipVariantId", e.target.value.trim())} placeholder="e.g. 11111111111111" />
+                </div>
+                <div className="form-group" style={{ margin:0 }}>
+                  <label>Rental VIP Variant ID</label>
+                  <input value={form.shopifyRentalVipVariantId || ""} onChange={e => f("shopifyRentalVipVariantId", e.target.value.trim())} placeholder="e.g. 22222222222222" />
+                </div>
+              </div>
               <div style={{ fontSize:10, color:"var(--muted)", marginTop:8, lineHeight:1.6 }}>
-                To find a variant ID: Shopify Admin → Products → [product] → right-click a variant → inspect element → look for <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px", borderRadius:2 }}>variant=XXXXXXXX</code> in the URL, or use the Shopify Admin API.
+                To find a variant ID: Shopify Admin → Products → [product] → click a variant → copy the number from the URL after <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px", borderRadius:2 }}>/variants/</code>
               </div>
             </div>
             <div className="form-group">
@@ -7602,8 +7614,10 @@ function AdminSettings({ showToast, cu }) {
 
   // Shopify settings
   const [shopifyStoreDomain, setShopifyStoreDomain] = S("shopify_store_domain");
+  const [shopifyStorefrontToken, setShopifyStorefrontToken] = S("shopify_storefront_token");
   const [shopifyWebhookSecret, setShopifyWebhookSecret] = S("shopify_webhook_secret");
   const [savingShopify, setSavingShopify] = useState(false);
+  const [showShopifyToken, setShowShopifyToken] = useState(false);
 
   const saveSquare = async () => {
     setSavingSQ(true);
@@ -7637,13 +7651,27 @@ function AdminSettings({ showToast, cu }) {
       <div className="card mb-2">
         {sectionHead("🛒 Shopify Payments")}
         <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.8, marginBottom:14 }}>
-          When configured, players are redirected to your Shopify store to pay for event tickets. The booking is created in this system automatically once Shopify confirms the payment via webhook. No API token needed — uses Shopify's public cart URL.
+          When configured, players are redirected to your Shopify store to pay for event tickets. The booking is created in this system automatically once Shopify confirms the payment via webhook.
         </div>
 
         <div className="form-group">
           <label>Store Domain</label>
           <input value={shopifyStoreDomain} onChange={e => setShopifyStoreDomain(e.target.value.trim())} placeholder="your-store.myshopify.com" />
-          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Your <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px" }}>.myshopify.com</code> domain — found in Shopify Admin → Settings → Domains. Do not include <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px" }}>https://</code>.</div>
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Your Shopify store domain — found in Shopify Admin → Settings → Domains.</div>
+        </div>
+
+        <div className="form-group">
+          <label>Storefront API Token <span style={{ color:"var(--muted)", fontWeight:400, fontSize:11 }}>(public — used to build checkout URLs)</span></label>
+          <div style={{ position:"relative" }}>
+            <input type={showShopifyToken ? "text" : "password"} value={shopifyStorefrontToken} onChange={e => setShopifyStorefrontToken(e.target.value.trim())} placeholder="shpat_..." style={{ paddingRight:70 }} />
+            <button onClick={() => setShowShopifyToken(v => !v)}
+              style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:12, padding:"2px 6px" }}>
+              {showShopifyToken ? "Hide" : "Show"}
+            </button>
+          </div>
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4, lineHeight:1.6 }}>
+            Shopify Admin → Apps → <strong style={{ color:"var(--text)" }}>Develop apps</strong> → Create app → Storefront API → enable <strong style={{ color:"var(--text)" }}>unauthenticated_write_checkouts</strong> scope.
+          </div>
         </div>
 
         <div className="form-group">
@@ -7657,7 +7685,10 @@ function AdminSettings({ showToast, cu }) {
         <button className="btn btn-primary" disabled={savingShopify} onClick={async () => {
           setSavingShopify(true);
           try {
-            await api.settings.set("shopify_store_domain", shopifyStoreDomain.trim());
+            await Promise.all([
+              api.settings.set("shopify_store_domain", shopifyStoreDomain.trim()),
+              api.settings.set("shopify_storefront_token", shopifyStorefrontToken.trim()),
+            ]);
             showToast("✅ Shopify settings saved!");
             logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Shopify settings saved", detail: null });
           } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
@@ -7666,13 +7697,13 @@ function AdminSettings({ showToast, cu }) {
           {savingShopify ? "Saving…" : "Save Shopify Settings"}
         </button>
 
-        {shopifyStoreDomain ? (
+        {shopifyStoreDomain && shopifyStorefrontToken ? (
           <div className="alert alert-green mt-2" style={{ fontSize:12 }}>
             ✅ Shopify is configured. Players will be redirected to Shopify checkout when booking events with variant IDs set.
           </div>
         ) : (
           <div className="alert mt-2" style={{ fontSize:12, background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", color:"var(--muted)" }}>
-            Store domain required to enable Shopify checkout.
+            Store domain and Storefront API token required to enable Shopify checkout.
           </div>
         )}
       </div>
