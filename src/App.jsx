@@ -3029,32 +3029,31 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
 
 // Renders a Q&A answer — splits on newlines and renders each line,
 // converting **bold** and *italic* inline markdown.
+function renderInline(text) {
+  const INLINE_RE = new RegExp("(\\*\\*[^*]+\\*\\*|\\*[^*]+\\*|`[^`]+`)", "g");
+  const parts = text.split(INLINE_RE);
+  return parts.map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) return <strong key={i} style={{ color:"#fff", fontWeight:700 }}>{p.slice(2,-2)}</strong>;
+    if (p.startsWith("*")  && p.endsWith("*"))  return <em key={i} style={{ color:"var(--accent)", fontStyle:"italic" }}>{p.slice(1,-1)}</em>;
+    if (p.startsWith("`")  && p.endsWith("`"))  return <code key={i} style={{ background:"#1a1a1a", padding:"1px 5px", fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"var(--accent)" }}>{p.slice(1,-1)}</code>;
+    return p;
+  });
+}
+
 function renderQAAnswer(text) {
   if (!text) return null;
-  return text.split("\n").map((line, i) => {
-    // Convert **bold** and *italic*
-    const parts = [];
-    let remaining = line;
-    let key = 0;
-    while (remaining.length > 0) {
-      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-      const italicMatch = remaining.match(/\*(.+?)\*/);
-      const firstBold = boldMatch ? remaining.indexOf(boldMatch[0]) : Infinity;
-      const firstItalic = italicMatch ? remaining.indexOf(italicMatch[0]) : Infinity;
-      if (boldMatch && firstBold <= firstItalic) {
-        if (firstBold > 0) parts.push(<span key={key++}>{remaining.slice(0, firstBold)}</span>);
-        parts.push(<strong key={key++} style={{ color: "#c8e878", fontWeight: 800 }}>{boldMatch[1]}</strong>);
-        remaining = remaining.slice(firstBold + boldMatch[0].length);
-      } else if (italicMatch && firstItalic < firstBold) {
-        if (firstItalic > 0) parts.push(<span key={key++}>{remaining.slice(0, firstItalic)}</span>);
-        parts.push(<em key={key++} style={{ color: "#9ab870" }}>{italicMatch[1]}</em>);
-        remaining = remaining.slice(firstItalic + italicMatch[0].length);
-      } else {
-        parts.push(<span key={key++}>{remaining}</span>);
-        break;
-      }
+  const lines = text.split("\n");
+  return lines.map((line, i) => {
+    if (line.startsWith("### ")) return <h4 key={i} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, color:"#fff", margin:"10px 0 4px", letterSpacing:".04em", textTransform:"uppercase" }}>{line.slice(4)}</h4>;
+    if (line.startsWith("## "))  return <h3 key={i} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)", margin:"12px 0 6px", letterSpacing:".04em", textTransform:"uppercase" }}>{line.slice(3)}</h3>;
+    if (line.startsWith("# "))   return <h2 key={i} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:"var(--accent)", margin:"14px 0 8px" }}>{line.slice(2)}</h2>;
+    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) return <img key={i} src={imgMatch[2]} alt={imgMatch[1]} style={{ maxWidth:"100%", margin:"8px 0", borderRadius:2 }} />;
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      return <div key={i} style={{ display:"flex", gap:8, padding:"3px 0", fontSize:13, color:"var(--muted)" }}><span style={{ color:"var(--accent)", flexShrink:0 }}>▸</span>{renderInline(line.slice(2))}</div>;
     }
-    return <div key={i} style={{ marginBottom: line ? 4 : 8 }}>{parts}</div>;
+    if (line.trim() === "") return <div key={i} style={{ height:8 }} />;
+    return <p key={i} style={{ fontSize:13, color:"var(--muted)", lineHeight:1.8, margin:"2px 0" }}>{renderInline(line)}</p>;
   });
 }
 
