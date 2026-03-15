@@ -7583,11 +7583,15 @@ function AdminSettings({ showToast, cu }) {
 
   // Xero settings
   const [xeroAccountCode, setXeroAccountCode] = S("xero_account_code");
+  const [xeroClientId, setXeroClientId] = S("xero_client_id");
   const [savingXero, setSavingXero] = useState(false);
   const [xeroConnected, setXeroConnected] = useState(false);
   React.useEffect(() => {
     api.settings.get("xero_refresh_token").then(v => setXeroConnected(!!v)).catch(() => {});
   }, []);
+  const xeroAuthUrl = xeroClientId
+    ? `https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${xeroClientId}&redirect_uri=https://bnlndgjbcthxyodgstaa.supabase.co/functions/v1/xero-auth-callback&scope=openid+profile+email+accounting.invoices+accounting.payments+accounting.contacts+offline_access&state=swindon-airsoft`
+    : null;
 
   const saveSquare = async () => {
     setSavingSQ(true);
@@ -7625,6 +7629,23 @@ function AdminSettings({ showToast, cu }) {
         </div>
 
         <div className="form-group">
+          <label>Client ID</label>
+          <input value={xeroClientId} onChange={e => setXeroClientId(e.target.value.trim())} placeholder="e.g. 185BA8393B33423899C83D8B327A058B" />
+          <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
+            Xero Developer Portal → My Apps → your app → Configuration → Client ID.
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Client Secret</label>
+          <div style={{ fontSize:11, color:"var(--muted)", lineHeight:1.6, padding:"8px 12px", background:"rgba(255,255,255,.03)", border:"1px solid var(--border)", borderRadius:4 }}>
+            🔒 Store as a Supabase secret — not in the database.<br/>
+            <code style={{ color:"var(--accent)" }}>supabase secrets set XERO_CLIENT_SECRET=your_secret</code><br/>
+            <span style={{ color:"#555" }}>Found in: Xero Developer Portal → My Apps → your app → Configuration → Client secret</span>
+          </div>
+        </div>
+
+        <div className="form-group">
           <label>Revenue Account Code</label>
           <input value={xeroAccountCode} onChange={e => setXeroAccountCode(e.target.value.trim())} placeholder="e.g. 200" style={{ maxWidth:160 }} />
           <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
@@ -7636,20 +7657,24 @@ function AdminSettings({ showToast, cu }) {
           <button className="btn btn-primary btn-sm" disabled={savingXero} onClick={async () => {
             setSavingXero(true);
             try {
-              await api.settings.set("xero_account_code", xeroAccountCode.trim());
-              showToast("✅ Xero account code saved!");
+              await Promise.all([
+                api.settings.set("xero_account_code", xeroAccountCode.trim()),
+                api.settings.set("xero_client_id",    xeroClientId.trim()),
+              ]);
+              showToast("✅ Xero settings saved!");
             } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
             finally { setSavingXero(false); }
           }}>
-            {savingXero ? "Saving…" : "Save Account Code"}
+            {savingXero ? "Saving…" : "Save Xero Settings"}
           </button>
 
-          <a
-            href="https://login.xero.com/identity/connect/authorize?response_type=code&client_id=185BA8393B33423899C83D8B327A058B&redirect_uri=https://bnlndgjbcthxyodgstaa.supabase.co/functions/v1/xero-auth-callback&scope=openid+profile+email+accounting.invoices+accounting.payments+accounting.contacts+offline_access&state=swindon-airsoft"
-            target="_blank" rel="noopener noreferrer"
-            className="btn btn-ghost btn-sm">
-            🔗 {xeroConnected ? "Re-authorise Xero" : "Connect Xero"}
-          </a>
+          {xeroAuthUrl ? (
+            <a href={xeroAuthUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm">
+              🔗 {xeroConnected ? "Re-authorise Xero" : "Connect Xero"}
+            </a>
+          ) : (
+            <span style={{ fontSize:11, color:"var(--muted)" }}>Save Client ID first to enable Connect button</span>
+          )}
         </div>
 
         {xeroConnected ? (
@@ -7658,7 +7683,7 @@ function AdminSettings({ showToast, cu }) {
           </div>
         ) : (
           <div className="alert" style={{ fontSize:12, background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", color:"var(--muted)" }}>
-            Click "Connect Xero" above to authorise. You'll be redirected to Xero and back automatically.
+            Enter Client ID, save, then click "Connect Xero" to authorise.
           </div>
         )}
       </div>
