@@ -739,13 +739,13 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "cheat-reports" && <AdminCheatReports data={data} showToast={showToast} cu={cu} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
-          {section === "revenue" && <AdminRevenue data={data} save={save} showToast={showToast} />}
+          {section === "revenue" && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "visitor-stats" && <AdminVisitorStats />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}
           {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} cu={cu} />}
-          {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} />}
+          {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
@@ -5195,7 +5195,7 @@ function AdminVisitorStats() {
 }
 
 // ── Admin Revenue ─────────────────────────────────────────
-function AdminRevenue({ data, save, showToast }) {
+function AdminRevenue({ data, save, showToast, cu }) {
   const [cashSales, setCashSales] = useState([]);
   const [shopOrders, setShopOrders] = useState([]);
   const [selected, setSelected] = useState(null); // selected transaction for detail modal
@@ -7891,7 +7891,7 @@ const PRESET_COMBOS = [
 ];
 const emptyBanner = () => ({ text:"", color:"#c8ff00", bg:"#080a06", icon:"⚡" });
 
-function AdminMessages({ data, save, showToast }) {
+function AdminMessages({ data, save, showToast, cu }) {
   const [banners, setBanners] = useState(() => Array.isArray(data.homeMsg) && data.homeMsg.length > 0 ? data.homeMsg.map(b => ({ ...emptyBanner(), ...b })) : []);
   const [facebook, setFacebook] = useState(data.socialFacebook || "");
   const [instagram, setInstagram] = useState(data.socialInstagram || "");
