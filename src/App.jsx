@@ -4268,7 +4268,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       </div>
 
       <div className="nav-tabs profile-tabs">
-        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],["orders","📦 Orders"],["waitlist","🔔 Waitlist"],["vip","⭐ VIP"],["loadout","🎒 Loadout"],["report","🚩 Report Player"]].map(([t, label]) => (
+        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],...(!data.shopClosed ? [["orders","📦 Orders"]] : []),["waitlist","🔔 Waitlist"],["vip","⭐ VIP"],["loadout","🎒 Loadout"],["report","🚩 Report Player"]].map(([t, label]) => (
           <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{label}</button>
         ))}
       </div>
@@ -4280,7 +4280,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         <option value="profile">👤 Profile</option>
         <option value="waiver">📋 Waiver</option>
         <option value="bookings">🎟 Bookings</option>
-        <option value="orders">📦 Orders</option>
+        {!data.shopClosed && <option value="orders">📦 Orders</option>}
         <option value="waitlist">🔔 Waitlist</option>
         <option value="vip">⭐ VIP</option>
         <option value="loadout">🎒 Loadout</option>
