@@ -1319,7 +1319,7 @@ function ShopClosedPage({ setPage }) {
       }}>
         <div style={{ position:"absolute", top:0, right:0, width:120, height:120, background:"radial-gradient(circle,rgba(200,255,0,.08) 0%,transparent 70%)", pointerEvents:"none" }} />
         <div style={{ display:"flex", alignItems:"flex-start", gap:20, flexWrap:"wrap" }}>
-          <div style={{ flex:1, minWidth:220 }}>
+          <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", color:"#c8ff00", marginBottom:8, textTransform:"uppercase" }}>🛒 Our Retail Store</div>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#fff", marginBottom:8 }}>Airsoft Armoury UK</div>
             <div style={{ fontSize:13, color:"#a0cc60", lineHeight:1.7, marginBottom:16 }}>
@@ -1336,7 +1336,7 @@ function ShopClosedPage({ setPage }) {
             </div>
           </div>
           {/* Collection info box */}
-          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid #2a3a10", borderRadius:6, padding:"16px 18px", minWidth:200, flexShrink:0 }}>
+          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid #2a3a10", borderRadius:6, padding:"16px 18px", minWidth:0, flexShrink:0, width:"100%" }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".2em", color:"#c8ff00", marginBottom:10, textTransform:"uppercase" }}>📦 Game Day Collection</div>
             {[
               ["1", "Order from airsoftarmoury.uk"],
@@ -2919,7 +2919,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
                 </div>
 
                 {/* Image slot grid */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,200px),1fr))", gap:10, marginBottom:14 }}>
                   {[0, 1].map(slot => {
                     const img = idImages[slot];
                     return (
@@ -3484,7 +3484,7 @@ function PlayerOrders({ cu }) {
   const selected = orders.find(o => o.id === activeOrder);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,260px),1fr))", gap: 16, alignItems: "start" }}>
 
       {/* ── Order list sidebar ── */}
       <div>

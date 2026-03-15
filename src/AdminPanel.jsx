@@ -4721,7 +4721,7 @@ function AdminShop({ data, save, showToast, cu }) {
                     }}
                     style={{marginBottom:10,background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:2,padding:"10px 12px",cursor:"grab"}}
                   >
-                    <div style={{display:"grid",gridTemplateColumns:"20px 1fr 90px 90px 90px 36px",gap:8,alignItems:"center",marginBottom:4}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,120px),1fr))",gap:8,alignItems:"center",marginBottom:4}}>
                       <span style={{color:"var(--muted)",fontSize:14,textAlign:"center",userSelect:"none",cursor:"grab"}}>☰</span>
                       <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
                       <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Sell £" style={{fontSize:12}} />
@@ -4755,7 +4755,7 @@ function AdminShop({ data, save, showToast, cu }) {
                   </div>
                 ))}
                 {/* Add new variant row */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 90px 90px 90px auto",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,120px),1fr))",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
                   <input value={newVariant.name} onChange={e => setNewVariant(p => ({...p, name: e.target.value}))} placeholder="New variant name" style={{fontSize:12}} />
                   <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="Sell £" style={{fontSize:12}} />
                   <input type="number" step="0.01" value={newVariant.costPrice} onChange={e => setNewVariant(p => ({...p, costPrice: e.target.value}))} placeholder="Cost £" style={{fontSize:12,borderColor:"#2a2a2a"}} title="Your cost price (admin only)" />
@@ -5116,7 +5116,8 @@ function AdminVisitorStats() {
 
         {/* ── PAGES ── */}
         {activeTab === "pages" && (
-          <div style={{ background:"#0c1009", border:"1px solid #1a2808" }}>
+          <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+          <div style={{ background:"#0c1009", border:"1px solid #1a2808", minWidth:340 }}>
             <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:8 }}>
               {["PAGE","VISITS","SHARE"].map(colHead => (
                 <div key={colHead} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{colHead}</div>
@@ -5137,6 +5138,7 @@ function AdminVisitorStats() {
               </div>
             ))}
             {pageRows.length === 0 && <div style={{ padding:40, textAlign:"center", color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>NO DATA IN RANGE</div>}
+          </div>
           </div>
         )}
 
@@ -5162,7 +5164,8 @@ function AdminVisitorStats() {
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>
               {uniqueUsers} UNIQUE LOGGED-IN USERS · {loggedInVisits} VISITS
             </div>
-            <div style={{ background:"#0c1009", border:"1px solid #1a2808" }}>
+            <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+            <div style={{ background:"#0c1009", border:"1px solid #1a2808", minWidth:480 }}>
               <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8 }}>
                 {["USER","VISITS","TOP PAGE","LAST SEEN"].map(colHead => (
                   <div key={colHead} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{colHead}</div>
@@ -5180,6 +5183,7 @@ function AdminVisitorStats() {
                 );
               })}
               {userRows.length === 0 && <div style={{ padding:40, textAlign:"center", color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>NO LOGGED-IN VISITS IN RANGE</div>}
+            </div>
             </div>
           </div>
         )}
