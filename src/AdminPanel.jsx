@@ -930,7 +930,7 @@ function AdminDash({ data, setSection }) {
 
 // ── Admin Check-In ────────────────────────────────────────
 // ── Admin Bookings & Check-In (merged) ────────────────────
-function BookingsTab({ allBookings, data, doCheckin, save, showToast }) {
+function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
   const [editBooking, setEditBooking] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null);
   const [viewBooking, setViewBooking] = useState(null);
@@ -1599,6 +1599,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           doCheckin={doCheckin}
           save={save}
           showToast={showToast}
+          cu={cu}
         />
       )}
 
