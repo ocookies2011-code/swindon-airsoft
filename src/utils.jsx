@@ -2292,8 +2292,8 @@ function HomePage({ data, setPage }) {
           </div>
         )}
 
-        {/* TACTICAL GEAR */}
-        {data.shop.filter(p => p.published !== false).length > 0 && (
+        {/* TACTICAL GEAR — only shown when shop is open */}
+        {!data.shopClosed && data.shop.filter(p => p.published !== false).length > 0 && (
           <div style={{ marginBottom:48 }}>
             <div className="section-header">
               <div>
@@ -2348,7 +2348,7 @@ function HomePage({ data, setPage }) {
             BECOME A <span style={{ color:"#c8ff00", textShadow:"0 0 24px rgba(200,255,0,.3)" }}>VIP OPERATIVE</span>
           </div>
           <p style={{ fontSize:14, color:"#7a9a50", marginBottom:28, lineHeight:1.8, fontFamily:"'Share Tech Mono',monospace", letterSpacing:".03em" }}>
-            After 3 game days, unlock VIP membership for just £30/year.<br/>10% off everything · Free birthday game day · Exclusive events · UKARA registration support.
+            After 3 game days, unlock VIP membership for just £30/year.<br/>{data.shopClosed ? "10% off game days · Free birthday game day · Exclusive events · UKARA registration support." : "10% off everything · Free birthday game day · Exclusive events · UKARA registration support."}
           </p>
           <button style={{ background:"#c8ff00", color:"#000", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".2em", padding:"13px 40px", border:"none", cursor:"pointer", textTransform:"uppercase", transition:"background .15s" }}
             onMouseEnter={e => e.currentTarget.style.background="#d8ff33"}
