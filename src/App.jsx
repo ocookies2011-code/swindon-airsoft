@@ -10,6 +10,7 @@ import {
   gmtNow, gmtDate, gmtShort, fmtDate, uid,
   CSS,
   loadSquareConfig, SquareCheckoutButton,
+  ShopifyCheckoutButton,
   TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS,
   detectCourier, TrackingBlock,
   useData,
@@ -980,14 +981,47 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   SIGN WAIVER TO CONTINUE
                 </button>
               )}
-              {!bookingBlocked && payTotal > 0 && (
-                <SquareCheckoutButton
-                  amount={payTotal}
-                  description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
-                  onSuccess={confirmBookingAfterPayment}
-                  disabled={bookingBusy}
-                />
-              )}
+              {!bookingBlocked && payTotal > 0 && (() => {
+                // Use Shopify checkout if this event has variant IDs configured
+                const woVariant = ev.shopifyWalkOnVariantId;
+                const rnVariant = ev.shopifyRentalVariantId;
+                const hasShopify = (bCart.walkOn > 0 && woVariant) || (bCart.rental > 0 && rnVariant);
+
+                if (hasShopify) {
+                  const lineItems = [
+                    bCart.walkOn > 0 && woVariant && { variantId: woVariant, quantity: bCart.walkOn },
+                    bCart.rental > 0 && rnVariant && { variantId: rnVariant, quantity: bCart.rental },
+                  ].filter(Boolean);
+                  // Embed booking metadata in the order note so the webhook can create the booking
+                  const note = JSON.stringify({
+                    _sa: true,
+                    eventId:  ev.id,
+                    userId:   cu.id,
+                    userName: cu.name,
+                    walkOn:   bCart.walkOn,
+                    rental:   bCart.rental,
+                  });
+                  return (
+                    <ShopifyCheckoutButton
+                      lineItems={lineItems}
+                      note={note}
+                      amount={payTotal}
+                      description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
+                      disabled={bookingBusy}
+                      onError={msg => setSquareError(msg)}
+                    />
+                  );
+                }
+
+                return (
+                  <SquareCheckoutButton
+                    amount={payTotal}
+                    description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
+                    onSuccess={confirmBookingAfterPayment}
+                    disabled={bookingBusy}
+                  />
+                );
+              })()}
               {!bookingBlocked && payTotal === 0 && !cartEmpty && (
                 <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }}
                   disabled={bookingBusy}

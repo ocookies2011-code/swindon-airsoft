@@ -199,11 +199,121 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 }
 
 
+// ── Shopify Checkout Button ────────────────────────────────────
+// Builds a Shopify Storefront API checkout and redirects the player.
+// Accepts multiple line items so walk-on + rental can be checked out together.
+// After payment, Shopify fires the orders/paid webhook → Supabase Edge Function
+// → booking record created in DB automatically.
+async function loadShopifyConfig() {
+  if (loadShopifyConfig._cache) return loadShopifyConfig._cache;
+  try {
+    const { supabase } = await import('./supabaseClient');
+    const [{ data: d }, { data: s }] = await Promise.all([
+      supabase.from('site_settings').select('value').eq('key', 'shopify_store_domain').single(),
+      supabase.from('site_settings').select('value').eq('key', 'shopify_storefront_token').single(),
+    ]);
+    loadShopifyConfig._cache = { domain: d?.value || null, token: s?.value || null };
+  } catch { loadShopifyConfig._cache = { domain: null, token: null }; }
+  return loadShopifyConfig._cache;
+}
+loadShopifyConfig._cache = null;
+
+async function buildShopifyCheckoutUrl({ domain, token, lineItems, note }) {
+  // Shopify Storefront API — create a checkout
+  const mutation = `
+    mutation checkoutCreate($input: CheckoutCreateInput!) {
+      checkoutCreate(input: $input) {
+        checkout { webUrl }
+        checkoutUserErrors { message }
+      }
+    }`;
+  const variables = {
+    input: {
+      lineItems: lineItems.map(({ variantId, quantity }) => ({
+        variantId: `gid://shopify/ProductVariant/${variantId}`,
+        quantity,
+      })),
+      note: note || "",
+    },
+  };
+  const res = await fetch(`https://${domain}/api/2024-01/graphql.json`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Storefront-Access-Token": token,
+    },
+    body: JSON.stringify({ query: mutation, variables }),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error("Shopify API error: " + res.status);
+  const json = await res.json();
+  const errs = json?.data?.checkoutCreate?.checkoutUserErrors;
+  if (errs?.length) throw new Error(errs[0].message);
+  const url = json?.data?.checkoutCreate?.checkout?.webUrl;
+  if (!url) throw new Error("No checkout URL returned from Shopify.");
+  return url;
+}
+
+function ShopifyCheckoutButton({ lineItems, note, amount, description, disabled, onError }) {
+  const [loading, setLoading] = useState(false);
+  const [config, setConfig] = useState(null);
+
+  useEffect(() => {
+    loadShopifyConfig().then(setConfig);
+  }, []);
+
+  const handleClick = async () => {
+    if (!config?.domain || !config?.token) {
+      onError?.("Shopify is not configured. Please contact admin.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const url = await buildShopifyCheckoutUrl({ domain: config.domain, token: config.token, lineItems, note });
+      window.location.href = url;
+    } catch (e) {
+      onError?.(e.message || "Failed to open checkout. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  if (!config) return (
+    <div style={{ color:"var(--muted)", fontSize:12, padding:8, marginTop:12 }}>Loading checkout…</div>
+  );
+
+  if (!config.domain || !config.token) return (
+    <div className="alert alert-red" style={{ marginTop:12, fontSize:12 }}>
+      ⚠ Shopify checkout is not configured. Contact the site admin.
+    </div>
+  );
+
+  return (
+    <div style={{ marginTop:12 }}>
+      <div style={{ background:"#0a0f05", border:"1px solid #2a3a10", padding:"10px 14px", marginBottom:10, fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", display:"flex", justifyContent:"space-between" }}>
+        <span>{description}</span>
+        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontSize:16 }}>£{Number(amount).toFixed(2)}</span>
+      </div>
+      <button
+        className="btn btn-primary"
+        style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".15em", opacity:(disabled || loading) ? .6 : 1, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
+        disabled={disabled || loading}
+        onClick={handleClick}>
+        {loading
+          ? "⏳ Opening Shopify checkout…"
+          : <>🛒 PAY ON SHOPIFY · £{Number(amount).toFixed(2)}</>
+        }
+      </button>
+      <div style={{ textAlign:"center", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", marginTop:6, letterSpacing:".1em" }}>
+        You will be redirected to Shopify to complete payment securely.
+      </div>
+    </div>
+  );
+}
+
 // ── GMT helpers ───────────────────────────────────────────────
 const gmtNow = () => new Date().toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
 const gmtDate = (d) => new Date(d).toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
 const gmtShort = (d) => new Date(d).toLocaleDateString("en-GB", { timeZone: "Europe/London" });
-// Convert a YYYY-MM-DD date string to DD/MM/YYYY for display (UK format)
 const fmtDate = (d) => { if (!d) return ""; const [y,m,day] = String(d).slice(0,10).split("-"); return `${day}/${m}/${y}`; };
 const uid = () => crypto.randomUUID();
 
@@ -3291,6 +3401,7 @@ export {
   CSS,
   // Square
   loadSquareConfig, SquareCheckoutButton,
+  ShopifyCheckoutButton, loadShopifyConfig,
   _squareAppId, _squareLocationId, _squareEnv,
   // Tracking
   TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS,

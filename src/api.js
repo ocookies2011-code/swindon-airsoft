@@ -584,7 +584,9 @@ function normaliseEvent(ev) {
     banner:       ev.banner,
     mapEmbed:     ev.map_embed,
     published:    ev.published,
-    vipOnly:      ev.vip_only ?? false,
+    vipOnly:            ev.vip_only ?? false,
+    shopifyWalkOnVariantId: ev.shopify_walkon_variant_id || null,
+    shopifyRentalVariantId: ev.shopify_rental_variant_id || null,
     extras: (ev.event_extras || [])
       .sort((a, b) => a.sort_order - b.sort_order)
       .map(ex => {
@@ -693,6 +695,8 @@ function toSnakeEvent(ev) {
     map_embed:      ev.mapEmbed || null,
     published:      ev.published ?? true,
     vip_only:       ev.vipOnly ?? false,
+    shopify_walkon_variant_id: ev.shopifyWalkOnVariantId || null,
+    shopify_rental_variant_id: ev.shopifyRentalVariantId || null,
   }
 }
 
