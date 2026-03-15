@@ -286,7 +286,7 @@ function useData() {
 
           const [evList, shopList, postageList, albumList, qaList, staffList, homeMsg,
                  socialFacebook, socialInstagram, socialWhatsapp, contactAddress, contactPhone, contactEmail,
-                 contactDepartmentsRaw] = await Promise.all([
+                 contactDepartmentsRaw, shopClosed] = await Promise.all([
             safe("events",  api.events.getAll()),
             safe("shop",    api.shop.getAll()),
             safe("postage", api.postage.getAll()),
@@ -301,6 +301,7 @@ function useData() {
             api.settings.get("contact_phone").catch(() => ""),
             api.settings.get("contact_email").catch(() => ""),
             api.settings.get("contact_departments").catch(() => ""),
+            api.settings.get("shop_closed").catch(() => "false"),
           ]);
 
           // If all key collections came back empty and it's a partial error, treat as a cold-start failure
@@ -334,6 +335,7 @@ function useData() {
             albums: albumList,
             qa: qaList,
             staff: staffList,
+            shopClosed: shopClosed === "true",
             homeMsg: (() => { try { const p = JSON.parse(homeMsg); return Array.isArray(p) ? p : (homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []); } catch { return homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []; } })(),
             socialFacebook,
             socialInstagram,

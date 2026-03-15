@@ -7581,6 +7581,13 @@ function AdminSettings({ showToast, cu }) {
   const [savingSQ, setSavingSQ] = useState(false);
   const [showAppId, setShowAppId] = useState(false);
 
+  // Shop closed toggle
+  const [shopClosedSetting, setShopClosedSetting] = useState(false);
+  const [savingShopClosed, setSavingShopClosed] = useState(false);
+  React.useEffect(() => {
+    api.settings.get("shop_closed").then(v => setShopClosedSetting(v === "true")).catch(() => {});
+  }, []);
+
   // Xero settings
   const [xeroAccountCode, setXeroAccountCode] = S("xero_account_code");
   const [xeroClientId, setXeroClientId] = S("xero_client_id");
@@ -7618,6 +7625,40 @@ function AdminSettings({ showToast, cu }) {
         <div>
           <div className="page-title">Settings</div>
           <div className="page-sub">Payment configuration and API keys</div>
+        </div>
+      </div>
+
+      {/* Shop Closed Toggle */}
+      <div className="card mb-2">
+        {sectionHead("🛒 Shop Status")}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
+          <div>
+            <div style={{ fontSize:13, color:"var(--text)", marginBottom:4 }}>
+              {shopClosedSetting
+                ? <span style={{ color:"var(--red)", fontWeight:700 }}>⛔ Shop is currently CLOSED</span>
+                : <span style={{ color:"var(--accent)", fontWeight:700 }}>✅ Shop is currently OPEN</span>}
+            </div>
+            <div style={{ fontSize:11, color:"var(--muted)", lineHeight:1.6 }}>
+              When closed, the shop page shows a redirect to Airsoft Armoury UK with the <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px" }}>COLLECTION</code> code for game day pickup.
+            </div>
+          </div>
+          <button
+            className={shopClosedSetting ? "btn btn-primary" : "btn btn-ghost"}
+            style={{ minWidth:160, borderColor: shopClosedSetting ? "var(--red)" : "var(--accent)", color: shopClosedSetting ? "var(--red)" : "var(--accent)" }}
+            disabled={savingShopClosed}
+            onClick={async () => {
+              setSavingShopClosed(true);
+              try {
+                const next = !shopClosedSetting;
+                await api.settings.set("shop_closed", String(next));
+                setShopClosedSetting(next);
+                showToast(next ? "🔒 Shop closed — customers will see the Airsoft Armoury UK redirect." : "✅ Shop is now open.");
+                logAction({ adminEmail: cu?.email, adminName: cu?.name, action: next ? "Shop closed" : "Shop opened", detail: null });
+              } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
+              finally { setSavingShopClosed(false); }
+            }}>
+            {savingShopClosed ? "Saving…" : shopClosedSetting ? "🔓 Reopen Shop" : "🔒 Close Shop"}
+          </button>
         </div>
       </div>
 
