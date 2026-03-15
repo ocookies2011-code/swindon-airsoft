@@ -884,106 +884,99 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 }
 `
 // ── Parcel tracking status ───────────────────────────────────
-const TRACKING_CACHE_KEY = (tn) => `tracking_status_${tn}`;
-const TRACKING_TTL_MS       = 8 * 60 * 60 * 1000; // 8 hours — final statuses (Delivered)
+const TRACKING_CACHE_KEY    = (tn) => `tracking_status_${tn}`;
+const TRACKING_TTL_MS       = 8 * 60 * 60 * 1000; // 8 hours  — final statuses (Delivered)
 const TRACKING_TTL_SHORT_MS = 30 * 60 * 1000;      // 30 mins  — in-progress statuses
 
-const TRACK_STATUS_MAP = { 0:'Pending', 10:'In Transit', 20:'Expired', 30:'Pick Up', 35:'Undelivered', 40:'Delivered', 50:'In Transit' };
-const RM_STATUS_FRAGMENTS = [
-  ['delivered',            'Delivered'],
-  ['out for delivery',     'Out for Delivery'],
-  ['unable to deliver',    'Undelivered'],
-  ['you were not in',      'Undelivered'],
-  ["sorry, we couldn",     'Undelivered'],
-  ['available for',        'Pick Up'],
-  ['collected from',       'In Transit'],
-  ['item accepted',        'In Transit'],
-  ['we have your item',    'In Transit'],
-  ['in transit',           'In Transit'],
-  ['it is being prepared', 'In Transit'],
-];
-function guessRmStatus(text) {
-  if (!text) return null;
-  const lower = text.toLowerCase();
-  for (const [frag, label] of RM_STATUS_FRAGMENTS) {
-    if (lower.includes(frag)) return label;
-  }
-  return null;
-}
+// TrackingMore status codes → human labels
+// https://www.trackingmore.com/tracking-status.html
+const TM_STATUS_MAP = {
+  'notfound':      'Not Found',
+  'transit':       'In Transit',
+  'pickup':        'Out for Delivery',
+  'undelivered':   'Undelivered',
+  'delivered':     'Delivered',
+  'expired':       'Expired',
+  'pending':       'Pending',
+  'inforeceived':  'Info Received',
+  'availableforpickup': 'Pick Up',
+};
 
-// Cache the 17track key so we only hit site_settings once per session.
-// Exported as a mutable object so AdminPanel.jsx can reset it when a new key is saved.
+// TrackingMore courier slugs for UK carriers
+const TM_CARRIER_MAP = {
+  'Royal Mail':  'royal-mail',
+  'UPS':         'ups',
+  'FedEx':       'fedex',
+  'DPD':         'dpd',
+  'Evri':        'evri',
+  'Parcelforce': 'parcelforce',
+};
+
+// Cache the TrackingMore key so we only hit site_settings once per session.
 export const trackKeyCache = { value: undefined };
-async function get17trackKey() {
+async function getTrackingKey() {
   if (trackKeyCache.value !== undefined) return trackKeyCache.value;
   try {
     const { supabase } = await import('./supabaseClient');
     const { data } = await supabase
       .from('site_settings')
       .select('value')
-      .eq('key', '17track_api_key')
+      .eq('key', 'trackingmore_api_key')
       .single();
     trackKeyCache.value = data?.value || null;
   } catch { trackKeyCache.value = null; }
   return trackKeyCache.value;
 }
 
-// Immediately seed the key from the settings page value if already known
-// (avoids needing a DB round-trip on first load when key is freshly saved)
-function prime17trackKey(key) {
-  if (key) trackKeyCache.value = key;
-}
-
 async function fetchTrackingStatus(tn, courier) {
   if (!tn) return null;
 
-  // Return from localStorage cache if still fresh.
-  // Never cache null/failed results — always retry those.
+  // Return from localStorage cache if still fresh
   try {
     const cached = localStorage.getItem(TRACKING_CACHE_KEY(tn));
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.status) { // only use cached entry if it has real data
+      if (parsed.status) {
         const ttl = ['Delivered','Expired'].includes(parsed.status) ? TRACKING_TTL_MS : TRACKING_TTL_SHORT_MS;
         if (Date.now() - parsed.checkedAt < ttl) return { ...parsed, fromCache: true };
       }
     }
   } catch {}
 
-  const carrierMap = { 'Royal Mail':190, 'UPS':100002, 'FedEx':100003, 'DPD':3011, 'Evri':3011, 'Parcelforce':190 };
-  const carrierCode = carrierMap[courier] || 0;
+  const apiKey = await getTrackingKey();
+  if (!apiKey) return null;
 
-  // All tracking calls go through the track-parcel Edge Function — it runs
-  // server-side so there are no CORS issues with 17track or Royal Mail APIs.
-  // The Edge Function reads the 17track key from site_settings itself, and
-  // falls back to Royal Mail's public API if the key is missing or fails.
+  const slug = TM_CARRIER_MAP[courier] || null;
+
   try {
-    const { supabase } = await import('./supabaseClient');
-    const { data, error } = await supabase.functions.invoke('track-parcel', {
-      body: { trackingNumber: tn, courier, carrierCode },
-    });
-    if (!error && data) {
-      // Edge function may return a numeric status code (17track format) or a string
-      let statusStr = data.status;
-      if (typeof statusStr === 'number' || (typeof statusStr === 'string' && /^\d+$/.test(statusStr))) {
-        statusStr = TRACK_STATUS_MAP[Number(statusStr)] || statusStr;
-      }
-      // Also handle 17track nested format: data.accepted[0].track.e
-      if (!statusStr && data.accepted?.[0]?.track?.e !== undefined) {
-        statusStr = TRACK_STATUS_MAP[data.accepted[0].track.e] || String(data.accepted[0].track.e);
-      }
-      if (statusStr) {
-        const result = { status: statusStr, events: data.events || data.accepted?.[0]?.track?.z?.map(z => ({ desc: z.z, time: z.a, location: z.c })) || [], checkedAt: Date.now(), fromCache: false };
-        try {
-          localStorage.removeItem(TRACKING_CACHE_KEY(tn));
-          localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
-        } catch {}
-        return result;
-      }
-    }
-  } catch {}
+    // TrackingMore v4 API — free tier, no CORS issues, works client-side
+    const url = slug
+      ? `https://api.trackingmore.com/v4/trackings/${slug}/${tn}`
+      : `https://api.trackingmore.com/v4/trackings/detect/${tn}`;
 
-  return null;
+    const res = await fetch(url, {
+      headers: { 'Tracking-Api-Key': apiKey },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!res.ok) return null;
+    const json = await res.json();
+    const d = json?.data;
+    if (!d) return null;
+
+    const statusRaw  = (d.delivery_status || d.tag || '').toLowerCase();
+    const statusLabel = TM_STATUS_MAP[statusRaw] || d.delivery_status || 'In Transit';
+
+    const events = (d.origin_info?.trackinfo || d.destination_info?.trackinfo || [])
+      .map(e => ({ desc: e.tracking_detail, time: e.tracking_time, location: e.location || '' }))
+      .filter(e => e.desc);
+
+    const result = { status: statusLabel, events, checkedAt: Date.now(), fromCache: false };
+    try {
+      localStorage.setItem(TRACKING_CACHE_KEY(tn), JSON.stringify(result));
+    } catch {}
+    return result;
+  } catch { return null; }
 }
 
 
@@ -3301,8 +3294,8 @@ export {
   _squareAppId, _squareLocationId, _squareEnv,
   // Tracking
   TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS,
-  TRACK_STATUS_MAP, RM_STATUS_FRAGMENTS,
-  guessRmStatus, get17trackKey, prime17trackKey, fetchTrackingStatus,
+  TM_STATUS_MAP, TM_CARRIER_MAP,
+  getTrackingKey, fetchTrackingStatus,
   detectCourier,
   AdminTrackStatusCell, AdminTrackBadge, TrackingBlock,
   // Data hook

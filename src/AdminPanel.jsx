@@ -11,7 +11,7 @@ import {
   renderMd, stockLabel, fmtErr,
   gmtShort, fmtDate, uid,
   EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
-  prime17trackKey, detectCourier, trackKeyCache,
+  detectCourier, trackKeyCache,
   AdminTrackStatusCell, TrackingBlock,
   useMobile, GmtClock, QRScanner,
   sendEmail, sendTicketEmail, sendEventReminderEmail,
@@ -7573,9 +7573,9 @@ function AdminSettings({ showToast, cu }) {
   };
 
   const [squareAppId, setSquareAppId] = S("square_app_id");
-  const [trackApiKey, setTrackApiKey] = S("17track_api_key");
+  const [trackApiKey, setTrackApiKey] = S("trackingmore_api_key");
   // Seed the in-memory key cache as soon as the value loads from DB
-  React.useEffect(() => { if (trackApiKey) prime17trackKey(trackApiKey); }, [trackApiKey]);
+  React.useEffect(() => { if (trackApiKey) trackKeyCache.value = trackApiKey; }, [trackApiKey]);
   const [savingTrack, setSavingTrack] = useState(false);
   const [squareLocationId, setSquareLocationId] = S("square_location_id");
   const [squareEnv, setSquareEnv, sqLoaded] = S("square_env", "sandbox");
@@ -7706,30 +7706,30 @@ function AdminSettings({ showToast, cu }) {
         </div>
       </div>
 
-      {/* 17track */}
+      {/* TrackingMore */}
       <div className="card mb-2">
-        {sectionHead("📦 Parcel Tracking (17track)")}
+        {sectionHead("📦 Parcel Tracking (TrackingMore)")}
         <div className="form-group">
-          <label>17track API Key</label>
+          <label>TrackingMore API Key</label>
           <div style={{ position: "relative" }}>
             <input
               type="password"
               value={trackApiKey}
               onChange={e => { setTrackApiKey(e.target.value); trackKeyCache.value = undefined; }}
-              placeholder="Paste your 17track API key here"
+              placeholder="Paste your TrackingMore API key here"
             />
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
-            Get a free key at <a href="https://17track.net/en/api" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>17track.net/en/api</a> — free tier gives 100 tracking requests/month. Once saved, the STATUS column in Orders will show live courier statuses (In Transit, Delivered, etc.).
+            Get a free key at <a href="https://www.trackingmore.com/api" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>trackingmore.com/api</a> — the free tier gives 500 tracking requests/month and covers Royal Mail, DPD, Evri, Parcelforce, UPS, FedEx and more. Once saved, the STATUS column in Orders will show live courier statuses (In Transit, Delivered, etc.).
           </div>
         </div>
         <button className="btn btn-primary" disabled={savingTrack} onClick={async () => {
           setSavingTrack(true);
           try {
-            await api.settings.set("17track_api_key", trackApiKey.trim());
+            await api.settings.set("trackingmore_api_key", trackApiKey.trim());
             trackKeyCache.value = undefined;
-            showToast("✅ 17track API key saved!");
-            logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "17track API key saved", detail: null });
+            showToast("✅ TrackingMore API key saved!");
+            logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "TrackingMore API key saved", detail: null });
           } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
           finally { setSavingTrack(false); }
         }}>
@@ -7737,12 +7737,12 @@ function AdminSettings({ showToast, cu }) {
         </button>
         {trackApiKey && (
           <div className="alert alert-green mt-2" style={{ fontSize: 12 }}>
-            ✅ API key is set. Parcel tracking will show live status in the Orders table.
+            ✅ API key is set. Live tracking will show courier statuses in the Orders table.
           </div>
         )}
         {!trackApiKey && (
           <div className="alert mt-2" style={{ fontSize: 12, background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", color: "var(--muted)" }}>
-            No key set — tracking will attempt Royal Mail's public API as a fallback, but results may be limited.
+            No key set — tracking status will not be available. Add a free TrackingMore key above to enable it.
           </div>
         )}
       </div>
