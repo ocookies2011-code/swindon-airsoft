@@ -981,53 +981,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   SIGN WAIVER TO CONTINUE
                 </button>
               )}
-              {!bookingBlocked && payTotal > 0 && (() => {
-                // Use Shopify checkout if this event has variant IDs configured.
-                // VIP players get routed to the discounted VIP variant if set,
-                // falling back to the standard variant if VIP variant isn't configured.
-                const woVariant = (vipIsActive && ev.shopifyWalkOnVipVariantId)
-                  ? ev.shopifyWalkOnVipVariantId
-                  : ev.shopifyWalkOnVariantId;
-                const rnVariant = (vipIsActive && ev.shopifyRentalVipVariantId)
-                  ? ev.shopifyRentalVipVariantId
-                  : ev.shopifyRentalVariantId;
-                const hasShopify = (bCart.walkOn > 0 && woVariant) || (bCart.rental > 0 && rnVariant);
-
-                if (hasShopify) {
-                  const lineItems = [
-                    bCart.walkOn > 0 && woVariant && { variantId: woVariant, quantity: bCart.walkOn },
-                    bCart.rental > 0 && rnVariant && { variantId: rnVariant, quantity: bCart.rental },
-                  ].filter(Boolean);
-                  // Embed booking metadata in the order note so the webhook can create the booking
-                  const note = JSON.stringify({
-                    _sa: true,
-                    eventId:  ev.id,
-                    userId:   cu.id,
-                    userName: cu.name,
-                    walkOn:   bCart.walkOn,
-                    rental:   bCart.rental,
-                  });
-                  return (
-                    <ShopifyCheckoutButton
-                      lineItems={lineItems}
-                      note={note}
-                      amount={payTotal}
-                      description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
-                      disabled={bookingBusy}
-                      onError={msg => setSquareError(msg)}
-                    />
-                  );
-                }
-
-                return (
-                  <SquareCheckoutButton
-                    amount={payTotal}
-                    description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
-                    onSuccess={confirmBookingAfterPayment}
-                    disabled={bookingBusy}
-                  />
-                );
-              })()}
+              {!bookingBlocked && payTotal > 0 && (
+                <SquareCheckoutButton
+                  amount={payTotal}
+                  description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
+                  onSuccess={confirmBookingAfterPayment}
+                  disabled={bookingBusy}
+                />
+              )}
               {!bookingBlocked && payTotal === 0 && !cartEmpty && (
                 <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }}
                   disabled={bookingBusy}

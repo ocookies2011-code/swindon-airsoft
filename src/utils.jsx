@@ -204,87 +204,10 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 // Accepts multiple line items so walk-on + rental can be checked out together.
 // After payment, Shopify fires the orders/paid webhook → Supabase Edge Function
 // → booking record created in DB automatically.
-async function loadShopifyConfig() {
-  if (loadShopifyConfig._cache) return loadShopifyConfig._cache;
-  try {
-    const { supabase } = await import('./supabaseClient');
-    const { data: d } = await supabase
-      .from('site_settings').select('value').eq('key', 'shopify_store_domain').single();
-    loadShopifyConfig._cache = { domain: d?.value || null };
-  } catch { loadShopifyConfig._cache = { domain: null }; }
-  return loadShopifyConfig._cache;
-}
+// Shopify stubs — kept for import compatibility, not used
+async function loadShopifyConfig() { return { domain: null }; }
 loadShopifyConfig._cache = null;
-
-// Builds a Shopify cart permalink — no API token required.
-// Uses the /cart/{variantId}:{qty} URL format which is fully public.
-// Booking metadata is passed via the cart note so the webhook Edge Function
-// can read it and auto-create the booking record after payment.
-function buildShopifyCartUrl({ domain, lineItems, note }) {
-  const items = lineItems
-    .map(({ variantId, quantity }) => `${variantId}:${quantity}`)
-    .join(",");
-  const params = new URLSearchParams();
-  if (note) params.set("note", note);
-  params.set("return_to", window.location.href);
-  return `https://${domain}/cart/${items}?${params.toString()}`;
-}
-
-function ShopifyCheckoutButton({ lineItems, note, amount, description, disabled, onError }) {
-  const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState(null);
-
-  useEffect(() => {
-    loadShopifyConfig().then(setConfig);
-  }, []);
-
-  const handleClick = () => {
-    if (!config?.domain) {
-      onError?.("Shopify is not configured. Please contact admin.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const url = buildShopifyCartUrl({ domain: config.domain, lineItems, note });
-      window.location.href = url;
-    } catch (e) {
-      onError?.(e.message || "Failed to open checkout. Please try again.");
-      setLoading(false);
-    }
-  };
-
-  if (!config) return (
-    <div style={{ color:"var(--muted)", fontSize:12, padding:8, marginTop:12 }}>Loading checkout…</div>
-  );
-
-  if (!config.domain) return (
-    <div className="alert alert-red" style={{ marginTop:12, fontSize:12 }}>
-      ⚠ Shopify checkout is not configured. Contact the site admin.
-    </div>
-  );
-
-  return (
-    <div style={{ marginTop:12 }}>
-      <div style={{ background:"#0a0f05", border:"1px solid #2a3a10", padding:"10px 14px", marginBottom:10, fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", display:"flex", justifyContent:"space-between" }}>
-        <span>{description}</span>
-        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontSize:16 }}>£{Number(amount).toFixed(2)}</span>
-      </div>
-      <button
-        className="btn btn-primary"
-        style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".15em", opacity:(disabled || loading) ? .6 : 1, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
-        disabled={disabled || loading}
-        onClick={handleClick}>
-        {loading
-          ? "⏳ Opening Shopify checkout…"
-          : <>🛒 PAY ON SHOPIFY · £{Number(amount).toFixed(2)}</>
-        }
-      </button>
-      <div style={{ textAlign:"center", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", marginTop:6, letterSpacing:".1em" }}>
-        You will be redirected to Shopify to complete payment securely.
-      </div>
-    </div>
-  );
-}
+function ShopifyCheckoutButton() { return null; }
 
 // ── GMT helpers ───────────────────────────────────────────────
 const gmtNow = () => new Date().toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
