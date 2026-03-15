@@ -3027,6 +3027,37 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   );
 }
 
+// Renders a Q&A answer — splits on newlines and renders each line,
+// converting **bold** and *italic* inline markdown.
+function renderQAAnswer(text) {
+  if (!text) return null;
+  return text.split("\n").map((line, i) => {
+    // Convert **bold** and *italic*
+    const parts = [];
+    let remaining = line;
+    let key = 0;
+    while (remaining.length > 0) {
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      const italicMatch = remaining.match(/\*(.+?)\*/);
+      const firstBold = boldMatch ? remaining.indexOf(boldMatch[0]) : Infinity;
+      const firstItalic = italicMatch ? remaining.indexOf(italicMatch[0]) : Infinity;
+      if (boldMatch && firstBold <= firstItalic) {
+        if (firstBold > 0) parts.push(<span key={key++}>{remaining.slice(0, firstBold)}</span>);
+        parts.push(<strong key={key++} style={{ color: "#c8e878", fontWeight: 800 }}>{boldMatch[1]}</strong>);
+        remaining = remaining.slice(firstBold + boldMatch[0].length);
+      } else if (italicMatch && firstItalic < firstBold) {
+        if (firstItalic > 0) parts.push(<span key={key++}>{remaining.slice(0, firstItalic)}</span>);
+        parts.push(<em key={key++} style={{ color: "#9ab870" }}>{italicMatch[1]}</em>);
+        remaining = remaining.slice(firstItalic + italicMatch[0].length);
+      } else {
+        parts.push(<span key={key++}>{remaining}</span>);
+        break;
+      }
+    }
+    return <div key={i} style={{ marginBottom: line ? 4 : 8 }}>{parts}</div>;
+  });
+}
+
 function QAPage({ data }) {
   const [open, setOpen] = useState(null);
   return (
