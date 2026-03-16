@@ -1431,12 +1431,14 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     setBusy(true);
     try {
       await api.auth.signUp({ email: form.email, password: form.password, name: form.name, phone: form.phone });
-      showToast("Account created! Check your email to confirm.");
+      showToast("🎉 Account created! You can now log in.");
       // Send welcome email fire-and-forget — only on confirmed success, never blocks
       setTimeout(() => {
         sendWelcomeEmail({ name: form.name, email: form.email }).catch(() => {});
       }, 500);
-      onClose();
+      // Switch to login mode so player can sign in immediately
+      setMode("login");
+      setForm(p => ({ ...p, password: "" }));
     } catch (e) {
       console.error("Registration error:", e);
       const msg = e.message || "";
@@ -1488,7 +1490,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
             )}
             {mode === "register" && (
               <div className="alert alert-blue" style={{ marginBottom: 12 }}>
-                📧 You'll receive a confirmation email — click the link to activate your account.
+                📧 A welcome email will be sent once your account is created.
                 <br/><span style={{ fontSize: 11, opacity: .8 }}>🔒 Password: 8+ characters, must include at least one letter and one number.</span>
               </div>
             )}
