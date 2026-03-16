@@ -2859,7 +2859,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                     <td style={{ color: u.gamesAttended >= 3 ? "var(--accent)" : "var(--red)" }}>{u.gamesAttended} / 3</td>
                     <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
                     <td>
-                      <span className="tag tag-green" style={{ fontSize:11 }}>✓ £50 paid</span>
+                      <span className="tag tag-green" style={{ fontSize:11 }}>✓ £40 paid</span>
                     </td>
                     <td>
                       {u.vipIdImages?.length > 0 ? (
@@ -8541,7 +8541,7 @@ function TermsPage({ setPage }) {
             </div>
 
             <SectionTitle id="terms-8">8. VIP Membership</SectionTitle>
-            <Para>VIP membership is an annual subscription providing discounts and benefits as described on the VIP page. Membership fees are non-refundable once activated. Membership is personal and non-transferable. Swindon Airsoft reserves the right to revoke VIP status for breach of these terms without refund of the membership fee. Annual membership costs £50.</Para>
+            <Para>VIP membership is an annual subscription providing discounts and benefits as described on the VIP page. Membership fees are non-refundable once activated. Membership is personal and non-transferable. Swindon Airsoft reserves the right to revoke VIP status for breach of these terms without refund of the membership fee. Annual membership costs £40.</Para>
 
             <SectionTitle id="terms-card">9. Disciplinary Card System</SectionTitle>
             <Para>Swindon Airsoft operates a three-tier disciplinary card system to maintain a safe and fair playing environment for all participants. Cards may be issued by staff on game days or by admins for conduct off the field.</Para>
