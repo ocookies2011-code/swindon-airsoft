@@ -5579,44 +5579,25 @@ function AppInner() {
         <div style={{ position:"absolute", top:32, right:32, width:40, height:40, borderTop:"2px solid rgba(200,255,0,.2)", borderRight:"2px solid rgba(200,255,0,.2)" }}/>
         <div style={{ position:"absolute", bottom:32, left:32, width:40, height:40, borderBottom:"2px solid rgba(200,255,0,.2)", borderLeft:"2px solid rgba(200,255,0,.2)" }}/>
         <div style={{ position:"absolute", bottom:32, right:32, width:40, height:40, borderBottom:"2px solid rgba(200,255,0,.2)", borderRight:"2px solid rgba(200,255,0,.2)" }}/>
-        {/* Airsoft gun SVG */}
-        <div style={{ marginBottom:32, animation:"aimIn 0.6s ease-out forwards" }}>
-          <svg width="180" height="80" viewBox="0 0 180 80" fill="none">
-            {/* Stock */}
-            <rect x="2" y="34" width="38" height="12" rx="2" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
-            <rect x="6" y="37" width="28" height="2" rx="1" fill="#2a3a10"/>
-            <rect x="6" y="41" width="28" height="2" rx="1" fill="#2a3a10"/>
-            {/* Lower receiver */}
-            <rect x="38" y="30" width="72" height="20" rx="2" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
-            {/* Upper receiver */}
-            <rect x="42" y="18" width="68" height="14" rx="2" fill="#1e2e0c" stroke="#c8ff00" strokeWidth="1.2"/>
-            {/* Rail */}
-            <rect x="44" y="15" width="64" height="4" rx="1" fill="#222" stroke="#3a5010" strokeWidth="1"/>
-            {[0,8,16,24,32,40,48,56].map(x=><line key={x} x1={46+x} y1="15" x2={46+x} y2="19" stroke="#3a5010" strokeWidth="1"/>)}
-            {/* Barrel */}
-            <rect x="108" y="23" width="68" height="8" rx="1.5" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
-            {/* Muzzle */}
-            <rect x="172" y="21" width="8" height="12" rx="1" fill="#111" stroke="#c8ff00" strokeWidth="1.2"/>
-            <circle cx="176" cy="27" r="2.5" fill="#000" stroke="#c8ff00" strokeWidth="1"/>
-            {/* Grip */}
-            <path d="M68 50 L74 50 L80 70 L62 70 Z" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
-            <rect x="66" y="55" width="12" height="2" rx="1" fill="#2a3a10"/>
-            <rect x="65" y="59" width="13" height="2" rx="1" fill="#2a3a10"/>
-            <rect x="66" y="63" width="12" height="2" rx="1" fill="#2a3a10"/>
-            {/* Trigger guard */}
-            <path d="M88 50 Q94 62 100 50" stroke="#c8ff00" strokeWidth="1.2" fill="none"/>
-            {/* Trigger */}
-            <line x1="93" y1="50" x2="91" y2="60" stroke="#c8ff00" strokeWidth="1.5"/>
-            {/* Magazine */}
-            <rect x="50" y="50" width="14" height="28" rx="2" fill="#1a2808" stroke="#c8ff00" strokeWidth="1.2"/>
-            <rect x="52" y="53" width="10" height="3" rx="1" fill="#2a3a10"/>
-            <rect x="52" y="58" width="10" height="3" rx="1" fill="#2a3a10"/>
-            <rect x="52" y="63" width="10" height="3" rx="1" fill="#2a3a10"/>
-            {/* Sight */}
-            <rect x="66" y="13" width="16" height="6" rx="1" fill="#111" stroke="#c8ff00" strokeWidth="1"/>
-            <circle cx="74" cy="16" r="2" fill="none" stroke="#c8ff00" strokeWidth="1"/>
-            <line x1="74" y1="13" x2="74" y2="10" stroke="#c8ff00" strokeWidth="1" strokeDasharray="1 1"/>
-          </svg>
+        {/* Logo mark */}
+        <div style={{ marginBottom:32, display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+          {/* SA box — matches nav logo */}
+          <div style={{
+            width:80, height:80,
+            background:"#c8ff00",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:28,
+            color:"#000", letterSpacing:".05em",
+            animation:"aimIn 0.6s ease-out forwards",
+            position:"relative",
+          }}>
+            SA
+            {/* Corner accents */}
+            <div style={{ position:"absolute", top:-4, left:-4, width:10, height:10, borderTop:"2px solid #c8ff00", borderLeft:"2px solid #c8ff00" }}/>
+            <div style={{ position:"absolute", top:-4, right:-4, width:10, height:10, borderTop:"2px solid #c8ff00", borderRight:"2px solid #c8ff00" }}/>
+            <div style={{ position:"absolute", bottom:-4, left:-4, width:10, height:10, borderBottom:"2px solid #c8ff00", borderLeft:"2px solid #c8ff00" }}/>
+            <div style={{ position:"absolute", bottom:-4, right:-4, width:10, height:10, borderBottom:"2px solid #c8ff00", borderRight:"2px solid #c8ff00" }}/>
+          </div>
         </div>
         {/* Site name */}
         <div style={{ fontSize:32, fontWeight:900, letterSpacing:".12em", color:"#fff", textTransform:"uppercase", lineHeight:1, marginBottom:4 }}>
