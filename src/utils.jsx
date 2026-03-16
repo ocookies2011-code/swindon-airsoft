@@ -2546,11 +2546,10 @@ function CountdownPanel({ target }) {
 // ── Events Page ───────────────────────────────────────────
 // ── Send Ticket Email ────────────────────────────────────────
 // ── EmailJS shared helper ────────────────────────────────────
-// Keys should be set in .env as VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY
-// The fallback values below work but are visible in source — move to .env for production
-const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID  || "service_np4zvqs";
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_d84acm9";
-const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY  || "jC6heZ9LvgHiaHTFq";
+// Keys must be set in .env as VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY
+const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID  || "";
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "";
+const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY  || "";
 async function sendEmail({ toEmail, toName, subject, htmlContent }) {
   if (!toEmail) throw new Error("No email address");
   if (!window.emailjs) {

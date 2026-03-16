@@ -10,7 +10,6 @@ import {
   gmtNow, gmtDate, gmtShort, fmtDate, uid,
   CSS,
   loadSquareConfig, SquareCheckoutButton,
-  ShopifyCheckoutButton,
   TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS,
   detectCourier, TrackingBlock,
   useData,
