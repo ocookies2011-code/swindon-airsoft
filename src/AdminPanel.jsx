@@ -1171,6 +1171,7 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
 function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
   const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [resendBusy, setResendBusy] = useState({}); // bookingId -> true while sending
 
   const openWaitlist = async (ev) => {
     setWaitlistLoading(true);
@@ -1203,6 +1204,26 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     }
     showToast(`📧 Waitlist emailed: ${sent} sent${failed > 0 ? `, ${failed} failed` : ""}. Slots held for 30 mins.`);
   };
+
+  const resendTicket = async (b, ev) => {
+    const player = data.users.find(u => u.id === b.userId);
+    if (!player?.email) { showToast("No email address found for this player.", "red"); return; }
+    setResendBusy(prev => ({ ...prev, [b.id]: true }));
+    try {
+      await sendTicketEmail({
+        cu: player,
+        ev,
+        bookings: [{ id: b.id, type: b.type, qty: b.qty, total: b.total }],
+        extras: b.extras || {},
+      });
+      showToast(`📧 Ticket resent to ${player.email}`);
+    } catch (e) {
+      showToast("Failed to resend ticket: " + e.message, "red");
+    } finally {
+      setResendBusy(prev => ({ ...prev, [b.id]: false }));
+    }
+  };
+
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="events" && ["events","bookings","checkin"].includes(p[2]) ? p[2] : "events";
@@ -1742,6 +1763,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                             }
                             <button onClick={downloadTicket} style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", borderRadius:2, whiteSpace:"nowrap" }}>
                               ⬇ Ticket
+                            </button>
+                            <button
+                              onClick={() => resendTicket(b, ev)}
+                              disabled={resendBusy[b.id]}
+                              style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.25)", color: resendBusy[b.id] ? "#555" : "#4fc3f7", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id] ? "default" : "pointer", borderRadius:2, whiteSpace:"nowrap" }}
+                            >
+                              {resendBusy[b.id] ? "…" : "📧 Resend"}
                             </button>
                           </div>
                         </td>
