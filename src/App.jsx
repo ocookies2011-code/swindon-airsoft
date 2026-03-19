@@ -4489,12 +4489,14 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                         </div>
                       )}
                       {i > 0 && (
-                        <button onClick={() => {
-                          const updated = (cu.extraWaivers || []).filter((_, ei) => ei !== i - 1);
-                          updateUser(cu.id, { extraWaivers: updated });
-                          showToast("Waiver removed");
+                        <button onClick={async () => {
+                          if (!window.confirm("Request removal of this additional player waiver? An admin will need to approve before it's deleted.")) return;
+                          // Store removal request in waiverPending as a special marker
+                          const removalRequest = { _removeExtra: true, _extraIndex: i - 1, _playerName: w.name, _requestedAt: new Date().toISOString() };
+                          await updateUser(cu.id, { waiverPending: removalRequest });
+                          showToast("Removal request submitted — awaiting admin approval.");
                         }} style={{ background:"none", border:"1px solid var(--red)", color:"var(--red)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
-                          🗑 REMOVE
+                          🗑 REQUEST REMOVAL
                         </button>
                       )}
                     </div>

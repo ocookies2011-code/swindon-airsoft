@@ -3474,9 +3474,19 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
     : withWaiver;
 
   const approve = (u) => {
-    updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
-    showToast("Waiver changes approved!"); setView(null);
-    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver changes approved", detail: u.name });
+    // Check if this is a removal request
+    if (u.waiverPending?._removeExtra) {
+      const idx = u.waiverPending._extraIndex;
+      const updated = (u.extraWaivers || []).filter((_, ei) => ei !== idx);
+      updateUser(u.id, { extraWaivers: updated, waiverPending: null });
+      showToast("Waiver removal approved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Extra waiver removal approved", detail: `Player: ${u.name} — removed: ${u.waiverPending._playerName}` });
+    } else {
+      updateUser(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
+      showToast("Waiver changes approved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver changes approved", detail: u.name });
+    }
+    setView(null);
   };
   const reject = (u) => {
     updateUser(u.id, { waiverPending: null }); showToast("Changes rejected"); setView(null);
@@ -3510,7 +3520,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
                   <td>{u.waiverSigned ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
                   <td>{u.waiverYear || "—"}</td>
                   <td>{totalWaivers > 1 ? <span className="tag tag-blue">{totalWaivers} players</span> : <span style={{ color:"var(--muted)", fontSize:12 }}>1</span>}</td>
-                  <td>{u.waiverPending ? <span className="tag tag-gold">⚠ Pending</span> : "—"}</td>
+                  <td>{u.waiverPending ? (u.waiverPending._removeExtra ? <span className="tag tag-red">🗑 Removal</span> : <span className="tag tag-gold">⚠ Pending</span>) : "—"}</td>
                   <td><button className="btn btn-sm btn-ghost" onClick={() => setView(u.id)}>View</button></td>
                 </tr>
               );
@@ -3577,23 +3587,39 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
               {/* Pending changes */}
               {vw.waiverPending && (
                 <div style={{ marginTop:16, padding:16, background:"#1a1200", border:"1px solid #4a3800", borderRadius:4 }}>
-                  <div className="alert alert-gold mb-2">⚠️ Player has submitted waiver changes for approval</div>
-                  <div style={{ fontSize:11, letterSpacing:".1em", fontWeight:700, color:"var(--muted)", marginBottom:10 }}>PROPOSED CHANGES</div>
-                  {waiverFields(vw.waiverPending).map(([k, v]) => {
-                    const oldVal = vw.waiverData ? waiverFields(vw.waiverData).find(([ok]) => ok === k)?.[1] : null;
-                    const changed = oldVal !== null && v !== oldVal;
-                    return (
-                      <div key={k} style={{ display:"flex", gap:12, padding: changed ? "7px 8px" : "7px 0", borderBottom:"1px solid var(--border)", fontSize:13, background: changed ? "#2d1e0a" : "transparent", borderRadius: changed ? 4 : 0 }}>
-                        <span className="text-muted" style={{ minWidth:140 }}>{k}:</span>
-                        <span style={{ color: changed ? "var(--gold)" : "var(--text)" }}>{v}</span>
-                        {changed && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:"auto" }}>CHANGED</span>}
+                  {vw.waiverPending._removeExtra ? (
+                    <>
+                      <div className="alert alert-red mb-2">🗑 Player has requested removal of an additional waiver</div>
+                      <div style={{ fontSize:13, color:"var(--muted)", marginBottom:12 }}>
+                        Request to remove waiver for: <strong style={{ color:"var(--text)" }}>{vw.waiverPending._playerName}</strong><br/>
+                        <span style={{ fontSize:11 }}>Requested: {gmtShort(vw.waiverPending._requestedAt)}</span>
                       </div>
-                    );
-                  })}
-                  <div className="gap-2 mt-2">
-                    <button className="btn btn-primary" onClick={() => approve(vw)}>Approve Changes</button>
-                    <button className="btn btn-danger" onClick={() => reject(vw)}>Reject</button>
-                  </div>
+                      <div className="gap-2 mt-2">
+                        <button className="btn btn-danger" onClick={() => approve(vw)}>Approve Removal</button>
+                        <button className="btn btn-ghost" onClick={() => reject(vw)}>Reject</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="alert alert-gold mb-2">⚠️ Player has submitted waiver changes for approval</div>
+                      <div style={{ fontSize:11, letterSpacing:".1em", fontWeight:700, color:"var(--muted)", marginBottom:10 }}>PROPOSED CHANGES</div>
+                      {waiverFields(vw.waiverPending).map(([k, v]) => {
+                        const oldVal = vw.waiverData ? waiverFields(vw.waiverData).find(([ok]) => ok === k)?.[1] : null;
+                        const changed = oldVal !== null && v !== oldVal;
+                        return (
+                          <div key={k} style={{ display:"flex", gap:12, padding: changed ? "7px 8px" : "7px 0", borderBottom:"1px solid var(--border)", fontSize:13, background: changed ? "#2d1e0a" : "transparent", borderRadius: changed ? 4 : 0 }}>
+                            <span className="text-muted" style={{ minWidth:140 }}>{k}:</span>
+                            <span style={{ color: changed ? "var(--gold)" : "var(--text)" }}>{v}</span>
+                            {changed && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:"auto" }}>CHANGED</span>}
+                          </div>
+                        );
+                      })}
+                      <div className="gap-2 mt-2">
+                        <button className="btn btn-primary" onClick={() => approve(vw)}>Approve Changes</button>
+                        <button className="btn btn-danger" onClick={() => reject(vw)}>Reject</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
