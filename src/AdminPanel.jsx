@@ -936,6 +936,10 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
   const [delConfirm, setDelConfirm] = useState(null);
   const [viewBooking, setViewBooking] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [refundModal, setRefundModal] = useState(null); // { booking }
+  const [refundAmt, setRefundAmt] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [refunding, setRefunding] = useState(false);
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
     document.addEventListener("visibilitychange", onVisible);
@@ -988,6 +992,34 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
     finally { setBusy(false); }
   };
 
+  const doRefundBooking = async () => {
+    const { booking } = refundModal;
+    const amt = parseFloat(refundAmt);
+    if (isNaN(amt) || amt <= 0) { showToast("Enter a valid refund amount", "red"); return; }
+    if (amt > booking.total) { showToast("Refund amount exceeds booking total", "red"); return; }
+    if (!booking.squareOrderId) { showToast("No Square payment ID on this booking — refund manually in your Square Dashboard.", "red"); return; }
+    setRefunding(true);
+    try {
+      const locationId = await api.settings.get("square_location_id");
+      const isFullRefund = Math.abs(amt - booking.total) < 0.01;
+      await squareRefund({ squarePaymentId: booking.squareOrderId, amount: isFullRefund ? null : amt, locationId });
+      // Record refund on the booking row
+      await supabase.from('bookings').update({
+        refund_amount: amt,
+        refund_note: refundNote || null,
+        refunded_at: new Date().toISOString(),
+      }).eq('id', booking.id);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast(`✅ Refund of £${amt.toFixed(2)} issued via Square!`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: `Booking ID: ${booking.id} — ${booking.userName} | Refund: £${amt.toFixed(2)}${refundNote ? ` | Note: ${refundNote}` : ""}` });
+      setRefundModal(null);
+      setRefundAmt(""); setRefundNote("");
+    } catch (e) {
+      showToast("❌ Refund failed: " + (e.message || String(e)), "red");
+    } finally { setRefunding(false); }
+  };
+
   return (
     <div className="card">
       <div style={{ marginBottom: 12 }}>
@@ -1037,6 +1069,12 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
                   )}
                   <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking(b)}>View</button>
                   <button className="btn btn-sm btn-ghost" onClick={() => openEdit(b)}>Edit</button>
+                  {b.squareOrderId && b.total > 0 && (
+                    <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
+                      onClick={() => { setRefundModal({ booking: b }); setRefundAmt(b.total.toFixed(2)); setRefundNote(""); }}>
+                      £ Refund
+                    </button>
+                  )}
                   <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(b)}>Del</button>
                 </div>
               </td>
@@ -1160,6 +1198,39 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
                 {busy ? "Deleting…" : "Yes, Delete"}
               </button>
               <button className="btn btn-ghost" onClick={() => setDelConfirm(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {refundModal && (
+        <div className="overlay" onClick={() => !refunding && setRefundModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">💸 Refund Booking</div>
+            <div style={{ background:"var(--bg3)", border:"1px solid var(--border)", padding:"12px 14px", borderRadius:4, marginBottom:16 }}>
+              <div style={{ fontWeight:700 }}>{refundModal.booking.userName}</div>
+              <div style={{ color:"var(--muted)", marginTop:2, fontSize:13 }}>{refundModal.booking.eventTitle} — {refundModal.booking.type === "walkOn" ? "Walk-On" : "Rental"} ×{refundModal.booking.qty}</div>
+              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>Square ref: {refundModal.booking.squareOrderId}</div>
+            </div>
+            <div className="form-group">
+              <label>Refund Amount (£)</label>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                <input type="number" step="0.01" min="0.01" max={refundModal.booking.total}
+                  value={refundAmt} onChange={e => setRefundAmt(e.target.value)} autoFocus style={{ maxWidth:120 }} />
+                <button className="btn btn-sm btn-ghost" onClick={() => setRefundAmt(refundModal.booking.total.toFixed(2))}>Full £{refundModal.booking.total.toFixed(2)}</button>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Note (optional)</label>
+              <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Event cancelled, player request" />
+            </div>
+            <p style={{ fontSize:12, color:"var(--red)", marginBottom:16 }}>⚠️ This will immediately issue a refund via Square. This cannot be undone.</p>
+            <div className="gap-2">
+              <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
+                onClick={doRefundBooking} disabled={refunding}>
+                {refunding ? "⏳ Processing…" : `✓ Confirm Refund · £${parseFloat(refundAmt||0).toFixed(2)}`}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setRefundModal(null)} disabled={refunding}>Cancel</button>
             </div>
           </div>
         </div>
@@ -5416,6 +5487,10 @@ function AdminRevenue({ data, save, showToast, cu }) {
       if (t.source === "cash") {
         await api.cashSales.delete(t.id);
         await reloadCash();
+      } else if (t.source === "shop") {
+        await supabase.from('shop_orders').delete().eq('id', t.id);
+        const freshOrders = await api.shopOrders.getAll();
+        setShopOrders(freshOrders);
       } else {
         // Online booking — delete from bookings table then refresh events
         await api.bookings.delete(t.id);
@@ -5455,6 +5530,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
     total: Number(b.total),
     date: b.date || b.created_at,
     checkedIn: b.checkedIn,
+    squareOrderId: b.squareOrderId || null,
   })));
 
   const shopRevenue = shopOrders
@@ -5606,7 +5682,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                 <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
                 <td onClick={e => e.stopPropagation()} style={{ display:"flex", gap:6, alignItems:"center" }}>
                   <button className="btn btn-sm btn-ghost" onClick={() => setSelected(t)}>Detail →</button>
-                  {t.source !== "shop" && <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>}
+                  <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>
                 </td>
               </tr>
             ))}
@@ -5658,10 +5734,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
             </table></div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              {selected.source !== "shop"
-                ? <button className="btn btn-danger btn-sm" onClick={() => { setDelConfirm(selected); }}>🗑 Delete Transaction</button>
-                : <span style={{ fontSize: 12, color: "var(--muted)" }}>Manage shop orders via the Shop section</span>
-              }
+              <button className="btn btn-danger btn-sm" onClick={() => { setDelConfirm(selected); }}>🗑 Delete Transaction</button>
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
                 <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
                 <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
@@ -5681,6 +5754,8 @@ function AdminRevenue({ data, save, showToast, cu }) {
               <div style={{ fontSize:12, color:"var(--muted)" }}>
                 {delConfirm.source === "cash"
                   ? `Cash Sale — ${delConfirm.items?.length || 0} item(s)`
+                  : delConfirm.source === "shop"
+                  ? `Shop Order — ${delConfirm.items?.length || 0} item(s)`
                   : `${delConfirm.eventTitle} — ${delConfirm.ticketType} ×${delConfirm.qty}`
                 }
               </div>

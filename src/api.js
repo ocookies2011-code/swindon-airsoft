@@ -598,15 +598,16 @@ function normaliseEvent(ev) {
         return { id: ex.id, name, price: Number(ex.price), noPost: ex.no_post, productId, variantId }
       }),
     bookings: (ev.bookings || []).map(b => ({
-      id:        b.id,
-      userId:    b.user_id,
-      userName:  b.user_name,
-      type:      b.ticket_type,
-      qty:       b.qty,
-      extras:    b.extras,
-      total:     Number(b.total),
-      checkedIn: b.checked_in,
-      date:      b.created_at,
+      id:            b.id,
+      userId:        b.user_id,
+      userName:      b.user_name,
+      type:          b.ticket_type,
+      qty:           b.qty,
+      extras:        b.extras,
+      total:         Number(b.total),
+      checkedIn:     b.checked_in,
+      date:          b.created_at,
+      squareOrderId: b.square_order_id || null,
     }))
   }
 }
