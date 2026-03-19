@@ -145,8 +145,20 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sourceId, amount: amountPence, currency: "GBP", note: description }),
       });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Payment failed.");
+
+      // Safely parse JSON — empty or non-JSON responses (502, 504, timeouts) must not crash
+      let data = {};
+      try {
+        const text = await res.text();
+        if (text) data = JSON.parse(text);
+      } catch {
+        // Response body was not valid JSON — treat as a server error
+      }
+
+      if (!res.ok || data.error) {
+        const msg = data.error || (res.status === 504 ? "Payment timed out — please try again." : res.status === 502 ? "Payment server unavailable — please try again." : `Payment failed (${res.status}).`);
+        throw new Error(msg);
+      }
       onSuccess({ id: data.paymentId, status: "COMPLETED" });
     } catch (e) {
       setSqError(e.message || "Payment failed. Please try again.");

@@ -925,7 +925,11 @@ export async function squareRefund({ squarePaymentId, amount, locationId }) {
       reason: 'Refund from Swindon Airsoft',
     }),
   })
-  const data = await res.json()
+  let data = {}
+  try {
+    const text = await res.text()
+    if (text) data = JSON.parse(text)
+  } catch {}
   if (!res.ok || data.error) throw new Error(data.error || 'Square refund failed: ' + res.status)
   return data
 }
