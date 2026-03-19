@@ -15,6 +15,7 @@ import {
   AdminTrackStatusCell, TrackingBlock,
   useMobile, GmtClock, QRScanner,
   sendEmail, sendTicketEmail, sendEventReminderEmail,
+  sendAdminBookingNotification,
   sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
   sendReturnDecisionEmail,
   WaiverModal,
@@ -1456,6 +1457,16 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         const emailBookings = [{ id: newBooking.id, type: addBookingForm.type, qty: addBookingForm.qty, total: 0 }];
         await sendTicketEmail({ cu: player, ev: targetEv, bookings: emailBookings, extras: Object.fromEntries(Object.entries(addBookingForm.extras).filter(([,v]) => v > 0)) });
         showToast("📧 Confirmation email sent to " + player.email);
+        // Notify admin — fire-and-forget
+        api.settings.get("contact_email").then(adminEmail => {
+          if (adminEmail) sendAdminBookingNotification({
+            adminEmail,
+            cu: player,
+            ev: targetEv,
+            bookings: emailBookings,
+            total: 0,
+          }).catch(() => {});
+        }).catch(() => {});
       } catch (emailErr) {
         showToast("Email failed: " + (emailErr?.message || String(emailErr)), "red");
       }
