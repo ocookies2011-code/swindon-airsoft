@@ -7858,6 +7858,7 @@ function AdminSettings({ showToast, cu }) {
   const [savingTrack, setSavingTrack] = useState(false);
   const [squareLocationId, setSquareLocationId] = S("square_location_id");
   const [squareEnv, setSquareEnv, sqLoaded] = S("square_env", "sandbox");
+  const [squareTerminalDeviceId, setSquareTerminalDeviceId] = S("square_terminal_device_id");
   const [savingSQ, setSavingSQ] = useState(false);
   const [showAppId, setShowAppId] = useState(false);
 
@@ -7886,6 +7887,7 @@ function AdminSettings({ showToast, cu }) {
       await api.settings.set("square_app_id", squareAppId.trim());
       await api.settings.set("square_location_id", squareLocationId.trim());
       await api.settings.set("square_env", squareEnv);
+      await api.settings.set("square_terminal_device_id", squareTerminalDeviceId.trim());
       // Access token is stored in Supabase Edge Function secrets, not the DB
       _squareConfigLoaded = false;
       showToast("✅ Square settings saved! Changes take effect on next checkout.");
@@ -8064,6 +8066,20 @@ function AdminSettings({ showToast, cu }) {
           />
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>
             Found in Square Dashboard → <strong style={{ color: "var(--text)" }}>Locations</strong>. Each business location has a unique ID.
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Terminal Device ID <span style={{ color:"var(--muted)", fontSize:11, fontWeight:400 }}>— for Cash Sales terminal payments</span></label>
+          <input
+            value={squareTerminalDeviceId}
+            onChange={e => setSquareTerminalDeviceId(e.target.value)}
+            placeholder="device:... (from Square Dashboard → Devices)"
+          />
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.7 }}>
+            Found in <a href="https://squareup.com/dashboard/devices" target="_blank" rel="noreferrer" style={{ color:"var(--accent)" }}>Square Dashboard → Devices</a>.
+            Click your Terminal → copy the <strong style={{ color:"var(--text)" }}>Device ID</strong> (starts with <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px", borderRadius:2 }}>device:</code>).
+            Leave blank to hide the terminal option in Cash Sales.
           </div>
         </div>
 
@@ -8387,7 +8403,22 @@ function AdminCash({ data, cu, showToast }) {
   const [busy, setBusy] = useState(false);
   const [lastError, setLastError] = useState(null);
   const [diagResult, setDiagResult] = useState(null);
+
+  // ── Payment method: "cash" | "terminal"
+  const [payMethod, setPayMethod] = useState("cash");
+
+  // ── Terminal state
+  const [terminalDeviceId, setTerminalDeviceId] = useState(""); // from settings
+  const [squareEnv, setSquareEnv] = useState("production");
+  const [terminalCheckoutId, setTerminalCheckoutId] = useState(null); // active checkout
+  const [terminalStatus, setTerminalStatus] = useState(null); // PENDING|IN_PROGRESS|COMPLETED|CANCELLED
+  const [terminalPaymentId, setTerminalPaymentId] = useState(null);
+  const [terminalPolling, setTerminalPolling] = useState(false);
+  const [terminalBusy, setTerminalBusy] = useState(false);
+  const pollRef = useRef(null);
+
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
     document.addEventListener("visibilitychange", onVisible);
@@ -8398,7 +8429,13 @@ function AdminCash({ data, cu, showToast }) {
     api.shop.getAll()
       .then(list => { setShopProducts(list); setShopLoading(false); })
       .catch(() => { setShopProducts(data.shop || []); setShopLoading(false); });
+    // Load terminal device ID + env from settings
+    api.settings.get("square_terminal_device_id").then(v => { if (v) setTerminalDeviceId(v); }).catch(() => {});
+    api.settings.get("square_env").then(v => { if (v) setSquareEnv(v); }).catch(() => {});
   }, []);
+
+  // Clear polling on unmount
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   const add = (item) => setItems(c => {
     const ex = c.find(x => x.id === item.id);
@@ -8417,62 +8454,161 @@ function AdminCash({ data, cu, showToast }) {
     }
   };
 
-  const completeSale = async () => {
+  // ── Invoke the square-terminal Edge Function ──────────
+  const terminalInvoke = async (body) => {
+    const { data: d, error } = await supabase.functions.invoke("square-terminal", {
+      body: { ...body, env: squareEnv },
+    });
+    if (error) throw new Error(error.message || "Terminal function error");
+    if (d?.error) throw new Error(d.error);
+    return d;
+  };
+
+  // ── Save the completed sale to DB ─────────────────────
+  const saveSaleToDB = async (squarePaymentId = null) => {
+    const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+    const payload = {
+      customer_name:  player ? player.name : (manual.name || "Walk-in"),
+      customer_email: player ? (player.email || "") : (manual.email || ""),
+      user_id:        player?.id ?? null,
+      items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      total,
+      payment_method: squarePaymentId ? "terminal" : "cash",
+      square_payment_id: squarePaymentId || null,
+    };
+    const insertPromise = supabase.from('cash_sales').insert(payload).select();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("TIMEOUT")), 6000)
+    );
+    const { data: result, error } = await Promise.race([insertPromise, timeoutPromise]);
+    if (error) {
+      const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
+      throw new Error("DB Error: " + msg);
+    }
+    // Deduct stock
+    for (const item of items) {
+      await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
+    }
+    const cashPlayer = playerId !== "manual" ? data.users?.find(u => u.id === playerId) : null;
+    const cashCustomer = cashPlayer ? cashPlayer.name : (manual.name || "Walk-in");
+    const cashItems = items.map(i => `${i.name} x${i.qty} (£${Number(i.price * i.qty).toFixed(2)})`).join(", ");
+    const method = squarePaymentId ? "Terminal" : "Cash";
+    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: ${cashCustomer} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
+  };
+
+  const resetSale = () => {
+    setItems([]);
+    setManual({ name: "", email: "" });
+    setPlayerId("manual");
+    setLastError(null);
+    setDiagResult(null);
+    setTerminalCheckoutId(null);
+    setTerminalStatus(null);
+    setTerminalPaymentId(null);
+    setTerminalPolling(false);
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  };
+
+  // ── Cash payment ──────────────────────────────────────
+  const completeCashSale = async () => {
     if (items.length === 0) { showToast("Add items first", "red"); return; }
     setLastError(null);
     setBusy(true);
-
     try {
-      const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
-      const payload = {
-        customer_name:  player ? player.name : (manual.name || "Walk-in"),
-        customer_email: player ? (player.email || "") : (manual.email || ""),
-        user_id:        player?.id ?? null,
-        items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
-        total,
-      };
-
-      // Race the insert against a 6s timeout — whichever settles first wins
-      const insertPromise = supabase.from('cash_sales').insert(payload).select();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 6000)
-      );
-
-      const { data: result, error } = await Promise.race([insertPromise, timeoutPromise]);
-
-      if (error) {
-        const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
-        setLastError("DB Error: " + msg);
-        showToast("Failed: " + msg.slice(0, 80), "red");
-        return;
-      }
-
-      // Deduct stock
-      for (const item of items) {
-        await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
-      }
-      showToast(`✅ Sale £${total.toFixed(2)} saved!`);
-      const cashPlayer = playerId !== "manual" ? data.users?.find(u => u.id === playerId) : null;
-      const cashCustomer = cashPlayer ? cashPlayer.name : (manual.name || "Walk-in");
-      const cashItems = items.map(i => `${i.name} x${i.qty} (£${Number(i.price * i.qty).toFixed(2)})`).join(", ");
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Cash sale recorded", detail: `Customer: ${cashCustomer} | Total: £${total.toFixed(2)} | Items: ${cashItems}` });
-      setItems([]);
-      setManual({ name: "", email: "" });
-      setPlayerId("manual");
-      setLastError(null);
-      setDiagResult(null);
-
+      await saveSaleToDB(null);
+      showToast(`✅ Cash sale £${total.toFixed(2)} saved!`);
+      resetSale();
     } catch (e) {
-      const isTimed = e.message === "TIMEOUT";
+      const isTimed = e.message.includes("TIMEOUT");
       const msg = isTimed
         ? "Insert timed out — RLS is blocking the write. Run master-rls-admin-only.sql in Supabase SQL Editor, then click 'Test Table Access' below to confirm."
-        : "Exception: " + e.message;
+        : e.message;
       setLastError(msg);
       showToast(isTimed ? "RLS blocking insert — see error below" : "Error: " + e.message, "red");
     } finally {
       setBusy(false);
     }
   };
+
+  // ── Terminal: send checkout to device ────────────────
+  const startTerminalCheckout = async () => {
+    if (items.length === 0) { showToast("Add items first", "red"); return; }
+    if (!terminalDeviceId) { showToast("No Terminal Device ID configured — add it in Settings → Square", "red"); return; }
+    setTerminalBusy(true);
+    setLastError(null);
+    setTerminalStatus("PENDING");
+    setTerminalCheckoutId(null);
+    setTerminalPaymentId(null);
+    try {
+      const locationId = await api.settings.get("square_location_id");
+      const amountPence = Math.round(total * 100);
+      const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+      const customerName = player ? player.name : (manual.name || "Walk-in");
+      const note = `Swindon Airsoft — ${customerName} — ${items.map(i => `${i.name} x${i.qty}`).join(", ")}`;
+      const result = await terminalInvoke({
+        action: "create",
+        deviceId: terminalDeviceId,
+        amount: amountPence,
+        currency: "GBP",
+        note: note.slice(0, 200),
+        locationId,
+      });
+      setTerminalCheckoutId(result.checkoutId);
+      setTerminalStatus(result.status || "PENDING");
+      showToast("📟 Payment sent to terminal — waiting for customer…");
+      // Start polling every 3 seconds
+      setTerminalPolling(true);
+      pollRef.current = setInterval(() => pollTerminal(result.checkoutId), 3000);
+    } catch (e) {
+      setTerminalStatus(null);
+      setLastError("Terminal error: " + e.message);
+      showToast("Terminal error: " + e.message, "red");
+    } finally {
+      setTerminalBusy(false);
+    }
+  };
+
+  // ── Terminal: poll for status ─────────────────────────
+  const pollTerminal = async (checkoutId) => {
+    try {
+      const result = await terminalInvoke({ action: "get", checkoutId });
+      setTerminalStatus(result.status);
+      if (result.status === "COMPLETED") {
+        clearInterval(pollRef.current); pollRef.current = null;
+        setTerminalPolling(false);
+        setTerminalPaymentId(result.paymentId);
+        // Save to DB with the Square payment ID
+        try {
+          await saveSaleToDB(result.paymentId);
+          showToast(`✅ Terminal payment £${total.toFixed(2)} confirmed!`);
+          resetSale();
+        } catch (dbErr) {
+          setLastError("Payment taken but DB save failed: " + dbErr.message);
+          showToast("Payment taken but DB save failed — see error below", "red");
+        }
+      } else if (result.status === "CANCELLED" || result.status === "CANCEL_REQUESTED") {
+        clearInterval(pollRef.current); pollRef.current = null;
+        setTerminalPolling(false);
+        showToast("❌ Terminal payment cancelled.", "red");
+      }
+    } catch { /* polling errors are non-fatal — keep trying */ }
+  };
+
+  // ── Terminal: cancel checkout ─────────────────────────
+  const cancelTerminalCheckout = async () => {
+    if (!terminalCheckoutId) return;
+    try {
+      await terminalInvoke({ action: "cancel", checkoutId: terminalCheckoutId });
+      clearInterval(pollRef.current); pollRef.current = null;
+      setTerminalPolling(false);
+      setTerminalStatus("CANCELLED");
+      showToast("Terminal payment cancelled.");
+    } catch (e) {
+      showToast("Cancel failed: " + e.message, "red");
+    }
+  };
+
+  const terminalActive = terminalPolling || terminalStatus === "PENDING" || terminalStatus === "IN_PROGRESS";
 
   return (
     <div>
@@ -8490,6 +8626,29 @@ function AdminCash({ data, cu, showToast }) {
           <strong>Diagnostic:</strong> {diagResult}
         </div>
       )}
+
+      {/* ── Active terminal checkout status banner ── */}
+      {terminalActive && (
+        <div style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.35)", borderRadius:6, padding:"14px 18px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+          <div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".08em", color:"#4fc3f7", marginBottom:4 }}>
+              📟 TERMINAL CHECKOUT — {terminalStatus || "PENDING"}
+            </div>
+            <div style={{ fontSize:12, color:"var(--muted)" }}>
+              {terminalStatus === "PENDING" && "Sending to device…"}
+              {terminalStatus === "IN_PROGRESS" && "Waiting for customer to pay on the terminal…"}
+              <span style={{ fontFamily:"monospace", fontSize:10, marginLeft:8, color:"#2a3a50" }}>{terminalCheckoutId}</span>
+            </div>
+          </div>
+          <button className="btn btn-sm btn-danger" onClick={cancelTerminalCheckout}>
+            ✕ Cancel
+          </button>
+        </div>
+      )}
+      {terminalStatus === "CANCELLED" && (
+        <div className="alert alert-red mb-2" style={{ fontSize:12 }}>❌ Terminal payment was cancelled. You can retry or switch to cash.</div>
+      )}
+
       <div className="grid-2">
         <div className="card">
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", color: "var(--muted)", marginBottom: 12 }}>PRODUCTS</div>
@@ -8559,12 +8718,60 @@ function AdminCash({ data, cu, showToast }) {
                 </div>
               ))
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: 22, marginTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: 22, marginTop: 12, marginBottom: 16 }}>
               <span>TOTAL</span><span className="text-green">£{total.toFixed(2)}</span>
             </div>
-            <button className="btn btn-primary mt-2" style={{ width: "100%", padding: 10 }} disabled={busy} onClick={completeSale}>
-              {busy ? "Saving…" : "Complete Sale"}
-            </button>
+
+            {/* ── Payment method selector ── */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", letterSpacing: ".08em", marginBottom: 8 }}>PAYMENT METHOD</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {["cash", "terminal"].map(m => {
+                  const isTerminal = m === "terminal";
+                  const unavailable = isTerminal && !terminalDeviceId;
+                  return (
+                    <button key={m}
+                      onClick={() => !unavailable && setPayMethod(m)}
+                      title={unavailable ? "No Terminal Device ID set — go to Settings → Square" : ""}
+                      style={{
+                        flex: 1, padding: "10px 8px", borderRadius: 4, cursor: unavailable ? "not-allowed" : "pointer",
+                        fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em",
+                        textTransform: "uppercase", border: "1px solid",
+                        background: payMethod === m ? (isTerminal ? "rgba(79,195,247,.15)" : "rgba(200,255,0,.12)") : "var(--card)",
+                        color: unavailable ? "var(--muted)" : payMethod === m ? (isTerminal ? "#4fc3f7" : "var(--accent)") : "var(--muted)",
+                        borderColor: payMethod === m ? (isTerminal ? "rgba(79,195,247,.5)" : "rgba(200,255,0,.4)") : "var(--border)",
+                        opacity: unavailable ? 0.45 : 1,
+                      }}>
+                      {isTerminal ? "📟 Terminal" : "💵 Cash"}
+                      {isTerminal && !terminalDeviceId && <div style={{ fontSize: 9, fontWeight: 400, marginTop: 2, textTransform: "none", letterSpacing: 0 }}>Not configured</div>}
+                    </button>
+                  );
+                })}
+              </div>
+              {payMethod === "terminal" && terminalDeviceId && (
+                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 6, fontFamily: "monospace" }}>
+                  Device: {terminalDeviceId} · {squareEnv}
+                </div>
+              )}
+            </div>
+
+            {/* ── Action buttons ── */}
+            {payMethod === "cash" ? (
+              <button className="btn btn-primary" style={{ width: "100%", padding: 10 }} disabled={busy || items.length === 0} onClick={completeCashSale}>
+                {busy ? "Saving…" : "✓ Complete Cash Sale"}
+              </button>
+            ) : (
+              terminalActive ? (
+                <button className="btn btn-sm btn-danger" style={{ width: "100%", padding: 10 }} onClick={cancelTerminalCheckout}>
+                  ✕ Cancel Terminal Payment
+                </button>
+              ) : (
+                <button className="btn" style={{ width: "100%", padding: 10, background: "rgba(79,195,247,.15)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: ".08em" }}
+                  disabled={terminalBusy || items.length === 0} onClick={startTerminalCheckout}>
+                  {terminalBusy ? "⏳ Sending…" : "📟 Send to Terminal"}
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
