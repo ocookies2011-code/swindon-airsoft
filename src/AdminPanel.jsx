@@ -2652,9 +2652,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
 
       <div className="nav-tabs">
         <button className={`nav-tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>All Players</button>
-        <button className={`nav-tab ${tab === "waivers" ? "active" : ""}`} onClick={() => setTab("waivers")}>
-          Waivers {allUsers.filter(u => u.waiverPending).length > 0 && <span style={{ background: "var(--gold)", color: "#000", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{allUsers.filter(u => u.waiverPending).length}</span>}
-        </button>
       </div>
 
       {tab === "all" && (
@@ -2981,8 +2978,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
           )}
         </div>
       )}
-      {tab === "waivers" && <AdminWaivers data={{ ...data, users: allUsers }} updateUser={updateUserAndRefresh} showToast={showToast} embedded />}
-
       {edit && (
         <div className="overlay" onClick={() => setEdit(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
