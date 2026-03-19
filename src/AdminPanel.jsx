@@ -2424,6 +2424,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   };
   const [edit, setEdit] = useState(null);
   const [viewPlayer, setViewPlayer] = useState(null);
+  const [waiverViewPlayer, setWaiverViewPlayer] = useState(null); // inline waiver panel
   const [contactPlayer, setContactPlayer] = useState(null);
   const [contactSubject, setContactSubject] = useState("");
   const [contactMsg, setContactMsg] = useState("");
@@ -2818,7 +2819,16 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                     )}
                     {u.ukara && <span className="mono" style={{ fontSize: 10, color: "var(--accent)", marginLeft: 6 }}>{u.ukara}</span>}
                   </td>
-                  <td>{u.waiverSigned === true && u.waiverYear === new Date().getFullYear() ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
+                  <td>
+                    <button onClick={() => setWaiverViewPlayer(waiverViewPlayer?.id === u.id ? null : u)}
+                      style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}
+                      title="Click to view waiver details">
+                      {u.waiverSigned === true && u.waiverYear === new Date().getFullYear()
+                        ? <span className="tag tag-green" style={{ cursor:"pointer" }}>✓</span>
+                        : <span className="tag tag-red" style={{ cursor:"pointer" }}>✗</span>}
+                      {u.waiverPending && <span style={{ fontSize:9, marginLeft:3, color:"var(--gold)" }}>⚠</span>}
+                    </button>
+                  </td>
                   <td>{u.credits > 0 ? <span className="text-gold">£{u.credits}</span> : "—"}</td>
                   <td>
                     {(!u.cardStatus || u.cardStatus === "none") && <span className="tag tag-green" style={{fontSize:10}}>✓ Clear</span>}
@@ -2837,13 +2847,146 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               ))}
             </tbody>
           </table></div>
+
+          {/* ── Inline Waiver Panel ── */}
+          {waiverViewPlayer && (() => {
+            const u = waiverViewPlayer;
+            const allWaivers = [u.waiverData, ...(u.extraWaivers || [])].filter(Boolean);
+            const wFields = (w) => [
+              ["Name", w.name], ["DOB", w.dob],
+              ["Address", [w.addr1, w.addr2, w.city, w.county, w.postcode].filter(Boolean).join(", ") || "—"],
+              ["Emergency", w.emergencyName ? `${w.emergencyName} · ${w.emergencyPhone}` : "—"],
+              ["Medical", w.medical || "None"],
+              ["Minor", w.isChild ? `Yes — Guardian: ${w.guardian}` : "No"],
+              ["Signed", gmtShort(w.date)],
+            ];
+            return (
+              <div style={{ marginTop:12, background:"#0c1009", border:"1px solid #2a3a10", borderRadius:4, padding:"16px 18px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase" }}>
+                    📋 Waiver — {u.name}
+                    {u.waiverPending && <span className="tag tag-gold" style={{ marginLeft:8, fontSize:10 }}>{u.waiverPending._removeExtra ? "🗑 Removal Request" : "⚠ Changes Pending"}</span>}
+                  </div>
+                  <button onClick={() => setWaiverViewPlayer(null)} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:18, lineHeight:1 }}>✕</button>
+                </div>
+                {allWaivers.length === 0 && <div style={{ color:"var(--muted)", fontSize:13 }}>No waiver on file.</div>}
+                {allWaivers.map((w, i) => (
+                  <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 16 : 0, paddingBottom: i < allWaivers.length - 1 ? 16 : 0, borderBottom: i < allWaivers.length - 1 ? "1px solid #1a2808" : "none" }}>
+                    {allWaivers.length > 1 && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".15em", color:"var(--muted)", marginBottom:8, textTransform:"uppercase" }}>Player {i+1}{i===0?" (Primary)":""}</div>}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))", gap:"4px 24px" }}>
+                      {wFields(w).map(([k, v]) => (
+                        <div key={k} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #111", fontSize:12 }}>
+                          <span style={{ color:"var(--muted)", minWidth:90, flexShrink:0 }}>{k}:</span>
+                          <span style={{ wordBreak:"break-word" }}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {u.waiverPending && (
+                  <div style={{ marginTop:14, padding:"12px 14px", background:"#1a1200", border:"1px solid #4a3800", borderRadius:4 }}>
+                    {u.waiverPending._removeExtra ? (
+                      <>
+                        <div style={{ fontSize:12, color:"var(--gold)", marginBottom:8 }}>Requesting removal of: <strong style={{ color:"#fff" }}>{u.waiverPending._playerName}</strong></div>
+                        <div style={{ display:"flex", gap:8 }}>
+                          <button className="btn btn-sm btn-danger" onClick={async () => {
+                            const idx = u.waiverPending._extraIndex;
+                            const updated = (u.extraWaivers || []).filter((_, ei) => ei !== idx);
+                            await updateUserAndRefresh(u.id, { extraWaivers: updated, waiverPending: null });
+                            logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Extra waiver removal approved", detail: `Player: ${u.name}` });
+                            showToast("Removal approved!"); setWaiverViewPlayer(null);
+                          }}>Approve Removal</button>
+                          <button className="btn btn-sm btn-ghost" onClick={async () => {
+                            await updateUserAndRefresh(u.id, { waiverPending: null });
+                            showToast("Removal rejected."); setWaiverViewPlayer(null);
+                          }}>Reject</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize:12, color:"var(--gold)", marginBottom:8 }}>⚠ Player submitted waiver changes for approval</div>
+                        <div style={{ display:"flex", gap:8 }}>
+                          <button className="btn btn-sm btn-primary" onClick={async () => {
+                            await updateUserAndRefresh(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
+                            logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver changes approved", detail: u.name });
+                            showToast("Changes approved!"); setWaiverViewPlayer(null);
+                          }}>Approve Changes</button>
+                          <button className="btn btn-sm btn-ghost" onClick={async () => {
+                            await updateUserAndRefresh(u.id, { waiverPending: null });
+                            showToast("Changes rejected."); setWaiverViewPlayer(null);
+                          }}>Reject</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ── Inline VIP Applications ── */}
+          {vipApps.length > 0 && (
+            <div style={{ marginTop:12, background:"rgba(200,160,0,.05)", border:"1px solid rgba(200,160,0,.2)", borderRadius:4, padding:"16px 18px" }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--gold)", textTransform:"uppercase", marginBottom:14 }}>
+                ⭐ VIP Applications — {vipApps.length} pending
+              </div>
+              {vipApps.map(u => (
+                <div key={u.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", padding:"10px 0", borderBottom:"1px solid rgba(200,160,0,.1)" }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:700, fontSize:13 }}>{u.name}</div>
+                    <div style={{ fontSize:11, color:"var(--muted)" }}>{u.email} · {u.gamesAttended} games</div>
+                    {u.vipIdImages?.length > 0 && (
+                      <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
+                        {u.vipIdImages.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noreferrer">
+                            <img src={url} alt={`ID ${i+1}`} style={{ width:40, height:30, objectFit:"cover", border:"1px solid var(--accent)", borderRadius:2, cursor:"pointer" }} />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <span className="tag tag-green" style={{ fontSize:10 }}>✓ £40 paid</span>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button className="btn btn-sm btn-primary" onClick={() => {
+                      setVipUkara(`UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`);
+                      setVipApproveModal(u);
+                    }}>✓ Approve</button>
+                    <button className="btn btn-sm btn-danger" onClick={async () => {
+                      await updateUserAndRefresh(u.id, { vipApplied: false });
+                      showToast(`VIP application rejected for ${u.name}`, "red");
+                      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "VIP application rejected", detail: u.name });
+                    }}>✗ Reject</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Inline Deletion Requests ── */}
+          {allUsers.filter(u => u.deleteRequest).length > 0 && (
+            <div style={{ marginTop:12, background:"rgba(220,30,30,.05)", border:"1px solid rgba(220,30,30,.2)", borderRadius:4, padding:"16px 18px" }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--red)", textTransform:"uppercase", marginBottom:14 }}>
+                🗑 Deletion Requests — {allUsers.filter(u => u.deleteRequest).length}
+              </div>
+              {allUsers.filter(u => u.deleteRequest).map(u => (
+                <div key={u.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", padding:"10px 0", borderBottom:"1px solid rgba(220,30,30,.1)" }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:700, fontSize:13 }}>{u.name}</div>
+                    <div style={{ fontSize:11, color:"var(--muted)" }}>{u.email}</div>
+                  </div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button className="btn btn-sm btn-danger" onClick={() => setDelAccountConfirm(u)}>Delete Account</button>
+                    <button className="btn btn-sm btn-ghost" onClick={async () => {
+                      await updateUserAndRefresh(u.id, { deleteRequest: false });
+                      showToast(`Deletion request cleared for ${u.name}`);
+                    }}>Dismiss</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
-
-      {tab === "vip" && (
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: "var(--muted)" }}>{vipApps.length} pending application{vipApps.length !== 1 ? "s" : ""}</div>
             <button className="btn btn-ghost btn-sm" onClick={loadUsers}>🔄 Refresh</button>
           </div>
           {vipApps.length === 0 ? (
