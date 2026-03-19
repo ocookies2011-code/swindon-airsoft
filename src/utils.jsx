@@ -141,10 +141,20 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
       // 2. Create payment via Square Payments API proxy (Supabase Edge Function)
       const amountPence = Math.round(Number(amount) * 100);
       const { data: payData, error: payError } = await supabase.functions.invoke("square-payment", {
-        body: { sourceId, amount: amountPence, currency: "GBP", note: description },
+        body: { sourceId, amount: amountPence, currency: "GBP", note: description, env: _squareEnv },
       });
-      if (payError || !payData) throw new Error(payError?.message || "Payment failed — please try again.");
-      if (payData.error) throw new Error(payData.error);
+      if (payError) {
+        // Try to extract the actual error message from the edge function response
+        let msg = payError.message || "Payment failed — please try again.";
+        try {
+          const parsed = typeof payError.context?.json === "function"
+            ? await payError.context.json()
+            : null;
+          if (parsed?.error) msg = parsed.error;
+        } catch {}
+        throw new Error(msg);
+      }
+      if (!payData || payData.error) throw new Error(payData?.error || "Payment failed — please try again.");
       onSuccess({ id: payData.paymentId, status: "COMPLETED" });
     } catch (e) {
       setSqError(e.message || "Payment failed. Please try again.");
