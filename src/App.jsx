@@ -391,10 +391,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           for (let attempt = 0; attempt < 3 && emailBookings.length === 0; attempt++) {
             if (attempt > 0) await new Promise(r => setTimeout(r, 600));
             const { data: freshBookings } = await supabase
-              .from('bookings').select('id, type, qty, total')
+              .from('bookings').select('id, ticket_type, qty, total')
               .eq('user_id', cu.id).eq('event_id', ev.id)
               .order('created_at', { ascending: false }).limit(2);
-            emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.type, qty: b.qty, total: b.total }));
+            emailBookings = (freshBookings || []).map(b => ({ id: b.id, type: b.ticket_type, qty: b.qty, total: b.total }));
           }
           if (emailBookings.length > 0) {
             await sendTicketEmail({ cu, ev, bookings: emailBookings, extras: Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)) });
