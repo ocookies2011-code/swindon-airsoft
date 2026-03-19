@@ -140,25 +140,19 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 
       // 2. Create payment via Square Payments API proxy (Supabase Edge Function)
       const amountPence = Math.round(Number(amount) * 100);
-      const res = await fetch("/api/square-payment", {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`${supabaseUrl}/functions/v1/square-payment`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+        },
         body: JSON.stringify({ sourceId, amount: amountPence, currency: "GBP", note: description }),
       });
-
-      // Safely parse JSON — empty or non-JSON responses (502, 504, timeouts) must not crash
-      let data = {};
-      try {
-        const text = await res.text();
-        if (text) data = JSON.parse(text);
-      } catch {
-        // Response body was not valid JSON — treat as a server error
-      }
-
-      if (!res.ok || data.error) {
-        const msg = data.error || (res.status === 504 ? "Payment timed out — please try again." : res.status === 502 ? "Payment server unavailable — please try again." : `Payment failed (${res.status}).`);
-        throw new Error(msg);
-      }
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Payment failed.");
       onSuccess({ id: data.paymentId, status: "COMPLETED" });
     } catch (e) {
       setSqError(e.message || "Payment failed. Please try again.");

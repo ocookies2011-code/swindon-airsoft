@@ -915,21 +915,23 @@ export const purchaseOrders = wrapWithTimeout({
 // The Edge Function holds the Square Access Token securely.
 // amount = number in GBP (e.g. 12.50), null = full refund.
 export async function squareRefund({ squarePaymentId, amount, locationId }) {
-  const res = await fetch('/api/square-refund', {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const res = await fetch(`${supabaseUrl}/functions/v1/square-refund`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`,
+    },
     body: JSON.stringify({
       paymentId: squarePaymentId,
-      amount: amount ? Math.round(Number(amount) * 100) : null, // pence
+      amount: amount ? Math.round(Number(amount) * 100) : null,
       locationId,
       reason: 'Refund from Swindon Airsoft',
     }),
   })
-  let data = {}
-  try {
-    const text = await res.text()
-    if (text) data = JSON.parse(text)
-  } catch {}
+  const data = await res.json()
   if (!res.ok || data.error) throw new Error(data.error || 'Square refund failed: ' + res.status)
   return data
 }
