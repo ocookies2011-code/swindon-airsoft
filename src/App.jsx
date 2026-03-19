@@ -498,7 +498,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </span>
               ))}
               <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, letterSpacing:".1em", color: totalBooked/totalSlots > 0.8 ? "#ff6b6b" : "#6a8a40", padding:"3px 0", marginLeft:4 }}>
-                {totalBooked}/{totalSlots} SLOTS
+                {totalBooked >= totalSlots ? "FULL" : totalBooked/totalSlots > 0.8 ? "FILLING FAST" : "AVAILABLE"}
               </span>
             </div>
             {/* Styled progress bar */}
@@ -669,7 +669,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <div>
                         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
                         <div style={{ fontSize:11, color: walkOnLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                          £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft === 0 ? "FULL" : walkOnLeft + " slots left"}
+                          £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft === 0 ? "FULL" : walkOnLeft <= 3 ? "ALMOST FULL" : "AVAILABLE"}
                         </div>
                         {woHeldForMe && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--accent)", marginTop:3 }}>
@@ -736,7 +736,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       <div>
                         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
                         <div style={{ fontSize:11, color: rentalLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                          £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft === 0 ? "FULL" : rentalLeft + " slots left"}
+                          £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft === 0 ? "FULL" : rentalLeft <= 3 ? "ALMOST FULL" : "AVAILABLE"}
                         </div>
                         {rnHeldForMe && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--accent)", marginTop:3 }}>
@@ -1216,7 +1216,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   <div style={{ marginBottom:12 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                       <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".18em", color:"#2a3a10" }}>CAPACITY</span>
-                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isAlmostFull ? "#ef4444" : "#3a5010", letterSpacing:".1em" }}>{booked}/{total} SLOTS</span>
+                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isFull ? "#ef4444" : isAlmostFull ? "#f97316" : "#3a5010", letterSpacing:".1em" }}>
+                        {isFull ? "FULL" : isAlmostFull ? "FILLING FAST" : "AVAILABLE"}
+                      </span>
                     </div>
                     <div style={{ height:3, background:"#0a0f06", borderRadius:2, overflow:"hidden" }}>
                       <div style={{ height:"100%", width:`${Math.min(100, fillPct*100)}%`, background: isAlmostFull ? "#ef4444" : "#c8ff00", boxShadow: isAlmostFull ? "0 0 6px #ef4444" : "0 0 6px rgba(200,255,0,.5)", borderRadius:2, transition:"width .4s" }} />
