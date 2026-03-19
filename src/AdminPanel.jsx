@@ -2652,12 +2652,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
 
       <div className="nav-tabs">
         <button className={`nav-tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>All Players</button>
-        <button className={`nav-tab ${tab === "vip" ? "active" : ""}`} onClick={() => setTab("vip")}>
-          VIP Applications {vipApps.length > 0 && <span style={{ background: "var(--gold)", color: "#000", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{vipApps.length}</span>}
-        </button>
-        <button className={`nav-tab ${tab === "del" ? "active" : ""}`} onClick={() => setTab("del")}>
-          Deletion Requests {players.filter(u => u.deleteRequest).length > 0 && <span style={{ background: "var(--red)", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{players.filter(u => u.deleteRequest).length}</span>}
-        </button>
         <button className={`nav-tab ${tab === "waivers" ? "active" : ""}`} onClick={() => setTab("waivers")}>
           Waivers {allUsers.filter(u => u.waiverPending).length > 0 && <span style={{ background: "var(--gold)", color: "#000", borderRadius: 10, padding: "1px 7px", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>{allUsers.filter(u => u.waiverPending).length}</span>}
         </button>
@@ -2987,109 +2981,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
           )}
         </div>
       )}
-            <button className="btn btn-ghost btn-sm" onClick={loadUsers}>🔄 Refresh</button>
-          </div>
-          {vipApps.length === 0 ? (
-            <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No pending VIP applications.</div>
-          ) : (
-            <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Games</th><th>Joined</th><th>Payment</th><th>Photo ID</th><th>Actions</th></tr></thead>
-              <tbody>
-                {vipApps.map(u => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600 }}>{u.name}</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
-                    <td style={{ color: u.gamesAttended >= 3 ? "var(--accent)" : "var(--red)" }}>{u.gamesAttended} / 3</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate}</td>
-                    <td>
-                      <span className="tag tag-green" style={{ fontSize:11 }}>✓ £40 paid</span>
-                    </td>
-                    <td>
-                      {u.vipIdImages?.length > 0 ? (
-                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                          {u.vipIdImages.map((url, i) => (
-                            <a key={i} href={url} target="_blank" rel="noreferrer">
-                              <img src={url} alt={`ID ${i+1}`} style={{ width:48, height:36, objectFit:"cover", border:"1px solid var(--accent)", borderRadius:2, cursor:"pointer" }} title="Click to view full size" />
-                            </a>
-                          ))}
-                          <span className="tag tag-green" style={{ fontSize:10, alignSelf:"center" }}>✓ {u.vipIdImages.length}</span>
-                        </div>
-                      ) : (
-                        <span className="tag tag-red" style={{ fontSize:10 }}>✗ None</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="gap-2">
-                        <button className="btn btn-sm btn-primary" onClick={() => {
-                          setVipUkara(`UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,"0")}`);
-                          setVipApproveModal(u);
-                        }}>✓ Approve</button>
-                        <button className="btn btn-sm btn-danger" onClick={async () => {
-                          await updateUserAndRefresh(u.id, { vipApplied: false });
-                          showToast(`VIP application rejected for ${u.name}`, "red");
-                          logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "VIP application rejected", detail: u.name });
-                        }}>✗ Reject</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
-          )}
-        </div>
-      )}
-
-      {tab === "del" && (
-        <div className="card">
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".1em" }}>
-              {allUsers.filter(u => u.deleteRequest).length} DELETION REQUEST(S) · {allUsers.length} TOTAL USERS LOADED
-            </div>
-            <button className="btn btn-sm btn-ghost" onClick={loadUsers}>↺ Refresh</button>
-          </div>
-          {allUsers.filter(u => u.deleteRequest).length === 0 ? (
-            <div style={{ textAlign: "center", color: "var(--muted)", padding: 40 }}>No deletion requests.</div>
-          ) : (
-            <>
-            <div style={{ marginBottom: 12, padding: "10px 14px", background: "rgba(220,50,50,.06)", border: "1px solid rgba(220,50,50,.2)", fontSize: 12, color: "var(--muted)" }}>
-              ⚠️ These players have requested account deletion. Deleting an account is <strong style={{ color: "var(--red)" }}>permanent and cannot be undone</strong> — their profile, waiver, auth account and all personal data will be removed.
-            </div>
-            <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Email</th><th>Joined</th><th>Games</th><th>Credits</th><th>Actions</th></tr></thead>
-              <tbody>
-                {allUsers.filter(u => u.deleteRequest).map(u => (
-                  <tr key={u.id} style={{ background: "rgba(220,50,50,.03)" }}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{u.name}</div>
-                      {u.vipStatus === "active" && <div style={{ fontSize: 10, color: "var(--gold)", marginTop: 2 }}>★ VIP</div>}
-                    </td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.joinDate ? new Date(u.joinDate).toLocaleDateString("en-GB") : "—"}</td>
-                    <td className="text-muted" style={{ fontSize: 12 }}>{u.gamesAttended || 0}</td>
-                    <td style={{ fontSize: 12, color: u.credits > 0 ? "var(--gold)" : "var(--muted)" }}>
-                      {u.credits > 0 ? `£${Number(u.credits).toFixed(2)}` : "—"}
-                    </td>
-                    <td>
-                      <div className="gap-2">
-                        <button className="btn btn-sm btn-danger" onClick={() => setDelAccountConfirm(u)}>
-                          🗑 Delete Account
-                        </button>
-                        <button className="btn btn-sm btn-ghost" onClick={async () => {
-                          await updateUser(u.id, { deleteRequest: false });
-                          await loadUsers();
-                          showToast("Deletion request cancelled");
-                        }}>✕ Cancel Request</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
-            </>
-          )}
-        </div>
-      )}
-
       {tab === "waivers" && <AdminWaivers data={{ ...data, users: allUsers }} updateUser={updateUserAndRefresh} showToast={showToast} embedded />}
 
       {edit && (
