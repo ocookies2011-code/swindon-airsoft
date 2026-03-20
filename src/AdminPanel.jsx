@@ -3585,6 +3585,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   ["Joined",         u.joinDate || "—"],
                   ["Waiver",         u.waiverSigned && u.waiverYear === new Date().getFullYear() ? "✓ Signed" : "✗ Not signed"],
                   ["Account Status", u.cardStatus && u.cardStatus !== "none" ? cardLabels[u.cardStatus] : "✅ Clear"],
+                  ["Callsign",       u.callsign || "—"],
                 ].map(([label, val]) => (
                   <div key={label} style={{ background:"var(--bg4)", padding:"10px 12px", borderRadius:3 }}>
                     <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:4 }}>{label}</div>
