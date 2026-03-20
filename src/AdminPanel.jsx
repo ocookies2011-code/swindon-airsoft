@@ -7176,6 +7176,16 @@ function EmailTestCard({ showToast, sectionHead }) {
   const [testEmail, setTestEmail] = useState("");
   const [testing, setTesting] = useState(false);
   const [lastResult, setLastResult] = useState(null); // { ok, msg }
+  const [open, setOpen] = React.useState(false);
+  const emailSectionHead = (label) => (
+    <div
+      onClick={() => setOpen(o => !o)}
+      style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", userSelect:"none", fontWeight:700, fontSize:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase", marginBottom: open ? 14 : 0 }}
+    >
+      <span>{label}</span>
+      <span style={{ fontSize:16, color:"var(--muted)", transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+    </div>
+  );
 
   const runTest = async () => {
     if (!testEmail || !testEmail.includes("@")) { showToast("Enter a valid email address", "red"); return; }
@@ -7213,8 +7223,8 @@ function EmailTestCard({ showToast, sectionHead }) {
 
   return (
     <div className="card mb-2">
-      {sectionHead("📧 Email Diagnostics")}
-      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14, lineHeight: 1.7 }}>
+      {emailSectionHead("📧 Email Diagnostics")}
+      {open && <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14, lineHeight: 1.7 }}>
         Send a test email to verify EmailJS is configured correctly.<br/>
         Service: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_SERVICE_ID}</span> ·
         Template: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_TEMPLATE_ID}</span>
@@ -7244,6 +7254,7 @@ function EmailTestCard({ showToast, sectionHead }) {
         • Your EmailJS free tier hasn't hit its monthly limit (200/month)<br/>
         • The template's "To Email" field is set to <span className="mono">{"{{to_email}}"}</span>
       </div>
+      }
     </div>
   );
 }
@@ -7897,9 +7908,26 @@ function AdminSettings({ showToast, cu }) {
     } finally { setSavingSQ(false); }
   };
 
-  const sectionHead = (label) => (
-    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14, color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em", textTransform: "uppercase" }}>{label}</div>
-  );
+  const [openSections, setOpenSections] = React.useState({});
+  const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const sectionHead = (label, key) => {
+    const isOpen = openSections[key] !== false; // default open = false means collapsed
+    return (
+      <div
+        onClick={() => toggleSection(key)}
+        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", userSelect:"none", fontWeight:700, fontSize:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase", marginBottom: isOpen ? 14 : 0 }}
+      >
+        <span>{label}</span>
+        <span style={{ fontSize:16, color:"var(--muted)", transition:"transform .2s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+      </div>
+    );
+  };
+
+  const sectionBody = (key, children) => {
+    const isOpen = openSections[key] !== false;
+    return isOpen ? <div style={{ marginTop: 14 }}>{children}</div> : null;
+  };
 
   return (
     <div>
@@ -7912,7 +7940,8 @@ function AdminSettings({ showToast, cu }) {
 
       {/* Shop Closed Toggle */}
       <div className="card mb-2">
-        {sectionHead("🛒 Shop Status")}
+        {sectionHead("🛒 Shop Status", "shop")}
+        {sectionBody("shop", <>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
           <div>
             <div style={{ fontSize:13, color:"var(--text)", marginBottom:4 }}>
@@ -7942,11 +7971,13 @@ function AdminSettings({ showToast, cu }) {
             {savingShopClosed ? "Saving…" : shopClosedSetting ? "🔓 Reopen Shop" : "🔒 Close Shop"}
           </button>
         </div>
+        </>)}
       </div>
 
       {/* Xero */}
       <div className="card mb-2">
-        {sectionHead("📊 Xero Accounting")}
+        {sectionHead("📊 Xero Accounting", "xero")}
+        {sectionBody("xero", <>
         <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.8, marginBottom:14 }}>
           When connected, a sales receipt is automatically created in Xero for every confirmed ticket booking. Fires fire-and-forget — never affects the booking flow.
         </div>
@@ -8009,11 +8040,13 @@ function AdminSettings({ showToast, cu }) {
             Enter Client ID, save, then click "Connect Xero" to authorise.
           </div>
         )}
+        </>)}
       </div>
 
       {/* Square */}
       <div className="card mb-2">
-        {sectionHead("💳 Square Payments")}
+        {sectionHead("💳 Square Payments", "square")}
+        {sectionBody("square", <>
 
         <div className="form-group">
           <label>Environment</label>
@@ -8106,11 +8139,13 @@ function AdminSettings({ showToast, cu }) {
             ⚠️ Environment is Production but Application ID or Location ID is missing — checkouts will show an error.
           </div>
         )}
+        </>)}
       </div>
 
       {/* How to get Square keys guide */}
       <div className="card mb-2" style={{ background: "#0a140a", border: "1px solid #1a2e1a" }}>
-        {sectionHead("📋 Square Setup Guide")}
+        {sectionHead("📋 Square Setup Guide", "squareguide")}
+        {sectionBody("squareguide", <>
         <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 2 }}>
           <div>1. Go to <a href="https://developer.squareup.com" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>developer.squareup.com</a> and log in with your Square account.</div>
           <div>2. Create an application (or open an existing one) → go to <strong style={{ color: "var(--text)" }}>Credentials</strong>.</div>
@@ -8119,11 +8154,13 @@ function AdminSettings({ showToast, cu }) {
           <div>5. Paste all three above, set Environment to <strong style={{ color: "var(--accent)" }}>Production</strong>, and click Save.</div>
           <div>6. Deploy the <strong style={{ color: "var(--text)" }}>square-payment</strong> Supabase Edge Function (see README) to handle server-side payment creation and refunds.</div>
         </div>
+        </>)}
       </div>
 
       {/* TrackingMore */}
       <div className="card mb-2">
-        {sectionHead("📦 Parcel Tracking (TrackingMore)")}
+        {sectionHead("📦 Parcel Tracking (TrackingMore)", "tracking")}
+        {sectionBody("tracking", <>
         <div className="form-group">
           <label>TrackingMore API Key</label>
           <div style={{ position: "relative" }}>
@@ -8160,6 +8197,7 @@ function AdminSettings({ showToast, cu }) {
             No key set — tracking status will not be available. Add a free TrackingMore key above to enable it.
           </div>
         )}
+        </>)}
       </div>
 
       {/* EmailJS test */}
