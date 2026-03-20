@@ -190,7 +190,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       }
     }
     const afterDiscount  = Math.round(Math.max(0, grandTotal - discountSaving) * 100) / 100;
-    const creditsApplied = useCredits ? Math.round(Math.min(availCredits, afterDiscount) * 100) / 100 : 0;
+    // Credits apply to game day tickets only — not extras.
+    // Cap credits against the ticket subtotal (after VIP discount, before extras).
+    const ticketSubtotal = Math.round((walkOnTotal + rentalTotal) * 100) / 100;
+    const creditsApplied = useCredits ? Math.round(Math.min(availCredits, ticketSubtotal) * 100) / 100 : 0;
     const payTotal       = Math.round(Math.max(0, afterDiscount - creditsApplied) * 100) / 100;
 
     const applyDiscountCode = async () => {
@@ -965,7 +968,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 10px", background:"rgba(0,120,255,.06)", border:"1px solid rgba(0,120,255,.2)", borderRadius:3, marginTop:4, marginBottom:4 }}>
                       <div>
                         <span style={{ fontSize:12, color:"#60a0ff" }}>💳 Account Credits — £{availCredits.toFixed(2)} available</span>
-                        {vipDisc > 0 && <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>Note: using credits disables the VIP discount</div>}
+                        <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>Credits apply to tickets only, not game day extras</div>
+                        {vipDisc > 0 && <div style={{ fontSize:10, color:"var(--muted)", marginTop:1 }}>Note: using credits disables the VIP discount</div>}
                       </div>
                       <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
                         <input type="checkbox" checked={useCredits} onChange={e => setUseCredits(e.target.checked)} />
