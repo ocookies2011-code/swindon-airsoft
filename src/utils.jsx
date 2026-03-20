@@ -74,6 +74,8 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
   const [isLive, setIsLive] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [paying, setPaying] = useState(false);
+  // "idle" | "tokenising" | "verifying" | "charging"
+  const [payStage, setPayStage] = useState("idle");
   const cardRef = useRef(null);
   const cardInstance = useRef(null);
   const paymentsRef = useRef(null);
@@ -128,23 +130,76 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 
   const handlePay = async () => {
     if (!cardInstance.current || !paymentsRef.current) return;
-    setPaying(true); setSqError(null);
+    setPaying(true);
+    setSqError(null);
+    setPayStage("tokenising");
+
     try {
-      // 1. Tokenise the card
+      // ── Step 1: Tokenise the card ──────────────────────────────
       const result = await cardInstance.current.tokenize();
       if (result.status !== "OK") {
-        setSqError(result.errors?.map(e => e.message).join(", ") || "Card tokenisation failed.");
-        setPaying(false); return;
+        const msg = result.errors?.map(e => e.message).join(", ") || "Card tokenisation failed.";
+        setSqError(msg);
+        setPaying(false);
+        setPayStage("idle");
+        return;
       }
-      const sourceId = result.token;
+      let sourceId = result.token;
+      let verificationToken = null;
 
-      // 2. Create payment via Square Payments API proxy (Supabase Edge Function)
+      // ── Step 2: 3D Secure / SCA buyer verification ─────────────
+      // This is what fixes CARD_DECLINED_VERIFICATION_REQUIRED.
+      // verifyBuyer() triggers the bank's 3DS challenge (popup or redirect
+      // in the customer's banking app). Square handles the entire flow and
+      // returns a verificationToken we pass to the Edge Function.
+      setPayStage("verifying");
+      try {
+        const verificationDetails = {
+          amount: String(Math.round(Number(amount) * 100)),
+          currencyCode: "GBP",
+          intent: "CHARGE",
+          billingContact: {},
+        };
+        const verifyResult = await paymentsRef.current.verifyBuyer(sourceId, verificationDetails);
+        if (verifyResult?.token) {
+          verificationToken = verifyResult.token;
+        }
+      } catch (verifyErr) {
+        // The customer cancelled 3DS or their bank rejected verification.
+        // Distinguish between a user cancellation and a hard failure.
+        const msg = verifyErr?.message || "";
+        const isCancelled =
+          msg.toLowerCase().includes("cancel") ||
+          msg.toLowerCase().includes("closed") ||
+          msg.toLowerCase().includes("aborted");
+        setSqError(
+          isCancelled
+            ? "Verification was cancelled. Please try again and complete the security check in your banking app."
+            : "Your bank requires additional verification but it failed. Please try a different card or contact your bank."
+        );
+        setPaying(false);
+        setPayStage("idle");
+        return;
+      }
+
+      // ── Step 3: Charge via Edge Function ───────────────────────
+      // We pass both sourceId (card token) and verificationToken (3DS token).
+      // The Edge Function forwards verificationToken to Square's Payments API
+      // so the charge is treated as SCA-compliant.
+      setPayStage("charging");
       const amountPence = Math.round(Number(amount) * 100);
       const { data: payData, error: payError } = await supabase.functions.invoke("square-payment", {
-        body: { sourceId, amount: amountPence, currency: "GBP", note: description, env: _squareEnv },
+        body: {
+          sourceId,
+          verificationToken,   // <── new field — pass to Square API
+          amount: amountPence,
+          currency: "GBP",
+          note: description,
+          env: _squareEnv,
+        },
       });
+
       if (payError) {
-        // Try to extract the actual error message from the edge function response
         let msg = payError.message || "Payment failed — please try again.";
         try {
           const parsed = typeof payError.context?.json === "function"
@@ -154,24 +209,42 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
         } catch {}
         throw new Error(msg);
       }
-      if (!payData || payData.error) throw new Error(payData?.error || "Payment failed — please try again.");
+      if (!payData || payData.error) {
+        throw new Error(payData?.error || "Payment failed — please try again.");
+      }
+
+      setPayStage("idle");
       onSuccess({ id: payData.paymentId, status: "COMPLETED" });
+
     } catch (e) {
       const errMsg = e.message || "Payment failed. Please try again.";
       setSqError(errMsg);
+      setPayStage("idle");
       // Log failed payment — fire and forget, never blocks UI
-      supabase.from('failed_payments').insert({
-        customer_name:  "Online customer",
-        customer_email: "",
-        user_id:        null,
-        items:          [],
-        total:          Number(amount) || 0,
-        payment_method: "square_online",
-        error_message:  errMsg,
+      supabase.from("failed_payments").insert({
+        customer_name:     "Online customer",
+        customer_email:    "",
+        user_id:           null,
+        items:             [],
+        total:             Number(amount) || 0,
+        payment_method:    "square_online",
+        error_message:     errMsg,
         square_payment_id: null,
-        recorded_by:    null,
-      }).then(({ error }) => { if (error) console.warn("Failed to log payment error:", error.message); });
-    } finally { setPaying(false); }
+        recorded_by:       null,
+      }).then(({ error }) => {
+        if (error) console.warn("Failed to log payment error:", error.message);
+      });
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // Human-readable label for each stage shown on the button
+  const stageLabel = {
+    idle:       `PAY · £${Number(amount).toFixed(2)}`,
+    tokenising: "⏳ Reading card…",
+    verifying:  "🔐 Verifying with your bank…",
+    charging:   "⏳ Processing payment…",
   };
 
   if (!configLoaded) {
@@ -199,7 +272,19 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 
   return (
     <div style={{ marginTop: 12 }}>
-      {sqError && <div className="alert alert-red" style={{ marginBottom: 8 }}>{sqError}</div>}
+      {sqError && (
+        <div className="alert alert-red" style={{ marginBottom: 8 }}>
+          {sqError}
+        </div>
+      )}
+
+      {/* 3DS in-progress notice — shown while verifyBuyer popup is open */}
+      {payStage === "verifying" && (
+        <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "10px 14px", marginBottom: 10, fontSize: 12, color: "#4fc3f7", fontFamily: "'Share Tech Mono',monospace", lineHeight: 1.6 }}>
+          🔐 Your bank is requesting identity verification. Please check your banking app or complete the pop-up security step.
+        </div>
+      )}
+
       <div style={{ background: "#0a0f05", border: "1px solid #2a3a10", padding: "14px 16px", marginBottom: 10 }}>
         <div style={{ fontSize: 10, letterSpacing: ".15em", color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", marginBottom: 10, textTransform: "uppercase" }}>Card Details</div>
         <div ref={cardRef} style={{ minHeight: 48 }} />
@@ -208,11 +293,17 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
         <span>{description}</span>
         <span style={{ color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
       </div>
-      {!sqReady && !sqError && <div style={{ color: "var(--muted)", fontSize: 12, padding: 8 }}>Loading card form…</div>}
+      {!sqReady && !sqError && (
+        <div style={{ color: "var(--muted)", fontSize: 12, padding: 8 }}>Loading card form…</div>
+      )}
       {sqReady && (
-        <button className="btn btn-primary" style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: (disabled || paying) ? .6 : 1 }}
-          disabled={disabled || paying} onClick={handlePay}>
-          {paying ? "⏳ Processing…" : `PAY · £${Number(amount).toFixed(2)}`}
+        <button
+          className="btn btn-primary"
+          style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: (disabled || paying) ? .6 : 1 }}
+          disabled={disabled || paying}
+          onClick={handlePay}
+        >
+          {paying ? stageLabel[payStage] || "⏳ Processing…" : stageLabel.idle}
         </button>
       )}
     </div>
