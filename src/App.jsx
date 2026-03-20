@@ -1563,6 +1563,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   }, [data.shop]);
   const filteredShop = useMemo(() => {
     let list = data.shop || [];
+    list = list.filter(p => !p.hiddenFromShop);
     if (shopCatFilter) list = list.filter(p => p.category === shopCatFilter);
     if (shopSearch.trim()) {
       const q = shopSearch.toLowerCase();

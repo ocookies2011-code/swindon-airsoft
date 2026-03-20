@@ -4408,7 +4408,7 @@ function AdminShop({ data, save, showToast, cu }) {
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, costPrice: null, category: "", supplierCode: "", variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, costPrice: null, category: "", supplierCode: "", variants: [] };
 
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
@@ -4654,7 +4654,7 @@ function AdminShop({ data, save, showToast, cu }) {
             ☰ Drag rows to reorder. Variants can be reordered inside the edit modal.
           </p>
           <div className="table-wrap"><table className="data-table">
-            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Category</th><th>Base Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th></th></tr></thead>
+            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Category</th><th>Base Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th>Hidden</th><th></th></tr></thead>
             <tbody>
               {(() => {
                 const renderRow = (item) => {
@@ -4736,6 +4736,7 @@ function AdminShop({ data, save, showToast, cu }) {
                       <td>{item.onSale ? <span className="tag tag-red">£{item.salePrice}</span> : "—"}</td>
                       <td>{item.noPost ? <span className="tag tag-gold">Yes</span> : "—"}</td>
                       <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
+                      <td>{item.hiddenFromShop ? <span className="tag tag-red" title="Hidden from public shop">🔒</span> : "—"}</td>
                       <td>
                         <div className="gap-2">
                           <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
@@ -4974,9 +4975,13 @@ function AdminShop({ data, save, showToast, cu }) {
               <input type="checkbox" checked={form.noPost} onChange={e => setField("noPost", e.target.checked)} />
               <label style={{fontSize:13}}>No Post — Collection Only (e.g. Pyro)</label>
             </div>
-            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
+            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
               <input type="checkbox" checked={form.gameExtra || false} onChange={e => setField("gameExtra", e.target.checked)} />
               <label style={{fontSize:13}}>Available as Game Day Extra <span style={{color:"var(--muted)",fontSize:11}}>(shows in event extras product picker)</span></label>
+            </div>
+            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
+              <input type="checkbox" checked={form.hiddenFromShop || false} onChange={e => setField("hiddenFromShop", e.target.checked)} />
+              <label style={{fontSize:13}}>🔒 Hidden from Public Shop <span style={{color:"var(--muted)",fontSize:11}}>(only visible in Cash Sales &amp; Game Day Extras)</span></label>
             </div>
 
             {/* ── VARIANTS EDITOR ── */}
@@ -8871,7 +8876,10 @@ function AdminCash({ data, cu, showToast }) {
             if (item.variants && item.variants.length > 0) {
               return (
                 <div key={item.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8, marginBottom: 4 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                    {item.name}
+                    {item.hiddenFromShop && <span className="tag tag-red" style={{ fontSize: 9, marginLeft: 6 }}>🔒 HIDDEN</span>}
+                  </div>
                   {item.variants.map(v => (
                     <div key={v.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0 3px 12px" }}>
                       <span style={{ fontSize: 12, color: "var(--muted)" }}>{v.name}</span>
@@ -8889,6 +8897,7 @@ function AdminCash({ data, cu, showToast }) {
               <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
                 <div>
                   <span style={{ fontSize: 13 }}>{item.name}</span>
+                  {item.hiddenFromShop && <span className="tag tag-red" style={{ fontSize: 9, marginLeft: 6 }}>🔒 HIDDEN</span>}
                   {item.onSale && item.salePrice && <span className="tag tag-red" style={{ fontSize: 9, marginLeft: 6 }}>SALE</span>}
                 </div>
                 <div className="gap-2">
