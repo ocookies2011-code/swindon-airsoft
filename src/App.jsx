@@ -143,13 +143,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     // extras keyed by "extraId" (no variant) or "extraId:variantId"
     const extraKey = (id, variantId) => variantId ? id + ":" + variantId : id;
     const getExtraQty = (id, variantId) => bCart.extras[extraKey(id, variantId)] || 0;
-    const extrasTotal = visibleExtras.reduce((s, ex) => {
+    const extrasTotal = Math.round(visibleExtras.reduce((s, ex) => {
       const lp = shopData.find(p => p.id === ex.productId);
       if (lp?.variants?.length > 0) {
         return s + lp.variants.reduce((vs, v) => vs + getExtraQty(ex.id, v.id) * Number(v.price), 0);
       }
-      return s + getExtraQty(ex.id, null) * (lp ? lp.price : ex.price);
-    }, 0);
+      return s + getExtraQty(ex.id, null) * (lp ? Number(lp.price) : Number(ex.price));
+    }, 0) * 100) / 100;
     const availCredits = cu?.credits || 0;
     // Determine if VIP discount can apply: only when NOT using credits
     const vipDiscActive = vipDisc > 0 && !useCredits;
@@ -172,22 +172,26 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         vipSavings = saving;
       }
     }
-    const grandTotal   = walkOnTotal + rentalTotal + extrasTotal;
+    // Round every money value to exactly 2 decimal places (pence-precise).
+    // Floating point arithmetic on extras (e.g. 22.5 + 5.99) can silently
+    // produce 28.489999999999998, which Square's fraud checks treat as a
+    // mismatch between the displayed total and the charged amount — causing
+    // CARD_DECLINED_AUTHORIZATION_ERROR specifically when extras are in cart.
+    const grandTotal   = Math.round((walkOnTotal + rentalTotal + extrasTotal) * 100) / 100;
     const cartEmpty    = bCart.walkOn === 0 && bCart.rental === 0 && extrasTotal === 0;
 
     // ── Discount code savings (applied after VIP, before credits)
     let discountSaving = 0;
     if (appliedDiscount && !cartEmpty) {
       if (appliedDiscount.type === 'percent') {
-        discountSaving = grandTotal * (Number(appliedDiscount.value) / 100);
+        discountSaving = Math.round(grandTotal * (Number(appliedDiscount.value) / 100) * 100) / 100;
       } else {
-        discountSaving = Math.min(Number(appliedDiscount.value), grandTotal);
+        discountSaving = Math.min(Math.round(Number(appliedDiscount.value) * 100) / 100, grandTotal);
       }
     }
-    const afterDiscount = Math.max(0, grandTotal - discountSaving);
-
-    const creditsApplied = useCredits ? Math.min(availCredits, afterDiscount) : 0;
-    const payTotal     = Math.max(0, afterDiscount - creditsApplied);
+    const afterDiscount  = Math.round(Math.max(0, grandTotal - discountSaving) * 100) / 100;
+    const creditsApplied = useCredits ? Math.round(Math.min(availCredits, afterDiscount) * 100) / 100 : 0;
+    const payTotal       = Math.round(Math.max(0, afterDiscount - creditsApplied) * 100) / 100;
 
     const applyDiscountCode = async () => {
       if (!discountInput.trim()) return;
