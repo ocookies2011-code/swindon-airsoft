@@ -786,6 +786,14 @@ function AdminDash({ data, setSection }) {
   const outOfStockVariants = shopProducts.filter(p => p.variants?.length > 0 && p.variants.every(v => Number(v.stock) < 1));
   const lowStockVariants = shopProducts.filter(p => p.variants?.length > 0 && p.variants.some(v => Number(v.stock) > 0 && Number(v.stock) <= LOW_STOCK_THRESHOLD));
 
+  // Failed payments count for dashboard alert
+  const [failedPayCount, setFailedPayCount] = React.useState(0);
+  React.useEffect(() => {
+    supabase.from('failed_payments').select('id', { count: 'exact', head: true })
+      .then(({ count }) => { if (count) setFailedPayCount(count); })
+      .catch(() => {});
+  }, []);
+
   const alerts = [
     unsigned > 0 && { msg: `${unsigned} player(s) with unsigned waivers.`, section: "unsigned-waivers", color: "red" },
     pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers", color: "red" },
@@ -798,14 +806,6 @@ function AdminDash({ data, setSection }) {
     new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "⚠" },
     failedPayCount > 0 && { msg: `${failedPayCount} failed payment record${failedPayCount !== 1 ? "s" : ""} — review in Failed Payments.`, section: "failed-payments", color: "red", icon: "💳" },
   ].filter(Boolean);
-
-  // Failed payments count for dashboard alert
-  const [failedPayCount, setFailedPayCount] = React.useState(0);
-  React.useEffect(() => {
-    supabase.from('failed_payments').select('id', { count: 'exact', head: true })
-      .then(({ count }) => { if (count) setFailedPayCount(count); })
-      .catch(() => {});
-  }, []);
 
   // Quick action state
   const [reminderBusy, setReminderBusy] = useState(false);
