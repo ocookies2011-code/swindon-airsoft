@@ -161,15 +161,22 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     let walkOnTotal = bCart.walkOn * walkOnUnitPrice;
     let rentalTotal = bCart.rental * rentalUnitPrice;
     if (vipDiscActive && totalTickets > 0) {
-      // Apply discount to 1 ticket — whichever type was added (walkOn first, then rental)
+      // Apply 10% discount to 1 ticket — whichever type was added (walkOn first, then rental)
       if (bCart.walkOn > 0) {
-        const saving = walkOnUnitPrice * 0.1;
+        const saving = Math.round(walkOnUnitPrice * 0.1 * 100) / 100;
         walkOnTotal = (bCart.walkOn * walkOnUnitPrice) - saving;
         vipSavings = saving;
       } else if (bCart.rental > 0) {
-        const saving = rentalUnitPrice * 0.1;
+        const saving = Math.round(rentalUnitPrice * 0.1 * 100) / 100;
         rentalTotal = (bCart.rental * rentalUnitPrice) - saving;
         vipSavings = saving;
+      }
+      // Also apply 10% VIP discount to extras (disabled automatically when credits are used
+      // because vipDiscActive is already false in that case)
+      if (extrasTotal > 0) {
+        const extrasSaving = Math.round(extrasTotal * 0.1 * 100) / 100;
+        extrasTotal = Math.round((extrasTotal - extrasSaving) * 100) / 100;
+        vipSavings = Math.round((vipSavings + extrasSaving) * 100) / 100;
       }
     }
     // Round every money value to exactly 2 decimal places (pence-precise).
@@ -915,8 +922,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       {useCredits
                         ? "⚠️ VIP discount is not applied when using credits"
                         : totalTickets > 1
-                          ? `★ VIP discount: 10% off 1 ticket (−£${vipSavings.toFixed(2)}). Full price applies to remaining ${totalTickets - 1} ticket${totalTickets - 1 > 1 ? "s" : ""}.`
-                          : `★ VIP 10% discount applied — saving £${vipSavings.toFixed(2)}`
+                          ? `★ VIP discount: 10% off 1 ticket + extras (−£${vipSavings.toFixed(2)}). Full price applies to remaining ${totalTickets - 1} ticket${totalTickets - 1 > 1 ? "s" : ""}.`
+                          : `★ VIP 10% discount applied to ticket & extras — saving £${vipSavings.toFixed(2)}`
                       }
                     </div>
                   )}
