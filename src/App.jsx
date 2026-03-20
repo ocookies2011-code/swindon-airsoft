@@ -437,7 +437,19 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         ]);
 
       } catch (e) {
-        setSquareError("Payment taken but booking failed — please contact us. Error: " + (e.message || String(e)));
+        const errMsg = "Payment taken but booking failed — please contact us. Error: " + (e.message || String(e));
+        setSquareError(errMsg);
+        supabase.from('failed_payments').insert({
+          customer_name:     cu?.name || "Unknown",
+          customer_email:    cu?.email || "",
+          user_id:           cu?.id || null,
+          items:             [],
+          total:             grandTotal || 0,
+          payment_method:    "square_online",
+          error_message:     errMsg,
+          square_payment_id: squarePayment?.id || null,
+          recorded_by:       null,
+        }).then(({ error }) => { if (error) console.warn("Failed to log payment error:", error.message); });
       } finally {
         clearTimeout(safety);
         setBookingBusy(false);
@@ -1519,7 +1531,19 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         api.shop.getAll().then(freshShop => save({ shop: freshShop })).catch(() => {}),
       ]);
     } catch (e) {
-      setShopSquareError("Order failed — please contact us. Error: " + (e.message || String(e)));
+      const errMsg = "Order failed — please contact us. Error: " + (e.message || String(e));
+      setShopSquareError(errMsg);
+      supabase.from('failed_payments').insert({
+        customer_name:     cu?.name || "Unknown",
+        customer_email:    cu?.email || "",
+        user_id:           cu?.id || null,
+        items:             cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+        total:             grandTotal || 0,
+        payment_method:    "square_shop",
+        error_message:     errMsg,
+        square_payment_id: squarePayment?.id || null,
+        recorded_by:       null,
+      }).then(({ error }) => { if (error) console.warn("Failed to log payment error:", error.message); });
     } finally {
       clearTimeout(safety);
       setPlacing(false);
@@ -2772,7 +2796,19 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
       setShowPayment(false);
       showToast("🎉 Payment received! VIP application submitted — admin will activate your status shortly.");
     } catch (e) {
-      setVipPayError("Payment succeeded but application failed — please contact us. Ref: " + squarePayment.id);
+      const errMsg = "Payment succeeded but VIP application failed — please contact us. Ref: " + squarePayment.id;
+      setVipPayError(errMsg);
+      supabase.from('failed_payments').insert({
+        customer_name:     cu?.name || "Unknown",
+        customer_email:    cu?.email || "",
+        user_id:           cu?.id || null,
+        items:             [{ name: "VIP Membership", price: 0, qty: 1 }],
+        total:             0,
+        payment_method:    "square_vip",
+        error_message:     errMsg,
+        square_payment_id: squarePayment?.id || null,
+        recorded_by:       null,
+      }).then(({ error }) => { if (error) console.warn("Failed to log payment error:", error.message); });
     } finally {
       setApplying(false);
     }

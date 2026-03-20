@@ -7913,7 +7913,7 @@ function AdminSettings({ showToast, cu }) {
   const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   const sectionHead = (label, key) => {
-    const isOpen = openSections[key] !== false; // default open = false means collapsed
+    const isOpen = openSections[key] === true; // default collapsed
     return (
       <div
         onClick={() => toggleSection(key)}
@@ -7926,7 +7926,7 @@ function AdminSettings({ showToast, cu }) {
   };
 
   const sectionBody = (key, children) => {
-    const isOpen = openSections[key] !== false;
+    const isOpen = openSections[key] === true;
     return isOpen ? <div style={{ marginTop: 14 }}>{children}</div> : null;
   };
 

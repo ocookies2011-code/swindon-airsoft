@@ -157,7 +157,20 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
       if (!payData || payData.error) throw new Error(payData?.error || "Payment failed — please try again.");
       onSuccess({ id: payData.paymentId, status: "COMPLETED" });
     } catch (e) {
-      setSqError(e.message || "Payment failed. Please try again.");
+      const errMsg = e.message || "Payment failed. Please try again.";
+      setSqError(errMsg);
+      // Log failed payment — fire and forget, never blocks UI
+      supabase.from('failed_payments').insert({
+        customer_name:  "Online customer",
+        customer_email: "",
+        user_id:        null,
+        items:          [],
+        total:          Number(amount) || 0,
+        payment_method: "square_online",
+        error_message:  errMsg,
+        square_payment_id: null,
+        recorded_by:    null,
+      }).then(({ error }) => { if (error) console.warn("Failed to log payment error:", error.message); });
     } finally { setPaying(false); }
   };
 
