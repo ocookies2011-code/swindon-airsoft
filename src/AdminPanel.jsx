@@ -7224,37 +7224,38 @@ function EmailTestCard({ showToast, sectionHead }) {
   return (
     <div className="card mb-2">
       {emailSectionHead("📧 Email Diagnostics")}
-      {open && <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14, lineHeight: 1.7 }}>
-        Send a test email to verify EmailJS is configured correctly.<br/>
-        Service: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_SERVICE_ID}</span> ·
-        Template: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_TEMPLATE_ID}</span>
-      </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-        <input
-          type="email"
-          value={testEmail}
-          onChange={e => setTestEmail(e.target.value)}
-          placeholder="your@email.com"
-          onKeyDown={e => e.key === "Enter" && runTest()}
-          style={{ flex: 1, fontSize: 13 }}
-        />
-        <button className="btn btn-primary" onClick={runTest} disabled={testing} style={{ whiteSpace: "nowrap" }}>
-          {testing ? "Sending…" : "Send Test Email"}
-        </button>
-      </div>
-      {lastResult && (
-        <div className={`alert ${lastResult.ok ? "alert-green" : "alert-red"}`} style={{ fontSize: 12 }}>
-          {lastResult.ok ? "✅ " : "❌ "}{lastResult.msg}
+      {open && <>
+        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14, lineHeight: 1.7 }}>
+          Send a test email to verify EmailJS is configured correctly.<br/>
+          Service: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_SERVICE_ID}</span> ·
+          Template: <span className="mono" style={{ color: "var(--accent)" }}>{EMAILJS_TEMPLATE_ID}</span>
         </div>
-      )}
-      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, lineHeight: 1.7 }}>
-        <strong style={{ color: "var(--text)" }}>If the test fails, check:</strong><br/>
-        • EmailJS dashboard → your template has variables: <span className="mono">to_email</span>, <span className="mono">to_name</span>, <span className="mono">subject</span>, <span className="mono">html_content</span><br/>
-        • The service is connected and verified in EmailJS<br/>
-        • Your EmailJS free tier hasn't hit its monthly limit (200/month)<br/>
-        • The template's "To Email" field is set to <span className="mono">{"{{to_email}}"}</span>
-      </div>
-      }
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+          <input
+            type="email"
+            value={testEmail}
+            onChange={e => setTestEmail(e.target.value)}
+            placeholder="your@email.com"
+            onKeyDown={e => e.key === "Enter" && runTest()}
+            style={{ flex: 1, fontSize: 13 }}
+          />
+          <button className="btn btn-primary" onClick={runTest} disabled={testing} style={{ whiteSpace: "nowrap" }}>
+            {testing ? "Sending…" : "Send Test Email"}
+          </button>
+        </div>
+        {lastResult && (
+          <div className={`alert ${lastResult.ok ? "alert-green" : "alert-red"}`} style={{ fontSize: 12 }}>
+            {lastResult.ok ? "✅ " : "❌ "}{lastResult.msg}
+          </div>
+        )}
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, lineHeight: 1.7 }}>
+          <strong style={{ color: "var(--text)" }}>If the test fails, check:</strong><br/>
+          • EmailJS dashboard → your template has variables: <span className="mono">to_email</span>, <span className="mono">to_name</span>, <span className="mono">subject</span>, <span className="mono">html_content</span><br/>
+          • The service is connected and verified in EmailJS<br/>
+          • Your EmailJS free tier hasn't hit its monthly limit (200/month)<br/>
+          • The template's "To Email" field is set to <span className="mono">{"{{to_email}}"}</span>
+        </div>
+      </>}
     </div>
   );
 }
@@ -8531,7 +8532,24 @@ function AdminCash({ data, cu, showToast }) {
     const cashCustomer = cashPlayer ? cashPlayer.name : (manual.name || "Walk-in");
     const cashItems = items.map(i => `${i.name} x${i.qty} (£${Number(i.price * i.qty).toFixed(2)})`).join(", ");
     const method = squarePaymentId ? "Terminal" : "Cash";
-    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: ${cashCustomer} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
+    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: £{cashCustomer} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
+  };
+
+  const logFailedPayment = async (errorMessage, paymentMethod, squarePaymentId = null) => {
+    const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+    await supabase.from('failed_payments').insert({
+      customer_name:     player ? player.name : (manual.name || "Walk-in"),
+      customer_email:    player ? (player.email || "") : (manual.email || ""),
+      user_id:           player?.id ?? null,
+      items:             items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      total,
+      payment_method:    paymentMethod,
+      error_message:     errorMessage,
+      square_payment_id: squarePaymentId || null,
+      recorded_by:       cu?.email || null,
+    }).then(({ error }) => {
+      if (error) console.warn("Failed to log failed payment:", error.message);
+    });
   };
 
   const resetSale = () => {
@@ -8563,6 +8581,7 @@ function AdminCash({ data, cu, showToast }) {
         : e.message;
       setLastError(msg);
       showToast(isTimed ? "RLS blocking insert — see error below" : "Error: " + e.message, "red");
+      await logFailedPayment(msg, "cash");
     } finally {
       setBusy(false);
     }
@@ -8601,6 +8620,7 @@ function AdminCash({ data, cu, showToast }) {
       setTerminalStatus(null);
       setLastError("Terminal error: " + e.message);
       showToast("Terminal error: " + e.message, "red");
+      await logFailedPayment(e.message, "terminal");
     } finally {
       setTerminalBusy(false);
     }
@@ -8623,6 +8643,7 @@ function AdminCash({ data, cu, showToast }) {
         } catch (dbErr) {
           setLastError("Payment taken but DB save failed: " + dbErr.message);
           showToast("Payment taken but DB save failed — see error below", "red");
+          await logFailedPayment("Payment taken but DB save failed: " + dbErr.message, "terminal", result.paymentId);
         }
       } else if (result.status === "CANCELLED" || result.status === "CANCEL_REQUESTED") {
         clearInterval(pollRef.current); pollRef.current = null;
