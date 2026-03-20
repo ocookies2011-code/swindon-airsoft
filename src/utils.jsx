@@ -155,7 +155,7 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
       setPayStage("verifying");
       try {
         const verificationDetails = {
-          amount: String(Math.round(Number(amount) * 100)),
+          amount: String(Number(amount).toFixed(2)),  // verifyBuyer needs pounds as string, NOT pence
           currencyCode: "GBP",
           intent: "CHARGE",
           billingContact: {},
