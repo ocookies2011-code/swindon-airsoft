@@ -667,6 +667,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "leaderboard-admin", label: "Leaderboard",       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>, group: null },
     { id: "revenue",           label: "Revenue",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, group: "ANALYTICS" },
     { id: "visitor-stats",     label: "Visitor Stats",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, group: null },
+    { id: "failed-payments",   label: "Failed Payments",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, group: null },
     { id: "gallery-admin",     label: "Gallery",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, group: null },
     { id: "qa-admin",          label: "Q&A",               icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, group: null },
     { id: "staff-admin",       label: "Staff",             icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, group: null },
@@ -742,6 +743,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "visitor-stats" && <AdminVisitorStats />}
+          {section === "failed-payments" && <AdminFailedPayments showToast={showToast} cu={cu} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}
@@ -794,7 +796,16 @@ function AdminDash({ data, setSection }) {
     lowStock.length > 0 && { msg: lowStock.length + " product(s) running low (≤" + LOW_STOCK_THRESHOLD + "): " + lowStock.slice(0,3).map(p=>p.name+" ("+p.stock+")").join(", ") + (lowStock.length>3 ? " +" + (lowStock.length-3) + " more" : "") + ".", section: "shop", color: "gold", icon: "⚠️" },
     lowStockVariants.length > 0 && { msg: lowStockVariants.length + " variant product(s) have low stock variants.", section: "shop", color: "gold", icon: "⚠️" },
     new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "⚠" },
+    failedPayCount > 0 && { msg: `${failedPayCount} failed payment record${failedPayCount !== 1 ? "s" : ""} — review in Failed Payments.`, section: "failed-payments", color: "red", icon: "💳" },
   ].filter(Boolean);
+
+  // Failed payments count for dashboard alert
+  const [failedPayCount, setFailedPayCount] = React.useState(0);
+  React.useEffect(() => {
+    supabase.from('failed_payments').select('id', { count: 'exact', head: true })
+      .then(({ count }) => { if (count) setFailedPayCount(count); })
+      .catch(() => {});
+  }, []);
 
   // Quick action state
   const [reminderBusy, setReminderBusy] = useState(false);
@@ -5135,6 +5146,147 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
   );
 }
 
+// ── Admin Failed Payments ─────────────────────────────────
+function AdminFailedPayments({ showToast, cu }) {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [delConfirm, setDelConfirm] = useState(null);
+  const [delBusy, setDelBusy]   = useState(false);
+  const [filter, setFilter]     = useState("all");
+
+  useEffect(() => {
+    supabase.from("failed_payments").select("*").order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) showToast("Failed to load: " + error.message, "red");
+        else setPayments(data || []);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const deleteEntry = async (id) => {
+    setDelBusy(true);
+    try {
+      const { error } = await supabase.from("failed_payments").delete().eq("id", id);
+      if (error) throw error;
+      setPayments(p => p.filter(x => x.id !== id));
+      showToast("Entry deleted.");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Failed payment deleted", detail: `ID: ${id}` });
+      setDelConfirm(null);
+    } catch (e) {
+      showToast("Delete failed: " + e.message, "red");
+    } finally { setDelBusy(false); }
+  };
+
+  const methodLabel = { square_online:"Online Booking", square_shop:"Shop Order", square_vip:"VIP Payment", terminal:"Terminal", cash:"Cash Sale", unknown:"Unknown" };
+  const methodColor = { square_online:"#4fc3f7", square_shop:"#ffb74d", square_vip:"#ffd54f", terminal:"#81c784", cash:"#a5d6a7", unknown:"#888" };
+
+  const filtered = filter === "all" ? payments : payments.filter(p => p.payment_method === filter);
+  const totalLost = filtered.reduce((s, p) => s + Number(p.total || 0), 0);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Failed Payments</div>
+          <div className="page-sub">Payment attempts that failed — not included in revenue</div>
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:10, marginBottom:16 }}>
+        {[
+          { label:"Total Failed",    val: payments.length,                                                           color:"var(--red)" },
+          { label:"Value at Risk",   val: `£${payments.reduce((s,p) => s+Number(p.total||0),0).toFixed(2)}`,   color:"var(--gold)" },
+          { label:"Online Bookings", val: payments.filter(p=>p.payment_method==="square_online").length,             color:"#4fc3f7" },
+          { label:"Shop Orders",     val: payments.filter(p=>p.payment_method==="square_shop").length,               color:"#ffb74d" },
+          { label:"Terminal",        val: payments.filter(p=>p.payment_method==="terminal").length,                  color:"#81c784" },
+          { label:"Cash Sales",      val: payments.filter(p=>p.payment_method==="cash").length,                      color:"#a5d6a7" },
+        ].map(({ label, val, color }) => (
+          <div key={label} style={{ background:"var(--card)", border:"1px solid var(--border)", padding:"12px 14px", borderRadius:3 }}>
+            <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:4 }}>{label}</div>
+            <div style={{ fontSize:20, fontWeight:800, color, fontFamily:"'Barlow Condensed',sans-serif" }}>{val}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:12 }}>
+        {[["all","All"],["square_online","Online"],["square_shop","Shop"],["terminal","Terminal"],["cash","Cash"],["square_vip","VIP"]].map(([key, label]) => (
+          <button key={key} onClick={() => setFilter(key)} className="btn btn-sm"
+            style={{ background:filter===key?"var(--accent)":"var(--card)", color:filter===key?"#000":"var(--muted)", border:"1px solid "+(filter===key?"var(--accent)":"var(--border)"), fontWeight:filter===key?700:400 }}>
+            {label}{key!=="all"&&` (${payments.filter(p=>p.payment_method===key).length})`}
+          </button>
+        ))}
+        {filtered.length > 0 && (
+          <span style={{ marginLeft:"auto", fontSize:12, color:"var(--muted)", alignSelf:"center" }}>
+            {filtered.length} record{filtered.length!==1?"s":""} · £{totalLost.toFixed(2)} total
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="card" style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>
+          {payments.length === 0 ? "✅ No failed payments on record." : "No failed payments match this filter."}
+        </div>
+      ) : (
+        <div className="card" style={{ padding:0, overflow:"hidden" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+            <thead>
+              <tr style={{ borderBottom:"1px solid var(--border)", background:"var(--bg4)" }}>
+                {["Date","Customer","Method","Items","Total","Error",""].map(h => (
+                  <th key={h} style={{ padding:"8px 12px", textAlign:"left", fontSize:10, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", fontWeight:600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p, i) => (
+                <tr key={p.id} style={{ borderBottom:"1px solid var(--border)", background:i%2===0?"transparent":"rgba(255,255,255,.015)" }}>
+                  <td style={{ padding:"10px 12px", whiteSpace:"nowrap", fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)" }}>{gmtShort(p.created_at)}</td>
+                  <td style={{ padding:"10px 12px" }}>
+                    <div style={{ fontWeight:600, fontSize:12 }}>{p.customer_name||"—"}</div>
+                    {p.customer_email && <div style={{ fontSize:10, color:"var(--muted)" }}>{p.customer_email}</div>}
+                  </td>
+                  <td style={{ padding:"10px 12px" }}>
+                    <span style={{ background:"rgba(0,0,0,.3)", border:`1px solid ${methodColor[p.payment_method]||"#888"}`, color:methodColor[p.payment_method]||"#888", fontSize:9, fontWeight:700, padding:"2px 7px", letterSpacing:".1em", fontFamily:"'Barlow Condensed',sans-serif" }}>
+                      {methodLabel[p.payment_method]||p.payment_method}
+                    </span>
+                  </td>
+                  <td style={{ padding:"10px 12px", color:"var(--muted)", fontSize:11, maxWidth:160 }}>
+                    {Array.isArray(p.items)&&p.items.length>0 ? p.items.map(it=>`${it.name}${it.qty>1?` ×${it.qty}`:""}`).join(", ") : "—"}
+                  </td>
+                  <td style={{ padding:"10px 12px", fontFamily:"'Share Tech Mono',monospace", fontWeight:700, color:"var(--red)" }}>£{Number(p.total||0).toFixed(2)}</td>
+                  <td style={{ padding:"10px 12px", fontSize:11, color:"var(--muted)", maxWidth:200 }}>
+                    <span title={p.error_message} style={{ display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:200 }}>{p.error_message||"—"}</span>
+                    {p.square_payment_id && <span style={{ fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#4fc3f7", display:"block", marginTop:2 }}>Ref: {p.square_payment_id.slice(0,16)}…</span>}
+                  </td>
+                  <td style={{ padding:"10px 12px" }}>
+                    <button onClick={() => setDelConfirm(p.id)} style={{ background:"transparent", border:"1px solid rgba(255,60,60,.3)", color:"var(--red)", fontSize:10, padding:"3px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em" }}>DELETE</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {delConfirm && (
+        <div className="overlay" onClick={() => setDelConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:380 }}>
+            <div className="modal-title">Delete Entry?</div>
+            <div style={{ fontSize:13, color:"var(--muted)", marginBottom:20 }}>This will permanently remove the failed payment record. This cannot be undone.</div>
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button className="btn btn-ghost" onClick={() => setDelConfirm(null)} disabled={delBusy}>Cancel</button>
+              <button className="btn btn-primary" style={{ background:"rgba(255,60,60,.15)", borderColor:"var(--red)", color:"var(--red)" }} onClick={() => deleteEntry(delConfirm)} disabled={delBusy}>
+                {delBusy ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Admin Visitor Stats ───────────────────────────────────
 function AdminVisitorStats() {
   const [visitData, setVisitData]         = useState([]);
@@ -9154,7 +9306,8 @@ function TermsPage({ setPage }) {
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,280px),1fr))", gap:12, marginBottom:20 }}>
               {[
                 { title:"More than 48 hours before event", icon:"✅", color:"#c8ff00", bg:"rgba(200,255,0,.05)", border:"rgba(200,255,0,.2)", items:["Walk-on bookings: full refund to original payment method", "Rental bookings: 90% refund (10% rental processing fee retained)", "Refund issued to original payment method within 3–5 business days"] },
-                { title:"Within 48 hours of event", icon:"⏱", color:"var(--gold)", bg:"rgba(200,150,0,.06)", border:"rgba(200,150,0,.25)", items:["Walk-on bookings: full amount issued as Game Day Credits", "Rental bookings: 90% issued as Game Day Credits (10% fee retained)", "Credits are added to your account instantly and can be used on future bookings"] },
+                { title:"24–48 hours before event", icon:"⏱", color:"var(--gold)", bg:"rgba(200,150,0,.06)", border:"rgba(200,150,0,.25)", items:["Walk-on bookings: full amount issued as Game Day Credits", "Rental bookings: 90% issued as Game Day Credits (10% fee retained)", "Credits are added to your account instantly and can be used on future bookings"] },
+                { title:"Within 24 hours of event", icon:"🚫", color:"var(--red)", bg:"rgba(255,60,60,.05)", border:"rgba(255,60,60,.2)", items:["Cancellations are not permitted within 24 hours of the event", "The Cancel Booking button will be unavailable in your profile", "In exceptional circumstances please contact us directly"] },
               ].map(box => (
                 <div key={box.title} style={{ background:box.bg, border:"1px solid " + box.border, padding:16 }}>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".1em", color:box.color, textTransform:"uppercase", marginBottom:10 }}>{box.icon} {box.title}</div>

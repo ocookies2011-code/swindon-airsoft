@@ -4200,6 +4200,14 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       const hoursUntil = (eventDate - new Date()) / 36e5;
       const isRental = b.type === "rental";
       const within48 = hoursUntil < 48;
+      const within24 = hoursUntil < 24;
+
+      // 24h no-cancel guard — should be blocked by UI but double-check server-side
+      if (within24) {
+        showToast("Cancellations are not permitted within 24 hours of the event.", "red");
+        setCancelling(false);
+        return;
+      }
 
       // Calculate refund
       let refundAmount = Number(b.total);
@@ -4207,7 +4215,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       refundAmount = Math.round(refundAmount * 100) / 100;
 
       if (within48) {
-        // Within 48h — always give credits
+        // Within 48h (but outside 24h) — always give credits
         const newCredits = (Number(cu.credits) || 0) + refundAmount;
         await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
         updateUser(cu.id, { credits: newCredits });
@@ -4937,17 +4945,22 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                     const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
                     const canCancel = hoursUntil > 0;
                     if (!canCancel) return null;
+                    const within24 = hoursUntil < 24;
                     const within48 = hoursUntil < 48;
                     return (
                       <div style={{ padding:"8px 22px 10px", borderTop:"1px solid #1a2808", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
-                        <div style={{ fontSize:10, color:"#5a7a30", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".08em" }}>
-                          {within48
+                        <div style={{ fontSize:10, color: within24 ? "var(--red)" : "#5a7a30", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".08em" }}>
+                          {within24
+                            ? "🚫 Within 24h of event — cancellation not permitted"
+                            : within48
                             ? "⚠ Within 48h — refund as credits only" + (b.type === "rental" ? " · 10% rental fee applies" : "")
                             : b.type === "rental" ? "Rental — 10% fee applies on cancellation" : "Full refund available"}
                         </div>
-                        <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".15em", padding:"4px 14px", cursor:"pointer", textTransform:"uppercase" }}>
-                          ✕ CANCEL BOOKING
-                        </button>
+                        {!within24 && (
+                          <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".15em", padding:"4px 14px", cursor:"pointer", textTransform:"uppercase" }}>
+                            ✕ CANCEL BOOKING
+                          </button>
+                        )}
                       </div>
                     );
                   })()}
@@ -4962,44 +4975,78 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       {cancelModal && (() => {
         const b = cancelModal;
         const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
+        const within24 = hoursUntil < 24;
         const within48 = hoursUntil < 48;
         const isRental = b.type === "rental";
         const originalTotal = Number(b.total);
         const refundAmount = Math.round(originalTotal * (isRental ? 0.9 : 1) * 100) / 100;
         const rentalFee = Math.round((originalTotal - refundAmount) * 100) / 100;
+
+        // Policy tiers
+        const policyTiers = [
+          { label: "More than 48 hours", condition: !within48, color:"#c8ff00", bg:"rgba(200,255,0,.04)", border:"rgba(200,255,0,.15)",
+            desc: isRental ? `90% refund (£${refundAmount.toFixed(2)}) to original payment method — 10% rental fee retained` : `Full refund (£${refundAmount.toFixed(2)}) to original payment method` },
+          { label: "24–48 hours before", condition: within48 && !within24, color:"var(--gold)", bg:"rgba(200,150,0,.04)", border:"rgba(200,150,0,.2)",
+            desc: isRental ? `90% refund (£${refundAmount.toFixed(2)}) as Game Day Credits — 10% rental fee retained` : `Full refund (£${refundAmount.toFixed(2)}) as Game Day Credits` },
+          { label: "Under 24 hours", condition: within24, color:"var(--red)", bg:"rgba(255,60,60,.04)", border:"rgba(255,60,60,.2)",
+            desc: "Cancellations not permitted within 24 hours of the event" },
+        ];
+
         return (
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
-            <div style={{ background:"#0d0d0d", border:"1px solid #6b2222", maxWidth:440, width:"100%", padding:28 }}>
+            <div style={{ background:"#0d0d0d", border:"1px solid #6b2222", maxWidth:460, width:"100%", padding:28 }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".12em", color:"#ef4444", textTransform:"uppercase", marginBottom:6 }}>⚠ CANCEL BOOKING</div>
-              <div style={{ fontWeight:700, fontSize:15, color:"var(--text)", marginBottom:16 }}>{b.eventTitle} — {fmtDate(b.eventDate)}</div>
+              <div style={{ fontWeight:700, fontSize:15, color:"var(--text)", marginBottom:4 }}>{b.eventTitle}</div>
+              <div style={{ fontSize:12, color:"var(--muted)", marginBottom:16 }}>{fmtDate(b.eventDate)} · {b.type === "rental" ? "Rental" : "Walk-On"} × {b.qty} · Paid £{originalTotal.toFixed(2)}</div>
 
-              <div style={{ background:"#1a0a0a", border:"1px solid #3a1515", padding:16, marginBottom:20, display:"flex", flexDirection:"column", gap:8 }}>
-                {[
-                  ["Booking total", `£${originalTotal.toFixed(2)}`],
-                  isRental && ["Rental fee (10%)", `-£${rentalFee.toFixed(2)}`],
-                  ["You will receive", null],
-                ].filter(Boolean).map(([label, val]) => val ? (
-                  <div key={label} style={{ display:"flex", justifyContent:"space-between", fontSize:13, color: label.includes("fee") ? "var(--red)" : "var(--muted)" }}>
-                    <span>{label}</span><span style={{ color: label.includes("fee") ? "var(--red)" : "var(--text)", fontFamily:"'Share Tech Mono',monospace" }}>{val}</span>
+              {/* Policy tiers */}
+              <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+                {policyTiers.map(tier => (
+                  <div key={tier.label} style={{ background: tier.condition ? tier.bg : "transparent", border:`1px solid ${tier.condition ? tier.border : "rgba(255,255,255,.06)"}`, padding:"10px 12px", display:"flex", alignItems:"flex-start", gap:10 }}>
+                    <div style={{ width:8, height:8, borderRadius:"50%", background: tier.condition ? tier.color : "#333", flexShrink:0, marginTop:4 }} />
+                    <div>
+                      <div style={{ fontSize:11, fontWeight:700, color: tier.condition ? tier.color : "#444", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase", marginBottom:2 }}>{tier.label}</div>
+                      <div style={{ fontSize:11, color: tier.condition ? "var(--text)" : "#444" }}>{tier.desc}</div>
+                    </div>
+                    {tier.condition && <div style={{ marginLeft:"auto", fontSize:10, fontWeight:800, color:tier.color, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", flexShrink:0 }}>← YOU ARE HERE</div>}
                   </div>
-                ) : null)}
-                <div style={{ borderTop:"1px solid #3a1515", paddingTop:8, display:"flex", justifyContent:"space-between", fontSize:16, fontWeight:800 }}>
-                  <span style={{ color:"var(--muted)" }}>Refund</span>
-                  <span style={{ color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>£{refundAmount.toFixed(2)}</span>
-                </div>
-                <div style={{ fontSize:11, color: within48 ? "var(--gold)" : "var(--muted)", marginTop:4 }}>
-                  {within48
-                    ? "⏱ Within 48h of event — refund will be added as game credits"
-                    : "✓ Outside 48h — refund via original payment method (or game credits if Square unavailable)"}
-                </div>
+                ))}
               </div>
 
-              <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-                <button onClick={() => setCancelModal(null)} disabled={cancelling} className="btn btn-ghost">Keep Booking</button>
-                <button onClick={doCancel} disabled={cancelling} style={{ background:"#6b2222", border:"1px solid #ef4444", color:"#fca5a5", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".1em", padding:"8px 20px", cursor:cancelling?"wait":"pointer", textTransform:"uppercase" }}>
-                  {cancelling ? "Cancelling…" : "Confirm Cancellation"}
-                </button>
-              </div>
+              {!within24 && (
+                <div style={{ background:"#1a0a0a", border:"1px solid #3a1515", padding:14, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
+                    <span style={{ color:"var(--muted)" }}>Booking total</span>
+                    <span style={{ fontFamily:"'Share Tech Mono',monospace" }}>£{originalTotal.toFixed(2)}</span>
+                  </div>
+                  {isRental && (
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:6 }}>
+                      <span style={{ color:"var(--red)" }}>Rental fee (10%)</span>
+                      <span style={{ color:"var(--red)", fontFamily:"'Share Tech Mono',monospace" }}>−£{rentalFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div style={{ borderTop:"1px solid #3a1515", paddingTop:10, display:"flex", justifyContent:"space-between", fontSize:16, fontWeight:800 }}>
+                    <span style={{ color:"var(--muted)" }}>{within48 ? "Credits added" : "Refund"}</span>
+                    <span style={{ color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace" }}>£{refundAmount.toFixed(2)}</span>
+                  </div>
+                  <div style={{ fontSize:10, color:"var(--muted)", marginTop:8, fontFamily:"'Share Tech Mono',monospace" }}>
+                    {within48 ? "⏱ Added to your account instantly as Game Day Credits" : "✓ Refunded to original payment method within 3–5 business days"}
+                  </div>
+                </div>
+              )}
+
+              {within24 ? (
+                <div style={{ display:"flex", justifyContent:"flex-end" }}>
+                  <button onClick={() => setCancelModal(null)} className="btn btn-ghost">Close</button>
+                </div>
+              ) : (
+                <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+                  <button onClick={() => setCancelModal(null)} disabled={cancelling} className="btn btn-ghost">Keep Booking</button>
+                  <button onClick={doCancel} disabled={cancelling} style={{ background:"#6b2222", border:"1px solid #ef4444", color:"#fca5a5", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".1em", padding:"8px 20px", cursor:cancelling?"wait":"pointer", textTransform:"uppercase" }}>
+                    {cancelling ? "Cancelling…" : "Confirm Cancellation"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );
