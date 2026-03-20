@@ -160,19 +160,21 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     let vipSavings = 0;
     let walkOnTotal = bCart.walkOn * walkOnUnitPrice;
     let rentalTotal = bCart.rental * rentalUnitPrice;
-    if (vipDiscActive && totalTickets > 0) {
-      // Apply 10% discount to 1 ticket — whichever type was added (walkOn first, then rental)
-      if (bCart.walkOn > 0) {
-        const saving = Math.round(walkOnUnitPrice * 0.1 * 100) / 100;
-        walkOnTotal = (bCart.walkOn * walkOnUnitPrice) - saving;
-        vipSavings = saving;
-      } else if (bCart.rental > 0) {
-        const saving = Math.round(rentalUnitPrice * 0.1 * 100) / 100;
-        rentalTotal = (bCart.rental * rentalUnitPrice) - saving;
-        vipSavings = saving;
+    if (vipDiscActive) {
+      // Apply 10% to 1 ticket — whichever type is in the cart (walkOn first, then rental)
+      if (totalTickets > 0) {
+        if (bCart.walkOn > 0) {
+          const saving = Math.round(walkOnUnitPrice * 0.1 * 100) / 100;
+          walkOnTotal = (bCart.walkOn * walkOnUnitPrice) - saving;
+          vipSavings = saving;
+        } else if (bCart.rental > 0) {
+          const saving = Math.round(rentalUnitPrice * 0.1 * 100) / 100;
+          rentalTotal = (bCart.rental * rentalUnitPrice) - saving;
+          vipSavings = saving;
+        }
       }
-      // Also apply 10% VIP discount to extras (disabled automatically when credits are used
-      // because vipDiscActive is already false in that case)
+      // Apply 10% to extras regardless of whether a ticket is also in the cart.
+      // vipDiscActive is already false when using credits, so no extra guard needed.
       if (extrasTotal > 0) {
         const extrasSaving = Math.round(extrasTotal * 0.1 * 100) / 100;
         extrasTotal = Math.round((extrasTotal - extrasSaving) * 100) / 100;
