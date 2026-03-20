@@ -2460,14 +2460,16 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
     .filter(u => !u.leaderboardOptOut && u.role === "player")
     .sort((a, b) => b.gamesAttended - a.gamesAttended);
 
-  const totalPages = Math.max(1, Math.ceil(board.length / PAGE_SIZE));
-  const pageStart  = (page - 1) * PAGE_SIZE;
-  const pageEnd    = pageStart + PAGE_SIZE;
-  const pagePlayers = board.slice(pageStart, pageEnd);
+  const listBoard   = board.slice(3); // exclude top 3 — shown in podium
+  const totalPages  = Math.max(1, Math.ceil(listBoard.length / PAGE_SIZE));
+  const pageStart   = (page - 1) * PAGE_SIZE;
+  const pageEnd     = pageStart + PAGE_SIZE;
+  const pagePlayers = page === 1 ? listBoard.slice(0, PAGE_SIZE) : listBoard.slice(pageStart, pageEnd);
 
   // If the logged-in user is on a different page, show which page they're on
-  const myRank = cu ? board.findIndex(p => p.id === cu.id) : -1;
-  const myPage = myRank >= 0 ? Math.ceil((myRank + 1) / PAGE_SIZE) : -1;
+  const myRank     = cu ? board.findIndex(p => p.id === cu.id) : -1;
+  const myListRank = cu ? listBoard.findIndex(p => p.id === cu.id) : -1;
+  const myPage     = myListRank >= 0 ? Math.ceil((myListRank + 1) / PAGE_SIZE) : (myRank >= 0 && myRank < 3 ? 1 : -1);
 
   const getRankTitle = (i) => {
     if (i === 0) return "FIELD COMMANDER";
