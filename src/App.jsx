@@ -5675,20 +5675,6 @@ function AppInner() {
     });
   }, [page, cu?.id]);
 
-  // ── Shop cart funnel tracking ──────────────────────────────
-  useEffect(() => {
-    if (page !== "shop") return;
-    const sid = sessionStorage.getItem("sa_sid");
-    const itemCount = shopCart.reduce((s, i) => s + i.qty, 0);
-    if (itemCount === 0) return; // nothing in cart — already tracked as 'shop'
-    const funnelPage = shopCartOpen ? "shop:checkout" : "shop:basket";
-    api.visits.track({
-      page:      funnelPage,
-      userId:    cu?.id   || null,
-      userName:  cu?.name || null,
-      sessionId: sid,
-    });
-  }, [shopCart.length, shopCartOpen, page]);
   useEffect(() => {
     const onHash = () => {
       const parts = window.location.hash.replace("#","").split("/");
@@ -5703,6 +5689,20 @@ function AppInner() {
   // Shop state — lifted to App level so cart persists between shop & product page
   const [shopCart, setShopCart] = useState([]);
   const [shopCartOpen, setShopCartOpen] = useState(false);
+  // ── Shop cart funnel tracking ──────────────────────────────
+  useEffect(() => {
+    if (page !== "shop") return;
+    const sid = sessionStorage.getItem("sa_sid");
+    const itemCount = shopCart.reduce((s, i) => s + i.qty, 0);
+    if (itemCount === 0) return; // nothing in cart — already tracked as 'shop'
+    const funnelPage = shopCartOpen ? "shop:checkout" : "shop:basket";
+    api.visits.track({
+      page:      funnelPage,
+      userId:    cu?.id   || null,
+      userName:  cu?.name || null,
+      sessionId: sid,
+    });
+  }, [shopCart.length, shopCartOpen, page]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   // Reset product view when navigating away from shop
