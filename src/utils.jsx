@@ -458,7 +458,9 @@ function useData() {
             contactDepartments: (() => { try { return JSON.parse(contactDepartmentsRaw || "[]"); } catch { return []; } })(),
           }));
 
-          // Load profiles after public data — only succeeds when authed, silently skipped for guests
+          // Load profiles after public data.
+          // Full load succeeds for authenticated users; guests fall back to the
+          // public leaderboard subset so the Combat Roll is never empty.
           api.profiles.getAll()
             .then(userList => {
               const profiles = userList.map(normaliseProfile);
@@ -500,7 +502,35 @@ function useData() {
               });
               setData(prev => prev ? { ...prev, users: profiles } : prev);
             })
-            .catch(() => {}); // guests can't see profiles — that's fine
+            .catch(() => {
+              // Authenticated profile load failed (guest / RLS restriction).
+              // Fetch the minimal public subset needed to render the leaderboard.
+              // Only selects non-sensitive fields; email, phone, credits etc. are excluded.
+              supabase
+                .from("profiles")
+                .select("id, name, callsign, role, games_attended, vip_status, vip_expires_at, profile_pic, public_profile, leaderboard_opt_out")
+                .eq("role", "player")
+                .then(({ data: rows }) => {
+                  if (!rows || rows.length === 0) return;
+                  const now = new Date();
+                  const publicProfiles = rows.map(r => ({
+                    id:                r.id,
+                    name:              r.name              || "",
+                    callsign:          r.callsign          || "",
+                    role:              r.role              || "player",
+                    gamesAttended:     r.games_attended    || 0,
+                    vipStatus:         r.vip_status && r.vip_expires_at && new Date(r.vip_expires_at) < now
+                                         ? "expired"
+                                         : (r.vip_status   || "none"),
+                    vipExpiresAt:      r.vip_expires_at    || null,
+                    profilePic:        r.profile_pic       || null,
+                    publicProfile:     r.public_profile    ?? false,
+                    leaderboardOptOut: r.leaderboard_opt_out ?? false,
+                  }));
+                  setData(prev => prev ? { ...prev, users: publicProfiles } : prev);
+                })
+                .catch(() => {}); // truly public fetch failed — board stays empty
+            });
 
           clearTimeout(globalTimeout);
           setLoading(false);
