@@ -996,9 +996,9 @@ export const staff = wrapWithTimeout({
 //  - Unique visits = distinct session_ids (one per browser tab session)
 //  - getAllTimeCounts() returns total rows + unique sessions across all time
 // ── Geo lookup cache (session-scoped, never sent to server) ──────────────────
-// Cached on success. On failure, retries up to 3 times (once per page nav)
-// so a transient API blip doesn't permanently prevent geo data for a session.
-let _geoCache     = undefined; // undefined = not yet attempted; null = last attempt failed
+// Reset on every page load so a new API order is always tried fresh.
+// Result is cached in memory once a successful lookup completes.
+let _geoCache     = undefined;
 let _geoFailCount = 0;
 const GEO_MAX_RETRIES = 3;
 
@@ -1138,7 +1138,8 @@ export const visits = wrapWithTimeout({
         .maybeSingle();
 
       if (existing) {
-        // Row exists — update only the non-geo fields (preserve existing geo)
+        // Row exists — update non-geo fields plus always refresh geo
+        // (always overwrite so bad cached coords get corrected on next visit)
         await supabase.from('page_visits').update({
           page,
           last_seen_at: now,
@@ -1147,18 +1148,16 @@ export const visits = wrapWithTimeout({
           visit_count:  (existing.visit_count || 1) + 1,
         }).eq('id', existing.id);
 
-        // Backfill geo if it's still missing on this row
-        if (!existing.country) {
-          _lookupGeo().then(geo => {
-            if (!geo) return;
-            supabase.from('page_visits').update({
-              country: geo.country || null,
-              city:    geo.city    || null,
-              lat:     geo.lat     || null,
-              lon:     geo.lon     || null,
-            }).eq('id', existing.id).then(() => {}).catch(() => {});
-          }).catch(() => {});
-        }
+        // Always re-run geo and overwrite — fixes stale/bad coords from old API
+        _lookupGeo().then(geo => {
+          if (!geo) return;
+          supabase.from('page_visits').update({
+            country: geo.country || null,
+            city:    geo.city    || null,
+            lat:     geo.lat     || null,
+            lon:     geo.lon     || null,
+          }).eq('id', existing.id).then(() => {}).catch(() => {});
+        }).catch(() => {});
       } else {
         // New row — insert with geo filled in once lookup resolves
         const { data: newRow } = await supabase.from('page_visits').insert({
