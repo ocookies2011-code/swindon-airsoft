@@ -5323,7 +5323,13 @@ function AdminVisitorStats() {
   }, [dateRange]); // eslint-disable-line
 
   // Data arrives pre-filtered from the server
-  const filtered = visitData;
+  // Filter out bot/crawler traffic — identified by user_agent strings.
+  // Bots (Googlebot, Bingbot etc.) typically hit from US datacenters (San Jose)
+  // with no referrer and no user_id, heavily distorting location stats.
+  const BOT_PATTERNS = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|yandex|duckduck|semrush|ahrefs|mj12|petalbot|bytespider/i;
+  const filtered = visitData.filter(row =>
+    !row.user_agent || !BOT_PATTERNS.test(row.user_agent)
+  );
 
   // ── Derived stats ──
   // For "ALL" range, use the exact server-side counts (avoids any row-limit distortion)
