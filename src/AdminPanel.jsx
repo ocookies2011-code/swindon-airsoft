@@ -5294,8 +5294,8 @@ function AdminFailedPayments({ showToast, cu }) {
 
 // ── UK Visitor Map ────────────────────────────────────────
 function UKVisitorMap({ visitData }) {
-  const [tooltip, setTooltip] = React.useState(null);
-  const svgRef = React.useRef(null);
+  const [tooltip, setTooltip] = useState(null);
+  const svgRef = useRef(null);
 
   const UK_LAT_MAX = 60.9; const UK_LAT_MIN = 49.8;
   const UK_LON_MIN = -8.2; const UK_LON_MAX = 2.0;
