@@ -5373,7 +5373,7 @@ function AdminVisitorStats() {
     acc[ckey] = (acc[ckey] || 0) + 1; return acc;
   }, {});
   const countryRows = Object.entries(countryCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 10)
-    .map(([cc, cnt]) => [countryFlag(cc) ? `${countryFlag(cc)} ${cc}` : cc, cnt]);
+    .map(([cc, cnt]) => ({ flag: countryFlag(cc), label: cc, count: cnt }));
 
   // City breakdown — store country code separately so we can flag it
   const cityCounts = filtered.reduce((acc, row) => {
@@ -5382,7 +5382,7 @@ function AdminVisitorStats() {
     acc[ckey].count++; return acc;
   }, {});
   const cityRows = Object.entries(cityCounts).sort((aa, bb) => bb[1].count - aa[1].count).slice(0, 12)
-    .map(([city, { count, country }]) => [`${countryFlag(country)} ${city}`, count]);
+    .map(([city, { count, country }]) => ({ flag: countryFlag(country), label: city, count }));
 
   // Logged-in user breakdown
   const userVisitMap = {};
@@ -5435,10 +5435,13 @@ function AdminVisitorStats() {
     </div>
   );
 
-  const barRow = (barLabel, barCount, barTotal, barColor = "#c8ff00") => (
+  const barRow = (barLabel, barCount, barTotal, barColor = "#c8ff00", barFlag = "") => (
     <div key={barLabel} style={{ marginBottom:8 }}>
       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#b0c090", textTransform:"uppercase", letterSpacing:".04em" }}>{barLabel}</span>
+        <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+          {barFlag && <span style={{ fontSize:16, lineHeight:1 }}>{barFlag}</span>}
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#b0c090", textTransform:"uppercase", letterSpacing:".04em" }}>{barLabel}</span>
+        </span>
         <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00" }}>{barCount} <span style={{ color:"#3a5010" }}>({Math.round(barCount / barTotal * 100)}%)</span></span>
       </div>
       <div style={{ height:4, background:"#0a0f06", borderRadius:2, overflow:"hidden" }}>
@@ -5587,12 +5590,12 @@ function AdminVisitorStats() {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,300px),1fr))", gap:16 }}>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>BY COUNTRY</div>
-              {countryRows.map(([countryName, cnt]) => barRow(countryName, cnt, totalVisits))}
+              {countryRows.map(r => barRow(r.label, r.count, totalVisits, "#c8ff00", r.flag))}
               {countryRows.length === 0 && <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No location data yet — geo lookup fires on each new visit.</div>}
             </div>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px" }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>BY CITY</div>
-              {cityRows.map(([cityName, cnt]) => barRow(cityName, cnt, totalVisits, "#ce93d8"))}
+              {cityRows.map(r => barRow(r.label, r.count, totalVisits, "#ce93d8", r.flag))}
               {cityRows.length === 0 && <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No location data yet.</div>}
             </div>
           </div>
