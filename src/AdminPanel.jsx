@@ -5294,8 +5294,8 @@ function AdminFailedPayments({ showToast, cu }) {
 
 // ── UK Visitor Map ────────────────────────────────────────
 function UKVisitorMap({ visitData }) {
-  const [tooltip, setTooltip] = useState(null);
-  const svgRef = useRef(null);
+  const [tooltip, setTooltip] = React.useState(null);
+  const svgRef = React.useRef(null);
 
   const UK_LAT_MAX = 60.9; const UK_LAT_MIN = 49.8;
   const UK_LON_MIN = -8.2; const UK_LON_MAX = 2.0;
@@ -6563,14 +6563,19 @@ function AdminQA({ data, save, showToast, cu }) {
 }
 
 // ── About Page ────────────────────────────────────────────
-function AboutPage({ setPage }) {
-  const Divider = () => (
+// Shared section divider used by AboutPage, TermsPage etc.
+function Divider() {
+  return (
     <div style={{ display:"flex", alignItems:"center", gap:16, margin:"40px 0" }}>
       <div style={{ flex:1, height:1, background:"linear-gradient(to right,transparent,#2a3a10)" }} />
       <div style={{ color:"#c8ff00", fontSize:14, opacity:.5 }}>✦</div>
       <div style={{ flex:1, height:1, background:"linear-gradient(to left,transparent,#2a3a10)" }} />
     </div>
   );
+}
+
+function AboutPage({ setPage }) {
+
   const InfoRow = ({ icon, children }) => (
     <div style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom:14 }}>
       <span style={{ fontSize:16, flexShrink:0, marginTop:1 }}>{icon}</span>
@@ -9296,13 +9301,7 @@ function TermsPage({ setPage }) {
     );
   };
 
-  const Divider = () => (
-    <div style={{ display:"flex", alignItems:"center", gap:16, margin:"32px 0" }}>
-      <div style={{ flex:1, height:1, background:"linear-gradient(to right,transparent,#2a3a10)" }} />
-      <div style={{ color:"#c8ff00", fontSize:14, opacity:.4 }}>✦</div>
-      <div style={{ flex:1, height:1, background:"linear-gradient(to left,transparent,#2a3a10)" }} />
-    </div>
-  );
+  // Divider is defined at module level above AboutPage;
 
   const tabs = [
     { id:"terms", label:"Terms of Use" },
