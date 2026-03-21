@@ -1030,39 +1030,122 @@ async function _lookupGeo() {
 }
 
 export const visits = wrapWithTimeout({
+  // ── track ────────────────────────────────────────────────────────────────────
+  // One row per logged-in user (conflict on user_id), or one row per browser
+  // session (conflict on session_id) for anonymous visitors.
+  // Each visit updates the last-seen page, timestamp, and visit count in-place
+  // rather than inserting a new row — keeps the table lean indefinitely.
+  //
+  // Required Supabase migration (run once in SQL editor):
+  //
+  //   ALTER TABLE page_visits
+  //     ADD COLUMN IF NOT EXISTS last_seen_at  timestamptz DEFAULT now(),
+  //     ADD COLUMN IF NOT EXISTS visit_count   int         DEFAULT 1;
+  //
+  //   -- Unique constraints for upsert targets
+  //   ALTER TABLE page_visits
+  //     DROP CONSTRAINT IF EXISTS page_visits_user_id_key;
+  //   ALTER TABLE page_visits
+  //     ADD CONSTRAINT page_visits_user_id_key UNIQUE (user_id);
+  //
+  //   ALTER TABLE page_visits
+  //     DROP CONSTRAINT IF EXISTS page_visits_session_id_key;
+  //   ALTER TABLE page_visits
+  //     ADD CONSTRAINT page_visits_session_id_key UNIQUE (session_id);
+  //
+  //   -- Clean up old duplicate rows first (keep most recent per user/session):
+  //   DELETE FROM page_visits a USING page_visits b
+  //     WHERE a.id < b.id AND a.user_id IS NOT NULL AND a.user_id = b.user_id;
+  //   DELETE FROM page_visits a USING page_visits b
+  //     WHERE a.id < b.id AND a.user_id IS NULL AND a.session_id = b.session_id;
+  //
   async track({ page, userId, userName, sessionId }) {
     try {
-      // Insert the row immediately (don't block on geo)
-      const { data: row, error } = await supabase.from('page_visits').insert({
-        page,
-        user_id:    userId    || null,
-        user_name:  userName  || null,
-        session_id: sessionId || null,
-        city:       null,
-        country:    null,
-        lat:        null,
-        lon:        null,
-        user_agent: navigator.userAgent || null,
-        referrer:   document.referrer   || null,
-      }).select('id').single();
-      if (error || !row?.id) return;
+      const now = new Date().toISOString();
 
-      // Fire geo lookup in background — update this row and any earlier rows in
-      // this session that also have no geo (e.g. rows inserted before geo resolved)
+      if (userId) {
+        // ── Logged-in user: upsert on user_id ──────────────────────────────
+        await supabase.from('page_visits').upsert({
+          user_id:      userId,
+          user_name:    userName  || null,
+          session_id:   sessionId || null,
+          page,
+          last_seen_at: now,
+          user_agent:   navigator.userAgent || null,
+          referrer:     document.referrer   || null,
+          // visit_count incremented via DB default on insert; on update we bump it
+        }, {
+          onConflict:        'user_id',
+          ignoreDuplicates:  false,
+        }).then(async ({ error }) => {
+          if (error) return;
+          // Bump visit_count separately (PostgREST upsert doesn't support expressions)
+          await supabase.rpc('increment_visit_count', { p_user_id: userId }).catch(() => {});
+        });
+      } else if (sessionId) {
+        // ── Anonymous visitor: upsert on session_id ────────────────────────
+        await supabase.from('page_visits').upsert({
+          session_id:   sessionId,
+          user_id:      null,
+          user_name:    null,
+          page,
+          last_seen_at: now,
+          user_agent:   navigator.userAgent || null,
+          referrer:     document.referrer   || null,
+        }, {
+          onConflict:       'session_id',
+          ignoreDuplicates: false,
+        }).then(async ({ error }) => {
+          if (error) return;
+          await supabase.rpc('increment_visit_count_session', { p_session_id: sessionId }).catch(() => {});
+        });
+      }
+
+      // Fire geo lookup in background — patch the row if geo not yet set
       _lookupGeo().then(geo => {
-        if (!geo || !sessionId) return;
-        // Update this specific row
-        supabase.from('page_visits').update({
-          country: geo.country || null,
-          city:    geo.city    || null,
-        }).eq('id', row.id).then(() => {}).catch(() => {});
-        // Backfill any earlier rows in this session that are still missing geo
-        supabase.from('page_visits').update({
-          country: geo.country || null,
-          city:    geo.city    || null,
-        }).eq('session_id', sessionId).is('country', null).then(() => {}).catch(() => {});
+        if (!geo) return;
+        const geoUpdate = { country: geo.country || null, city: geo.city || null };
+        if (userId) {
+          supabase.from('page_visits').update(geoUpdate)
+            .eq('user_id', userId).is('country', null).then(() => {}).catch(() => {});
+        } else if (sessionId) {
+          supabase.from('page_visits').update(geoUpdate)
+            .eq('session_id', sessionId).is('country', null).then(() => {}).catch(() => {});
+        }
       }).catch(() => {});
     } catch { /* never break the site */ }
+  },
+
+  // Backfill user_id + user_name on the anonymous session row when auth resolves.
+  // Also merges the anon session row into the user row (deletes anon, updates user).
+  async backfillUser({ sessionId, userId, userName }) {
+    if (!sessionId || !userId) return;
+    try {
+      // Fetch both rows
+      const [{ data: userRow }, { data: anonRow }] = await Promise.all([
+        supabase.from('page_visits').select('id, visit_count').eq('user_id', userId).maybeSingle(),
+        supabase.from('page_visits').select('id, visit_count, country, city, page, last_seen_at').eq('session_id', sessionId).is('user_id', null).maybeSingle(),
+      ]);
+
+      if (anonRow && userRow) {
+        // Both exist — merge anon into user row, then delete the anon row
+        const mergedCount = (userRow.visit_count || 1) + (anonRow.visit_count || 1);
+        await supabase.from('page_visits').update({
+          user_name:    userName || null,
+          visit_count:  mergedCount,
+          // Keep geo from anon row if user row has none
+          ...(anonRow.country ? { country: anonRow.country, city: anonRow.city } : {}),
+        }).eq('user_id', userId);
+        await supabase.from('page_visits').delete().eq('id', anonRow.id);
+      } else if (anonRow && !userRow) {
+        // Only anon row — promote it to a user row
+        await supabase.from('page_visits').update({
+          user_id:   userId,
+          user_name: userName || null,
+        }).eq('id', anonRow.id);
+      }
+      // If only user row exists, nothing to do
+    } catch { /* non-fatal */ }
   },
 
   // Primary stats fetch — date filtered ON THE SERVER.
@@ -1072,13 +1155,13 @@ export const visits = wrapWithTimeout({
   async getStats(days = 7) {
     let q = supabase
       .from('page_visits')
-      .select('id, page, user_id, user_name, session_id, referrer, country, city, lat, lon, user_agent, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, page, user_id, user_name, session_id, referrer, country, city, lat, lon, user_agent, visit_count, last_seen_at, created_at')
+      .order('last_seen_at', { ascending: false })
       .limit(10000);
     if (days > 0) {
       const since = new Date();
       since.setDate(since.getDate() - days);
-      q = q.gte('created_at', since.toISOString());
+      q = q.gte('last_seen_at', since.toISOString());
     }
     const { data, error } = await q;
     if (error) throw error;
@@ -1102,19 +1185,6 @@ export const visits = wrapWithTimeout({
     const uniqueSessions = new Set((sessionData || []).map(r => r.session_id)).size;
     const totalRows = totalRes.count ?? 0;
     return { totalRows, uniqueSessions };
-  },
-
-  // Backfill user_id + user_name on rows that were logged before auth resolved.
-  // Called once when the session is restored and cu becomes non-null.
-  async backfillUser({ sessionId, userId, userName }) {
-    if (!sessionId || !userId) return;
-    try {
-      await supabase
-        .from('page_visits')
-        .update({ user_id: userId, user_name: userName || null })
-        .eq('session_id', sessionId)
-        .is('user_id', null);
-    } catch { /* non-fatal */ }
   },
 
   // Legacy — kept for backwards compat; main stats use getStats() now

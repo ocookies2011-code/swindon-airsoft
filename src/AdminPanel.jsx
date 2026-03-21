@@ -5633,25 +5633,30 @@ function AdminVisitorStats() {
   );
 
   // ── Derived stats ──
-  // For "ALL" range, use the exact server-side counts (avoids any row-limit distortion)
-  const totalVisits    = (dateRange === "all" && allTimeCounts) ? allTimeCounts.totalRows      : filtered.length;
-  const uniqueSessions = (dateRange === "all" && allTimeCounts) ? allTimeCounts.uniqueSessions : new Set(filtered.map(row => row.session_id).filter(Boolean)).size;
+  // Each row now represents one user/session — visit_count holds their total visits.
+  const totalVisits    = (dateRange === "all" && allTimeCounts)
+    ? allTimeCounts.totalRows
+    : filtered.reduce((s, r) => s + (r.visit_count || 1), 0);
+  const uniqueSessions = (dateRange === "all" && allTimeCounts)
+    ? allTimeCounts.uniqueSessions
+    : filtered.length; // one row per user/session now, so row count = unique visitors
   const uniqueUsers    = new Set(filtered.map(row => row.user_id).filter(Boolean)).size;
-  const loggedInVisits = filtered.filter(row => row.user_id).length;
-  const anonVisits     = filtered.length - loggedInVisits; // use filtered.length for anon ratio
+  const loggedInVisits = filtered.filter(row => row.user_id).reduce((s, r) => s + (r.visit_count || 1), 0);
+  const anonVisits     = filtered.filter(row => !row.user_id).reduce((s, r) => s + (r.visit_count || 1), 0);
 
-  // Page breakdown
+  // Page breakdown — weight by visit_count
   const pageCounts = filtered.reduce((acc, row) => {
-    acc[row.page] = (acc[row.page] || 0) + 1; return acc;
+    acc[row.page] = (acc[row.page] || 0) + (row.visit_count || 1); return acc;
   }, {});
   const pageRows = Object.entries(pageCounts).sort((aa, bb) => bb[1] - aa[1]);
 
-  // Visits by day
+  // Visits by day — use last_seen_at as the canonical timestamp
   const nowDate = new Date();
   const dayMap = {};
   filtered.forEach(row => {
-    const dayKey = row.created_at?.slice(0, 10);
-    if (dayKey) dayMap[dayKey] = (dayMap[dayKey] || 0) + 1;
+    const ts = row.last_seen_at || row.created_at;
+    const dayKey = ts?.slice(0, 10);
+    if (dayKey) dayMap[dayKey] = (dayMap[dayKey] || 0) + (row.visit_count || 1);
   });
   const daysToShow = dateRange === "1d" ? 1 : dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 30;
   const dayBars = [];
@@ -5663,17 +5668,18 @@ function AdminVisitorStats() {
   }
   const maxDayCount = Math.max(...dayBars.map(db => db.count), 1);
 
-  // Visits by hour
+  // Visits by hour — use last_seen_at
   const hourCounts = Array(24).fill(0);
   filtered.forEach(row => {
-    if (row.created_at) hourCounts[new Date(row.created_at).getHours()]++;
+    const ts = row.last_seen_at || row.created_at;
+    if (ts) hourCounts[new Date(ts).getHours()] += (row.visit_count || 1);
   });
   const maxHourCount = Math.max(...hourCounts, 1);
 
     // Country breakdown
   const countryCounts = filtered.reduce((acc, row) => {
     const ckey = row.country || "Unknown";
-    acc[ckey] = (acc[ckey] || 0) + 1; return acc;
+    acc[ckey] = (acc[ckey] || 0) + (row.visit_count || 1); return acc;
   }, {});
   const countryRows = Object.entries(countryCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 10)
     .map(([cc, cnt]) => ({ flag: cc !== "Unknown" ? cc : null, label: cc, count: cnt }));
@@ -5682,28 +5688,31 @@ function AdminVisitorStats() {
   const cityCounts = filtered.reduce((acc, row) => {
     const ckey = row.city ? `${row.city}${row.country ? ", " + row.country : ""}` : "Unknown";
     if (!acc[ckey]) acc[ckey] = { count: 0, country: row.country || null };
-    acc[ckey].count++; return acc;
+    acc[ckey].count += (row.visit_count || 1); return acc;
   }, {});
   const cityRows = Object.entries(cityCounts).sort((aa, bb) => bb[1].count - aa[1].count).slice(0, 12)
     .map(([city, { count, country }]) => ({ flag: country || null, label: city, count }));
 
-  // Logged-in user breakdown
+  // Logged-in user breakdown — each row IS one user, visit_count is their total
   const userVisitMap = {};
   filtered.filter(row => row.user_id).forEach(row => {
-    if (!userVisitMap[row.user_id]) {
-      userVisitMap[row.user_id] = { name: row.user_name || row.user_id, count: 0, pages: {}, last: row.created_at, lastPage: row.page };
-    }
-    userVisitMap[row.user_id].count++;
-    userVisitMap[row.user_id].pages[row.page] = (userVisitMap[row.user_id].pages[row.page] || 0) + 1;
-    if (row.created_at > userVisitMap[row.user_id].last) {
-      userVisitMap[row.user_id].last = row.created_at;
-      userVisitMap[row.user_id].lastPage = row.page;
-    }
+    const ts = row.last_seen_at || row.created_at;
+    userVisitMap[row.user_id] = {
+      name:     row.user_name || row.user_id,
+      count:    row.visit_count || 1,
+      pages:    { [row.page]: row.visit_count || 1 },
+      last:     ts,
+      lastPage: row.page,
+    };
   });
   const userRows = Object.values(userVisitMap).sort((aa, bb) => bb.count - aa.count).slice(0, 20);
 
-  // Recent feed
-  const recentRows = [...filtered].slice(0, 50);
+  // Recent feed — sorted by last_seen_at desc
+  const recentRows = [...filtered].sort((a, b) => {
+    const ta = a.last_seen_at || a.created_at || '';
+    const tb = b.last_seen_at || b.created_at || '';
+    return tb.localeCompare(ta);
+  }).slice(0, 50);
 
   // Referrers
   const refCounts = filtered.reduce((acc, row) => {
