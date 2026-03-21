@@ -5295,174 +5295,206 @@ function AdminFailedPayments({ showToast, cu }) {
 // ── UK Visitor Map ────────────────────────────────────────
 function UKVisitorMap({ visitData }) {
   const [tooltip, setTooltip] = useState(null);
-  const svgRef = useRef(null);
   const containerRef = useRef(null);
 
-  // ── Zoom / pan state ──────────────────────────────────────────
+  // ── Zoom / pan state ─────────────────────────────────────────
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const dragging = useRef(false);
-  const lastPos  = useRef({ x: 0, y: 0 });
+  const [pan, setPan]   = useState({ x: 0, y: 0 });
+  const dragging        = useRef(false);
+  const lastPos         = useRef({ x: 0, y: 0 });
   const MIN_ZOOM = 1, MAX_ZOOM = 8;
 
-  // ── Projection — Mercator tuned for Great Britain + N.Ireland ──
-  const W = 500; const H = 700;
-  const LAT_MAX = 60.9; const LAT_MIN = 49.8;
-  const LON_MIN = -8.2; const LON_MAX = 2.0;
+  // ── True Web-Mercator projection ─────────────────────────────
+  // SVG canvas
+  const W = 500, H = 820;
+  // Geographic bounds tuned to show all of GB + NI with even margins
+  const LON_MIN = -8.65, LON_MAX = 1.85;
+  const LAT_MIN = 49.85, LAT_MAX = 60.95;
+
+  const mercY = (lat) => Math.log(Math.tan(Math.PI/4 + (lat * Math.PI/180)/2));
+  const mercYMin = mercY(LAT_MIN);
+  const mercYMax = mercY(LAT_MAX);
 
   const project = (lon, lat) => ({
     x: ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * W,
-    y: ((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * H,
+    y: ((mercYMax - mercY(lat)) / (mercYMax - mercYMin)) * H,
   });
 
   const toPath = (coords) =>
-    coords.map((p, i) => (i === 0 ? 'M' : 'L') + project(p[0], p[1]).x.toFixed(1) + ',' + project(p[0], p[1]).y.toFixed(1)).join(' ') + ' Z';
+    coords.map((p, i) => (i===0?'M':'L') + project(p[0],p[1]).x.toFixed(2) + ',' + project(p[0],p[1]).y.toFixed(2)).join(' ') + ' Z';
 
-  // ── Geography ─────────────────────────────────────────────────
+  // ── Accurate UK coastline polygons (GeoJSON-derived, simplified) ─
+  // England + Wales — clockwise from Land\'s End
   const englandWales = [
-    [-5.71,50.06],[-5.09,49.96],[-4.53,50.15],[-3.99,50.22],[-3.37,50.44],[-2.93,50.60],
-    [-2.37,50.62],[-1.77,50.71],[-1.08,50.80],[-0.55,50.76],[0.28,50.89],[1.02,51.00],
-    [1.44,51.12],[1.77,51.38],[1.41,51.74],[0.56,51.84],[0.28,52.62],[0.51,52.89],
-    [0.43,53.05],[0.11,53.22],[-0.10,53.61],[-0.06,53.84],[0.04,54.06],[0.32,54.25],
-    [-0.60,54.55],[-1.05,54.68],[-1.36,54.98],[-1.64,55.22],[-2.03,55.45],[-2.50,55.66],
-    [-3.06,55.80],[-3.38,55.68],[-3.65,55.35],[-3.20,55.07],[-3.00,54.72],[-3.18,54.55],
-    [-3.50,54.37],[-3.62,54.12],[-3.41,53.91],[-3.23,53.66],[-3.09,53.35],[-3.07,53.06],
-    [-3.26,52.84],[-3.14,52.68],[-2.94,52.40],[-2.74,52.15],[-2.52,51.93],[-2.60,51.68],
-    [-2.79,51.56],[-3.11,51.39],[-3.55,51.22],[-4.15,51.22],[-4.71,51.42],[-5.06,51.75],
-    [-4.98,51.99],[-5.19,52.15],[-4.48,52.36],[-4.06,52.59],[-3.84,52.80],[-4.03,53.01],
-    [-4.48,53.19],[-4.72,53.29],[-4.50,53.54],[-4.10,53.67],[-3.63,53.70],[-3.30,53.55],
-    [-3.06,53.42],[-3.00,53.30],[-3.16,53.20],[-3.29,53.11],[-3.24,52.99],[-3.11,52.89],
-    [-4.09,52.57],[-4.70,52.32],[-5.23,51.97],[-5.34,51.68],[-5.18,51.43],[-4.79,51.16],
-    [-4.23,51.07],[-3.65,51.13],[-3.10,51.23],[-2.68,51.44],[-2.55,51.63],[-2.70,51.79],
-    [-3.15,51.89],[-3.64,51.73],[-4.20,51.55],[-4.97,51.60],[-5.37,51.79],[-5.21,52.10],
-    [-4.66,52.34],[-4.17,52.61],[-3.85,52.82],[-3.92,53.05],[-4.36,53.27],[-4.62,53.36],
-    [-4.42,53.58],[-4.04,53.68],[-3.63,53.71],[-3.29,53.56],[-3.00,53.29],[-2.90,53.10],
-    [-2.85,52.97],[-2.72,52.78],[-2.61,52.55],[-2.55,52.33],[-2.70,52.09],[-3.00,51.94],
-    [-3.27,51.78],[-3.02,51.58],[-2.62,51.51],[-2.14,51.59],[-1.80,51.74],[-1.34,51.68],
-    [-0.94,51.56],[-0.52,51.47],[-0.08,51.51],[0.25,51.62],[0.55,51.73],[0.80,51.82],
-    [1.08,51.88],[1.33,51.76],[1.23,51.55],[0.95,51.38],[0.71,51.19],[0.35,50.97],
-    [-0.22,50.83],[-0.73,50.81],[-1.22,50.70],[-1.62,50.65],[-2.05,50.64],[-2.49,50.64],
-    [-2.92,50.57],[-3.36,50.41],[-3.79,50.23],[-4.25,50.08],[-4.68,50.04],[-5.08,50.02],
-    [-5.55,50.08],[-5.71,50.06]
-  ];
-  const scotland = [
-    [-2.03,55.45],[-2.50,55.66],[-3.06,55.80],[-3.38,55.68],[-3.65,55.35],
-    [-3.20,55.07],[-3.00,54.72],[-3.06,55.80],[-2.50,55.66],[-2.03,55.45],
-    [-1.80,55.94],[-1.60,56.10],[-1.98,56.38],[-2.36,56.70],[-2.52,57.00],
-    [-2.39,57.30],[-2.08,57.49],[-1.88,57.68],[-1.96,57.92],[-2.42,58.15],
-    [-2.89,58.41],[-3.20,58.62],[-3.54,58.77],[-3.96,58.63],[-4.30,58.45],
-    [-4.60,58.26],[-4.90,58.05],[-5.10,57.88],[-5.30,57.70],[-5.55,57.50],
-    [-5.60,57.26],[-5.40,57.10],[-5.20,57.00],[-5.08,56.78],[-5.30,56.52],
-    [-5.52,56.28],[-5.70,56.08],[-5.48,55.94],[-5.18,55.80],[-4.90,55.64],
-    [-4.68,55.49],[-4.52,55.36],[-4.30,55.22],[-4.10,55.09],[-3.90,54.96],
-    [-3.65,55.35],[-3.38,55.68],[-3.06,55.80],[-2.50,55.66],[-2.03,55.45],
-    [-1.64,55.22],[-1.36,54.98],[-1.05,54.68],[-0.60,54.55],[0.04,54.06],
-    [-0.06,53.84],[-0.10,53.61],[0.11,53.22],[0.43,53.05],[-0.06,53.61],
-    [-0.10,53.84],[-0.60,54.55],[-1.05,54.68],[-1.36,54.98],[-1.64,55.22],[-2.03,55.45]
-  ];
-  const northernIreland = [
-    [-7.18,55.06],[-6.95,54.88],[-6.62,54.75],[-6.22,54.72],[-5.85,54.68],
-    [-5.50,54.80],[-5.22,55.02],[-5.45,55.22],[-5.82,55.35],[-6.18,55.28],
-    [-6.55,55.18],[-6.90,55.12],[-7.18,55.06]
-  ];
-  const isleOfMan = [
-    [-4.82,54.42],[-4.62,54.28],[-4.40,54.20],[-4.32,54.32],[-4.50,54.48],
-    [-4.75,54.52],[-4.82,54.42]
-  ];
-  // Extra Scottish islands
-  const skye = [
-    [-6.20,57.72],[-6.05,57.55],[-5.80,57.42],[-5.65,57.28],[-5.72,57.10],
-    [-5.95,57.00],[-6.22,57.05],[-6.45,57.20],[-6.55,57.40],[-6.40,57.60],[-6.20,57.72]
-  ];
-  const mull = [
-    [-6.35,56.65],[-6.10,56.45],[-5.82,56.35],[-5.72,56.50],[-5.85,56.68],
-    [-6.12,56.78],[-6.35,56.65]
-  ];
-  const arran = [
-    [-5.32,55.72],[-5.10,55.57],[-5.00,55.42],[-5.18,55.32],[-5.38,55.40],
-    [-5.48,55.58],[-5.32,55.72]
-  ];
-  // Wales detail peninsula
-  const lleynPeninsula = [
-    [-4.48,53.19],[-4.72,53.29],[-4.50,53.54],[-4.35,53.50],[-4.20,53.34],
-    [-4.10,53.20],[-4.22,53.10],[-4.48,53.19]
-  ];
-  // Kent & East Anglia bulge outlines (extra detail)
-  const kentBulge = [
-    [0.28,50.89],[1.02,51.00],[1.44,51.12],[1.77,51.38],[1.60,51.55],
-    [1.35,51.75],[0.85,51.82],[0.50,51.73],[0.28,51.62],[0.10,51.50],
-    [0.28,50.89]
+    // Cornwall peninsula
+    [-5.715,50.066],[-5.553,49.959],[-5.196,49.956],[-4.823,50.033],[-4.418,50.184],
+    [-3.970,50.212],[-3.616,50.210],[-3.417,50.437],[-3.076,50.462],[-2.934,50.602],
+    [-2.567,50.617],[-2.197,50.609],[-1.773,50.710],[-1.488,50.734],[-1.082,50.797],
+    [-0.547,50.762],[-0.003,50.788],[0.281,50.896],[0.682,50.937],[1.016,50.999],
+    [1.292,51.096],[1.453,51.122],[1.776,51.372],[1.408,51.730],[1.015,51.806],
+    // East Anglia
+    [0.561,51.848],[0.279,52.624],[0.515,52.891],[0.432,53.048],[0.102,53.224],
+    // Humber / Lincolnshire
+    [0.002,53.418],[-0.062,53.614],[-0.115,53.841],[0.043,54.063],[0.198,54.108],
+    [0.321,54.249],
+    // Yorkshire coast
+    [-0.033,54.327],[-0.595,54.552],[-1.053,54.678],
+    // North East coast → Scottish border
+    [-1.358,54.982],[-1.644,55.215],[-2.028,55.447],[-2.503,55.660],
+    // Border goes west then south (Solway/Hadrian)
+    [-3.062,55.797],[-3.378,55.685],[-3.647,55.351],[-3.203,55.074],
+    [-2.998,54.719],[-3.184,54.551],[-3.501,54.370],[-3.626,54.120],
+    [-3.408,53.911],[-3.234,53.663],[-3.092,53.346],[-3.073,53.063],
+    [-3.265,52.843],[-3.141,52.678],[-2.941,52.402],[-2.741,52.152],
+    // Severn estuary / South Wales border
+    [-2.516,51.930],[-2.597,51.676],[-2.794,51.558],
+    [-3.112,51.389],[-3.555,51.224],[-4.153,51.219],[-4.712,51.417],
+    [-5.063,51.748],[-4.979,51.991],[-5.188,52.153],
+    // Pembrokeshire coast
+    [-5.310,51.750],[-5.207,51.543],[-4.835,51.166],[-4.233,51.070],
+    [-3.653,51.130],[-3.100,51.230],[-2.658,51.448],[-2.540,51.630],
+    [-2.700,51.791],[-3.153,51.888],[-3.639,51.733],[-4.197,51.545],
+    // Irish Sea coast — Cardigan Bay
+    [-4.966,51.604],[-5.373,51.793],[-5.213,52.103],[-4.665,52.343],
+    [-4.168,52.609],[-3.842,52.805],[-3.918,53.053],[-4.362,53.272],
+    [-4.623,53.360],[-4.422,53.582],[-4.041,53.673],[-3.625,53.706],
+    [-3.291,53.558],[-3.000,53.291],[-2.895,53.104],[-2.852,52.975],
+    [-2.722,52.784],[-2.608,52.554],[-2.546,52.330],[-2.697,52.094],
+    [-3.002,51.944],[-3.272,51.781],[-3.021,51.580],[-2.621,51.514],
+    [-2.142,51.592],[-1.800,51.736],[-1.341,51.682],[-0.941,51.558],
+    [-0.523,51.474],[-0.077,51.513],[0.248,51.622],[0.553,51.730],
+    [0.802,51.823],[1.083,51.882],[1.331,51.760],[1.232,51.552],
+    [0.955,51.380],[0.711,51.192],[0.354,50.970],[-0.218,50.828],
+    [-0.726,50.812],[-1.217,50.698],[-1.618,50.646],[-2.048,50.636],
+    [-2.491,50.636],[-2.920,50.573],[-3.363,50.413],[-3.791,50.229],
+    [-4.249,50.079],[-4.682,50.038],[-5.081,50.018],[-5.551,50.080],
+    [-5.715,50.066]
   ];
 
-  // ── City coordinates ──────────────────────────────────────────
+  // Scotland mainland — from English border anticlockwise
+  const scotland = [
+    // Start at English border east coast (Berwick)
+    [-2.028,55.447],[-1.956,55.720],[-1.891,56.003],[-1.759,56.205],
+    [-2.000,56.388],[-2.362,56.703],[-2.512,57.003],[-2.393,57.303],
+    [-2.085,57.490],[-1.881,57.683],[-1.961,57.921],[-2.419,58.145],
+    [-2.889,58.413],[-3.202,58.623],[-3.536,58.770],[-3.836,58.636],
+    [-3.965,58.500],[-4.300,58.455],[-4.593,58.260],[-4.900,58.048],
+    [-5.099,57.878],[-5.296,57.700],[-5.545,57.504],[-5.602,57.256],
+    [-5.397,57.103],[-5.198,56.997],[-5.199,56.777],[-5.083,56.781],
+    [-5.300,56.522],[-5.523,56.278],[-5.698,56.079],[-5.476,55.941],
+    [-5.180,55.800],[-4.895,55.637],[-4.682,55.491],[-4.518,55.356],
+    [-4.299,55.222],[-4.097,55.089],[-3.896,54.958],
+    // Mull of Galloway area
+    [-4.975,54.632],[-5.080,54.710],[-5.000,54.850],[-4.800,54.900],
+    [-4.620,54.840],[-4.500,54.770],[-4.350,54.700],[-4.100,54.820],
+    [-3.900,54.880],[-3.650,55.002],[-3.378,55.685],[-3.062,55.797],
+    [-2.503,55.660],[-2.028,55.447]
+  ];
+
+  // Northern Ireland
+  const northernIreland = [
+    [-6.140,55.073],[-5.929,54.872],[-5.607,54.682],[-6.012,54.614],
+    [-6.222,54.719],[-6.420,54.673],[-6.619,54.750],[-6.952,54.879],
+    [-7.183,55.065],[-7.545,55.133],[-7.870,55.046],[-8.172,54.715],
+    [-7.929,54.542],[-7.706,54.429],[-7.427,54.358],[-7.254,54.195],
+    [-7.001,54.008],[-6.790,53.985],[-6.308,54.095],[-5.929,54.872],
+    [-6.140,55.073]
+  ];
+
+  // Isle of Man
+  const isleOfMan = [
+    [-4.821,54.422],[-4.623,54.284],[-4.399,54.199],[-4.319,54.323],
+    [-4.497,54.482],[-4.752,54.520],[-4.821,54.422]
+  ];
+
+  // Isle of Wight
+  const isleOfWight = [
+    [-1.558,50.762],[-1.236,50.696],[-1.082,50.614],[-1.535,50.578],
+    [-1.795,50.627],[-1.558,50.762]
+  ];
+
+  // Skye
+  const skye = [
+    [-5.700,57.100],[-5.850,57.000],[-6.050,57.050],[-6.150,57.200],
+    [-6.200,57.400],[-6.350,57.500],[-6.400,57.600],[-6.250,57.720],
+    [-6.050,57.690],[-5.850,57.560],[-5.700,57.380],[-5.600,57.260],
+    [-5.700,57.100]
+  ];
+
+  // Mull
+  const mull = [
+    [-5.720,56.351],[-5.985,56.354],[-6.100,56.450],[-6.350,56.542],
+    [-6.385,56.658],[-6.212,56.783],[-5.980,56.733],[-5.780,56.618],
+    [-5.600,56.490],[-5.720,56.351]
+  ];
+
+  // Arran
+  const arran = [
+    [-5.320,55.721],[-5.400,55.580],[-5.374,55.415],[-5.193,55.320],
+    [-5.025,55.424],[-4.976,55.580],[-5.100,55.700],[-5.320,55.721]
+  ];
+
+  // ── City coordinates ─────────────────────────────────────────
   const CITY_COORDS = {
-    "swindon":{"lat":51.56,"lon":-1.78},"london":{"lat":51.51,"lon":-0.13},
-    "reading":{"lat":51.45,"lon":-0.97},"bristol":{"lat":51.45,"lon":-2.59},
-    "birmingham":{"lat":52.48,"lon":-1.90},"manchester":{"lat":53.48,"lon":-2.24},
-    "leeds":{"lat":53.80,"lon":-1.55},"sheffield":{"lat":53.38,"lon":-1.47},
-    "liverpool":{"lat":53.41,"lon":-2.99},"edinburgh":{"lat":55.95,"lon":-3.19},
-    "glasgow":{"lat":55.86,"lon":-4.25},"cardiff":{"lat":51.48,"lon":-3.18},
-    "oxford":{"lat":51.75,"lon":-1.26},"cambridge":{"lat":52.20,"lon":0.12},
-    "coventry":{"lat":52.41,"lon":-1.51},"leicester":{"lat":52.63,"lon":-1.13},
-    "nottingham":{"lat":52.95,"lon":-1.15},"newcastle":{"lat":54.97,"lon":-1.61},
-    "dumbarton":{"lat":55.94,"lon":-4.57},"farnborough":{"lat":51.29,"lon":-0.76},
-    "southampton":{"lat":50.91,"lon":-1.40},"portsmouth":{"lat":50.80,"lon":-1.09},
-    "exeter":{"lat":50.72,"lon":-3.53},"york":{"lat":53.96,"lon":-1.08},
-    "bath":{"lat":51.38,"lon":-2.36},"brighton":{"lat":50.82,"lon":-0.14},
-    "norwich":{"lat":52.63,"lon":1.30},"plymouth":{"lat":50.37,"lon":-4.14},
-    "worcester":{"lat":52.19,"lon":-2.22},"hereford":{"lat":52.06,"lon":-2.72},
-    "swansea":{"lat":51.62,"lon":-3.94},"wrexham":{"lat":53.05,"lon":-3.00},
-    "chester":{"lat":53.19,"lon":-2.89},"stoke":{"lat":53.00,"lon":-2.18},
-    "derby":{"lat":52.92,"lon":-1.48},"lincoln":{"lat":53.23,"lon":-0.54},
-    "peterborough":{"lat":52.57,"lon":-0.24},"ipswich":{"lat":52.06,"lon":1.16},
-    "colchester":{"lat":51.89,"lon":0.90},"luton":{"lat":51.88,"lon":-0.42},
-    "milton keynes":{"lat":52.04,"lon":-0.76},"northampton":{"lat":52.24,"lon":-0.89},
-    "san jose":{"lat":37.34,"lon":-121.89},"mountain view":{"lat":37.39,"lon":-122.08},
+    "swindon":{"lat":51.558,"lon":-1.782},"london":{"lat":51.507,"lon":-0.128},
+    "reading":{"lat":51.454,"lon":-0.971},"bristol":{"lat":51.454,"lon":-2.588},
+    "birmingham":{"lat":52.480,"lon":-1.902},"manchester":{"lat":53.480,"lon":-2.242},
+    "leeds":{"lat":53.800,"lon":-1.549},"sheffield":{"lat":53.381,"lon":-1.470},
+    "liverpool":{"lat":53.408,"lon":-2.991},"edinburgh":{"lat":55.953,"lon":-3.189},
+    "glasgow":{"lat":55.864,"lon":-4.252},"cardiff":{"lat":51.481,"lon":-3.180},
+    "oxford":{"lat":51.752,"lon":-1.258},"cambridge":{"lat":52.205,"lon":0.119},
+    "coventry":{"lat":52.408,"lon":-1.510},"leicester":{"lat":52.637,"lon":-1.135},
+    "nottingham":{"lat":52.954,"lon":-1.150},"newcastle":{"lat":54.978,"lon":-1.618},
+    "dumbarton":{"lat":55.943,"lon":-4.571},"farnborough":{"lat":51.295,"lon":-0.758},
+    "southampton":{"lat":50.910,"lon":-1.404},"portsmouth":{"lat":50.805,"lon":-1.087},
+    "exeter":{"lat":50.726,"lon":-3.527},"york":{"lat":53.958,"lon":-1.082},
+    "bath":{"lat":51.381,"lon":-2.360},"brighton":{"lat":50.827,"lon":-0.137},
+    "norwich":{"lat":52.628,"lon":1.299},"plymouth":{"lat":50.375,"lon":-4.143},
+    "worcester":{"lat":52.193,"lon":-2.220},"hereford":{"lat":52.056,"lon":-2.716},
+    "swansea":{"lat":51.621,"lon":-3.944},"wrexham":{"lat":53.046,"lon":-2.994},
+    "chester":{"lat":53.193,"lon":-2.893},"stoke":{"lat":53.003,"lon":-2.180},
+    "derby":{"lat":52.922,"lon":-1.478},"lincoln":{"lat":53.235,"lon":-0.540},
+    "peterborough":{"lat":52.573,"lon":-0.237},"ipswich":{"lat":52.059,"lon":1.155},
+    "colchester":{"lat":51.896,"lon":0.903},"luton":{"lat":51.879,"lon":-0.418},
+    "milton keynes":{"lat":52.041,"lon":-0.759},"northampton":{"lat":52.240,"lon":-0.898},
   };
 
-  // ── Cities to label on the map at zoom >= threshold ──────────
+  // ── City labels shown progressively as zoom increases ────────
   const CITY_LABELS = [
-    { name:'London',        lon:-0.13, lat:51.51, minZoom:1   },
-    { name:'Birmingham',    lon:-1.90, lat:52.48, minZoom:1.5 },
-    { name:'Manchester',    lon:-2.24, lat:53.48, minZoom:1.5 },
-    { name:'Edinburgh',     lon:-3.19, lat:55.95, minZoom:1.5 },
-    { name:'Glasgow',       lon:-4.25, lat:55.86, minZoom:2   },
-    { name:'Cardiff',       lon:-3.18, lat:51.48, minZoom:2   },
-    { name:'Leeds',         lon:-1.55, lat:53.80, minZoom:2   },
-    { name:'Liverpool',     lon:-2.99, lat:53.41, minZoom:2   },
-    { name:'Sheffield',     lon:-1.47, lat:53.38, minZoom:2.5 },
-    { name:'Newcastle',     lon:-1.61, lat:54.97, minZoom:2.5 },
-    { name:'Nottingham',    lon:-1.15, lat:52.95, minZoom:3   },
-    { name:'Leicester',     lon:-1.13, lat:52.63, minZoom:3   },
-    { name:'Bristol',       lon:-2.59, lat:51.45, minZoom:2   },
-    { name:'Oxford',        lon:-1.26, lat:51.75, minZoom:3   },
-    { name:'Cambridge',     lon: 0.12, lat:52.20, minZoom:3   },
-    { name:'Swindon',       lon:-1.78, lat:51.56, minZoom:3   },
-    { name:'Southampton',   lon:-1.40, lat:50.91, minZoom:3   },
-    { name:'Brighton',      lon:-0.14, lat:50.82, minZoom:3.5 },
-    { name:'York',          lon:-1.08, lat:53.96, minZoom:3.5 },
-    { name:'Norwich',       lon: 1.30, lat:52.63, minZoom:3.5 },
-    { name:'Coventry',      lon:-1.51, lat:52.41, minZoom:3.5 },
-    { name:'Plymouth',      lon:-4.14, lat:50.37, minZoom:3.5 },
-    { name:'Exeter',        lon:-3.53, lat:50.72, minZoom:4   },
-    { name:'Bath',          lon:-2.36, lat:51.38, minZoom:4   },
-    { name:'Derby',         lon:-1.48, lat:52.92, minZoom:4   },
-    { name:'Stoke',         lon:-2.18, lat:53.00, minZoom:4   },
-    { name:'Chester',       lon:-2.89, lat:53.19, minZoom:4   },
-    { name:'Lincoln',       lon:-0.54, lat:53.23, minZoom:4.5 },
-    { name:'Portsmouth',    lon:-1.09, lat:50.80, minZoom:4.5 },
-    { name:'Swansea',       lon:-3.94, lat:51.62, minZoom:4.5 },
-    { name:'Luton',         lon:-0.42, lat:51.88, minZoom:5   },
-    { name:'Reading',       lon:-0.97, lat:51.45, minZoom:5   },
-    { name:'Northampton',   lon:-0.89, lat:52.24, minZoom:5   },
-    { name:'Ipswich',       lon: 1.16, lat:52.06, minZoom:5   },
-    { name:'Worcester',     lon:-2.22, lat:52.19, minZoom:5   },
-    { name:'Hereford',      lon:-2.72, lat:52.06, minZoom:5   },
-    { name:'Peterborough',  lon:-0.24, lat:52.57, minZoom:5   },
-    { name:'Wrexham',       lon:-3.00, lat:53.05, minZoom:5.5 },
+    {name:'London',     lon:-0.128,lat:51.507,minZoom:1  },
+    {name:'Birmingham', lon:-1.902,lat:52.480,minZoom:1.5},
+    {name:'Manchester', lon:-2.242,lat:53.480,minZoom:1.5},
+    {name:'Edinburgh',  lon:-3.189,lat:55.953,minZoom:1.5},
+    {name:'Glasgow',    lon:-4.252,lat:55.864,minZoom:2  },
+    {name:'Cardiff',    lon:-3.180,lat:51.481,minZoom:2  },
+    {name:'Leeds',      lon:-1.549,lat:53.800,minZoom:2  },
+    {name:'Liverpool',  lon:-2.991,lat:53.408,minZoom:2  },
+    {name:'Bristol',    lon:-2.588,lat:51.454,minZoom:2  },
+    {name:'Sheffield',  lon:-1.470,lat:53.381,minZoom:2.5},
+    {name:'Newcastle',  lon:-1.618,lat:54.978,minZoom:2.5},
+    {name:'Nottingham', lon:-1.150,lat:52.954,minZoom:3  },
+    {name:'Leicester',  lon:-1.135,lat:52.637,minZoom:3  },
+    {name:'Oxford',     lon:-1.258,lat:51.752,minZoom:3  },
+    {name:'Cambridge',  lon: 0.119,lat:52.205,minZoom:3  },
+    {name:'Swindon',    lon:-1.782,lat:51.558,minZoom:3  },
+    {name:'Southampton',lon:-1.404,lat:50.910,minZoom:3  },
+    {name:'Brighton',   lon:-0.137,lat:50.827,minZoom:3.5},
+    {name:'York',       lon:-1.082,lat:53.958,minZoom:3.5},
+    {name:'Norwich',    lon: 1.299,lat:52.628,minZoom:3.5},
+    {name:'Coventry',   lon:-1.510,lat:52.408,minZoom:3.5},
+    {name:'Plymouth',   lon:-4.143,lat:50.375,minZoom:3.5},
+    {name:'Exeter',     lon:-3.527,lat:50.726,minZoom:4  },
+    {name:'Bath',       lon:-2.360,lat:51.381,minZoom:4  },
+    {name:'Derby',      lon:-1.478,lat:52.922,minZoom:4  },
+    {name:'Chester',    lon:-2.893,lat:53.193,minZoom:4  },
+    {name:'Lincoln',    lon:-0.540,lat:53.235,minZoom:4.5},
+    {name:'Portsmouth', lon:-1.087,lat:50.805,minZoom:4.5},
+    {name:'Swansea',    lon:-3.944,lat:51.621,minZoom:4.5},
+    {name:'Reading',    lon:-0.971,lat:51.454,minZoom:5  },
+    {name:'Northampton',lon:-0.898,lat:52.240,minZoom:5  },
   ];
 
-  // ── Build pin clusters ────────────────────────────────────────
+  // ── Build pin clusters from visit data ───────────────────────
   const pinMap = {};
   visitData.forEach(row => {
     let lat = row.lat, lon = row.lon;
@@ -5473,37 +5505,48 @@ function UKVisitorMap({ visitData }) {
     if (!lat || !lon) return;
     const latR = Math.round(lat * 10) / 10;
     const lonR = Math.round(lon * 10) / 10;
-    const key = latR + ',' + lonR;
+    const key  = latR + ',' + lonR;
     if (!pinMap[key]) pinMap[key] = { lat:latR, lon:lonR, count:0, city:row.city, country:row.country, users:new Set(), sessions:new Set() };
     pinMap[key].count++;
     pinMap[key].sessions.add(row.session_id);
     if (row.user_name) pinMap[key].users.add(row.user_name);
   });
-  const pins = Object.values(pinMap);
+  const pins     = Object.values(pinMap);
   const maxCount = Math.max(...pins.map(p => p.count), 1);
 
-  // ── Zoom helpers ──────────────────────────────────────────────
+  // ── Zoom / pan helpers ────────────────────────────────────────
+  // The SVG is rendered at a fixed display width then scaled via zoom.
+  // We need the rendered SVG width to clamp panning correctly.
+  const SVG_DISPLAY_W = 340;
+  const SVG_DISPLAY_H = (H / W) * SVG_DISPLAY_W;
+
   const clampPan = useCallback((nx, ny, z) => {
     const el = containerRef.current;
     if (!el) return { x: nx, y: ny };
     const cw = el.clientWidth, ch = el.clientHeight;
-    const mapW = Math.min(cw, 420) * z;
-    const mapH = (Math.min(cw, 420) / W) * H * z;
-    const maxX = 0, minX = cw - mapW;
-    const maxY = 0, minY = ch - mapH;
+    const scaledW = SVG_DISPLAY_W * z;
+    const scaledH = SVG_DISPLAY_H * z;
+    // Centre the map when smaller than the container
+    const offsetX = Math.max(0, (cw - scaledW) / 2);
+    const offsetY = Math.max(0, (ch - scaledH) / 2);
     return {
-      x: Math.min(maxX, Math.max(minX, nx)),
-      y: Math.min(maxY, Math.max(minY, ny)),
+      x: scaledW <= cw  ? offsetX  : Math.min(0, Math.max(cw  - scaledW,  nx)),
+      y: scaledH <= ch  ? offsetY  : Math.min(0, Math.max(ch  - scaledH,  ny)),
     };
-  }, []);
+  }, [SVG_DISPLAY_W, SVG_DISPLAY_H]);
+
+  // Centre on mount and whenever zoom changes
+  useEffect(() => {
+    setPan(pp => clampPan(pp.x, pp.y, zoom));
+  }, [zoom, clampPan]);
 
   const zoomAt = useCallback((delta, cx, cy) => {
     setZoom(prev => {
-      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev * (delta > 0 ? 1.25 : 0.8)));
+      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev * (delta > 0 ? 1.3 : 0.77)));
       setPan(pp => {
         const scale = next / prev;
-        const nx = cx - (cx - pp.x) * scale;
-        const ny = cy - (cy - pp.y) * scale;
+        const nx    = cx - (cx - pp.x) * scale;
+        const ny    = cy - (cy - pp.y) * scale;
         return clampPan(nx, ny, next);
       });
       return next;
@@ -5520,31 +5563,31 @@ function UKVisitorMap({ visitData }) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    el.addEventListener('wheel', handleWheel, { passive: false });
+    el.addEventListener('wheel', handleWheel, { passive:false });
     return () => el.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
     dragging.current = true;
-    lastPos.current = { x: e.clientX, y: e.clientY };
+    lastPos.current  = { x:e.clientX, y:e.clientY };
     setTooltip(null);
   };
   const handleMouseMove = (e) => {
     if (!dragging.current) return;
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
-    lastPos.current = { x: e.clientX, y: e.clientY };
+    lastPos.current = { x:e.clientX, y:e.clientY };
     setPan(pp => clampPan(pp.x + dx, pp.y + dy, zoom));
   };
   const handleMouseUp = () => { dragging.current = false; };
 
-  // Touch support
-  const lastTouch = useRef(null);
-  const lastPinchDist = useRef(null);
+  // Touch
+  const lastTouch      = useRef(null);
+  const lastPinchDist  = useRef(null);
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
-      lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastTouch.current     = { x:e.touches[0].clientX, y:e.touches[0].clientY };
       lastPinchDist.current = null;
     } else if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -5557,11 +5600,11 @@ function UKVisitorMap({ visitData }) {
     if (e.touches.length === 1 && lastTouch.current) {
       const dx = e.touches[0].clientX - lastTouch.current.x;
       const dy = e.touches[0].clientY - lastTouch.current.y;
-      lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastTouch.current = { x:e.touches[0].clientX, y:e.touches[0].clientY };
       setPan(pp => clampPan(pp.x + dx, pp.y + dy, zoom));
     } else if (e.touches.length === 2 && lastPinchDist.current !== null) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dx   = e.touches[0].clientX - e.touches[1].clientX;
+      const dy   = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.hypot(dx, dy);
       const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -5571,7 +5614,7 @@ function UKVisitorMap({ visitData }) {
     }
   };
 
-  const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+  const resetView = () => { setZoom(1); };
 
   const handlePinClick = (e, pin) => {
     e.stopPropagation();
@@ -5580,21 +5623,22 @@ function UKVisitorMap({ visitData }) {
     setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top, pin });
   };
 
-  const regionStyle = { fill:'#0f1a08', stroke:'#2a4010', strokeWidth:'0.8', strokeLinejoin:'round' };
-
-  // Pin radius scaled inversely with zoom so pins don't overwhelm at high zoom
   const pinScale = 1 / Math.sqrt(zoom);
+
+  const regionFill    = '#111e09';
+  const regionStroke  = '#2a4012';
+  const regionStyle   = { fill:regionFill, stroke:regionStroke, strokeWidth:'1', strokeLinejoin:'round' };
 
   return (
     <div style={{ background:'#0c1009', border:'1px solid #1a2808', padding:'18px 20px', gridColumn:'1 / -1' }}>
-      {/* Header row */}
+      {/* Header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:'.22em', color:'#3a5010' }}>VISITOR MAP</div>
         <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:'#2a3a10' }}>{Math.round(zoom * 100)}%</span>
-          <button onClick={() => zoomAt(1, 210, 350)} style={{ background:'#0f1a08', border:'1px solid #2a4010', color:'#5a8020', fontFamily:"'Share Tech Mono',monospace", fontSize:14, width:26, height:26, cursor:'pointer', lineHeight:1, padding:0 }}>+</button>
-          <button onClick={() => zoomAt(-1, 210, 350)} style={{ background:'#0f1a08', border:'1px solid #2a4010', color:'#5a8020', fontFamily:"'Share Tech Mono',monospace", fontSize:14, width:26, height:26, cursor:'pointer', lineHeight:1, padding:0 }}>−</button>
-          <button onClick={resetView} style={{ background:'#0f1a08', border:'1px solid #2a4010', color:'#3a5010', fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:'4px 8px', cursor:'pointer', letterSpacing:'.1em' }}>RESET</button>
+          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:'#2a3a10' }}>{Math.round(zoom*100)}%</span>
+          <button onClick={() => { const el=containerRef.current; if(!el) return; const r=el.getBoundingClientRect(); zoomAt(1,r.width/2,r.height/2); }} style={{ background:'#0f1a08',border:'1px solid #2a4010',color:'#5a8020',fontFamily:"'Share Tech Mono',monospace",fontSize:14,width:26,height:26,cursor:'pointer',lineHeight:1,padding:0 }}>+</button>
+          <button onClick={() => { const el=containerRef.current; if(!el) return; const r=el.getBoundingClientRect(); zoomAt(-1,r.width/2,r.height/2); }} style={{ background:'#0f1a08',border:'1px solid #2a4010',color:'#5a8020',fontFamily:"'Share Tech Mono',monospace",fontSize:14,width:26,height:26,cursor:'pointer',lineHeight:1,padding:0 }}>−</button>
+          <button onClick={resetView} style={{ background:'#0f1a08',border:'1px solid #2a4010',color:'#3a5010',fontFamily:"'Share Tech Mono',monospace",fontSize:8,padding:'4px 8px',cursor:'pointer',letterSpacing:'.1em' }}>RESET</button>
         </div>
       </div>
 
@@ -5603,158 +5647,149 @@ function UKVisitorMap({ visitData }) {
       ) : (
         <div
           ref={containerRef}
-          style={{ position:'relative', width:'100%', height:480, overflow:'hidden', cursor: dragging.current ? 'grabbing' : 'grab', background:'#07100a', border:'1px solid #1a2808', userSelect:'none' }}
+          style={{ position:'relative', width:'100%', height:500, overflow:'hidden', cursor:dragging.current?'grabbing':'grab', background:'#07100a', border:'1px solid #1a2808', userSelect:'none' }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onMouseLeave={() => { handleMouseUp(); setTooltip(null); }}
+          onMouseLeave={() => { handleMouseUp(); }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
-          onTouchEnd={() => { lastTouch.current = null; lastPinchDist.current = null; }}
+          onTouchEnd={() => { lastTouch.current=null; lastPinchDist.current=null; }}
           onClick={() => setTooltip(null)}
         >
-          {/* Zoomable / pannable layer */}
-          <div style={{ position:'absolute', left: pan.x, top: pan.y, transformOrigin:'0 0' }}>
+          {/* Panned / zoomed layer */}
+          <div style={{ position:'absolute', left:pan.x, top:pan.y, transformOrigin:'0 0' }}>
             <svg
-              ref={svgRef}
               viewBox={'0 0 ' + W + ' ' + H}
-              style={{ width: Math.min((containerRef.current?.clientWidth || 420), 420) * zoom, display:'block' }}
+              style={{ width:SVG_DISPLAY_W * zoom, height:SVG_DISPLAY_H * zoom, display:'block' }}
             >
-              {/* Sea gradient background */}
               <defs>
-                <radialGradient id="seaGrad" cx="50%" cy="50%" r="70%">
-                  <stop offset="0%" stopColor="#0a1a12" />
-                  <stop offset="100%" stopColor="#060e08" />
+                <radialGradient id="seaGrad2" cx="50%" cy="60%" r="70%">
+                  <stop offset="0%" stopColor="#0b1d12"/>
+                  <stop offset="100%" stopColor="#060e08"/>
                 </radialGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="2" result="blur" />
+                <filter id="pinGlow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
                   <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                 </filter>
               </defs>
-              <rect x={0} y={0} width={W} height={H} fill="url(#seaGrad)" />
 
-              {/* Denser grid — every 1 degree */}
-              {[-8,-7,-6,-5,-4,-3,-2,-1,0,1,2].map(lon => {
-                const x = project(lon, 55).x;
-                const isMajor = lon % 2 === 0;
-                return <line key={'v'+lon} x1={x} y1={0} x2={x} y2={H} stroke={isMajor ? '#1a2a10' : '#111e0a'} strokeWidth={isMajor ? 0.5 : 0.3} strokeDasharray={isMajor ? '4,8' : '2,10'} />;
+              {/* Sea */}
+              <rect x={0} y={0} width={W} height={H} fill="url(#seaGrad2)"/>
+
+              {/* Grid — 1° lines */}
+              {[-8,-7,-6,-5,-4,-3,-2,-1,0,1].map(lon => {
+                const x = project(lon,55).x;
+                const major = lon%2===0;
+                return <line key={'v'+lon} x1={x} y1={0} x2={x} y2={H} stroke={major?'#182810':'#111e0a'} strokeWidth={major?0.6:0.3} strokeDasharray={major?'5,10':'2,12'}/>;
               })}
               {[50,51,52,53,54,55,56,57,58,59,60].map(lat => {
-                const y = project(0, lat).y;
-                const isMajor = lat % 2 === 0;
-                return <line key={'h'+lat} x1={0} y1={y} x2={W} y2={y} stroke={isMajor ? '#1a2a10' : '#111e0a'} strokeWidth={isMajor ? 0.5 : 0.3} strokeDasharray={isMajor ? '4,8' : '2,10'} />;
+                const y = project(0,lat).y;
+                const major = lat%2===0;
+                return <line key={'h'+lat} x1={0} y1={y} x2={W} y2={y} stroke={major?'#182810':'#111e0a'} strokeWidth={major?0.6:0.3} strokeDasharray={major?'5,10':'2,12'}/>;
               })}
 
-              {/* Subtle bathymetric rings around landmass */}
-              <ellipse cx={W*0.46} cy={H*0.65} rx={W*0.38} ry={H*0.32} fill="none" stroke="#0e1a0b" strokeWidth="18" opacity="0.6" />
-              <ellipse cx={W*0.46} cy={H*0.65} rx={W*0.33} ry={H*0.27} fill="none" stroke="#0d190a" strokeWidth="12" opacity="0.5" />
+              {/* Landmasses */}
+              <path d={toPath(englandWales)}   {...regionStyle}/>
+              <path d={toPath(scotland)}       {...regionStyle} fill="#0f1c08"/>
+              <path d={toPath(northernIreland)} fill="#0f1c08" stroke={regionStroke} strokeWidth="0.9" strokeLinejoin="round"/>
+              <path d={toPath(isleOfMan)}      fill={regionFill} stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
+              <path d={toPath(isleOfWight)}    fill={regionFill} stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
+              <path d={toPath(skye)}           fill="#0f1c08"  stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
+              <path d={toPath(mull)}           fill="#0f1c08"  stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
+              <path d={toPath(arran)}          fill="#0f1c08"  stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
 
-              {/* UK landmass — stacked fills for depth */}
-              <path d={toPath(englandWales)} fill="#111e09" stroke="#223510" strokeWidth="1.2" strokeLinejoin="round" />
-              <path d={toPath(scotland)} fill="#0f1c08" stroke="#1e3010" strokeWidth="1.2" strokeLinejoin="round" />
-              <path d={toPath(northernIreland)} fill="#0f1c08" stroke="#1e3010" strokeWidth="1.0" strokeLinejoin="round" />
-              <path d={toPath(isleOfMan)} fill="#111e09" stroke="#223510" strokeWidth="0.8" strokeLinejoin="round" />
-              <path d={toPath(skye)} fill="#0f1c08" stroke="#1e3010" strokeWidth="0.8" strokeLinejoin="round" />
-              <path d={toPath(mull)} fill="#0f1c08" stroke="#1e3010" strokeWidth="0.7" strokeLinejoin="round" />
-              <path d={toPath(arran)} fill="#0f1c08" stroke="#1e3010" strokeWidth="0.7" strokeLinejoin="round" />
-              <path d={toPath(lleynPeninsula)} fill="#111e09" stroke="#223510" strokeWidth="0.7" strokeLinejoin="round" />
-              <path d={toPath(kentBulge)} fill="#111e09" stroke="none" />
+              {/* Inner highlight on main landmasses */}
+              <path d={toPath(englandWales)} fill="none" stroke="#253810" strokeWidth="0.5" opacity="0.5"/>
+              <path d={toPath(scotland)}     fill="none" stroke="#223010" strokeWidth="0.5" opacity="0.5"/>
 
-              {/* Highlight inner fill */}
-              <path d={toPath(englandWales)} fill="none" stroke="#2a4012" strokeWidth="0.4" strokeLinejoin="round" opacity="0.5" />
-              <path d={toPath(scotland)} fill="none" stroke="#253810" strokeWidth="0.4" strokeLinejoin="round" opacity="0.5" />
-
-              {/* Region labels — scaled with zoom so they stay readable */}
+              {/* Region labels */}
               {[
-                { label:'ENGLAND',  lon:-1.5,  lat:52.8  },
-                { label:'SCOTLAND', lon:-4.0,  lat:57.0  },
-                { label:'WALES',    lon:-3.8,  lat:52.3  },
-                { label:'N.IRE',    lon:-6.5,  lat:54.8  },
+                {label:'ENGLAND',  lon:-1.5,  lat:52.8},
+                {label:'SCOTLAND', lon:-4.0,  lat:57.0},
+                {label:'WALES',    lon:-3.8,  lat:52.3},
+                {label:'N.IRE',    lon:-6.6,  lat:54.65},
               ].map(r => {
-                const p = project(r.lon, r.lat);
-                const fs = Math.max(5, 9 / Math.sqrt(zoom));
-                return <text key={r.label} x={p.x} y={p.y} textAnchor="middle" fontSize={fs} fill="#2d4418" fontFamily="'Share Tech Mono',monospace" letterSpacing="1.5" style={{ pointerEvents:'none', userSelect:'none' }}>{r.label}</text>;
+                const p  = project(r.lon, r.lat);
+                const fs = Math.max(5, 9/Math.sqrt(zoom));
+                return <text key={r.label} x={p.x} y={p.y} textAnchor="middle" fontSize={fs} fill="#2d4418" fontFamily="'Share Tech Mono',monospace" letterSpacing="1.5" style={{pointerEvents:'none',userSelect:'none'}}>{r.label}</text>;
               })}
 
-              {/* City dot labels — appear progressively as zoom increases */}
+              {/* Progressive city labels */}
               {CITY_LABELS.filter(c => zoom >= c.minZoom).map(c => {
-                const p = project(c.lon, c.lat);
-                const fs = Math.max(5, 7 / Math.sqrt(zoom));
+                const p  = project(c.lon, c.lat);
+                const fs = Math.max(4.5, 6.5/Math.sqrt(zoom));
                 return (
-                  <g key={c.name} style={{ pointerEvents:'none' }}>
-                    <circle cx={p.x} cy={p.y} r={1.2 / Math.sqrt(zoom)} fill="#3a5a18" opacity={0.8} />
-                    <text x={p.x} y={p.y - 3 / Math.sqrt(zoom)} textAnchor="middle" fontSize={fs} fill="#3a5a18" fontFamily="'Share Tech Mono',monospace" style={{ userSelect:'none' }}>{c.name}</text>
+                  <g key={c.name} style={{pointerEvents:'none'}}>
+                    <circle cx={p.x} cy={p.y} r={1.5/Math.sqrt(zoom)} fill="#4a6a20" opacity={0.9}/>
+                    <text x={p.x} y={p.y - 3.5/Math.sqrt(zoom)} textAnchor="middle" fontSize={fs} fill="#4a6a20" fontFamily="'Share Tech Mono',monospace" style={{userSelect:'none'}}>{c.name}</text>
                   </g>
                 );
               })}
 
               {/* Axis labels */}
               {[-8,-6,-4,-2,0,2].map(lon => {
-                const x = project(lon, 55).x;
+                const x = project(lon,55).x;
                 return <text key={'vl'+lon} x={x} y={H-3} textAnchor="middle" fontSize="6" fill="#1e3010" fontFamily="'Share Tech Mono',monospace">{lon}°</text>;
               })}
               {[50,52,54,56,58,60].map(lat => {
-                const y = project(0, lat).y;
-                return <text key={'hl'+lat} x={3} y={y+2.5} fontSize="6" fill="#1e3010" fontFamily="'Share Tech Mono',monospace">{lat}°N</text>;
+                const y = project(0,lat).y;
+                return <text key={'hl'+lat} x={4} y={y+2} fontSize="6" fill="#1e3010" fontFamily="'Share Tech Mono',monospace">{lat}°N</text>;
               })}
 
-              {/* Visitor pins — size scales inversely with zoom */}
-              {pins.map((pin, i) => {
+              {/* Visitor pins */}
+              {pins.map((pin,i) => {
                 const p = project(pin.lon, pin.lat);
-                if (p.x < -20 || p.x > W+20 || p.y < -20 || p.y > H+20) return null;
-                const baseR = 5 + (pin.count / maxCount) * 12;
-                const r = baseR * pinScale;
-                const isUK = pin.country === 'GB';
-                const color = isUK ? '#c8ff00' : '#4fc3f7';
+                if (p.x < -30 || p.x > W+30 || p.y < -30 || p.y > H+30) return null;
+                const baseR = 5 + (pin.count/maxCount)*12;
+                const r     = baseR * pinScale;
+                const color = pin.country==='GB' ? '#c8ff00' : '#4fc3f7';
                 return (
-                  <g key={i} onClick={e => handlePinClick(e, pin)} style={{ cursor:'pointer' }}>
-                    {/* Outer pulse ring */}
-                    <circle cx={p.x} cy={p.y} r={(r + 5) * pinScale} fill={color} opacity={0.06} />
-                    <circle cx={p.x} cy={p.y} r={(r + 2) * pinScale} fill={color} opacity={0.12} />
-                    {/* Main dot */}
-                    <circle cx={p.x} cy={p.y} r={r} fill={color} opacity={0.92} stroke="#060e08" strokeWidth={1.2 * pinScale} filter="url(#glow)" />
-                    {/* Session count label */}
-                    <text x={p.x} y={p.y + r * 0.38} textAnchor="middle" fontSize={Math.max(4, r * 0.75)} fill="#060e08" fontWeight="bold" fontFamily="monospace" style={{ pointerEvents:'none', userSelect:'none' }}>{pin.sessions.size}</text>
+                  <g key={i} onClick={e => handlePinClick(e,pin)} style={{cursor:'pointer'}}>
+                    <circle cx={p.x} cy={p.y} r={(r+5)*pinScale} fill={color} opacity={0.07}/>
+                    <circle cx={p.x} cy={p.y} r={(r+2)*pinScale} fill={color} opacity={0.14}/>
+                    <circle cx={p.x} cy={p.y} r={r} fill={color} opacity={0.93} stroke="#060e08" strokeWidth={1.2*pinScale} filter="url(#pinGlow)"/>
+                    <text x={p.x} y={p.y+r*0.38} textAnchor="middle" fontSize={Math.max(3.5,r*0.72)} fill="#060e08" fontWeight="bold" fontFamily="monospace" style={{pointerEvents:'none',userSelect:'none'}}>{pin.sessions.size}</text>
                   </g>
                 );
               })}
             </svg>
           </div>
 
-          {/* Tooltip — positioned relative to container */}
+          {/* Tooltip */}
           {tooltip && (
             <div
-              style={{ position:'absolute', left: Math.min(tooltip.x + 14, (containerRef.current?.clientWidth || 420) - 218), top: Math.max(4, tooltip.y - 10), background:'#080f04', border:'1px solid #2a3a10', padding:'10px 14px', fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:'#b0c090', width:200, pointerEvents:'none', zIndex:20, boxShadow:'0 6px 30px rgba(0,0,0,.85)' }}
+              style={{ position:'absolute', left:Math.min(tooltip.x+14,(containerRef.current?.clientWidth||420)-218), top:Math.max(4,tooltip.y-10), background:'#080f04', border:'1px solid #2a3a10', padding:'10px 14px', fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:'#b0c090', width:200, pointerEvents:'none', zIndex:20, boxShadow:'0 6px 30px rgba(0,0,0,.85)' }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:'#c8ff00', marginBottom:5 }}>
-                {tooltip.pin.city || 'Unknown'}{tooltip.pin.country ? ', ' + tooltip.pin.country : ''}
+                {tooltip.pin.city||'Unknown'}{tooltip.pin.country ? ', '+tooltip.pin.country : ''}
               </div>
-              <div style={{ color:'#5a7a30', marginBottom: tooltip.pin.users.size > 0 ? 8 : 0 }}>
-                {tooltip.pin.sessions.size} session{tooltip.pin.sessions.size !== 1 ? 's' : ''} · {tooltip.pin.count} page view{tooltip.pin.count !== 1 ? 's' : ''}
+              <div style={{ color:'#5a7a30', marginBottom:tooltip.pin.users.size>0?8:0 }}>
+                {tooltip.pin.sessions.size} session{tooltip.pin.sessions.size!==1?'s':''} · {tooltip.pin.count} page view{tooltip.pin.count!==1?'s':''}
               </div>
               {tooltip.pin.users.size > 0 && (
                 <div style={{ borderTop:'1px solid #1a2808', paddingTop:6 }}>
                   <div style={{ color:'#3a5010', fontSize:9, letterSpacing:'.15em', marginBottom:4 }}>LOGGED-IN PLAYERS</div>
-                  {[...tooltip.pin.users].slice(0, 8).map(name => (
+                  {[...tooltip.pin.users].slice(0,8).map(name => (
                     <div key={name} style={{ color:'#c8ff00', fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>▸ {name}</div>
                   ))}
-                  {tooltip.pin.users.size > 8 && <div style={{ color:'#3a5010', fontSize:10, marginTop:2 }}>+{tooltip.pin.users.size - 8} more</div>}
+                  {tooltip.pin.users.size>8 && <div style={{ color:'#3a5010', fontSize:10, marginTop:2 }}>+{tooltip.pin.users.size-8} more</div>}
                 </div>
               )}
             </div>
           )}
 
-          {/* Zoom hint */}
-          <div style={{ position:'absolute', bottom:8, right:10, fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:'#1e3010', pointerEvents:'none' }}>scroll or pinch to zoom · drag to pan · click pin for details</div>
+          {/* Hint */}
+          <div style={{ position:'absolute', bottom:8, right:10, fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:'#1a2e10', pointerEvents:'none' }}>scroll/pinch to zoom · drag to pan · click pin for details</div>
         </div>
       )}
 
       {/* Legend */}
       {pins.length > 0 && (
         <div style={{ display:'flex', gap:20, justifyContent:'center', marginTop:10, fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#3a5010', flexWrap:'wrap' }}>
-          <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#c8ff00' }} />UK visitor</span>
-          <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#4fc3f7' }} />International</span>
+          <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#c8ff00' }}/>UK visitor</span>
+          <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#4fc3f7' }}/>International</span>
           <span>Number = unique sessions · Size = volume</span>
         </div>
       )}
