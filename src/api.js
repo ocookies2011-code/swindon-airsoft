@@ -1005,22 +1005,62 @@ const GEO_MAX_RETRIES = 3;
 async function _lookupGeo() {
   if (_geoCache !== undefined && _geoCache !== null) return _geoCache; // cached success
   if (_geoCache === null && _geoFailCount >= GEO_MAX_RETRIES) return null; // give up after 3 tries
-  // NOTE: lat/lon from free IP-geo APIs is often wildly inaccurate (ISP routing
-  // exchange points, not subscriber location). We intentionally discard their
-  // coordinates and only keep country + city — the map resolves pin positions
-  // from our own curated CITY_COORDS table which is known to be correct.
+
+  // Known city coordinates used to validate API-returned lat/lon.
+  // If the API says we're in "Swindon" but gives coords 300km away (ISP exchange
+  // routing), we discard the bad coords and fall back to our own lookup table.
+  const KNOWN_CITY_COORDS = {
+    "swindon":[51.558,-1.782],"london":[51.507,-0.128],"reading":[51.454,-0.971],
+    "bristol":[51.454,-2.588],"birmingham":[52.480,-1.902],"manchester":[53.480,-2.242],
+    "leeds":[53.800,-1.549],"sheffield":[53.381,-1.470],"liverpool":[53.408,-2.991],
+    "edinburgh":[55.953,-3.189],"glasgow":[55.864,-4.252],"cardiff":[51.481,-3.180],
+    "oxford":[51.752,-1.258],"cambridge":[52.205,0.119],"coventry":[52.408,-1.510],
+    "leicester":[52.637,-1.135],"nottingham":[52.954,-1.150],"newcastle":[54.978,-1.618],
+    "southampton":[50.910,-1.404],"portsmouth":[50.805,-1.087],"exeter":[50.726,-3.527],
+    "york":[53.958,-1.082],"bath":[51.381,-2.360],"brighton":[50.827,-0.137],
+    "norwich":[52.628,1.299],"plymouth":[50.375,-4.143],"worcester":[52.193,-2.220],
+    "chester":[53.193,-2.893],"derby":[52.922,-1.478],"lincoln":[53.235,-0.540],
+    "peterborough":[52.573,-0.237],"luton":[51.879,-0.418],"northampton":[52.240,-0.898],
+    "milton keynes":[52.041,-0.759],"colchester":[51.896,0.903],"ipswich":[52.059,1.155],
+  };
+
+  // Haversine distance in km between two lat/lon points
+  const haversineKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
   const apis = [
-    { url: 'https://ipwho.is/',             parse: g => g.success      ? { country: g.country_code, city: g.city     || null, lat: null, lon: null } : null },
-    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode  ? { country: g.countryCode,  city: g.cityName || null, lat: null, lon: null } : null },
-    { url: 'https://api.country.is/',        parse: g => g.country      ? { country: g.country,       city: null,               lat: null, lon: null } : null },
+    { url: 'https://ipwho.is/',             parse: g => g.success     ? { country: g.country_code, city: g.city     || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
+    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode ? { country: g.countryCode,  city: g.cityName || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
+    { url: 'https://api.country.is/',        parse: g => g.country     ? { country: g.country,       city: null,               lat: null,                lon: null                } : null },
   ];
+
   for (const { url, parse } of apis) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) continue;
       const g = await res.json();
       const result = parse(g);
-      if (result?.country) { _geoCache = result; _geoFailCount = 0; return _geoCache; }
+      if (!result?.country) continue;
+
+      // Validate lat/lon against the reported city name.
+      // Reject if the coords are >100km from where the city actually is —
+      // this filters out ISP routing exchange points being reported as the location.
+      if (result.lat && result.lon && result.city) {
+        const known = KNOWN_CITY_COORDS[result.city.toLowerCase()];
+        if (known) {
+          const distKm = haversineKm(result.lat, result.lon, known[0], known[1]);
+          if (distKm > 100) {
+            // Coords don't match the city — ditch the bad coords, keep city name
+            result.lat = null;
+            result.lon = null;
+          }
+        }
+      }
+
+      _geoCache = result; _geoFailCount = 0; return _geoCache;
     } catch { continue; }
   }
   // All APIs failed this attempt — allow retry next page nav, up to the cap
@@ -1104,7 +1144,12 @@ export const visits = wrapWithTimeout({
       // Fire geo lookup in background — patch the row if geo not yet set
       _lookupGeo().then(geo => {
         if (!geo) return;
-        const geoUpdate = { country: geo.country || null, city: geo.city || null };
+        const geoUpdate = {
+          country: geo.country || null,
+          city:    geo.city    || null,
+          lat:     geo.lat     || null,
+          lon:     geo.lon     || null,
+        };
         if (userId) {
           supabase.from('page_visits').update(geoUpdate)
             .eq('user_id', userId).is('country', null).then(() => {}).catch(() => {});
