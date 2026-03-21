@@ -5381,13 +5381,16 @@ function AdminVisitorStats() {
   const userVisitMap = {};
   filtered.filter(row => row.user_id).forEach(row => {
     if (!userVisitMap[row.user_id]) {
-      userVisitMap[row.user_id] = { name: row.user_name || row.user_id, count: 0, pages: {}, last: row.created_at };
+      userVisitMap[row.user_id] = { name: row.user_name || row.user_id, count: 0, pages: {}, last: row.created_at, lastPage: row.page };
     }
     userVisitMap[row.user_id].count++;
     userVisitMap[row.user_id].pages[row.page] = (userVisitMap[row.user_id].pages[row.page] || 0) + 1;
-    if (row.created_at > userVisitMap[row.user_id].last) userVisitMap[row.user_id].last = row.created_at;
+    if (row.created_at > userVisitMap[row.user_id].last) {
+      userVisitMap[row.user_id].last = row.created_at;
+      userVisitMap[row.user_id].lastPage = row.page;
+    }
   });
-  const userRows = Object.values(userVisitMap).sort((aa, bb) => new Date(bb.last) - new Date(aa.last)).slice(0, 20);
+  const userRows = Object.values(userVisitMap).sort((aa, bb) => bb.count - aa.count).slice(0, 20);
 
   // Recent feed
   const recentRows = [...filtered].slice(0, 50);
@@ -5597,17 +5600,17 @@ function AdminVisitorStats() {
             <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", minWidth:480 }}>
               <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8 }}>
-                {["USER","VISITS","TOP PAGE","LAST SEEN"].map(colHead => (
+                {["USER","VISITS","LAST PAGE","LAST SEEN"].map(colHead => (
                   <div key={colHead} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010" }}>{colHead}</div>
                 ))}
               </div>
               {userRows.map((userRow, userIdx) => {
-                const topPage = Object.entries(userRow.pages).sort((aa, bb) => bb[1] - aa[1])[0]?.[0] || "—";
+                const lastPage = userRow.lastPage || "—";
                 return (
                   <div key={userIdx} style={{ borderBottom:"1px solid #0f1a08", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8, alignItems:"center" }}>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}>{userRow.name}</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, fontWeight:900, color:"#c8ff00" }}>{userRow.count}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#3a5010", textTransform:"uppercase" }}>{PAGE_ICONS[topPage] || "▸"} {topPage}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#3a5010", textTransform:"uppercase" }}>{PAGE_ICONS[lastPage] || "▸"} {lastPage}</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>{new Date(userRow.last).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}</div>
                   </div>
                 );
