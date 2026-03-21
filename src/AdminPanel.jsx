@@ -5292,6 +5292,88 @@ function AdminFailedPayments({ showToast, cu }) {
   );
 }
 
+// ── UK Visitor Map ────────────────────────────────────────
+function UKVisitorMap({ visitData }) {
+  const [tooltip, setTooltip] = React.useState(null);
+  const svgRef = React.useRef(null);
+
+  const UK_LAT_MAX = 60.9; const UK_LAT_MIN = 49.8;
+  const UK_LON_MIN = -8.2; const UK_LON_MAX = 2.0;
+  const W = 340; const H = 500;
+
+  const project = (lat, lon) => ({
+    x: ((lon - UK_LON_MIN) / (UK_LON_MAX - UK_LON_MIN)) * W,
+    y: ((UK_LAT_MAX - lat) / (UK_LAT_MAX - UK_LAT_MIN)) * H,
+  });
+
+  const pinMap = {};
+  visitData.forEach(row => {
+    if (!row.lat || !row.lon) return;
+    const lat = Math.round(row.lat * 10) / 10;
+    const lon = Math.round(row.lon * 10) / 10;
+    const key = lat + "," + lon;
+    if (!pinMap[key]) pinMap[key] = { lat, lon, count: 0, city: row.city, country: row.country, users: new Set(), sessions: new Set() };
+    pinMap[key].count++;
+    pinMap[key].sessions.add(row.session_id);
+    if (row.user_name) pinMap[key].users.add(row.user_name);
+  });
+
+  const pins = Object.values(pinMap);
+  const maxCount = Math.max(...pins.map(p => p.count), 1);
+
+  const handlePinEnter = (e, pin) => {
+    const svgRect = svgRef.current?.getBoundingClientRect();
+    if (!svgRect) return;
+    setTooltip({ x: e.clientX - svgRect.left, y: e.clientY - svgRect.top, pin });
+  };
+
+  return (
+    <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px", gridColumn:"1 / -1" }}>
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>VISITOR MAP</div>
+      {pins.length === 0 ? (
+        <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No coordinate data yet — accumulates with new visits.</div>
+      ) : (
+        <div style={{ position:"relative", display:"inline-block", width:"100%" }}>
+          <svg ref={svgRef} viewBox={"0 0 " + W + " " + H} style={{ width:"100%", maxWidth:500, display:"block", margin:"0 auto" }} onMouseLeave={() => setTooltip(null)}>
+            <path d="M170,10 L185,15 L200,12 L215,20 L225,35 L220,55 L230,70 L225,90 L235,105 L230,125 L240,140 L238,160 L245,175 L240,195 L248,210 L242,230 L248,245 L242,260 L250,275 L244,290 L252,305 L246,320 L254,335 L248,350 L256,365 L250,380 L246,400 L238,415 L228,430 L215,440 L200,448 L185,452 L170,455 L155,452 L140,448 L125,440 L112,430 L102,415 L94,400 L90,380 L84,365 L78,350 L72,335 L66,320 L60,305 L54,290 L48,275 L42,260 L36,245 L30,230 L24,215 L20,195 L16,175 L12,155 L10,135 L14,115 L20,95 L28,78 L36,62 L48,48 L62,36 L78,26 L95,18 L112,12 L130,8 L150,6 Z" fill="#0f1a08" stroke="#1e3a10" strokeWidth="1.5" strokeLinejoin="round" />
+            {pins.map((pin, i) => {
+              const p = project(pin.lat, pin.lon);
+              if (p.x < 0 || p.x > W || p.y < 0 || p.y > H) return null;
+              const r = 4 + (pin.count / maxCount) * 10;
+              const color = pin.country === "GB" ? "#c8ff00" : "#4fc3f7";
+              return (
+                <g key={i} onMouseEnter={e => handlePinEnter(e, pin)} onMouseLeave={() => setTooltip(null)} style={{ cursor:"pointer" }}>
+                  <circle cx={p.x} cy={p.y} r={r + 4} fill={color} opacity={0.12} />
+                  <circle cx={p.x} cy={p.y} r={r} fill={color} opacity={0.85} stroke="#0c1009" strokeWidth={1} />
+                  {pin.sessions.size > 1 && <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize={r > 8 ? 9 : 7} fill="#0c1009" fontWeight="bold" fontFamily="monospace" style={{ pointerEvents:"none", userSelect:"none" }}>{pin.sessions.size}</text>}
+                </g>
+              );
+            })}
+          </svg>
+          {tooltip && (
+            <div style={{ position:"absolute", left:Math.min(tooltip.x + 12, 260), top:tooltip.y - 10, background:"#0a0f05", border:"1px solid #2a3a10", padding:"10px 14px", fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#b0c090", minWidth:180, maxWidth:240, pointerEvents:"none", zIndex:10, boxShadow:"0 4px 20px rgba(0,0,0,.6)" }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, color:"#c8ff00", marginBottom:6 }}>{tooltip.pin.city || "Unknown"}{tooltip.pin.country ? ", " + tooltip.pin.country : ""}</div>
+              <div style={{ color:"#3a5010", marginBottom:4 }}>{tooltip.pin.sessions.size} session{tooltip.pin.sessions.size !== 1 ? "s" : ""} · {tooltip.pin.count} page view{tooltip.pin.count !== 1 ? "s" : ""}</div>
+              {tooltip.pin.users.size > 0 && (
+                <div style={{ marginTop:6, borderTop:"1px solid #1a2808", paddingTop:6 }}>
+                  <div style={{ color:"#3a5010", fontSize:9, letterSpacing:".15em", marginBottom:4 }}>LOGGED-IN PLAYERS</div>
+                  {[...tooltip.pin.users].slice(0, 6).map(name => <div key={name} style={{ color:"#c8ff00", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>▸ {name}</div>)}
+                  {tooltip.pin.users.size > 6 && <div style={{ color:"#3a5010", fontSize:10 }}>+{tooltip.pin.users.size - 6} more</div>}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{ display:"flex", gap:16, justifyContent:"center", marginTop:8, fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010" }}>
+            <span><span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:"#c8ff00", marginRight:4 }} />UK</span>
+            <span><span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:"#4fc3f7", marginRight:4 }} />International</span>
+            <span>Pin size = visit volume</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Admin Visitor Stats ───────────────────────────────────
 function AdminVisitorStats() {
   const [visitData, setVisitData]         = useState([]);
@@ -5306,6 +5388,17 @@ function AdminVisitorStats() {
   // ── Live viewer count — sessions active in the last 5 minutes ──
   const [liveCount, setLiveCount] = useState(null);
   const [liveNames, setLiveNames] = useState([]);
+
+  // Inject livePulse keyframe into document head once
+  useEffect(() => {
+    const id = 'live-pulse-style';
+    if (document.getElementById(id)) return;
+    const s = document.createElement('style');
+    s.id = id;
+    s.textContent = '@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }';
+    document.head.appendChild(s);
+    return () => { try { document.head.removeChild(s); } catch {} };
+  }, []);
 
   useEffect(() => {
     const fetchLive = async () => {
@@ -5562,7 +5655,6 @@ function AdminVisitorStats() {
                     {liveNames.length > 5 && <div style={{ fontSize:10, color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace" }}>+{liveNames.length - 5} more</div>}
                   </div>
                 )}
-                <style>{"@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }"}</style>
               </div>
               {statCard("Unique Visitors", uniqueSessions.toLocaleString(), "distinct sessions", "#c8ff00")}
               {statCard("Total Page Views", totalVisits.toLocaleString(), `across ${dateRange === "all" ? "all time" : dateRange}`, "#4fc3f7")}
@@ -5658,6 +5750,7 @@ function AdminVisitorStats() {
               {cityRows.map(r => barRow(r.label, r.count, totalVisits, "#ce93d8", r.flag))}
               {cityRows.length === 0 && <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No location data yet.</div>}
             </div>
+            <UKVisitorMap visitData={filtered} />
           </div>
         )}
 
