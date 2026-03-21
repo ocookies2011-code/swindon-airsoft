@@ -1042,9 +1042,13 @@ async function _lookupGeo() {
   };
 
   const apis = [
-    { url: 'https://ipwho.is/',             parse: g => g.success     ? { country: g.country_code, city: g.city     || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
-    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode ? { country: g.countryCode,  city: g.cityName || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
-    { url: 'https://api.country.is/',        parse: g => g.country     ? { country: g.country,       city: null,               lat: null,                lon: null                } : null },
+    // ipwhois.app — most accurate for UK residential IPs (same service as ipwhois.io)
+    // Response fields: success, country_code, city, latitude, longitude
+    { url: 'https://ipwhois.app/json/',      parse: g => g.success !== false ? { country: g.country_code || null, city: g.city || null, lat: Number(g.latitude)  || null, lon: Number(g.longitude) || null } : null },
+    // fallbacks
+    { url: 'https://ipwho.is/',              parse: g => g.success           ? { country: g.country_code || null, city: g.city || null, lat: g.latitude          || null, lon: g.longitude         || null } : null },
+    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode       ? { country: g.countryCode  || null, city: g.cityName || null, lat: g.latitude      || null, lon: g.longitude         || null } : null },
+    { url: 'https://api.country.is/',        parse: g => g.country           ? { country: g.country,       city: null, lat: null, lon: null } : null },
   ];
 
   for (const { url, parse } of apis) {
