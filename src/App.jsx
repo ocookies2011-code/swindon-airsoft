@@ -232,6 +232,34 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, walkOnLeft)) }));
     const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, rentalLeft)) }));
 
+    // ── Funnel tracking — fires whenever cart contents change ──────────
+    // Updates the live viewer card so admins can see who is in the booking flow.
+    // Uses the same session ID as the main page tracker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+      if (!ev) return;
+      const sid = sessionStorage.getItem("sa_sid");
+      let funnelPage = null;
+      if (!cartEmpty && payTotal > 0) {
+        // Has items in cart and payment form is visible — at checkout
+        funnelPage = "event:checkout";
+      } else if (!cartEmpty) {
+        // Has items but not yet at payment (e.g. covered by credits)
+        funnelPage = "event:basket";
+      } else if (detail) {
+        // Viewing event detail but nothing in cart yet
+        funnelPage = "event:browsing";
+      }
+      if (!funnelPage) return;
+      api.visits.track({
+        page:      funnelPage,
+        userId:    cu?.id   || null,
+        userName:  cu?.name || null,
+        sessionId: sid,
+      });
+    // Only re-fire when the meaningful cart state changes
+    }, [cartEmpty, payTotal, !!detail]);
+
 
     const confirmBookingAfterPayment = async (squarePayment) => {
       setBookingBusy(true);
@@ -5646,6 +5674,21 @@ function AppInner() {
       sessionId: sid,
     });
   }, [page, cu?.id]);
+
+  // ── Shop cart funnel tracking ──────────────────────────────
+  useEffect(() => {
+    if (page !== "shop") return;
+    const sid = sessionStorage.getItem("sa_sid");
+    const itemCount = cart.reduce((s, i) => s + i.qty, 0);
+    if (itemCount === 0) return; // nothing in cart — already tracked as 'shop'
+    const funnelPage = cartOpen ? "shop:checkout" : "shop:basket";
+    api.visits.track({
+      page:      funnelPage,
+      userId:    cu?.id   || null,
+      userName:  cu?.name || null,
+      sessionId: sid,
+    });
+  }, [cart.length, cartOpen, page]);
   useEffect(() => {
     const onHash = () => {
       const parts = window.location.hash.replace("#","").split("/");

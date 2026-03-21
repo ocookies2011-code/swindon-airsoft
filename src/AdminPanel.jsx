@@ -5438,7 +5438,11 @@ function AdminVisitorStats() {
   }, {});
   const refRows = Object.entries(refCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 8);
 
-  const PAGE_ICONS = { home:"⌂", events:"📅", shop:"🛒", gallery:"🖼", staff:"👥", leaderboard:"🏆", vip:"⭐", qa:"💬", contact:"✉", profile:"👤" };
+  const PAGE_ICONS = { home:"⌂", events:"📅", shop:"🛒", gallery:"🖼", staff:"👥", leaderboard:"🏆", vip:"⭐", qa:"💬", contact:"✉", profile:"👤",
+    "event:browsing":"📅", "event:basket":"🛒", "event:checkout":"💳",
+    "shop:basket":"🛍", "shop:checkout":"💳" };
+  const PAGE_LABELS = { "event:browsing":"Event — Browsing", "event:basket":"Event — Items in Basket", "event:checkout":"Event — At Checkout",
+    "shop:basket":"Shop — Items in Basket", "shop:checkout":"Shop — At Checkout" };
 
   const CORNERS = [["top","left"],["top","right"],["bottom","left"],["bottom","right"]];
 
@@ -5552,7 +5556,7 @@ function AdminVisitorStats() {
                       <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontFamily:"'Share Tech Mono',monospace", color:"#5a7a30" }}>
                         <span style={{ color: s.name ? "#c8ff00" : "#3a5010" }}>{s.name ? s.name : "anon"}</span>
                         <span style={{ color:"#2a3a10" }}>→</span>
-                        <span style={{ textTransform:"uppercase", fontSize:10 }}>{s.page}</span>
+                        <span style={{ textTransform:"uppercase", fontSize:10 }}>{PAGE_LABELS[s.page] || s.page}</span>
                       </div>
                     ))}
                     {liveNames.length > 5 && <div style={{ fontSize:10, color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace" }}>+{liveNames.length - 5} more</div>}
