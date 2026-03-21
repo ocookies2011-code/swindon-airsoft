@@ -3860,7 +3860,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
                     <>
                       <div className="alert alert-gold mb-2">⚠️ Player has submitted waiver changes for approval</div>
                       <div style={{ fontSize:11, letterSpacing:".1em", fontWeight:700, color:"var(--muted)", marginBottom:10 }}>PROPOSED CHANGES</div>
-                      {waiverFields(vw.waiverPending).map(([k, v]) => {
+                      {waiverFields(vw.waiverPending?.waiverData ?? vw.waiverPending).map(([k, v]) => {
                         const oldVal = vw.waiverData ? waiverFields(vw.waiverData).find(([ok]) => ok === k)?.[1] : null;
                         const changed = oldVal !== null && v !== oldVal;
                         return (
