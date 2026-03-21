@@ -1034,13 +1034,6 @@ async function _lookupGeo() {
     "newport":[51.588,-2.998],"bangor":[53.228,-4.129],"aberystwyth":[52.415,-4.082],
   };
 
-  // Haversine distance in km between two lat/lon points
-  const haversineKm = (lat1, lon1, lat2, lon2) => {
-    const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  };
-
   const apis = [
     // ipwhois.app — most accurate for UK residential IPs (same service as ipwhois.io)
     // Response fields: success, country_code, city, latitude, longitude
@@ -1059,29 +1052,31 @@ async function _lookupGeo() {
       const result = parse(g);
       if (!result?.country) continue;
 
-      // For GB visitors, always snap to the nearest known city within 80km.
-      // This completely replaces API coords (which are ISP-exchange-routed and
-      // unreliable) with our own accurate lookup table.
-      // For non-GB visitors we do a basic bounding-box sanity check only.
-      if (result.country === 'GB' && result.lat && result.lon) {
-        let nearestCity = null, nearestDist = Infinity;
-        for (const [cityName, coords] of Object.entries(KNOWN_CITY_COORDS)) {
-          const d = haversineKm(result.lat, result.lon, coords[0], coords[1]);
-          if (d < nearestDist) { nearestDist = d; nearestCity = { name: cityName, coords }; }
-        }
-        if (nearestCity && nearestDist <= 80) {
-          // Snap to nearest known city
-          result.city = nearestCity.name.charAt(0).toUpperCase() + nearestCity.name.slice(1);
-          result.lat  = nearestCity.coords[0];
-          result.lon  = nearestCity.coords[1];
-        } else {
-          // No known city nearby — discard coords, city unknown
-          result.lat  = null;
-          result.lon  = null;
-          result.city = null;
+      // For GB visitors: completely ignore API-provided lat/lon — they are ISP-routing
+      // artefacts and consistently wrong for UK residential IPs. Instead, look up
+      // coordinates solely from the city name the API returns, using our own accurate
+      // table. If the city isn't in our table, store country only (no pin).
+      if (result.country === 'GB') {
+        result.lat = null;
+        result.lon = null;
+        if (result.city) {
+          // Normalise: lowercase, strip common suffixes like "-on-Sea", "(city)", etc.
+          const cityKey = result.city.toLowerCase().trim()
+            .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheticals
+            .replace(/-upon-\w+|-on-\w+|-under-\w+/g, '') // "Newcastle-upon-Tyne" -> "newcastle"
+            .trim();
+          const known = KNOWN_CITY_COORDS[cityKey] || KNOWN_CITY_COORDS[cityKey.split(' ')[0]];
+          if (known) {
+            result.lat  = known[0];
+            result.lon  = known[1];
+            // Normalise city name to our canonical capitalised version
+            const canonical = cityKey.split(' ')[0];
+            result.city = canonical.charAt(0).toUpperCase() + canonical.slice(1);
+          }
+          // If still not found, keep city name for display but coords stay null
         }
       } else if (result.city) {
-        // Non-GB: validate coords against known city if we have it
+        // Non-GB: use known coords if we have them, else pass API coords through
         const known = KNOWN_CITY_COORDS[result.city.toLowerCase()];
         if (known) {
           result.lat = known[0];
