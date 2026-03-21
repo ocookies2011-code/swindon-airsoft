@@ -5649,17 +5649,6 @@ function AppInner() {
     });
   }, [page, cu?.id]);
 
-  // ── Event booking funnel tracking ─────────────────────────
-  // Tracks cart stage as a page visit so the live viewer card shows
-  // who is browsing/in-basket/at-checkout for events.
-  // Must be at component top level — NOT inside conditional render blocks.
-  const bCartTotal = bCart.walkOn + bCart.rental + Object.values(bCart.extras).reduce((s, v) => s + v, 0);
-  useEffect(() => {
-    if (page !== "events" || !detail) return;
-    const sid = sessionStorage.getItem("sa_sid");
-    const funnelPage = bCartTotal > 0 ? "event:basket" : "event:browsing";
-    api.visits.track({ page: funnelPage, userId: cu?.id || null, userName: cu?.name || null, sessionId: sid });
-  }, [page, !!detail, bCartTotal, cu?.id]);
 
   useEffect(() => {
     const onHash = () => {
