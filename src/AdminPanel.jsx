@@ -3125,7 +3125,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                         <div style={{ fontSize:12, color:"var(--gold)", marginBottom:8 }}>⚠ Player submitted waiver changes for approval</div>
                         <div style={{ display:"flex", gap:8 }}>
                           <button className="btn btn-sm btn-primary" onClick={async () => {
-                            await updateUserAndRefresh(u.id, { waiverData: u.waiverPending, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
+                            await updateUserAndRefresh(u.id, { waiverData: u.waiverPending?.waiverData ?? u.waiverPending, extraWaivers: u.waiverPending?.extraWaivers ?? u.extraWaivers, waiverPending: null, waiverSigned: true, waiverYear: new Date().getFullYear() });
                             logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver changes approved", detail: u.name });
                             showToast("Changes approved!"); setWaiverViewPlayer(null);
                           }}>Approve Changes</button>

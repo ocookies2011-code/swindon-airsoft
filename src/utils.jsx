@@ -1729,12 +1729,11 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     setSubmitting(true);
     try {
       if (editMode) {
+        // Write to waiverPending for admin approval — do not apply directly
         await updateUser(cu.id, {
-          waiverData: primary,
-          extraWaivers: extras,
-          waiverPending: null,
+          waiverPending: { waiverData: primary, extraWaivers: extras },
         });
-        showToast(extras.length > 0 ? `${waivers.length} waivers updated!` : "Waiver updated!");
+        showToast("Changes submitted — awaiting admin approval.");
       } else {
         await updateUser(cu.id, { waiverSigned: true, waiverYear: new Date().getFullYear(), waiverData: primary, waiverPending: null, extraWaivers: extras });
         showToast(extras.length > 0 ? `${waivers.length} waivers signed!` : "Waiver signed successfully!");
