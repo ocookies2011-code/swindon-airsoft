@@ -5294,504 +5294,237 @@ function AdminFailedPayments({ showToast, cu }) {
 
 // ── UK Visitor Map ────────────────────────────────────────
 function UKVisitorMap({ visitData }) {
-  const [tooltip, setTooltip] = useState(null);
-  const containerRef = useRef(null);
+  const mapRef       = useRef(null);   // DOM node
+  const leafletRef   = useRef(null);   // L (library)
+  const mapObjRef    = useRef(null);   // map instance
+  const markersRef   = useRef([]);     // active markers
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(null);
 
-  // ── Zoom / pan state ─────────────────────────────────────────
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan]   = useState({ x: 0, y: 0 });
-  const dragging        = useRef(false);
-  const lastPos         = useRef({ x: 0, y: 0 });
-  const MIN_ZOOM = 1, MAX_ZOOM = 8;
-
-  // ── True Web-Mercator projection ─────────────────────────────
-  // SVG canvas
-  const W = 500, H = 820;
-  // Geographic bounds tuned to show all of GB + NI with even margins
-  const LON_MIN = -8.65, LON_MAX = 1.85;
-  const LAT_MIN = 49.85, LAT_MAX = 60.95;
-
-  const mercY = (lat) => Math.log(Math.tan(Math.PI/4 + (lat * Math.PI/180)/2));
-  const mercYMin = mercY(LAT_MIN);
-  const mercYMax = mercY(LAT_MAX);
-
-  const project = (lon, lat) => ({
-    x: ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * W,
-    y: ((mercYMax - mercY(lat)) / (mercYMax - mercYMin)) * H,
-  });
-
-  const toPath = (coords) =>
-    coords.map((p, i) => (i===0?'M':'L') + project(p[0],p[1]).x.toFixed(2) + ',' + project(p[0],p[1]).y.toFixed(2)).join(' ') + ' Z';
-
-  // ── Accurate UK coastline polygons (GeoJSON-derived, simplified) ─
-  // England + Wales — clockwise from Land\'s End
-  const englandWales = [
-    // Cornwall peninsula
-    [-5.715,50.066],[-5.553,49.959],[-5.196,49.956],[-4.823,50.033],[-4.418,50.184],
-    [-3.970,50.212],[-3.616,50.210],[-3.417,50.437],[-3.076,50.462],[-2.934,50.602],
-    [-2.567,50.617],[-2.197,50.609],[-1.773,50.710],[-1.488,50.734],[-1.082,50.797],
-    [-0.547,50.762],[-0.003,50.788],[0.281,50.896],[0.682,50.937],[1.016,50.999],
-    [1.292,51.096],[1.453,51.122],[1.776,51.372],[1.408,51.730],[1.015,51.806],
-    // East Anglia
-    [0.561,51.848],[0.279,52.624],[0.515,52.891],[0.432,53.048],[0.102,53.224],
-    // Humber / Lincolnshire
-    [0.002,53.418],[-0.062,53.614],[-0.115,53.841],[0.043,54.063],[0.198,54.108],
-    [0.321,54.249],
-    // Yorkshire coast
-    [-0.033,54.327],[-0.595,54.552],[-1.053,54.678],
-    // North East coast → Scottish border
-    [-1.358,54.982],[-1.644,55.215],[-2.028,55.447],[-2.503,55.660],
-    // Border goes west then south (Solway/Hadrian)
-    [-3.062,55.797],[-3.378,55.685],[-3.647,55.351],[-3.203,55.074],
-    [-2.998,54.719],[-3.184,54.551],[-3.501,54.370],[-3.626,54.120],
-    [-3.408,53.911],[-3.234,53.663],[-3.092,53.346],[-3.073,53.063],
-    [-3.265,52.843],[-3.141,52.678],[-2.941,52.402],[-2.741,52.152],
-    // Severn estuary / South Wales border
-    [-2.516,51.930],[-2.597,51.676],[-2.794,51.558],
-    [-3.112,51.389],[-3.555,51.224],[-4.153,51.219],[-4.712,51.417],
-    [-5.063,51.748],[-4.979,51.991],[-5.188,52.153],
-    // Pembrokeshire coast
-    [-5.310,51.750],[-5.207,51.543],[-4.835,51.166],[-4.233,51.070],
-    [-3.653,51.130],[-3.100,51.230],[-2.658,51.448],[-2.540,51.630],
-    [-2.700,51.791],[-3.153,51.888],[-3.639,51.733],[-4.197,51.545],
-    // Irish Sea coast — Cardigan Bay
-    [-4.966,51.604],[-5.373,51.793],[-5.213,52.103],[-4.665,52.343],
-    [-4.168,52.609],[-3.842,52.805],[-3.918,53.053],[-4.362,53.272],
-    [-4.623,53.360],[-4.422,53.582],[-4.041,53.673],[-3.625,53.706],
-    [-3.291,53.558],[-3.000,53.291],[-2.895,53.104],[-2.852,52.975],
-    [-2.722,52.784],[-2.608,52.554],[-2.546,52.330],[-2.697,52.094],
-    [-3.002,51.944],[-3.272,51.781],[-3.021,51.580],[-2.621,51.514],
-    [-2.142,51.592],[-1.800,51.736],[-1.341,51.682],[-0.941,51.558],
-    [-0.523,51.474],[-0.077,51.513],[0.248,51.622],[0.553,51.730],
-    [0.802,51.823],[1.083,51.882],[1.331,51.760],[1.232,51.552],
-    [0.955,51.380],[0.711,51.192],[0.354,50.970],[-0.218,50.828],
-    [-0.726,50.812],[-1.217,50.698],[-1.618,50.646],[-2.048,50.636],
-    [-2.491,50.636],[-2.920,50.573],[-3.363,50.413],[-3.791,50.229],
-    [-4.249,50.079],[-4.682,50.038],[-5.081,50.018],[-5.551,50.080],
-    [-5.715,50.066]
-  ];
-
-  // Scotland mainland — from English border anticlockwise
-  const scotland = [
-    // Start at English border east coast (Berwick)
-    [-2.028,55.447],[-1.956,55.720],[-1.891,56.003],[-1.759,56.205],
-    [-2.000,56.388],[-2.362,56.703],[-2.512,57.003],[-2.393,57.303],
-    [-2.085,57.490],[-1.881,57.683],[-1.961,57.921],[-2.419,58.145],
-    [-2.889,58.413],[-3.202,58.623],[-3.536,58.770],[-3.836,58.636],
-    [-3.965,58.500],[-4.300,58.455],[-4.593,58.260],[-4.900,58.048],
-    [-5.099,57.878],[-5.296,57.700],[-5.545,57.504],[-5.602,57.256],
-    [-5.397,57.103],[-5.198,56.997],[-5.199,56.777],[-5.083,56.781],
-    [-5.300,56.522],[-5.523,56.278],[-5.698,56.079],[-5.476,55.941],
-    [-5.180,55.800],[-4.895,55.637],[-4.682,55.491],[-4.518,55.356],
-    [-4.299,55.222],[-4.097,55.089],[-3.896,54.958],
-    // Mull of Galloway area
-    [-4.975,54.632],[-5.080,54.710],[-5.000,54.850],[-4.800,54.900],
-    [-4.620,54.840],[-4.500,54.770],[-4.350,54.700],[-4.100,54.820],
-    [-3.900,54.880],[-3.650,55.002],[-3.378,55.685],[-3.062,55.797],
-    [-2.503,55.660],[-2.028,55.447]
-  ];
-
-  // Northern Ireland
-  const northernIreland = [
-    [-6.140,55.073],[-5.929,54.872],[-5.607,54.682],[-6.012,54.614],
-    [-6.222,54.719],[-6.420,54.673],[-6.619,54.750],[-6.952,54.879],
-    [-7.183,55.065],[-7.545,55.133],[-7.870,55.046],[-8.172,54.715],
-    [-7.929,54.542],[-7.706,54.429],[-7.427,54.358],[-7.254,54.195],
-    [-7.001,54.008],[-6.790,53.985],[-6.308,54.095],[-5.929,54.872],
-    [-6.140,55.073]
-  ];
-
-  // Isle of Man
-  const isleOfMan = [
-    [-4.821,54.422],[-4.623,54.284],[-4.399,54.199],[-4.319,54.323],
-    [-4.497,54.482],[-4.752,54.520],[-4.821,54.422]
-  ];
-
-  // Isle of Wight
-  const isleOfWight = [
-    [-1.558,50.762],[-1.236,50.696],[-1.082,50.614],[-1.535,50.578],
-    [-1.795,50.627],[-1.558,50.762]
-  ];
-
-  // Skye
-  const skye = [
-    [-5.700,57.100],[-5.850,57.000],[-6.050,57.050],[-6.150,57.200],
-    [-6.200,57.400],[-6.350,57.500],[-6.400,57.600],[-6.250,57.720],
-    [-6.050,57.690],[-5.850,57.560],[-5.700,57.380],[-5.600,57.260],
-    [-5.700,57.100]
-  ];
-
-  // Mull
-  const mull = [
-    [-5.720,56.351],[-5.985,56.354],[-6.100,56.450],[-6.350,56.542],
-    [-6.385,56.658],[-6.212,56.783],[-5.980,56.733],[-5.780,56.618],
-    [-5.600,56.490],[-5.720,56.351]
-  ];
-
-  // Arran
-  const arran = [
-    [-5.320,55.721],[-5.400,55.580],[-5.374,55.415],[-5.193,55.320],
-    [-5.025,55.424],[-4.976,55.580],[-5.100,55.700],[-5.320,55.721]
-  ];
-
-  // ── City coordinates ─────────────────────────────────────────
+  // ── City coordinate fallbacks ─────────────────────────────
   const CITY_COORDS = {
-    "swindon":{"lat":51.558,"lon":-1.782},"london":{"lat":51.507,"lon":-0.128},
-    "reading":{"lat":51.454,"lon":-0.971},"bristol":{"lat":51.454,"lon":-2.588},
-    "birmingham":{"lat":52.480,"lon":-1.902},"manchester":{"lat":53.480,"lon":-2.242},
-    "leeds":{"lat":53.800,"lon":-1.549},"sheffield":{"lat":53.381,"lon":-1.470},
-    "liverpool":{"lat":53.408,"lon":-2.991},"edinburgh":{"lat":55.953,"lon":-3.189},
-    "glasgow":{"lat":55.864,"lon":-4.252},"cardiff":{"lat":51.481,"lon":-3.180},
-    "oxford":{"lat":51.752,"lon":-1.258},"cambridge":{"lat":52.205,"lon":0.119},
-    "coventry":{"lat":52.408,"lon":-1.510},"leicester":{"lat":52.637,"lon":-1.135},
-    "nottingham":{"lat":52.954,"lon":-1.150},"newcastle":{"lat":54.978,"lon":-1.618},
-    "dumbarton":{"lat":55.943,"lon":-4.571},"farnborough":{"lat":51.295,"lon":-0.758},
-    "southampton":{"lat":50.910,"lon":-1.404},"portsmouth":{"lat":50.805,"lon":-1.087},
-    "exeter":{"lat":50.726,"lon":-3.527},"york":{"lat":53.958,"lon":-1.082},
-    "bath":{"lat":51.381,"lon":-2.360},"brighton":{"lat":50.827,"lon":-0.137},
-    "norwich":{"lat":52.628,"lon":1.299},"plymouth":{"lat":50.375,"lon":-4.143},
-    "worcester":{"lat":52.193,"lon":-2.220},"hereford":{"lat":52.056,"lon":-2.716},
-    "swansea":{"lat":51.621,"lon":-3.944},"wrexham":{"lat":53.046,"lon":-2.994},
-    "chester":{"lat":53.193,"lon":-2.893},"stoke":{"lat":53.003,"lon":-2.180},
-    "derby":{"lat":52.922,"lon":-1.478},"lincoln":{"lat":53.235,"lon":-0.540},
-    "peterborough":{"lat":52.573,"lon":-0.237},"ipswich":{"lat":52.059,"lon":1.155},
-    "colchester":{"lat":51.896,"lon":0.903},"luton":{"lat":51.879,"lon":-0.418},
-    "milton keynes":{"lat":52.041,"lon":-0.759},"northampton":{"lat":52.240,"lon":-0.898},
+    "swindon":      [51.558, -1.782], "london":       [51.507, -0.128],
+    "reading":      [51.454, -0.971], "bristol":      [51.454, -2.588],
+    "birmingham":   [52.480, -1.902], "manchester":   [53.480, -2.242],
+    "leeds":        [53.800, -1.549], "sheffield":    [53.381, -1.470],
+    "liverpool":    [53.408, -2.991], "edinburgh":    [55.953, -3.189],
+    "glasgow":      [55.864, -4.252], "cardiff":      [51.481, -3.180],
+    "oxford":       [51.752, -1.258], "cambridge":    [52.205,  0.119],
+    "coventry":     [52.408, -1.510], "leicester":    [52.637, -1.135],
+    "nottingham":   [52.954, -1.150], "newcastle":    [54.978, -1.618],
+    "dumbarton":    [55.943, -4.571], "farnborough":  [51.295, -0.758],
+    "southampton":  [50.910, -1.404], "portsmouth":   [50.805, -1.087],
+    "exeter":       [50.726, -3.527], "york":         [53.958, -1.082],
+    "bath":         [51.381, -2.360], "brighton":     [50.827, -0.137],
+    "norwich":      [52.628,  1.299], "plymouth":     [50.375, -4.143],
+    "worcester":    [52.193, -2.220], "hereford":     [52.056, -2.716],
+    "swansea":      [51.621, -3.944], "wrexham":      [53.046, -2.994],
+    "chester":      [53.193, -2.893], "stoke":        [53.003, -2.180],
+    "derby":        [52.922, -1.478], "lincoln":      [53.235, -0.540],
+    "peterborough": [52.573, -0.237], "ipswich":      [52.059,  1.155],
+    "colchester":   [51.896,  0.903], "luton":        [51.879, -0.418],
+    "milton keynes":[52.041, -0.759], "northampton":  [52.240, -0.898],
   };
 
-  // ── City labels shown progressively as zoom increases ────────
-  const CITY_LABELS = [
-    {name:'London',     lon:-0.128,lat:51.507,minZoom:1  },
-    {name:'Birmingham', lon:-1.902,lat:52.480,minZoom:1.5},
-    {name:'Manchester', lon:-2.242,lat:53.480,minZoom:1.5},
-    {name:'Edinburgh',  lon:-3.189,lat:55.953,minZoom:1.5},
-    {name:'Glasgow',    lon:-4.252,lat:55.864,minZoom:2  },
-    {name:'Cardiff',    lon:-3.180,lat:51.481,minZoom:2  },
-    {name:'Leeds',      lon:-1.549,lat:53.800,minZoom:2  },
-    {name:'Liverpool',  lon:-2.991,lat:53.408,minZoom:2  },
-    {name:'Bristol',    lon:-2.588,lat:51.454,minZoom:2  },
-    {name:'Sheffield',  lon:-1.470,lat:53.381,minZoom:2.5},
-    {name:'Newcastle',  lon:-1.618,lat:54.978,minZoom:2.5},
-    {name:'Nottingham', lon:-1.150,lat:52.954,minZoom:3  },
-    {name:'Leicester',  lon:-1.135,lat:52.637,minZoom:3  },
-    {name:'Oxford',     lon:-1.258,lat:51.752,minZoom:3  },
-    {name:'Cambridge',  lon: 0.119,lat:52.205,minZoom:3  },
-    {name:'Swindon',    lon:-1.782,lat:51.558,minZoom:3  },
-    {name:'Southampton',lon:-1.404,lat:50.910,minZoom:3  },
-    {name:'Brighton',   lon:-0.137,lat:50.827,minZoom:3.5},
-    {name:'York',       lon:-1.082,lat:53.958,minZoom:3.5},
-    {name:'Norwich',    lon: 1.299,lat:52.628,minZoom:3.5},
-    {name:'Coventry',   lon:-1.510,lat:52.408,minZoom:3.5},
-    {name:'Plymouth',   lon:-4.143,lat:50.375,minZoom:3.5},
-    {name:'Exeter',     lon:-3.527,lat:50.726,minZoom:4  },
-    {name:'Bath',       lon:-2.360,lat:51.381,minZoom:4  },
-    {name:'Derby',      lon:-1.478,lat:52.922,minZoom:4  },
-    {name:'Chester',    lon:-2.893,lat:53.193,minZoom:4  },
-    {name:'Lincoln',    lon:-0.540,lat:53.235,minZoom:4.5},
-    {name:'Portsmouth', lon:-1.087,lat:50.805,minZoom:4.5},
-    {name:'Swansea',    lon:-3.944,lat:51.621,minZoom:4.5},
-    {name:'Reading',    lon:-0.971,lat:51.454,minZoom:5  },
-    {name:'Northampton',lon:-0.898,lat:52.240,minZoom:5  },
-  ];
-
-  // ── Build pin clusters from visit data ───────────────────────
-  const pinMap = {};
-  visitData.forEach(row => {
-    let lat = row.lat, lon = row.lon;
-    if ((!lat || !lon) && row.city) {
-      const c = CITY_COORDS[row.city.toLowerCase()];
-      if (c) { lat = c.lat; lon = c.lon; }
-    }
-    if (!lat || !lon) return;
-    const latR = Math.round(lat * 10) / 10;
-    const lonR = Math.round(lon * 10) / 10;
-    const key  = latR + ',' + lonR;
-    if (!pinMap[key]) pinMap[key] = { lat:latR, lon:lonR, count:0, city:row.city, country:row.country, users:new Set(), sessions:new Set() };
-    pinMap[key].count++;
-    pinMap[key].sessions.add(row.session_id);
-    if (row.user_name) pinMap[key].users.add(row.user_name);
-  });
-  const pins     = Object.values(pinMap);
-  const maxCount = Math.max(...pins.map(p => p.count), 1);
-
-  // ── Zoom / pan helpers ────────────────────────────────────────
-  // The SVG is rendered at a fixed display width then scaled via zoom.
-  // We need the rendered SVG width to clamp panning correctly.
-  const SVG_DISPLAY_W = 340;
-  const SVG_DISPLAY_H = (H / W) * SVG_DISPLAY_W;
-
-  const clampPan = useCallback((nx, ny, z) => {
-    const el = containerRef.current;
-    if (!el) return { x: nx, y: ny };
-    const cw = el.clientWidth, ch = el.clientHeight;
-    const scaledW = SVG_DISPLAY_W * z;
-    const scaledH = SVG_DISPLAY_H * z;
-    // Centre the map when smaller than the container
-    const offsetX = Math.max(0, (cw - scaledW) / 2);
-    const offsetY = Math.max(0, (ch - scaledH) / 2);
-    return {
-      x: scaledW <= cw  ? offsetX  : Math.min(0, Math.max(cw  - scaledW,  nx)),
-      y: scaledH <= ch  ? offsetY  : Math.min(0, Math.max(ch  - scaledH,  ny)),
-    };
-  }, [SVG_DISPLAY_W, SVG_DISPLAY_H]);
-
-  // Centre on mount and whenever zoom changes
-  useEffect(() => {
-    setPan(pp => clampPan(pp.x, pp.y, zoom));
-  }, [zoom, clampPan]);
-
-  const zoomAt = useCallback((delta, cx, cy) => {
-    setZoom(prev => {
-      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev * (delta > 0 ? 1.3 : 0.77)));
-      setPan(pp => {
-        const scale = next / prev;
-        const nx    = cx - (cx - pp.x) * scale;
-        const ny    = cy - (cy - pp.y) * scale;
-        return clampPan(nx, ny, next);
-      });
-      return next;
+  // ── Build pin clusters ────────────────────────────────────
+  const buildPins = useCallback(() => {
+    const pinMap = {};
+    visitData.forEach(row => {
+      let lat = row.lat, lon = row.lon;
+      if ((!lat || !lon) && row.city) {
+        const c = CITY_COORDS[row.city.toLowerCase()];
+        if (c) { lat = c[0]; lon = c[1]; }
+      }
+      if (!lat || !lon) return;
+      const latR = Math.round(lat * 10) / 10;
+      const lonR = Math.round(lon * 10) / 10;
+      const key  = latR + ',' + lonR;
+      if (!pinMap[key]) pinMap[key] = { lat:latR, lon:lonR, count:0, city:row.city, country:row.country, users:new Set(), sessions:new Set() };
+      pinMap[key].count++;
+      pinMap[key].sessions.add(row.session_id);
+      if (row.user_name) pinMap[key].users.add(row.user_name);
     });
-  }, [clampPan]);
+    return Object.values(pinMap);
+  }, [visitData]);
 
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    zoomAt(-e.deltaY, e.clientX - rect.left, e.clientY - rect.top);
-  }, [zoomAt]);
-
+  // ── Load Leaflet from CDN once ────────────────────────────
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.addEventListener('wheel', handleWheel, { passive:false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, [handleWheel]);
-
-  const handleMouseDown = (e) => {
-    if (e.button !== 0) return;
-    dragging.current = true;
-    lastPos.current  = { x:e.clientX, y:e.clientY };
-    setTooltip(null);
-  };
-  const handleMouseMove = (e) => {
-    if (!dragging.current) return;
-    const dx = e.clientX - lastPos.current.x;
-    const dy = e.clientY - lastPos.current.y;
-    lastPos.current = { x:e.clientX, y:e.clientY };
-    setPan(pp => clampPan(pp.x + dx, pp.y + dy, zoom));
-  };
-  const handleMouseUp = () => { dragging.current = false; };
-
-  // Touch
-  const lastTouch      = useRef(null);
-  const lastPinchDist  = useRef(null);
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      lastTouch.current     = { x:e.touches[0].clientX, y:e.touches[0].clientY };
-      lastPinchDist.current = null;
-    } else if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      lastPinchDist.current = Math.hypot(dx, dy);
+    // CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id   = 'leaflet-css';
+      link.rel  = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+      document.head.appendChild(link);
     }
-  };
-  const handleTouchMove = (e) => {
-    e.preventDefault();
-    if (e.touches.length === 1 && lastTouch.current) {
-      const dx = e.touches[0].clientX - lastTouch.current.x;
-      const dy = e.touches[0].clientY - lastTouch.current.y;
-      lastTouch.current = { x:e.touches[0].clientX, y:e.touches[0].clientY };
-      setPan(pp => clampPan(pp.x + dx, pp.y + dy, zoom));
-    } else if (e.touches.length === 2 && lastPinchDist.current !== null) {
-      const dx   = e.touches[0].clientX - e.touches[1].clientX;
-      const dy   = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.hypot(dx, dy);
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) zoomAt(dist > lastPinchDist.current ? 1 : -1, midX - rect.left, midY - rect.top);
-      lastPinchDist.current = dist;
+    // JS
+    if (window.L) { leafletRef.current = window.L; setReady(true); return; }
+    if (document.getElementById('leaflet-js')) {
+      const poll = setInterval(() => { if (window.L) { clearInterval(poll); leafletRef.current = window.L; setReady(true); } }, 80);
+      return () => clearInterval(poll);
     }
-  };
+    const script    = document.createElement('script');
+    script.id       = 'leaflet-js';
+    script.src      = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    script.onload   = () => { leafletRef.current = window.L; setReady(true); };
+    script.onerror  = () => setError('Failed to load map library.');
+    document.head.appendChild(script);
+  }, []);
 
-  const resetView = () => { setZoom(1); };
+  // ── Initialise map once Leaflet + DOM node are both ready ─
+  useEffect(() => {
+    if (!ready || !mapRef.current || mapObjRef.current) return;
+    const L = leafletRef.current;
 
-  const handlePinClick = (e, pin) => {
-    e.stopPropagation();
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top, pin });
-  };
+    const map = L.map(mapRef.current, {
+      center:        [54.5, -3.5],
+      zoom:          6,
+      zoomControl:   true,
+      attributionControl: false,
+    });
 
-  const pinScale = 1 / Math.sqrt(zoom);
+    // OpenStreetMap tile layer — real roads, towns, terrain colours
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    }).addTo(map);
 
-  const regionFill    = '#111e09';
-  const regionStroke  = '#2a4012';
-  const regionStyle   = { fill:regionFill, stroke:regionStroke, strokeWidth:'1', strokeLinejoin:'round' };
+    // Subtle attribution in corner
+    L.control.attribution({ position: 'bottomright', prefix: false })
+      .addAttribution('<span style="font-size:9px;opacity:.4">© OpenStreetMap</span>')
+      .addTo(map);
+
+    mapObjRef.current = map;
+  }, [ready]);
+
+  // ── Re-draw markers whenever visitData or map changes ────
+  useEffect(() => {
+    if (!mapObjRef.current || !leafletRef.current) return;
+    const L   = leafletRef.current;
+    const map = mapObjRef.current;
+
+    // Remove old markers
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    const pins     = buildPins();
+    const maxCount = Math.max(...pins.map(p => p.count), 1);
+
+    pins.forEach(pin => {
+      const isUK    = pin.country === 'GB';
+      const color   = isUK ? '#c8ff00' : '#4fc3f7';
+      const size    = Math.round(18 + (pin.count / maxCount) * 22);
+      const border  = isUK ? '#6a8800' : '#0288d1';
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:${size}px;height:${size}px;border-radius:50%;
+          background:${color};border:2px solid ${border};
+          display:flex;align-items:center;justify-content:center;
+          font-family:monospace;font-weight:700;font-size:${size > 28 ? 11 : 9}px;
+          color:#060e08;cursor:pointer;
+          box-shadow:0 0 ${size/2}px ${color}55;
+          transition:transform .1s;
+        ">${pin.sessions.size}</div>`,
+        iconSize:   [size, size],
+        iconAnchor: [size/2, size/2],
+      });
+
+      const usersHtml = pin.users.size > 0
+        ? `<div style="border-top:1px solid #1a2808;padding-top:6px;margin-top:6px">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.15em;color:#3a5010;margin-bottom:4px">LOGGED-IN PLAYERS</div>
+            ${[...pin.users].slice(0,8).map(n=>`<div style="color:#c8ff00;font-size:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700">▸ ${n}</div>`).join('')}
+            ${pin.users.size > 8 ? `<div style="color:#3a5010;font-size:10px;margin-top:2px">+${pin.users.size - 8} more</div>` : ''}
+          </div>` : '';
+
+      const popup = L.popup({
+        className:   'sa-map-popup',
+        maxWidth:    220,
+        offset:      [0, -size/2],
+        closeButton: true,
+      }).setContent(`
+        <div style="background:#080f04;border:1px solid #2a3a10;padding:12px 14px;font-family:'Share Tech Mono',monospace;color:#b0c090;min-width:180px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:17px;color:#c8ff00;margin-bottom:5px">
+            ${pin.city || 'Unknown'}${pin.country ? ', ' + pin.country : ''}
+          </div>
+          <div style="color:#5a7a30;font-size:11px">
+            ${pin.sessions.size} session${pin.sessions.size !== 1 ? 's' : ''} &nbsp;·&nbsp; ${pin.count} page view${pin.count !== 1 ? 's' : ''}
+          </div>
+          ${usersHtml}
+        </div>
+      `);
+
+      const marker = L.marker([pin.lat, pin.lon], { icon }).bindPopup(popup);
+      marker.addTo(map);
+      markersRef.current.push(marker);
+    });
+  }, [ready, buildPins]);
+
+  // ── Inject popup CSS once ─────────────────────────────────
+  useEffect(() => {
+    if (document.getElementById('sa-map-popup-style')) return;
+    const style = document.createElement('style');
+    style.id = 'sa-map-popup-style';
+    style.textContent = `
+      .sa-map-popup .leaflet-popup-content-wrapper,
+      .sa-map-popup .leaflet-popup-tip {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,.8) !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+      }
+      .sa-map-popup .leaflet-popup-content { margin: 0 !important; }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
+  // ── Cleanup on unmount ────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (mapObjRef.current) { mapObjRef.current.remove(); mapObjRef.current = null; }
+    };
+  }, []);
+
+  const pins     = buildPins();
+  const maxCount = Math.max(...pins.map(p => p.count), 1);
 
   return (
     <div style={{ background:'#0c1009', border:'1px solid #1a2808', padding:'18px 20px', gridColumn:'1 / -1' }}>
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:'.22em', color:'#3a5010' }}>VISITOR MAP</div>
-        <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:'#2a3a10' }}>{Math.round(zoom*100)}%</span>
-          <button onClick={() => { const el=containerRef.current; if(!el) return; const r=el.getBoundingClientRect(); zoomAt(1,r.width/2,r.height/2); }} style={{ background:'#0f1a08',border:'1px solid #2a4010',color:'#5a8020',fontFamily:"'Share Tech Mono',monospace",fontSize:14,width:26,height:26,cursor:'pointer',lineHeight:1,padding:0 }}>+</button>
-          <button onClick={() => { const el=containerRef.current; if(!el) return; const r=el.getBoundingClientRect(); zoomAt(-1,r.width/2,r.height/2); }} style={{ background:'#0f1a08',border:'1px solid #2a4010',color:'#5a8020',fontFamily:"'Share Tech Mono',monospace",fontSize:14,width:26,height:26,cursor:'pointer',lineHeight:1,padding:0 }}>−</button>
-          <button onClick={resetView} style={{ background:'#0f1a08',border:'1px solid #2a4010',color:'#3a5010',fontFamily:"'Share Tech Mono',monospace",fontSize:8,padding:'4px 8px',cursor:'pointer',letterSpacing:'.1em' }}>RESET</button>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#2a3a10' }}>
+          {pins.length} location{pins.length !== 1 ? 's' : ''} · {visitData.length} visit{visitData.length !== 1 ? 's' : ''}
         </div>
       </div>
 
-      {pins.length === 0 ? (
-        <div style={{ color:'#2a3a10', fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No coordinate data yet — accumulates with new visits.</div>
-      ) : (
-        <div
-          ref={containerRef}
-          style={{ position:'relative', width:'100%', height:500, overflow:'hidden', cursor:dragging.current?'grabbing':'grab', background:'#07100a', border:'1px solid #1a2808', userSelect:'none' }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={() => { handleMouseUp(); }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={() => { lastTouch.current=null; lastPinchDist.current=null; }}
-          onClick={() => setTooltip(null)}
-        >
-          {/* Panned / zoomed layer */}
-          <div style={{ position:'absolute', left:pan.x, top:pan.y, transformOrigin:'0 0' }}>
-            <svg
-              viewBox={'0 0 ' + W + ' ' + H}
-              style={{ width:SVG_DISPLAY_W * zoom, height:SVG_DISPLAY_H * zoom, display:'block' }}
-            >
-              <defs>
-                <radialGradient id="seaGrad2" cx="50%" cy="60%" r="70%">
-                  <stop offset="0%" stopColor="#0b1d12"/>
-                  <stop offset="100%" stopColor="#060e08"/>
-                </radialGradient>
-                <filter id="pinGlow">
-                  <feGaussianBlur stdDeviation="3" result="blur"/>
-                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-              </defs>
-
-              {/* Sea */}
-              <rect x={0} y={0} width={W} height={H} fill="url(#seaGrad2)"/>
-
-              {/* Grid — 1° lines */}
-              {[-8,-7,-6,-5,-4,-3,-2,-1,0,1].map(lon => {
-                const x = project(lon,55).x;
-                const major = lon%2===0;
-                return <line key={'v'+lon} x1={x} y1={0} x2={x} y2={H} stroke={major?'#182810':'#111e0a'} strokeWidth={major?0.6:0.3} strokeDasharray={major?'5,10':'2,12'}/>;
-              })}
-              {[50,51,52,53,54,55,56,57,58,59,60].map(lat => {
-                const y = project(0,lat).y;
-                const major = lat%2===0;
-                return <line key={'h'+lat} x1={0} y1={y} x2={W} y2={y} stroke={major?'#182810':'#111e0a'} strokeWidth={major?0.6:0.3} strokeDasharray={major?'5,10':'2,12'}/>;
-              })}
-
-              {/* Landmasses */}
-              <path d={toPath(englandWales)}   {...regionStyle}/>
-              <path d={toPath(scotland)}       {...regionStyle} fill="#0f1c08"/>
-              <path d={toPath(northernIreland)} fill="#0f1c08" stroke={regionStroke} strokeWidth="0.9" strokeLinejoin="round"/>
-              <path d={toPath(isleOfMan)}      fill={regionFill} stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
-              <path d={toPath(isleOfWight)}    fill={regionFill} stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
-              <path d={toPath(skye)}           fill="#0f1c08"  stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
-              <path d={toPath(mull)}           fill="#0f1c08"  stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
-              <path d={toPath(arran)}          fill="#0f1c08"  stroke={regionStroke} strokeWidth="0.7" strokeLinejoin="round"/>
-
-              {/* Inner highlight on main landmasses */}
-              <path d={toPath(englandWales)} fill="none" stroke="#253810" strokeWidth="0.5" opacity="0.5"/>
-              <path d={toPath(scotland)}     fill="none" stroke="#223010" strokeWidth="0.5" opacity="0.5"/>
-
-              {/* Region labels */}
-              {[
-                {label:'ENGLAND',  lon:-1.5,  lat:52.8},
-                {label:'SCOTLAND', lon:-4.0,  lat:57.0},
-                {label:'WALES',    lon:-3.8,  lat:52.3},
-                {label:'N.IRE',    lon:-6.6,  lat:54.65},
-              ].map(r => {
-                const p  = project(r.lon, r.lat);
-                const fs = Math.max(5, 9/Math.sqrt(zoom));
-                return <text key={r.label} x={p.x} y={p.y} textAnchor="middle" fontSize={fs} fill="#2d4418" fontFamily="'Share Tech Mono',monospace" letterSpacing="1.5" style={{pointerEvents:'none',userSelect:'none'}}>{r.label}</text>;
-              })}
-
-              {/* Progressive city labels */}
-              {CITY_LABELS.filter(c => zoom >= c.minZoom).map(c => {
-                const p  = project(c.lon, c.lat);
-                const fs = Math.max(4.5, 6.5/Math.sqrt(zoom));
-                return (
-                  <g key={c.name} style={{pointerEvents:'none'}}>
-                    <circle cx={p.x} cy={p.y} r={1.5/Math.sqrt(zoom)} fill="#4a6a20" opacity={0.9}/>
-                    <text x={p.x} y={p.y - 3.5/Math.sqrt(zoom)} textAnchor="middle" fontSize={fs} fill="#4a6a20" fontFamily="'Share Tech Mono',monospace" style={{userSelect:'none'}}>{c.name}</text>
-                  </g>
-                );
-              })}
-
-              {/* Axis labels */}
-              {[-8,-6,-4,-2,0,2].map(lon => {
-                const x = project(lon,55).x;
-                return <text key={'vl'+lon} x={x} y={H-3} textAnchor="middle" fontSize="6" fill="#1e3010" fontFamily="'Share Tech Mono',monospace">{lon}°</text>;
-              })}
-              {[50,52,54,56,58,60].map(lat => {
-                const y = project(0,lat).y;
-                return <text key={'hl'+lat} x={4} y={y+2} fontSize="6" fill="#1e3010" fontFamily="'Share Tech Mono',monospace">{lat}°N</text>;
-              })}
-
-              {/* Visitor pins */}
-              {pins.map((pin,i) => {
-                const p = project(pin.lon, pin.lat);
-                if (p.x < -30 || p.x > W+30 || p.y < -30 || p.y > H+30) return null;
-                const baseR = 5 + (pin.count/maxCount)*12;
-                const r     = baseR * pinScale;
-                const color = pin.country==='GB' ? '#c8ff00' : '#4fc3f7';
-                return (
-                  <g key={i} onClick={e => handlePinClick(e,pin)} style={{cursor:'pointer'}}>
-                    <circle cx={p.x} cy={p.y} r={(r+5)*pinScale} fill={color} opacity={0.07}/>
-                    <circle cx={p.x} cy={p.y} r={(r+2)*pinScale} fill={color} opacity={0.14}/>
-                    <circle cx={p.x} cy={p.y} r={r} fill={color} opacity={0.93} stroke="#060e08" strokeWidth={1.2*pinScale} filter="url(#pinGlow)"/>
-                    <text x={p.x} y={p.y+r*0.38} textAnchor="middle" fontSize={Math.max(3.5,r*0.72)} fill="#060e08" fontWeight="bold" fontFamily="monospace" style={{pointerEvents:'none',userSelect:'none'}}>{pin.sessions.size}</text>
-                  </g>
-                );
-              })}
-            </svg>
+      {/* Map container */}
+      <div style={{ position:'relative', width:'100%', height:480, border:'1px solid #1a2808' }}>
+        {!ready && !error && (
+          <div style={{ position:'absolute', inset:0, background:'#07100a', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:'.2em', color:'#2a3a10' }}>LOADING MAP…</div>
           </div>
-
-          {/* Tooltip */}
-          {tooltip && (
-            <div
-              style={{ position:'absolute', left:Math.min(tooltip.x+14,(containerRef.current?.clientWidth||420)-218), top:Math.max(4,tooltip.y-10), background:'#080f04', border:'1px solid #2a3a10', padding:'10px 14px', fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:'#b0c090', width:200, pointerEvents:'none', zIndex:20, boxShadow:'0 6px 30px rgba(0,0,0,.85)' }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:'#c8ff00', marginBottom:5 }}>
-                {tooltip.pin.city||'Unknown'}{tooltip.pin.country ? ', '+tooltip.pin.country : ''}
-              </div>
-              <div style={{ color:'#5a7a30', marginBottom:tooltip.pin.users.size>0?8:0 }}>
-                {tooltip.pin.sessions.size} session{tooltip.pin.sessions.size!==1?'s':''} · {tooltip.pin.count} page view{tooltip.pin.count!==1?'s':''}
-              </div>
-              {tooltip.pin.users.size > 0 && (
-                <div style={{ borderTop:'1px solid #1a2808', paddingTop:6 }}>
-                  <div style={{ color:'#3a5010', fontSize:9, letterSpacing:'.15em', marginBottom:4 }}>LOGGED-IN PLAYERS</div>
-                  {[...tooltip.pin.users].slice(0,8).map(name => (
-                    <div key={name} style={{ color:'#c8ff00', fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>▸ {name}</div>
-                  ))}
-                  {tooltip.pin.users.size>8 && <div style={{ color:'#3a5010', fontSize:10, marginTop:2 }}>+{tooltip.pin.users.size-8} more</div>}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Hint */}
-          <div style={{ position:'absolute', bottom:8, right:10, fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:'#1a2e10', pointerEvents:'none' }}>scroll/pinch to zoom · drag to pan · click pin for details</div>
-        </div>
-      )}
+        )}
+        {error && (
+          <div style={{ position:'absolute', inset:0, background:'#07100a', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#5a1010' }}>{error}</div>
+          </div>
+        )}
+        <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+      </div>
 
       {/* Legend */}
       {pins.length > 0 && (
         <div style={{ display:'flex', gap:20, justifyContent:'center', marginTop:10, fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#3a5010', flexWrap:'wrap' }}>
           <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#c8ff00' }}/>UK visitor</span>
           <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#4fc3f7' }}/>International</span>
-          <span>Number = unique sessions · Size = volume</span>
+          <span>Number = unique sessions · Size = volume · Click pin for details</span>
         </div>
+      )}
+      {pins.length === 0 && (
+        <div style={{ textAlign:'center', padding:'20px 0 4px', fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:'#2a3a10', letterSpacing:'.2em' }}>NO COORDINATE DATA YET — ACCUMULATES WITH NEW VISITS</div>
       )}
     </div>
   );
