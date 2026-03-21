@@ -1468,18 +1468,18 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
     setCart(c => c.map(x => x.key === key ? { ...x, qty: Math.min(qty, x.stock) } : x));
   };
 
-  const subTotal = cart.reduce((s, i) => s + i.price * i.qty * (cu?.vipStatus === "active" ? 0.9 : 1), 0);
-  const postageTotal = hasNoPost ? 0 : (postage?.price || 0);
+  const subTotal = Math.round(cart.reduce((s, i) => s + i.price * i.qty * (cu?.vipStatus === "active" ? 0.9 : 1), 0) * 100) / 100;
+  const postageTotal = hasNoPost ? 0 : Math.round((postage?.price || 0) * 100) / 100;
 
   let shopDiscountSaving = 0;
   if (shopAppliedDiscount && cart.length > 0) {
     if (shopAppliedDiscount.type === 'percent') {
-      shopDiscountSaving = subTotal * (Number(shopAppliedDiscount.value) / 100);
+      shopDiscountSaving = Math.round(subTotal * (Number(shopAppliedDiscount.value) / 100) * 100) / 100;
     } else {
-      shopDiscountSaving = Math.min(Number(shopAppliedDiscount.value), subTotal);
+      shopDiscountSaving = Math.min(Math.round(Number(shopAppliedDiscount.value) * 100) / 100, subTotal);
     }
   }
-  const grandTotal = Math.max(0, subTotal - shopDiscountSaving) + postageTotal;
+  const grandTotal = Math.round((Math.max(0, subTotal - shopDiscountSaving) + postageTotal) * 100) / 100;
 
   const applyShopDiscount = async (cu) => {
     if (!shopDiscountInput.trim()) return;
