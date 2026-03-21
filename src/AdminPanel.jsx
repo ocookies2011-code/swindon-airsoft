@@ -5363,19 +5363,28 @@ function AdminVisitorStats() {
   });
   const maxHourCount = Math.max(...hourCounts, 1);
 
+  // Country code → emoji flag (works for all ISO 3166-1 alpha-2 codes)
+  const countryFlag = (cc) => {
+    if (!cc || cc.length !== 2) return "";
+    return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)));
+  };
+
   // Country breakdown
   const countryCounts = filtered.reduce((acc, row) => {
     const ckey = row.country || "Unknown";
     acc[ckey] = (acc[ckey] || 0) + 1; return acc;
   }, {});
-  const countryRows = Object.entries(countryCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 10);
+  const countryRows = Object.entries(countryCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 10)
+    .map(([cc, cnt]) => [`${countryFlag(cc)} ${cc}`, cnt]);
 
-  // City breakdown
+  // City breakdown — store country code separately so we can flag it
   const cityCounts = filtered.reduce((acc, row) => {
     const ckey = row.city ? `${row.city}${row.country ? ", " + row.country : ""}` : "Unknown";
-    acc[ckey] = (acc[ckey] || 0) + 1; return acc;
+    if (!acc[ckey]) acc[ckey] = { count: 0, country: row.country || null };
+    acc[ckey].count++; return acc;
   }, {});
-  const cityRows = Object.entries(cityCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 12);
+  const cityRows = Object.entries(cityCounts).sort((aa, bb) => bb[1].count - aa[1].count).slice(0, 12)
+    .map(([city, { count, country }]) => [`${countryFlag(country)} ${city}`, count]);
 
   // Logged-in user breakdown
   const userVisitMap = {};
