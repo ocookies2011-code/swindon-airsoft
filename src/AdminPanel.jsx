@@ -5303,6 +5303,33 @@ function AdminVisitorStats() {
 
   const rangeToDays = { "1d": 1, "7d": 7, "30d": 30, "90d": 90, "all": 0 };
 
+  // ── Live viewer count — sessions active in the last 5 minutes ──
+  const [liveCount, setLiveCount] = useState(null);
+  const [liveNames, setLiveNames] = useState([]);
+
+  useEffect(() => {
+    const fetchLive = async () => {
+      try {
+        const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data } = await supabase
+          .from('page_visits')
+          .select('session_id, user_name, page')
+          .gte('created_at', since)
+          .order('created_at', { ascending: false });
+        if (!data) return;
+        // Deduplicate by session_id — keep most recent row per session
+        const seen = new Map();
+        data.forEach(row => { if (!seen.has(row.session_id)) seen.set(row.session_id, row); });
+        const sessions = [...seen.values()];
+        setLiveCount(sessions.length);
+        setLiveNames(sessions.map(s => ({ name: s.user_name, page: s.page })));
+      } catch { /* non-fatal */ }
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Re-fetch whenever date range changes — filtering happens server-side
   useEffect(() => {
     setLoading(true);
@@ -5506,6 +5533,33 @@ function AdminVisitorStats() {
         {activeTab === "overview" && (
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
+              {/* Live viewers card */}
+              <div style={{ background:"#0a0f05", border:"1px solid #1a2808", padding:"18px 20px", position:"relative", overflow:"hidden" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                  <span style={{ width:8, height:8, borderRadius:"50%", background: liveCount > 0 ? "#c8ff00" : "#2a3a10",
+                    boxShadow: liveCount > 0 ? "0 0 8px #c8ff00" : "none",
+                    animation: liveCount > 0 ? "livePulse 1.5s ease-in-out infinite" : "none",
+                    flexShrink:0, display:"inline-block" }} />
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010", textTransform:"uppercase" }}>Live Now</span>
+                </div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:38, color:"#c8ff00", lineHeight:1 }}>
+                  {liveCount === null ? "—" : liveCount}
+                </div>
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", marginTop:4 }}>active in last 5 min</div>
+                {liveNames.length > 0 && (
+                  <div style={{ marginTop:10, display:"flex", flexDirection:"column", gap:3 }}>
+                    {liveNames.slice(0, 5).map((s, i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontFamily:"'Share Tech Mono',monospace", color:"#5a7a30" }}>
+                        <span style={{ color: s.name ? "#c8ff00" : "#3a5010" }}>{s.name ? s.name : "anon"}</span>
+                        <span style={{ color:"#2a3a10" }}>→</span>
+                        <span style={{ textTransform:"uppercase", fontSize:10 }}>{s.page}</span>
+                      </div>
+                    ))}
+                    {liveNames.length > 5 && <div style={{ fontSize:10, color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace" }}>+{liveNames.length - 5} more</div>}
+                  </div>
+                )}
+                <style>{"@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }"}</style>
+              </div>
               {statCard("Unique Visitors", uniqueSessions.toLocaleString(), "distinct sessions", "#c8ff00")}
               {statCard("Total Page Views", totalVisits.toLocaleString(), `across ${dateRange === "all" ? "all time" : dateRange}`, "#4fc3f7")}
               {statCard("Logged-In Visits", loggedInVisits.toLocaleString(), `${uniqueUsers} unique members`, "#c8a000")}
