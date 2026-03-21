@@ -5363,17 +5363,13 @@ function AdminVisitorStats() {
   });
   const maxHourCount = Math.max(...hourCounts, 1);
 
-  // Country code → emoji flag lookup table (explicit pairs — guaranteed cross-browser)
-  const FLAGS = { AD:"🇦🇩",AE:"🇦🇪",AF:"🇦🇫",AG:"🇦🇬",AL:"🇦🇱",AM:"🇦🇲",AO:"🇦🇴",AR:"🇦🇷",AT:"🇦🇹",AU:"🇦🇺",AZ:"🇦🇿",BA:"🇧🇦",BB:"🇧🇧",BD:"🇧🇩",BE:"🇧🇪",BF:"🇧🇫",BG:"🇧🇬",BH:"🇧🇭",BI:"🇧🇮",BJ:"🇧🇯",BN:"🇧🇳",BO:"🇧🇴",BR:"🇧🇷",BS:"🇧🇸",BT:"🇧🇹",BW:"🇧🇼",BY:"🇧🇾",BZ:"🇧🇿",CA:"🇨🇦",CD:"🇨🇩",CF:"🇨🇫",CG:"🇨🇬",CH:"🇨🇭",CI:"🇨🇮",CL:"🇨🇱",CM:"🇨🇲",CN:"🇨🇳",CO:"🇨🇴",CR:"🇨🇷",CU:"🇨🇺",CV:"🇨🇻",CY:"🇨🇾",CZ:"🇨🇿",DE:"🇩🇪",DJ:"🇩🇯",DK:"🇩🇰",DM:"🇩🇲",DO:"🇩🇴",DZ:"🇩🇿",EC:"🇪🇨",EE:"🇪🇪",EG:"🇪🇬",ER:"🇪🇷",ES:"🇪🇸",ET:"🇪🇹",FI:"🇫🇮",FJ:"🇫🇯",FM:"🇫🇲",FR:"🇫🇷",GA:"🇬🇦",GB:"🇬🇧",GD:"🇬🇩",GE:"🇬🇪",GH:"🇬🇭",GM:"🇬🇲",GN:"🇬🇳",GQ:"🇬🇶",GR:"🇬🇷",GT:"🇬🇹",GW:"🇬🇼",GY:"🇬🇾",HN:"🇭🇳",HR:"🇭🇷",HT:"🇭🇹",HU:"🇭🇺",ID:"🇮🇩",IE:"🇮🇪",IL:"🇮🇱",IN:"🇮🇳",IQ:"🇮🇶",IR:"🇮🇷",IS:"🇮🇸",IT:"🇮🇹",JM:"🇯🇲",JO:"🇯🇴",JP:"🇯🇵",KE:"🇰🇪",KG:"🇰🇬",KH:"🇰🇭",KI:"🇰🇮",KM:"🇰🇲",KN:"🇰🇳",KP:"🇰🇵",KR:"🇰🇷",KW:"🇰🇼",KZ:"🇰🇿",LA:"🇱🇦",LB:"🇱🇧",LC:"🇱🇨",LI:"🇱🇮",LK:"🇱🇰",LR:"🇱🇷",LS:"🇱🇸",LT:"🇱🇹",LU:"🇱🇺",LV:"🇱🇻",LY:"🇱🇾",MA:"🇲🇦",MC:"🇲🇨",MD:"🇲🇩",ME:"🇲🇪",MG:"🇲🇬",MH:"🇲🇭",MK:"🇲🇰",ML:"🇲🇱",MM:"🇲🇲",MN:"🇲🇳",MR:"🇲🇷",MT:"🇲🇹",MU:"🇲🇺",MV:"🇲🇻",MW:"🇲🇼",MX:"🇲🇽",MY:"🇲🇾",MZ:"🇲🇿",NA:"🇳🇦",NE:"🇳🇪",NG:"🇳🇬",NI:"🇳🇮",NL:"🇳🇱",NO:"🇳🇴",NP:"🇳🇵",NR:"🇳🇷",NZ:"🇳🇿",OM:"🇴🇲",PA:"🇵🇦",PE:"🇵🇪",PG:"🇵🇬",PH:"🇵🇭",PK:"🇵🇰",PL:"🇵🇱",PT:"🇵🇹",PW:"🇵🇼",PY:"🇵🇾",QA:"🇶🇦",RO:"🇷🇴",RS:"🇷🇸",RU:"🇷🇺",RW:"🇷🇼",SA:"🇸🇦",SB:"🇸🇧",SC:"🇸🇨",SD:"🇸🇩",SE:"🇸🇪",SG:"🇸🇬",SI:"🇸🇮",SK:"🇸🇰",SL:"🇸🇱",SM:"🇸🇲",SN:"🇸🇳",SO:"🇸🇴",SR:"🇸🇷",SS:"🇸🇸",ST:"🇸🇹",SV:"🇸🇻",SY:"🇸🇾",SZ:"🇸🇿",TD:"🇹🇩",TG:"🇹🇬",TH:"🇹🇭",TJ:"🇹🇯",TL:"🇹🇱",TM:"🇹🇲",TN:"🇹🇳",TO:"🇹🇴",TR:"🇹🇷",TT:"🇹🇹",TV:"🇹🇻",TZ:"🇹🇿",UA:"🇺🇦",UG:"🇺🇬",US:"🇺🇸",UY:"🇺🇾",UZ:"🇺🇿",VA:"🇻🇦",VC:"🇻🇨",VE:"🇻🇪",VN:"🇻🇳",VU:"🇻🇺",WS:"🇼🇸",YE:"🇾🇪",ZA:"🇿🇦",ZM:"🇿🇲",ZW:"🇿🇼" };
-  const countryFlag = (cc) => FLAGS[cc?.toUpperCase()] || "";
-
-  // Country breakdown
+    // Country breakdown
   const countryCounts = filtered.reduce((acc, row) => {
     const ckey = row.country || "Unknown";
     acc[ckey] = (acc[ckey] || 0) + 1; return acc;
   }, {});
   const countryRows = Object.entries(countryCounts).sort((aa, bb) => bb[1] - aa[1]).slice(0, 10)
-    .map(([cc, cnt]) => ({ flag: countryFlag(cc), label: cc, count: cnt }));
+    .map(([cc, cnt]) => ({ flag: cc !== "Unknown" ? cc : null, label: cc, count: cnt }));
 
   // City breakdown — store country code separately so we can flag it
   const cityCounts = filtered.reduce((acc, row) => {
@@ -5382,7 +5378,7 @@ function AdminVisitorStats() {
     acc[ckey].count++; return acc;
   }, {});
   const cityRows = Object.entries(cityCounts).sort((aa, bb) => bb[1].count - aa[1].count).slice(0, 12)
-    .map(([city, { count, country }]) => ({ flag: countryFlag(country), label: city, count }));
+    .map(([city, { count, country }]) => ({ flag: country || null, label: city, count }));
 
   // Logged-in user breakdown
   const userVisitMap = {};
@@ -5439,7 +5435,7 @@ function AdminVisitorStats() {
     <div key={barLabel} style={{ marginBottom:8 }}>
       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
         <span style={{ display:"flex", alignItems:"center", gap:6 }}>
-          {barFlag && <span style={{ fontSize:16, lineHeight:1 }}>{barFlag}</span>}
+          {barFlag && <img src={`https://flagcdn.com/16x12/${barFlag.toLowerCase()}.png`} width="16" height="12" alt={barFlag} style={{ display:"inline-block", verticalAlign:"middle", borderRadius:1 }} />}
           <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#b0c090", textTransform:"uppercase", letterSpacing:".04em" }}>{barLabel}</span>
         </span>
         <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00" }}>{barCount} <span style={{ color:"#3a5010" }}>({Math.round(barCount / barTotal * 100)}%)</span></span>
