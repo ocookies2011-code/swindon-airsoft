@@ -1831,7 +1831,35 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
         {/* Personal details */}
         <div className="form-row" style={{ marginBottom:12 }}>
           <div className="form-group"><label>FULL LEGAL NAME *</label><input value={active.name} onChange={ev => fw("name", ev.target.value)} /></div>
-          <div className="form-group"><label>DATE OF BIRTH *</label><input type="date" value={active.dob} onChange={ev => fw("dob", ev.target.value)} /></div>
+          <div className="form-group">
+            <label>DATE OF BIRTH *</label>
+            <input
+              type="text"
+              placeholder="DD/MM/YYYY"
+              maxLength={10}
+              value={active.dob ? (() => {
+                // Convert stored YYYY-MM-DD to display DD/MM/YYYY
+                const parts = active.dob.split("-");
+                if (parts.length === 3 && parts[0].length === 4) return parts[2] + "/" + parts[1] + "/" + parts[0];
+                return active.dob; // already in display format or partial entry
+              })() : ""}
+              onChange={ev => {
+                let v = ev.target.value.replace(/[^0-9/]/g, "");
+                // Auto-insert slashes after DD and MM
+                if (v.length === 2 && !v.includes("/")) v = v + "/";
+                if (v.length === 5 && v.split("/").length === 2) v = v + "/";
+                // Convert DD/MM/YYYY → YYYY-MM-DD for storage when complete
+                const parts = v.split("/");
+                if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                  fw("dob", parts[2] + "-" + parts[1] + "-" + parts[0]);
+                } else {
+                  fw("dob", v); // store partial as-is while typing
+                }
+              }}
+              style={{ maxWidth: 140 }}
+            />
+            <div style={{ fontSize:10, color:"var(--muted)", marginTop:3 }}>Format: DD/MM/YYYY</div>
+          </div>
         </div>
 
         {/* Address */}
