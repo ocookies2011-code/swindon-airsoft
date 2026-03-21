@@ -8824,9 +8824,9 @@ function AdminMessages({ data, save, showToast, cu }) {
         {banners.map((banner, i) => (
           <div key={i} style={{ border:"1px solid #2a3a10", marginBottom:10, overflow:"hidden" }}>
             {/* Live preview */}
-            <div style={{ background: banner.bg || "#080a06", color: banner.color || "#c8ff00", padding:"8px 16px", display:"flex", alignItems:"center", gap:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, letterSpacing:".1em", textTransform:"uppercase", minHeight:36 }}>
+            <div style={{ background: banner.bg || "#080a06", color: banner.color || "#c8ff00", padding:"8px 16px", display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, letterSpacing:".1em", textTransform:"uppercase", minHeight:36 }}>
               {banner.icon && <span>{banner.icon}</span>}
-              <span style={{ flex:1 }}>{banner.text || <span style={{ opacity:.4 }}>Preview — type your message below</span>}</span>
+              <span style={{ flex:1, textAlign:"center" }}>{banner.text || <span style={{ opacity:.4 }}>Preview — type your message below</span>}</span>
               {banner.icon && <span>{banner.icon}</span>}
             </div>
             {/* Editor */}

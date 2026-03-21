@@ -1016,9 +1016,9 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 /* ── TICKER / MARQUEE ── */
 @keyframes skeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .site-banners{display:flex;flex-direction:column;gap:12px;padding:16px 20px;background:#0a0d08;border-bottom:1px solid #1a2808;}
-.site-banner{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:400;letter-spacing:.04em;line-height:1.7;border:1px solid;position:relative;}
-.site-banner-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
-.site-banner-text{flex:1;}
+.site-banner{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:400;letter-spacing:.04em;line-height:1.7;border:1px solid;position:relative;}
+.site-banner-icon{font-size:15px;flex-shrink:0;}
+.site-banner-text{flex:1;text-align:center;}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
