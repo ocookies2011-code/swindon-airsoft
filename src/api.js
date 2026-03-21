@@ -1003,12 +1003,11 @@ let _geoFailCount = 0;
 const GEO_MAX_RETRIES = 3;
 
 async function _lookupGeo() {
-  if (_geoCache !== undefined && _geoCache !== null) return _geoCache; // cached success
-  if (_geoCache === null && _geoFailCount >= GEO_MAX_RETRIES) return null; // give up after 3 tries
+  if (_geoCache !== undefined && _geoCache !== null) return _geoCache;
+  if (_geoCache === null && _geoFailCount >= GEO_MAX_RETRIES) return null;
 
-  // Known city coordinates — used for two purposes:
-  // 1. Validate API-returned coords against the city name (reject if >100km off)
-  // 2. Supply accurate coords when the API gives a valid city but bad/missing coords
+  // City name → accurate coordinates. API coords are ignored for GB visitors
+  // since ISP routing makes them consistently wrong.
   const KNOWN_CITY_COORDS = {
     "swindon":[51.558,-1.782],"london":[51.507,-0.128],"reading":[51.454,-0.971],
     "bristol":[51.454,-2.588],"birmingham":[52.480,-1.902],"manchester":[53.480,-2.242],
@@ -1034,64 +1033,46 @@ async function _lookupGeo() {
     "newport":[51.588,-2.998],"bangor":[53.228,-4.129],"aberystwyth":[52.415,-4.082],
   };
 
-  const apis = [
-    // ipwhois.app — most accurate for UK residential IPs (same service as ipwhois.io)
-    // Response fields: success, country_code, city, latitude, longitude
-    { url: 'https://ipwhois.app/json/',      parse: g => g.success !== false ? { country: g.country_code || null, city: g.city || null, lat: Number(g.latitude)  || null, lon: Number(g.longitude) || null } : null },
-    // fallbacks
-    { url: 'https://ipwho.is/',              parse: g => g.success           ? { country: g.country_code || null, city: g.city || null, lat: g.latitude          || null, lon: g.longitude         || null } : null },
-    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode       ? { country: g.countryCode  || null, city: g.cityName || null, lat: g.latitude      || null, lon: g.longitude         || null } : null },
-    { url: 'https://api.country.is/',        parse: g => g.country           ? { country: g.country,       city: null, lat: null, lon: null } : null },
-  ];
-
-  for (const { url, parse } of apis) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) continue;
-      const g = await res.json();
-      const result = parse(g);
-      if (!result?.country) continue;
-
-      // For GB visitors: completely ignore API-provided lat/lon — they are ISP-routing
-      // artefacts and consistently wrong for UK residential IPs. Instead, look up
-      // coordinates solely from the city name the API returns, using our own accurate
-      // table. If the city isn't in our table, store country only (no pin).
-      if (result.country === 'GB') {
-        result.lat = null;
-        result.lon = null;
-        if (result.city) {
-          // Normalise: lowercase, strip common suffixes like "-on-Sea", "(city)", etc.
-          const cityKey = result.city.toLowerCase().trim()
-            .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheticals
-            .replace(/-upon-\w+|-on-\w+|-under-\w+/g, '') // "Newcastle-upon-Tyne" -> "newcastle"
-            .trim();
-          const known = KNOWN_CITY_COORDS[cityKey] || KNOWN_CITY_COORDS[cityKey.split(' ')[0]];
-          if (known) {
-            result.lat  = known[0];
-            result.lon  = known[1];
-            // Normalise city name to our canonical capitalised version
-            const canonical = cityKey.split(' ')[0];
-            result.city = canonical.charAt(0).toUpperCase() + canonical.slice(1);
-          }
-          // If still not found, keep city name for display but coords stay null
-        }
-      } else if (result.city) {
-        // Non-GB: use known coords if we have them, else pass API coords through
-        const known = KNOWN_CITY_COORDS[result.city.toLowerCase()];
-        if (known) {
-          result.lat = known[0];
-          result.lon = known[1];
-        }
+  try {
+    // Call our Supabase edge function — runs server-side so no browser CSP blocks it,
+    // and the real client IP is forwarded via x-forwarded-for headers.
+    const res = await fetch(
+      `${supabase.supabaseUrl}/functions/v1/geo-lookup`,
+      {
+        headers: { 'apikey': supabase.supabaseKey },
+        signal: AbortSignal.timeout(8000),
       }
+    )
+    if (!res.ok) throw new Error(`geo-lookup ${res.status}`)
+    const g = await res.json()
+    if (g.error || !g.country) throw new Error(g.error || 'no country')
 
-      _geoCache = result; _geoFailCount = 0; return _geoCache;
-    } catch { continue; }
+    // For GB: ignore API coords — resolve purely from city name
+    if (g.country === 'GB') {
+      g.lat = null; g.lon = null
+      if (g.city) {
+        const key = g.city.toLowerCase().trim()
+          .replace(/\s*\(.*?\)\s*/g, '')
+          .replace(/-upon-\w+|-on-\w+|-under-\w+/gi, '')
+          .trim()
+        const known = KNOWN_CITY_COORDS[key] || KNOWN_CITY_COORDS[key.split(' ')[0]]
+        if (known) { g.lat = known[0]; g.lon = known[1] }
+      }
+    } else if (g.city) {
+      const known = KNOWN_CITY_COORDS[g.city.toLowerCase()]
+      if (known) { g.lat = known[0]; g.lon = known[1] }
+    }
+
+    _geoCache = { country: g.country, city: g.city || null, lat: g.lat || null, lon: g.lon || null }
+    _geoFailCount = 0
+    return _geoCache
+  } catch {
+    _geoCache = null
+    _geoFailCount++
+    return null
   }
-  // All APIs failed this attempt — allow retry next page nav, up to the cap
-  _geoCache = null;
-  _geoFailCount++;
-  return null;
 }
+
 
 export const visits = wrapWithTimeout({
   // ── track ────────────────────────────────────────────────────────────────────
