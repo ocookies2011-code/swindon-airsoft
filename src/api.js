@@ -996,16 +996,19 @@ export const staff = wrapWithTimeout({
 //  - Unique visits = distinct session_ids (one per browser tab session)
 //  - getAllTimeCounts() returns total rows + unique sessions across all time
 // ── Geo lookup cache (session-scoped, never sent to server) ──────────────────
-// One geo lookup per browser session — result reused for all subsequent visits.
-let _geoCache = undefined; // undefined = not yet attempted
+// Cached on success. On failure, retries up to 3 times (once per page nav)
+// so a transient API blip doesn't permanently prevent geo data for a session.
+let _geoCache     = undefined; // undefined = not yet attempted; null = last attempt failed
+let _geoFailCount = 0;
+const GEO_MAX_RETRIES = 3;
 
 async function _lookupGeo() {
-  if (_geoCache !== undefined) return _geoCache;
-  _geoCache = null; // mark as attempted so we never retry on failure
+  if (_geoCache !== undefined && _geoCache !== null) return _geoCache; // cached success
+  if (_geoCache === null && _geoFailCount >= GEO_MAX_RETRIES) return null; // give up after 3 tries
   const apis = [
-    { url: 'https://ipwho.is/',             parse: g => g.success  ? { country: g.country_code, city: g.city || null, lat: g.latitude || null, lon: g.longitude || null } : null },
-    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode ? { country: g.countryCode, city: g.cityName || null, lat: g.latitude || null, lon: g.longitude || null } : null },
-    { url: 'https://api.country.is/',        parse: g => g.country ? { country: g.country, city: null, lat: null, lon: null } : null },
+    { url: 'https://ipwho.is/',             parse: g => g.success      ? { country: g.country_code, city: g.city     || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
+    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode  ? { country: g.countryCode,  city: g.cityName || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
+    { url: 'https://api.country.is/',        parse: g => g.country      ? { country: g.country,       city: null,               lat: null,                lon: null                } : null },
   ];
   for (const { url, parse } of apis) {
     try {
@@ -1013,10 +1016,13 @@ async function _lookupGeo() {
       if (!res.ok) continue;
       const g = await res.json();
       const result = parse(g);
-      if (result?.country) { _geoCache = result; return _geoCache; }
+      if (result?.country) { _geoCache = result; _geoFailCount = 0; return _geoCache; }
     } catch { continue; }
   }
-  return null; // all failed — leave as null
+  // All APIs failed this attempt — allow retry next page nav, up to the cap
+  _geoCache = null;
+  _geoFailCount++;
+  return null;
 }
 
 export const visits = wrapWithTimeout({
@@ -1037,15 +1043,24 @@ export const visits = wrapWithTimeout({
       }).select('id').single();
       if (error || !row?.id) return;
 
-      // Fire geo lookup in background — update row when it resolves
+      // Fire geo lookup in background — update this row and any earlier rows in
+      // this session that also have no geo (e.g. rows inserted before geo resolved)
       _lookupGeo().then(geo => {
-        if (!geo) return;
+        if (!geo || !sessionId) return;
+        // Update this specific row
         supabase.from('page_visits').update({
           country: geo.country || null,
           city:    geo.city    || null,
           lat:     geo.lat     || null,
           lon:     geo.lon     || null,
         }).eq('id', row.id).then(() => {}).catch(() => {});
+        // Backfill any earlier rows in this session that are still missing geo
+        supabase.from('page_visits').update({
+          country: geo.country || null,
+          city:    geo.city    || null,
+          lat:     geo.lat     || null,
+          lon:     geo.lon     || null,
+        }).eq('session_id', sessionId).is('country', null).then(() => {}).catch(() => {});
       }).catch(() => {});
     } catch { /* never break the site */ }
   },

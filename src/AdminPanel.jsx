@@ -5326,13 +5326,32 @@ function UKVisitorMap({ visitData }) {
     "milton keynes":[52.041, -0.759], "northampton":  [52.240, -0.898],
   };
 
+  // Country-level fallback coords — used when geo resolved a country but no city/lat/lon
+  const COUNTRY_COORDS = {
+    "GB": [52.5, -1.5],  "IE": [53.4, -8.2],  "US": [38.9, -77.0],
+    "DE": [51.2,  10.5], "FR": [46.2,   2.2],  "ES": [40.4,  -3.7],
+    "IT": [42.5,  12.5], "NL": [52.4,   5.3],  "BE": [50.5,   4.5],
+    "PL": [52.2,  21.0], "AU": [-25.3, 133.8], "CA": [56.1, -106.3],
+    "NZ": [-40.9, 174.9],"ZA": [-30.6,  22.9], "SE": [62.2,  17.6],
+    "NO": [60.5,   8.5], "DK": [56.3,   9.5],  "FI": [61.9,  25.7],
+    "PT": [39.4,  -8.2], "CH": [46.8,   8.2],  "AT": [47.5,  14.6],
+    "RO": [45.9,  24.9], "CZ": [49.8,  15.5],  "HU": [47.2,  19.5],
+  };
+
   // ── Build pin clusters ────────────────────────────────────
   const buildPins = useCallback(() => {
     const pinMap = {};
     visitData.forEach(row => {
       let lat = row.lat, lon = row.lon;
+      // 1. Use stored lat/lon if present
+      // 2. Fall back to city name lookup
       if ((!lat || !lon) && row.city) {
         const c = CITY_COORDS[row.city.toLowerCase()];
+        if (c) { lat = c[0]; lon = c[1]; }
+      }
+      // 3. Fall back to country-centre coords so the visit still appears on the map
+      if ((!lat || !lon) && row.country) {
+        const c = COUNTRY_COORDS[row.country.toUpperCase()];
         if (c) { lat = c[0]; lon = c[1]; }
       }
       if (!lat || !lon) return;
