@@ -5306,13 +5306,39 @@ function UKVisitorMap({ visitData }) {
     y: ((UK_LAT_MAX - lat) / (UK_LAT_MAX - UK_LAT_MIN)) * H,
   });
 
+  // Fallback coordinates for known UK cities when lat/lon not in DB row
+  const CITY_COORDS = {
+    "swindon":{"lat":51.56,"lon":-1.78},"london":{"lat":51.51,"lon":-0.13},
+    "reading":{"lat":51.45,"lon":-0.97},"bristol":{"lat":51.45,"lon":-2.59},
+    "birmingham":{"lat":52.48,"lon":-1.90},"manchester":{"lat":53.48,"lon":-2.24},
+    "leeds":{"lat":53.80,"lon":-1.55},"sheffield":{"lat":53.38,"lon":-1.47},
+    "liverpool":{"lat":53.41,"lon":-2.99},"edinburgh":{"lat":55.95,"lon":-3.19},
+    "glasgow":{"lat":55.86,"lon":-4.25},"cardiff":{"lat":51.48,"lon":-3.18},
+    "oxford":{"lat":51.75,"lon":-1.26},"cambridge":{"lat":52.20,"lon":0.12},
+    "coventry":{"lat":52.41,"lon":-1.51},"leicester":{"lat":52.63,"lon":-1.13},
+    "nottingham":{"lat":52.95,"lon":-1.15},"newcastle":{"lat":54.97,"lon":-1.61},
+    "dumbarton":{"lat":55.94,"lon":-4.57},"farnborough":{"lat":51.29,"lon":-0.76},
+    "southampton":{"lat":50.91,"lon":-1.40},"portsmouth":{"lat":50.80,"lon":-1.09},
+    "exeter":{"lat":50.72,"lon":-3.53},"york":{"lat":53.96,"lon":-1.08},
+    "bath":{"lat":51.38,"lon":-2.36},"brighton":{"lat":50.82,"lon":-0.14},
+    "san jose":{"lat":37.34,"lon":-121.89},"mountain view":{"lat":37.39,"lon":-122.08},
+  };
+
   const pinMap = {};
   visitData.forEach(row => {
-    if (!row.lat || !row.lon) return;
-    const lat = Math.round(row.lat * 10) / 10;
-    const lon = Math.round(row.lon * 10) / 10;
-    const key = lat + "," + lon;
-    if (!pinMap[key]) pinMap[key] = { lat, lon, count: 0, city: row.city, country: row.country, users: new Set(), sessions: new Set() };
+    let lat = row.lat;
+    let lon = row.lon;
+    // Fall back to city lookup if no coordinates stored
+    if ((!lat || !lon) && row.city) {
+      const cityKey = row.city.toLowerCase();
+      const coords = CITY_COORDS[cityKey];
+      if (coords) { lat = coords.lat; lon = coords.lon; }
+    }
+    if (!lat || !lon) return;
+    const latR = Math.round(lat * 10) / 10;
+    const lonR = Math.round(lon * 10) / 10;
+    const key = latR + "," + lonR;
+    if (!pinMap[key]) pinMap[key] = { lat: latR, lon: lonR, count: 0, city: row.city, country: row.country, users: new Set(), sessions: new Set() };
     pinMap[key].count++;
     pinMap[key].sessions.add(row.session_id);
     if (row.user_name) pinMap[key].users.add(row.user_name);
