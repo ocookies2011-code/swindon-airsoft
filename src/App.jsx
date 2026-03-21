@@ -5649,6 +5649,17 @@ function AppInner() {
     });
   }, [page, cu?.id]);
 
+  // ── Backfill user info on anonymous visit rows ────────────
+  // When auth resolves after the initial page track (e.g. returning player
+  // whose session loads asynchronously), patch all rows for this tab session
+  // that were recorded before cu was known so their name appears on the map.
+  useEffect(() => {
+    if (!cu?.id || page === "admin") return;
+    const sid = sessionStorage.getItem("sa_sid");
+    if (!sid) return;
+    api.visits.backfillUser({ sessionId: sid, userId: cu.id, userName: cu.name });
+  }, [cu?.id]);
+
 
   useEffect(() => {
     const onHash = () => {

@@ -1089,6 +1089,19 @@ export const visits = wrapWithTimeout({
     return { totalRows, uniqueSessions };
   },
 
+  // Backfill user_id + user_name on rows that were logged before auth resolved.
+  // Called once when the session is restored and cu becomes non-null.
+  async backfillUser({ sessionId, userId, userName }) {
+    if (!sessionId || !userId) return;
+    try {
+      await supabase
+        .from('page_visits')
+        .update({ user_id: userId, user_name: userName || null })
+        .eq('session_id', sessionId)
+        .is('user_id', null);
+    } catch { /* non-fatal */ }
+  },
+
   // Legacy — kept for backwards compat; main stats use getStats() now
   async getAll() {
     const { data, error } = await supabase
