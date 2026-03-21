@@ -5297,16 +5297,85 @@ function UKVisitorMap({ visitData }) {
   const [tooltip, setTooltip] = useState(null);
   const svgRef = useRef(null);
 
-  const UK_LAT_MAX = 60.9; const UK_LAT_MIN = 49.8;
-  const UK_LON_MIN = -8.2; const UK_LON_MAX = 2.0;
-  const W = 340; const H = 500;
+  // Mercator projection tuned for Great Britain + N.Ireland
+  // Bounding box: lat 49.8–60.9, lon -8.2–2.0
+  const W = 500; const H = 700;
+  const LAT_MAX = 60.9; const LAT_MIN = 49.8;
+  const LON_MIN = -8.2; const LON_MAX = 2.0;
 
-  const project = (lat, lon) => ({
-    x: ((lon - UK_LON_MIN) / (UK_LON_MAX - UK_LON_MIN)) * W,
-    y: ((UK_LAT_MAX - lat) / (UK_LAT_MAX - UK_LAT_MIN)) * H,
+  const project = (lon, lat) => ({
+    x: ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * W,
+    y: ((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * H,
   });
 
-  // Fallback coordinates for known UK cities when lat/lon not in DB row
+  // Detailed UK outline — real geographic coordinates projected to SVG
+  // Points encoded as [lon, lat] pairs
+  const toPath = (coords) =>
+    coords.map((p, i) => (i === 0 ? 'M' : 'L') + project(p[0], p[1]).x.toFixed(1) + ',' + project(p[0], p[1]).y.toFixed(1)).join(' ') + ' Z';
+
+  // England + Wales mainland
+  const englandWales = [
+    [-5.71,50.06],[-5.09,49.96],[-4.53,50.15],[-3.99,50.22],[-3.37,50.44],[-2.93,50.60],
+    [-2.37,50.62],[-1.77,50.71],[-1.08,50.80],[-0.55,50.76],[0.28,50.89],[1.02,51.00],
+    [1.44,51.12],[1.77,51.38],[1.41,51.74],[0.56,51.84],[0.28,52.62],[0.51,52.89],
+    [0.43,53.05],[0.11,53.22],[-0.10,53.61],[-0.06,53.84],[0.04,54.06],[0.32,54.25],
+    [-0.60,54.55],[-1.05,54.68],[-1.36,54.98],[-1.64,55.22],[-2.03,55.45],[-2.50,55.66],
+    [-3.06,55.80],[-3.38,55.68],[-3.65,55.35],[-3.20,55.07],[-3.00,54.72],[-3.18,54.55],
+    [-3.50,54.37],[-3.62,54.12],[-3.41,53.91],[-3.23,53.66],[-3.09,53.35],[-3.07,53.06],
+    [-3.26,52.84],[-3.14,52.68],[-2.94,52.40],[-2.74,52.15],[-2.52,51.93],[-2.60,51.68],
+    [-2.79,51.56],[-3.11,51.39],[-3.55,51.22],[-4.15,51.22],[-4.71,51.42],[-5.06,51.75],
+    [-4.98,51.99],[-5.19,52.15],[-4.48,52.36],[-4.06,52.59],[-3.84,52.80],[-4.03,53.01],
+    [-4.48,53.19],[-4.72,53.29],[-4.50,53.54],[-4.10,53.67],[-3.63,53.70],[-3.30,53.55],
+    [-3.06,53.42],[-3.00,53.30],[-3.16,53.20],[-3.29,53.11],[-3.24,52.99],[-3.11,52.89],
+    [-4.09,52.57],[-4.70,52.32],[-5.23,51.97],[-5.34,51.68],[-5.18,51.43],[-4.79,51.16],
+    [-4.23,51.07],[-3.65,51.13],[-3.10,51.23],[-2.68,51.44],[-2.55,51.63],[-2.70,51.79],
+    [-3.15,51.89],[-3.64,51.73],[-4.20,51.55],[-4.97,51.60],[-5.37,51.79],[-5.21,52.10],
+    [-4.66,52.34],[-4.17,52.61],[-3.85,52.82],[-3.92,53.05],[-4.36,53.27],[-4.62,53.36],
+    [-4.42,53.58],[-4.04,53.68],[-3.63,53.71],[-3.29,53.56],[-3.00,53.29],[-2.90,53.10],
+    [-2.85,52.97],[-2.72,52.78],[-2.61,52.55],[-2.55,52.33],[-2.70,52.09],[-3.00,51.94],
+    [-3.27,51.78],[-3.02,51.58],[-2.62,51.51],[-2.14,51.59],[-1.80,51.74],[-1.34,51.68],
+    [-0.94,51.56],[-0.52,51.47],[-0.08,51.51],[0.25,51.62],[0.55,51.73],[0.80,51.82],
+    [1.08,51.88],[1.33,51.76],[1.23,51.55],[0.95,51.38],[0.71,51.19],[0.35,50.97],
+    [-0.22,50.83],[-0.73,50.81],[-1.22,50.70],[-1.62,50.65],[-2.05,50.64],[-2.49,50.64],
+    [-2.92,50.57],[-3.36,50.41],[-3.79,50.23],[-4.25,50.08],[-4.68,50.04],[-5.08,50.02],
+    [-5.55,50.08],[-5.71,50.06]
+  ];
+
+  // Scotland mainland  
+  const scotland = [
+    [-2.03,55.45],[-1.64,55.22],[-1.36,54.98],[-1.05,54.68],[-0.60,54.55],[0.04,54.06],
+    [-0.06,53.84],[-0.10,53.61],[0.11,53.22],[0.43,53.05],[-0.06,53.61],[-0.10,53.84],
+    [-0.60,54.55],[-1.05,54.68],[-1.36,54.98],[-1.64,55.22],[-2.03,55.45],[-2.50,55.66],
+    [-3.06,55.80],[-3.38,55.68],[-3.65,55.35],[-3.20,55.07],[-3.00,54.72],[-3.06,55.80],
+    [-2.50,55.66],[-2.03,55.45],[-1.80,55.94],[-1.60,56.10],[-1.98,56.38],[-2.36,56.70],
+    [-2.52,57.00],[-2.39,57.30],[-2.08,57.49],[-1.88,57.68],[-1.96,57.92],[-2.42,58.15],
+    [-2.89,58.41],[-3.20,58.62],[-3.54,58.77],[-3.96,58.63],[-4.30,58.45],[-4.60,58.26],
+    [-4.90,58.05],[-5.10,57.88],[-5.30,57.70],[-5.55,57.50],[-5.60,57.26],[-5.40,57.10],
+    [-5.20,57.00],[-5.08,56.78],[-5.30,56.52],[-5.52,56.28],[-5.70,56.08],[-5.48,55.94],
+    [-5.18,55.80],[-4.90,55.64],[-4.68,55.49],[-4.52,55.36],[-4.30,55.22],[-4.10,55.09],
+    [-3.90,54.96],[-3.65,55.35],[-3.38,55.68],[-3.06,55.80],[-2.50,55.66],[-2.03,55.45],
+    [-1.80,55.94],[-1.60,56.10],[-1.98,56.38],[-2.36,56.70],[-2.52,57.00],[-2.39,57.30],
+    [-2.08,57.49],[-1.88,57.68],[-1.96,57.92],[-2.42,58.15],[-2.89,58.41],[-3.20,58.62],
+    [-3.54,58.77],[-3.96,58.63],[-4.30,58.45],[-4.68,58.22],[-4.98,58.00],[-5.24,57.75],
+    [-5.40,57.50],[-5.60,57.26],[-5.76,57.00],[-5.82,56.73],[-5.62,56.50],[-5.38,56.28],
+    [-5.55,56.08],[-5.72,55.90],[-5.48,55.70],[-5.20,55.55],[-4.90,55.40],[-4.68,55.20],
+    [-4.48,55.05],[-4.28,54.90],[-4.10,55.09],[-3.90,54.96],[-3.65,55.35],[-4.10,55.09]
+  ];
+
+  // Northern Ireland
+  const northernIreland = [
+    [-7.18,55.06],[-6.95,54.88],[-6.62,54.75],[-6.22,54.72],[-5.85,54.68],
+    [-5.50,54.80],[-5.22,55.02],[-5.45,55.22],[-5.82,55.35],[-6.18,55.28],
+    [-6.55,55.18],[-6.90,55.12],[-7.18,55.06]
+  ];
+
+  // Isle of Man
+  const isleOfMan = [
+    [-4.82,54.42],[-4.62,54.28],[-4.40,54.20],[-4.32,54.32],[-4.50,54.48],
+    [-4.75,54.52],[-4.82,54.42]
+  ];
+
+  // Build pin clusters from visit data
   const CITY_COORDS = {
     "swindon":{"lat":51.56,"lon":-1.78},"london":{"lat":51.51,"lon":-0.13},
     "reading":{"lat":51.45,"lon":-0.97},"bristol":{"lat":51.45,"lon":-2.59},
@@ -5321,6 +5390,14 @@ function UKVisitorMap({ visitData }) {
     "southampton":{"lat":50.91,"lon":-1.40},"portsmouth":{"lat":50.80,"lon":-1.09},
     "exeter":{"lat":50.72,"lon":-3.53},"york":{"lat":53.96,"lon":-1.08},
     "bath":{"lat":51.38,"lon":-2.36},"brighton":{"lat":50.82,"lon":-0.14},
+    "norwich":{"lat":52.63,"lon":1.30},"plymouth":{"lat":50.37,"lon":-4.14},
+    "worcester":{"lat":52.19,"lon":-2.22},"hereford":{"lat":52.06,"lon":-2.72},
+    "swansea":{"lat":51.62,"lon":-3.94},"wrexham":{"lat":53.05,"lon":-3.00},
+    "chester":{"lat":53.19,"lon":-2.89},"stoke":{"lat":53.00,"lon":-2.18},
+    "derby":{"lat":52.92,"lon":-1.48},"lincoln":{"lat":53.23,"lon":-0.54},
+    "peterborough":{"lat":52.57,"lon":-0.24},"ipswich":{"lat":52.06,"lon":1.16},
+    "colchester":{"lat":51.89,"lon":0.90},"luton":{"lat":51.88,"lon":-0.42},
+    "milton keynes":{"lat":52.04,"lon":-0.76},"northampton":{"lat":52.24,"lon":-0.89},
     "san jose":{"lat":37.34,"lon":-121.89},"mountain view":{"lat":37.39,"lon":-122.08},
   };
 
@@ -5328,16 +5405,14 @@ function UKVisitorMap({ visitData }) {
   visitData.forEach(row => {
     let lat = row.lat;
     let lon = row.lon;
-    // Fall back to city lookup if no coordinates stored
     if ((!lat || !lon) && row.city) {
-      const cityKey = row.city.toLowerCase();
-      const coords = CITY_COORDS[cityKey];
+      const coords = CITY_COORDS[row.city.toLowerCase()];
       if (coords) { lat = coords.lat; lon = coords.lon; }
     }
     if (!lat || !lon) return;
     const latR = Math.round(lat * 10) / 10;
     const lonR = Math.round(lon * 10) / 10;
-    const key = latR + "," + lonR;
+    const key = latR + ',' + lonR;
     if (!pinMap[key]) pinMap[key] = { lat: latR, lon: lonR, count: 0, city: row.city, country: row.country, users: new Set(), sessions: new Set() };
     pinMap[key].count++;
     pinMap[key].sessions.add(row.session_id);
@@ -5350,55 +5425,121 @@ function UKVisitorMap({ visitData }) {
   const handlePinEnter = (e, pin) => {
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return;
-    setTooltip({ x: e.clientX - svgRect.left, y: e.clientY - svgRect.top, pin });
+    const x = e.clientX - svgRect.left;
+    const y = e.clientY - svgRect.top;
+    setTooltip({ x, y, pin });
   };
 
+  const regionStyle = { fill: '#0f1a08', stroke: '#2a4010', strokeWidth: '0.8', strokeLinejoin: 'round' };
+
   return (
-    <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"18px 20px", gridColumn:"1 / -1" }}>
-      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:16 }}>VISITOR MAP</div>
+    <div style={{ background:'#0c1009', border:'1px solid #1a2808', padding:'18px 20px', gridColumn:'1 / -1' }}>
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:'.22em', color:'#3a5010', marginBottom:16 }}>VISITOR MAP</div>
       {pins.length === 0 ? (
-        <div style={{ color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No coordinate data yet — accumulates with new visits.</div>
+        <div style={{ color:'#2a3a10', fontFamily:"'Share Tech Mono',monospace", fontSize:10 }}>No coordinate data yet — accumulates with new visits.</div>
       ) : (
-        <div style={{ position:"relative", display:"inline-block", width:"100%" }}>
-          <svg ref={svgRef} viewBox={"0 0 " + W + " " + H} style={{ width:"100%", maxWidth:500, display:"block", margin:"0 auto" }} onMouseLeave={() => setTooltip(null)}>
-            <path d="M170,10 L185,15 L200,12 L215,20 L225,35 L220,55 L230,70 L225,90 L235,105 L230,125 L240,140 L238,160 L245,175 L240,195 L248,210 L242,230 L248,245 L242,260 L250,275 L244,290 L252,305 L246,320 L254,335 L248,350 L256,365 L250,380 L246,400 L238,415 L228,430 L215,440 L200,448 L185,452 L170,455 L155,452 L140,448 L125,440 L112,430 L102,415 L94,400 L90,380 L84,365 L78,350 L72,335 L66,320 L60,305 L54,290 L48,275 L42,260 L36,245 L30,230 L24,215 L20,195 L16,175 L12,155 L10,135 L14,115 L20,95 L28,78 L36,62 L48,48 L62,36 L78,26 L95,18 L112,12 L130,8 L150,6 Z" fill="#0f1a08" stroke="#1e3a10" strokeWidth="1.5" strokeLinejoin="round" />
+        <div style={{ position:'relative', width:'100%' }}>
+          <svg
+            ref={svgRef}
+            viewBox={'0 0 ' + W + ' ' + H}
+            style={{ width:'100%', maxWidth:420, display:'block', margin:'0 auto' }}
+            onMouseLeave={() => setTooltip(null)}
+          >
+            {/* Grid lines */}
+            {[-6,-4,-2,0,2].map(lon => {
+              const x = project(lon, 55).x;
+              return <line key={'v'+lon} x1={x} y1={0} x2={x} y2={H} stroke="#1a2808" strokeWidth="0.4" strokeDasharray="3,6" />;
+            })}
+            {[51,53,55,57,59].map(lat => {
+              const y = project(0, lat).y;
+              return <line key={'h'+lat} x1={0} y1={y} x2={W} y2={y} stroke="#1a2808" strokeWidth="0.4" strokeDasharray="3,6" />;
+            })}
+
+            {/* Sea/ocean background already from parent bg */}
+
+            {/* UK regions */}
+            <path d={toPath(englandWales)} {...regionStyle} fill="#0f1a08" />
+            <path d={toPath(scotland)} {...regionStyle} fill="#0d1806" />
+            <path d={toPath(northernIreland)} {...regionStyle} fill="#0d1806" />
+            <path d={toPath(isleOfMan)} {...regionStyle} fill="#0f1a08" />
+
+            {/* Region labels */}
+            {[
+              { label:'ENGLAND', lon:-1.5, lat:52.8 },
+              { label:'SCOTLAND', lon:-4.0, lat:57.0 },
+              { label:'WALES', lon:-3.8, lat:52.3 },
+              { label:'N.IRE', lon:-6.5, lat:54.8 },
+            ].map(r => {
+              const p = project(r.lon, r.lat);
+              return <text key={r.label} x={p.x} y={p.y} textAnchor="middle" fontSize="8" fill="#2a3a10" fontFamily="'Share Tech Mono',monospace" letterSpacing="1" style={{ pointerEvents:'none', userSelect:'none' }}>{r.label}</text>;
+            })}
+
+            {/* Lat/lon axis labels */}
+            {[-6,-4,-2,0,2].map(lon => {
+              const x = project(lon, 55).x;
+              return <text key={'vl'+lon} x={x} y={H-4} textAnchor="middle" fontSize="7" fill="#1e3a10" fontFamily="'Share Tech Mono',monospace">{lon}°</text>;
+            })}
+            {[51,53,55,57,59].map(lat => {
+              const y = project(0, lat).y;
+              return <text key={'hl'+lat} x={4} y={y+3} fontSize="7" fill="#1e3a10" fontFamily="'Share Tech Mono',monospace">{lat}°N</text>;
+            })}
+
+            {/* Visitor pins */}
             {pins.map((pin, i) => {
-              const p = project(pin.lat, pin.lon);
+              const p = project(pin.lon, pin.lat);
               if (p.x < 0 || p.x > W || p.y < 0 || p.y > H) return null;
-              const r = 4 + (pin.count / maxCount) * 10;
-              const color = pin.country === "GB" ? "#c8ff00" : "#4fc3f7";
+              const r = 5 + (pin.count / maxCount) * 12;
+              const isUK = pin.country === 'GB';
+              const color = isUK ? '#c8ff00' : '#4fc3f7';
               return (
-                <g key={i} onMouseEnter={e => handlePinEnter(e, pin)} onMouseLeave={() => setTooltip(null)} style={{ cursor:"pointer" }}>
-                  <circle cx={p.x} cy={p.y} r={r + 4} fill={color} opacity={0.12} />
-                  <circle cx={p.x} cy={p.y} r={r} fill={color} opacity={0.85} stroke="#0c1009" strokeWidth={1} />
-                  {pin.sessions.size > 1 && <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize={r > 8 ? 9 : 7} fill="#0c1009" fontWeight="bold" fontFamily="monospace" style={{ pointerEvents:"none", userSelect:"none" }}>{pin.sessions.size}</text>}
+                <g key={i} onMouseEnter={e => handlePinEnter(e, pin)} onMouseLeave={() => setTooltip(null)} style={{ cursor:'pointer' }}>
+                  <circle cx={p.x} cy={p.y} r={r + 6} fill={color} opacity={0.08} />
+                  <circle cx={p.x} cy={p.y} r={r} fill={color} opacity={0.9} stroke="#0c1009" strokeWidth={1.5} />
+                  <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize={r > 10 ? 9 : 7} fill="#0c1009" fontWeight="bold" fontFamily="monospace" style={{ pointerEvents:'none', userSelect:'none' }}>{pin.sessions.size}</text>
                 </g>
               );
             })}
           </svg>
-          {tooltip && (
-            <div style={{ position:"absolute", left:Math.min(tooltip.x + 12, 260), top:tooltip.y - 10, background:"#0a0f05", border:"1px solid #2a3a10", padding:"10px 14px", fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#b0c090", minWidth:180, maxWidth:240, pointerEvents:"none", zIndex:10, boxShadow:"0 4px 20px rgba(0,0,0,.6)" }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, color:"#c8ff00", marginBottom:6 }}>{tooltip.pin.city || "Unknown"}{tooltip.pin.country ? ", " + tooltip.pin.country : ""}</div>
-              <div style={{ color:"#3a5010", marginBottom:4 }}>{tooltip.pin.sessions.size} session{tooltip.pin.sessions.size !== 1 ? "s" : ""} · {tooltip.pin.count} page view{tooltip.pin.count !== 1 ? "s" : ""}</div>
-              {tooltip.pin.users.size > 0 && (
-                <div style={{ marginTop:6, borderTop:"1px solid #1a2808", paddingTop:6 }}>
-                  <div style={{ color:"#3a5010", fontSize:9, letterSpacing:".15em", marginBottom:4 }}>LOGGED-IN PLAYERS</div>
-                  {[...tooltip.pin.users].slice(0, 6).map(name => <div key={name} style={{ color:"#c8ff00", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>▸ {name}</div>)}
-                  {tooltip.pin.users.size > 6 && <div style={{ color:"#3a5010", fontSize:10 }}>+{tooltip.pin.users.size - 6} more</div>}
+
+          {/* Tooltip */}
+          {tooltip && (() => {
+            const svgEl = svgRef.current;
+            const svgRect = svgEl?.getBoundingClientRect();
+            const tipW = 200;
+            const left = svgRect ? Math.min(tooltip.x + 14, (svgRect.width || 420) - tipW - 8) : tooltip.x + 14;
+            return (
+              <div style={{ position:'absolute', left, top: Math.max(0, tooltip.y - 10), background:'#0a0f05', border:'1px solid #2a3a10', padding:'10px 14px', fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:'#b0c090', width:tipW, pointerEvents:'none', zIndex:10, boxShadow:'0 4px 24px rgba(0,0,0,.7)' }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:'#c8ff00', marginBottom:5 }}>
+                  {tooltip.pin.city || 'Unknown'}{tooltip.pin.country ? ', ' + tooltip.pin.country : ''}
                 </div>
-              )}
-            </div>
-          )}
-          <div style={{ display:"flex", gap:16, justifyContent:"center", marginTop:8, fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010" }}>
-            <span><span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:"#c8ff00", marginRight:4 }} />UK</span>
-            <span><span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:"#4fc3f7", marginRight:4 }} />International</span>
-            <span>Pin size = visit volume</span>
+                <div style={{ color:'#5a7a30', marginBottom: tooltip.pin.users.size > 0 ? 8 : 0 }}>
+                  {tooltip.pin.sessions.size} session{tooltip.pin.sessions.size !== 1 ? 's' : ''} · {tooltip.pin.count} page view{tooltip.pin.count !== 1 ? 's' : ''}
+                </div>
+                {tooltip.pin.users.size > 0 && (
+                  <div style={{ borderTop:'1px solid #1a2808', paddingTop:6 }}>
+                    <div style={{ color:'#3a5010', fontSize:9, letterSpacing:'.15em', marginBottom:4 }}>LOGGED-IN PLAYERS</div>
+                    {[...tooltip.pin.users].slice(0, 8).map(name => (
+                      <div key={name} style={{ color:'#c8ff00', fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>▸ {name}</div>
+                    ))}
+                    {tooltip.pin.users.size > 8 && <div style={{ color:'#3a5010', fontSize:10, marginTop:2 }}>+{tooltip.pin.users.size - 8} more</div>}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Legend */}
+          <div style={{ display:'flex', gap:20, justifyContent:'center', marginTop:10, fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#3a5010', flexWrap:'wrap' }}>
+            <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#c8ff00' }} />UK visitor</span>
+            <span style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:'#4fc3f7' }} />International</span>
+            <span>Number = unique sessions · Size = volume</span>
           </div>
         </div>
       )}
     </div>
   );
 }
+
 
 // ── Admin Visitor Stats ───────────────────────────────────
 function AdminVisitorStats() {
