@@ -1006,9 +1006,9 @@ async function _lookupGeo() {
   if (_geoCache !== undefined && _geoCache !== null) return _geoCache; // cached success
   if (_geoCache === null && _geoFailCount >= GEO_MAX_RETRIES) return null; // give up after 3 tries
 
-  // Known city coordinates used to validate API-returned lat/lon.
-  // If the API says we're in "Swindon" but gives coords 300km away (ISP exchange
-  // routing), we discard the bad coords and fall back to our own lookup table.
+  // Known city coordinates — used for two purposes:
+  // 1. Validate API-returned coords against the city name (reject if >100km off)
+  // 2. Supply accurate coords when the API gives a valid city but bad/missing coords
   const KNOWN_CITY_COORDS = {
     "swindon":[51.558,-1.782],"london":[51.507,-0.128],"reading":[51.454,-0.971],
     "bristol":[51.454,-2.588],"birmingham":[52.480,-1.902],"manchester":[53.480,-2.242],
@@ -1022,6 +1022,16 @@ async function _lookupGeo() {
     "chester":[53.193,-2.893],"derby":[52.922,-1.478],"lincoln":[53.235,-0.540],
     "peterborough":[52.573,-0.237],"luton":[51.879,-0.418],"northampton":[52.240,-0.898],
     "milton keynes":[52.041,-0.759],"colchester":[51.896,0.903],"ipswich":[52.059,1.155],
+    "stoke":[53.003,-2.180],"wolverhampton":[52.586,-2.128],"swansea":[51.621,-3.944],
+    "hereford":[52.056,-2.716],"wrexham":[53.046,-2.994],"dumbarton":[55.943,-4.571],
+    "farnborough":[51.295,-0.758],"salisbury":[51.068,-1.796],"cheltenham":[51.900,-2.077],
+    "gloucester":[51.864,-2.244],"shrewsbury":[52.707,-2.752],"wigan":[53.544,-2.637],
+    "bolton":[53.578,-2.429],"blackpool":[53.817,-3.036],"preston":[53.763,-2.703],
+    "huddersfield":[53.645,-1.785],"bradford":[53.795,-1.752],"wakefield":[53.683,-1.506],
+    "hull":[53.745,-0.336],"middlesbrough":[54.574,-1.235],"sunderland":[54.906,-1.381],
+    "durham":[54.776,-1.576],"carlisle":[54.896,-2.934],"inverness":[57.477,-4.225],
+    "aberdeen":[57.149,-2.094],"dundee":[56.462,-2.970],"stirling":[56.117,-3.937],
+    "newport":[51.588,-2.998],"bangor":[53.228,-4.129],"aberystwyth":[52.415,-4.082],
   };
 
   // Haversine distance in km between two lat/lon points
@@ -1045,15 +1055,27 @@ async function _lookupGeo() {
       const result = parse(g);
       if (!result?.country) continue;
 
-      // Validate lat/lon against the reported city name.
-      // Reject if the coords are >100km from where the city actually is —
-      // this filters out ISP routing exchange points being reported as the location.
-      if (result.lat && result.lon && result.city) {
+      if (result.city) {
         const known = KNOWN_CITY_COORDS[result.city.toLowerCase()];
         if (known) {
-          const distKm = haversineKm(result.lat, result.lon, known[0], known[1]);
-          if (distKm > 100) {
-            // Coords don't match the city — ditch the bad coords, keep city name
+          if (result.lat && result.lon) {
+            // We know this city — validate API coords against our known position.
+            // Reject if >100km off (ISP exchange routing artefact).
+            const distKm = haversineKm(result.lat, result.lon, known[0], known[1]);
+            if (distKm > 100) {
+              // Bad coords — replace with our accurate known coords
+              result.lat = known[0];
+              result.lon = known[1];
+            }
+          } else {
+            // API gave city but no coords — supply our own
+            result.lat = known[0];
+            result.lon = known[1];
+          }
+        } else if (result.lat && result.lon && result.country === 'GB') {
+          // City not in our table — sanity-check: UK coords must be within UK bounding box
+          // (49°N–61°N, 8°W–2°E). Reject anything outside that.
+          if (result.lat < 49 || result.lat > 61 || result.lon < -8 || result.lon > 2) {
             result.lat = null;
             result.lon = null;
           }
@@ -1082,18 +1104,13 @@ export const visits = wrapWithTimeout({
   //     ADD COLUMN IF NOT EXISTS last_seen_at  timestamptz DEFAULT now(),
   //     ADD COLUMN IF NOT EXISTS visit_count   int         DEFAULT 1;
   //
-  //   -- Unique constraints for upsert targets
+  //   -- Unique constraints so the select-then-update logic works correctly
   //   ALTER TABLE page_visits
-  //     DROP CONSTRAINT IF EXISTS page_visits_user_id_key;
+  //     ADD CONSTRAINT IF NOT EXISTS page_visits_user_id_key    UNIQUE (user_id);
   //   ALTER TABLE page_visits
-  //     ADD CONSTRAINT page_visits_user_id_key UNIQUE (user_id);
+  //     ADD CONSTRAINT IF NOT EXISTS page_visits_session_id_key UNIQUE (session_id);
   //
-  //   ALTER TABLE page_visits
-  //     DROP CONSTRAINT IF EXISTS page_visits_session_id_key;
-  //   ALTER TABLE page_visits
-  //     ADD CONSTRAINT page_visits_session_id_key UNIQUE (session_id);
-  //
-  //   -- Clean up old duplicate rows first (keep most recent per user/session):
+  //   -- Clean up old duplicate rows (keep most recent per user/session):
   //   DELETE FROM page_visits a USING page_visits b
   //     WHERE a.id < b.id AND a.user_id IS NOT NULL AND a.user_id = b.user_id;
   //   DELETE FROM page_visits a USING page_visits b
@@ -1102,62 +1119,63 @@ export const visits = wrapWithTimeout({
   async track({ page, userId, userName, sessionId }) {
     try {
       const now = new Date().toISOString();
+      const conflictKey = userId ? { col: 'user_id',   val: userId    }
+                                 : { col: 'session_id', val: sessionId };
+      if (!conflictKey.val) return;
 
-      if (userId) {
-        // ── Logged-in user: upsert on user_id ──────────────────────────────
-        await supabase.from('page_visits').upsert({
-          user_id:      userId,
-          user_name:    userName  || null,
-          session_id:   sessionId || null,
+      // Check if a row already exists for this user/session
+      const { data: existing } = await supabase
+        .from('page_visits')
+        .select('id, country, city, lat, lon, visit_count')
+        .eq(conflictKey.col, conflictKey.val)
+        .maybeSingle();
+
+      if (existing) {
+        // Row exists — update only the non-geo fields (preserve existing geo)
+        await supabase.from('page_visits').update({
           page,
           last_seen_at: now,
           user_agent:   navigator.userAgent || null,
-          referrer:     document.referrer   || null,
-          // visit_count incremented via DB default on insert; on update we bump it
-        }, {
-          onConflict:        'user_id',
-          ignoreDuplicates:  false,
-        }).then(async ({ error }) => {
-          if (error) return;
-          // Bump visit_count separately (PostgREST upsert doesn't support expressions)
-          await supabase.rpc('increment_visit_count', { p_user_id: userId }).catch(() => {});
-        });
-      } else if (sessionId) {
-        // ── Anonymous visitor: upsert on session_id ────────────────────────
-        await supabase.from('page_visits').upsert({
-          session_id:   sessionId,
-          user_id:      null,
-          user_name:    null,
-          page,
-          last_seen_at: now,
-          user_agent:   navigator.userAgent || null,
-          referrer:     document.referrer   || null,
-        }, {
-          onConflict:       'session_id',
-          ignoreDuplicates: false,
-        }).then(async ({ error }) => {
-          if (error) return;
-          await supabase.rpc('increment_visit_count_session', { p_session_id: sessionId }).catch(() => {});
-        });
-      }
+          ...(userId ? { user_name: userName || null, session_id: sessionId || null } : {}),
+          visit_count:  (existing.visit_count || 1) + 1,
+        }).eq('id', existing.id);
 
-      // Fire geo lookup in background — patch the row if geo not yet set
-      _lookupGeo().then(geo => {
-        if (!geo) return;
-        const geoUpdate = {
-          country: geo.country || null,
-          city:    geo.city    || null,
-          lat:     geo.lat     || null,
-          lon:     geo.lon     || null,
-        };
-        if (userId) {
-          supabase.from('page_visits').update(geoUpdate)
-            .eq('user_id', userId).is('country', null).then(() => {}).catch(() => {});
-        } else if (sessionId) {
-          supabase.from('page_visits').update(geoUpdate)
-            .eq('session_id', sessionId).is('country', null).then(() => {}).catch(() => {});
+        // Backfill geo if it's still missing on this row
+        if (!existing.country) {
+          _lookupGeo().then(geo => {
+            if (!geo) return;
+            supabase.from('page_visits').update({
+              country: geo.country || null,
+              city:    geo.city    || null,
+              lat:     geo.lat     || null,
+              lon:     geo.lon     || null,
+            }).eq('id', existing.id).then(() => {}).catch(() => {});
+          }).catch(() => {});
         }
-      }).catch(() => {});
+      } else {
+        // New row — insert with geo filled in once lookup resolves
+        const { data: newRow } = await supabase.from('page_visits').insert({
+          ...(userId ? { user_id: userId, user_name: userName || null, session_id: sessionId || null }
+                     : { session_id: sessionId, user_id: null, user_name: null }),
+          page,
+          last_seen_at: now,
+          visit_count:  1,
+          user_agent:   navigator.userAgent || null,
+          referrer:     document.referrer   || null,
+        }).select('id').single();
+
+        if (newRow?.id) {
+          _lookupGeo().then(geo => {
+            if (!geo) return;
+            supabase.from('page_visits').update({
+              country: geo.country || null,
+              city:    geo.city    || null,
+              lat:     geo.lat     || null,
+              lon:     geo.lon     || null,
+            }).eq('id', newRow.id).then(() => {}).catch(() => {});
+          }).catch(() => {});
+        }
+      }
     } catch { /* never break the site */ }
   },
 
