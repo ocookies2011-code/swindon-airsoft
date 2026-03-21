@@ -5358,10 +5358,15 @@ function UKVisitorMap({ visitData }) {
       const latR = Math.round(lat * 10) / 10;
       const lonR = Math.round(lon * 10) / 10;
       const key  = latR + ',' + lonR;
-      if (!pinMap[key]) pinMap[key] = { lat:latR, lon:lonR, count:0, city:row.city, country:row.country, users:new Set(), sessions:new Set() };
+      if (!pinMap[key]) pinMap[key] = { lat:latR, lon:lonR, count:0, city:row.city, country:row.country, users:new Map(), sessions:new Set() };
       pinMap[key].count++;
       pinMap[key].sessions.add(row.session_id);
-      if (row.user_name) pinMap[key].users.add(row.user_name);
+      if (row.user_name) {
+        // Normalise to lowercase key to deduplicate case variants (e.g. "Matt kane" vs "Matt Kane")
+        // Store the most recently seen casing for display
+        const nameKey = row.user_name.toLowerCase();
+        pinMap[key].users.set(nameKey, row.user_name);
+      }
     });
     return Object.values(pinMap);
   }, [visitData]);
@@ -5453,7 +5458,7 @@ function UKVisitorMap({ visitData }) {
       const usersHtml = pin.users.size > 0
         ? `<div style="border-top:1px solid #1a2808;padding-top:6px;margin-top:6px">
             <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.15em;color:#3a5010;margin-bottom:4px">LOGGED-IN PLAYERS</div>
-            ${[...pin.users].slice(0,8).map(n=>`<div style="color:#c8ff00;font-size:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700">▸ ${n}</div>`).join('')}
+            ${[...pin.users.values()].slice(0,8).map(n=>`<div style="color:#c8ff00;font-size:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700">▸ ${n}</div>`).join('')}
             ${pin.users.size > 8 ? `<div style="color:#3a5010;font-size:10px;margin-top:2px">+${pin.users.size - 8} more</div>` : ''}
           </div>` : '';
 
