@@ -995,58 +995,30 @@ export const staff = wrapWithTimeout({
 //    applied SERVER-SIDE, so the old 5000-row client cap is never hit
 //  - Unique visits = distinct session_ids (one per browser tab session)
 //  - getAllTimeCounts() returns total rows + unique sessions across all time
-// ── Geo lookup cache (session-scoped, never sent to server) ──────────────────
-// One geo lookup per browser session — result reused for all subsequent visits.
-let _geoCache = undefined; // undefined = not yet attempted
-
-async function _lookupGeo() {
-  if (_geoCache !== undefined) return _geoCache;
-  _geoCache = null; // mark as attempted so we never retry on failure
-  const apis = [
-    { url: 'https://ipwho.is/',             parse: g => g.success  ? { country: g.country_code, city: g.city || null, lat: g.latitude || null, lon: g.longitude || null } : null },
-    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode ? { country: g.countryCode, city: g.cityName || null, lat: g.latitude || null, lon: g.longitude || null } : null },
-    { url: 'https://api.country.is/',        parse: g => g.country ? { country: g.country, city: null, lat: null, lon: null } : null },
-  ];
-  for (const { url, parse } of apis) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) continue;
-      const g = await res.json();
-      const result = parse(g);
-      if (result?.country) { _geoCache = result; return _geoCache; }
-    } catch { continue; }
-  }
-  return null; // all failed — leave as null
-}
 
 export const visits = wrapWithTimeout({
   async track({ page, userId, userName, sessionId }) {
     try {
-      // Insert the row immediately (don't block on geo)
-      const { data: row, error } = await supabase.from('page_visits').insert({
-        page,
-        user_id:    userId    || null,
-        user_name:  userName  || null,
-        session_id: sessionId || null,
-        city:       null,
-        country:    null,
-        lat:        null,
-        lon:        null,
-        user_agent: navigator.userAgent || null,
-        referrer:   document.referrer   || null,
-      }).select('id').single();
-      if (error || !row?.id) return;
-
-      // Fire geo lookup in background — update row when it resolves
-      _lookupGeo().then(geo => {
-        if (!geo) return;
-        supabase.from('page_visits').update({
-          country: geo.country || null,
-          city:    geo.city    || null,
-          lat:     geo.lat     || null,
-          lon:     geo.lon     || null,
-        }).eq('id', row.id).then(() => {}).catch(() => {});
-      }).catch(() => {});
+      // Call the Edge Function which reads the real client IP server-side
+      // and performs accurate geo lookup — avoids CDN IP misidentification
+      const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      fetch(`${supabaseUrl}/functions/v1/track-visit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey':        supabaseAnon,
+          'Authorization': `Bearer ${supabaseAnon}`,
+        },
+        body: JSON.stringify({
+          page,
+          userId:    userId    || null,
+          userName:  userName  || null,
+          sessionId: sessionId || null,
+          referrer:  document.referrer   || null,
+          userAgent: navigator.userAgent || null,
+        }),
+      }).catch(() => {}); // fire-and-forget — never block or break the site
     } catch { /* never break the site */ }
   },
 
