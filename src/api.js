@@ -1005,10 +1005,14 @@ const GEO_MAX_RETRIES = 3;
 async function _lookupGeo() {
   if (_geoCache !== undefined && _geoCache !== null) return _geoCache; // cached success
   if (_geoCache === null && _geoFailCount >= GEO_MAX_RETRIES) return null; // give up after 3 tries
+  // NOTE: lat/lon from free IP-geo APIs is often wildly inaccurate (ISP routing
+  // exchange points, not subscriber location). We intentionally discard their
+  // coordinates and only keep country + city — the map resolves pin positions
+  // from our own curated CITY_COORDS table which is known to be correct.
   const apis = [
-    { url: 'https://ipwho.is/',             parse: g => g.success      ? { country: g.country_code, city: g.city     || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
-    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode  ? { country: g.countryCode,  city: g.cityName || null, lat: g.latitude  || null, lon: g.longitude || null } : null },
-    { url: 'https://api.country.is/',        parse: g => g.country      ? { country: g.country,       city: null,               lat: null,                lon: null                } : null },
+    { url: 'https://ipwho.is/',             parse: g => g.success      ? { country: g.country_code, city: g.city     || null, lat: null, lon: null } : null },
+    { url: 'https://freeipapi.com/api/json', parse: g => g.countryCode  ? { country: g.countryCode,  city: g.cityName || null, lat: null, lon: null } : null },
+    { url: 'https://api.country.is/',        parse: g => g.country      ? { country: g.country,       city: null,               lat: null, lon: null } : null },
   ];
   for (const { url, parse } of apis) {
     try {
@@ -1051,15 +1055,11 @@ export const visits = wrapWithTimeout({
         supabase.from('page_visits').update({
           country: geo.country || null,
           city:    geo.city    || null,
-          lat:     geo.lat     || null,
-          lon:     geo.lon     || null,
         }).eq('id', row.id).then(() => {}).catch(() => {});
         // Backfill any earlier rows in this session that are still missing geo
         supabase.from('page_visits').update({
           country: geo.country || null,
           city:    geo.city    || null,
-          lat:     geo.lat     || null,
-          lon:     geo.lon     || null,
         }).eq('session_id', sessionId).is('country', null).then(() => {}).catch(() => {});
       }).catch(() => {});
     } catch { /* never break the site */ }
