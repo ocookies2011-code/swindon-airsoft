@@ -1055,30 +1055,33 @@ async function _lookupGeo() {
       const result = parse(g);
       if (!result?.country) continue;
 
-      if (result.city) {
+      // For GB visitors, always snap to the nearest known city within 80km.
+      // This completely replaces API coords (which are ISP-exchange-routed and
+      // unreliable) with our own accurate lookup table.
+      // For non-GB visitors we do a basic bounding-box sanity check only.
+      if (result.country === 'GB' && result.lat && result.lon) {
+        let nearestCity = null, nearestDist = Infinity;
+        for (const [cityName, coords] of Object.entries(KNOWN_CITY_COORDS)) {
+          const d = haversineKm(result.lat, result.lon, coords[0], coords[1]);
+          if (d < nearestDist) { nearestDist = d; nearestCity = { name: cityName, coords }; }
+        }
+        if (nearestCity && nearestDist <= 80) {
+          // Snap to nearest known city
+          result.city = nearestCity.name.charAt(0).toUpperCase() + nearestCity.name.slice(1);
+          result.lat  = nearestCity.coords[0];
+          result.lon  = nearestCity.coords[1];
+        } else {
+          // No known city nearby — discard coords, city unknown
+          result.lat  = null;
+          result.lon  = null;
+          result.city = null;
+        }
+      } else if (result.city) {
+        // Non-GB: validate coords against known city if we have it
         const known = KNOWN_CITY_COORDS[result.city.toLowerCase()];
         if (known) {
-          if (result.lat && result.lon) {
-            // We know this city — validate API coords against our known position.
-            // Reject if >100km off (ISP exchange routing artefact).
-            const distKm = haversineKm(result.lat, result.lon, known[0], known[1]);
-            if (distKm > 100) {
-              // Bad coords — replace with our accurate known coords
-              result.lat = known[0];
-              result.lon = known[1];
-            }
-          } else {
-            // API gave city but no coords — supply our own
-            result.lat = known[0];
-            result.lon = known[1];
-          }
-        } else if (result.lat && result.lon && result.country === 'GB') {
-          // City not in our table — sanity-check: UK coords must be within UK bounding box
-          // (49°N–61°N, 8°W–2°E). Reject anything outside that.
-          if (result.lat < 49 || result.lat > 61 || result.lon < -8 || result.lon > 2) {
-            result.lat = null;
-            result.lon = null;
-          }
+          result.lat = known[0];
+          result.lon = known[1];
         }
       }
 
