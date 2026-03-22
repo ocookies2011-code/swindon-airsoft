@@ -683,7 +683,7 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
   --accent-pale:#d8ff33;--accent-dark:#8ab300;
   --red:#ef4444;--gold:#f59e0b;--blue:#3b82f6;--teal:#14b8a6;
   --rust:#8b3a0f;
-  --sidebar-w:230px;--nav-h:60px;--bottom-nav-h:64px;
+  --sidebar-w:230px;--nav-h:70px;--bottom-nav-h:64px;
 }
 
 /* ── SCROLLBAR ── */
@@ -2011,7 +2011,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
         <div className="pub-nav-inner">
           {/* Logo */}
           <div className="pub-nav-logo" onClick={() => go("home")}>
-            <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:44, width:"auto", objectFit:"contain", flexShrink:0 }} />
+            <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:56, width:"auto", objectFit:"contain", flexShrink:0 }} />
           </div>
           {/* Desktop links */}
           <div className="pub-nav-links">

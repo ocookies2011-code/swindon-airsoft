@@ -2844,7 +2844,7 @@ function GalleryPage({ data }) {
       <div style={{ position:'relative', display:'inline-block', maxWidth:'88vw', maxHeight:'84vh' }} onClick={e=>e.stopPropagation()}>
         <img src={lightbox.url} alt="" style={{ maxWidth:'88vw', maxHeight:'84vh', objectFit:'contain', display:'block', boxShadow:'0 0 80px rgba(0,0,0,.9),0 0 0 1px #1a2808' }} />
         <div style={{ position:'absolute', inset:0, pointerEvents:'none', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:'clamp(16px,3vw,28px)', letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)', textShadow:'0 2px 6px rgba(0,0,0,.9)', whiteSpace:'nowrap', transform:'rotate(-30deg)', userSelect:'none' }}>SWINDON AIRSOFT</div>
+          <img src={SA_LOGO_SRC} alt="" style={{ width:'clamp(120px,18vw,220px)', height:'auto', objectFit:'contain', opacity:0.18, transform:'rotate(-30deg)', userSelect:'none', pointerEvents:'none', filter:'saturate(0) brightness(10)' }} />
         </div>
       </div>
       <button onClick={e=>{e.stopPropagation();nextImg();}} style={{ position:'absolute', right:16, background:'rgba(200,255,0,.08)', border:'1px solid #2a3a10', color:'#c8ff00', fontSize:24, width:48, height:48, cursor:'pointer' }}>›</button>
@@ -2877,7 +2877,7 @@ function GalleryPage({ data }) {
                       }
                       <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(0,0,0,.65) 0%,transparent 55%)', pointerEvents:'none' }} />
                       <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', pointerEvents:'none' }}>
-                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.15)', transform:'rotate(-25deg)', userSelect:'none' }}>SWINDON AIRSOFT</div>
+                        <img src={SA_LOGO_SRC} alt="" style={{ width:100, height:'auto', objectFit:'contain', opacity:0.15, transform:'rotate(-25deg)', userSelect:'none', pointerEvents:'none', filter:'saturate(0) brightness(10)' }} />
                       </div>
                       <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,.75)', border:'1px solid rgba(200,255,0,.3)', fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#c8ff00', letterSpacing:'.12em', padding:'2px 7px' }}>
                         {album.images.length} FRAMES
@@ -2917,7 +2917,7 @@ function GalleryPage({ data }) {
                   onClick={() => openLightbox(img, openAlbum, i)}>
                   <img src={img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'contrast(1.05) saturate(0.8)' }} />
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:'clamp(10px,2.5vw,14px)', letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.22)', textShadow:'0 1px 3px rgba(0,0,0,.8)', whiteSpace:'nowrap', transform:'rotate(-30deg)', userSelect:'none' }}>SWINDON AIRSOFT</div>
+                    <img src={SA_LOGO_SRC} alt="" style={{ width:'clamp(60px,12vw,90px)', height:'auto', objectFit:'contain', opacity:0.22, transform:'rotate(-30deg)', userSelect:'none', pointerEvents:'none', filter:'saturate(0) brightness(10)' }} />
                   </div>
                   <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0)', display:'flex', alignItems:'center', justifyContent:'center', transition:'background .2s' }}
                     onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,0,0,.5)';e.currentTarget.querySelector(".gal-hover-label").style.opacity=1;}}
@@ -5910,7 +5910,7 @@ function AppInner() {
         {/* Logo mark */}
         <div style={{ marginBottom:32, display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
           {/* SA logo */}
-          <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ width:120, height:"auto", objectFit:"contain", animation:"aimIn 0.6s ease-out forwards" }} />
+          <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ width:480, height:"auto", objectFit:"contain", animation:"aimIn 0.6s ease-out forwards", filter:"drop-shadow(0 0 40px rgba(200,255,0,0.4))" }} />
         </div>
         {/* Site name */}
         <div style={{ fontSize:32, fontWeight:900, letterSpacing:".12em", color:"#fff", textTransform:"uppercase", lineHeight:1, marginBottom:4 }}>
@@ -6087,7 +6087,7 @@ function AppInner() {
             {/* Brand col */}
             <div>
               <div className="pub-footer-logo">
-                <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:52, width:"auto", objectFit:"contain" }} />
+                <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:70, width:"auto", objectFit:"contain" }} />
               </div>
               <p className="pub-footer-desc">Premier airsoft venue. Experience tactical gameplay like never before.</p>
               {(data.socialFacebook || data.socialInstagram || data.socialWhatsapp) && (
