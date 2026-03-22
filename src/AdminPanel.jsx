@@ -1435,7 +1435,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       .footer{margin-top:20px;font-size:11px;color:#aaa;text-align:right;}
       @media print{body{padding:16px;}}
     </style></head><body>
-      <img src="${SA_LOGO_SRC}" alt="Swindon Airsoft" style="height:44px;width:auto;display:block;margin-bottom:8px;" />
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" style="height:44px;width:auto;display:block;margin-bottom:8px;" />
       <h1>Player List — ${ev.title}</h1>
       <div class="meta">${new Date(ev.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${bookings.length} player(s) booked</div>
       <div class="summary">
@@ -1788,7 +1788,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <body>
                           <div class="header">
                             <div>
-                              <img src="${SA_LOGO_SRC}" alt="Swindon Airsoft" style="height:52px;width:auto;display:block;margin-bottom:4px;" />
+                              <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" style="height:52px;width:auto;display:block;margin-bottom:4px;" />
                               <div style="font-size:13px;color:#666">Field Pass / Booking Confirmation</div>
                             </div>
                             <div class="badge">CONFIRMED</div>
@@ -2954,7 +2954,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                       let sent = 0, failed = 0;
                       for (const u of selected) {
                         try {
-                          await sendEmail({ toEmail: u.email, toName: u.name, subject: bulkEmailSubject, htmlContent: `<div style="font-family:sans-serif;color:#ddd;background:#111;padding:24px;border-radius:8px"><div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #333;"><img src="${SA_LOGO_SRC}" alt="Swindon Airsoft" width="160" style="height:auto;display:block;margin:0 auto;" /></div><p style="white-space:pre-wrap">${bulkEmailBody}</p><hr style="border-color:#333;margin:20px 0"><p style="font-size:12px;color:#666">— Swindon Airsoft</p></div>` });
+                          await sendEmail({ toEmail: u.email, toName: u.name, subject: bulkEmailSubject, htmlContent: `<div style="font-family:sans-serif;color:#ddd;background:#111;padding:24px;border-radius:8px"><div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #333;"><img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto;height:auto;" /></div><p style="white-space:pre-wrap">${bulkEmailBody}</p><hr style="border-color:#333;margin:20px 0"><p style="font-size:12px;color:#666">— Swindon Airsoft</p></div>` });
                           sent++;
                         } catch { failed++; }
                       }
@@ -3055,7 +3055,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                 <body>
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #222;padding-bottom:16px;margin-bottom:24px">
                     <div>
-                      <img src="${SA_LOGO_SRC}" alt="Swindon Airsoft" style="height:60px;width:auto;display:block;margin-bottom:8px;" />
+                      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" style="height:60px;width:auto;display:block;margin-bottom:8px;" />
                       <h1 style="margin:0 0 4px;">SWINDON AIRSOFT — WAIVER</h1>
                       <h2>Player: ${u.name} · Downloaded: ${new Date().toLocaleDateString("en-GB")}</h2>
                     </div>
@@ -3689,7 +3689,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                 setContactSending(true);
                 try {
                   const htmlContent = `<div style="font-family:Arial,sans-serif;background:#0a0a0a;color:#e0e0e0;padding:32px 24px;max-width:600px;margin:0 auto">
-                    <img src="${SA_LOGO_SRC}" alt="Swindon Airsoft" style="height:52px;width:auto;display:block;margin-bottom:8px;" />
+                    <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 0 8px;height:auto;" />
                     <div style="height:2px;background:#1a2808;margin-bottom:24px"></div>
                     <div style="font-size:14px;margin-bottom:16px">Hi ${contactPlayer.name},</div>
                     <div style="font-size:14px;line-height:1.8;white-space:pre-wrap">${contactMsg.trim()}</div>
@@ -4151,7 +4151,7 @@ function AdminOrdersInline({ showToast, cu }) {
                 const addr = detail.customer_address || "No address on file";
                 const items = (Array.isArray(detail.items) ? detail.items : []).map(i => `${i.name} x${i.qty}`).join(", ");
                 const win = window.open("", "_blank", "width=400,height=300");
-                win.document.write(`<html><head><title>Postage Label</title><style>body{font-family:Arial,sans-serif;padding:24px;border:3px solid #000;margin:20px;}.to{font-size:22px;font-weight:bold;margin:16px 0 8px;}.addr{font-size:16px;line-height:1.6;white-space:pre-line;}.from{font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px;}@media print{body{margin:0;border:none;}}</style></head><body><div style="font-size:11px;color:#888;">ORDER #${detail.id?.slice(-8).toUpperCase()} · ${gmtShort(detail.created_at)}</div><div class="to">TO:</div><div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div><div class="addr">${addr}</div><img src="${SA_LOGO_SRC}" alt="Swindon Airsoft" style="height:36px;width:auto;display:block;margin-bottom:4px;" /><div class="from">FROM: Swindon Airsoft</div><script>window.onload=()=>window.print();<\/script></body></html>`);
+                win.document.write(`<html><head><title>Postage Label</title><style>body{font-family:Arial,sans-serif;padding:24px;border:3px solid #000;margin:20px;}.to{font-size:22px;font-weight:bold;margin:16px 0 8px;}.addr{font-size:16px;line-height:1.6;white-space:pre-line;}.from{font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px;}@media print{body{margin:0;border:none;}}</style></head><body><div style="font-size:11px;color:#888;">ORDER #${detail.id?.slice(-8).toUpperCase()} · ${gmtShort(detail.created_at)}</div><div class="to">TO:</div><div style="font-size:20px;font-weight:bold;">${detail.customer_name}</div><div class="addr">${addr}</div><img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" style="height:36px;width:auto;display:block;margin-bottom:4px;" /><div class="from">FROM: Swindon Airsoft</div><script>window.onload=()=>window.print();<\/script></body></html>`);
                 win.document.close();
               }}>🖨️ Print Label</button>
             </div>
@@ -7721,7 +7721,7 @@ function EmailTestCard({ showToast, sectionHead }) {
         htmlContent: `
           <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
             <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-              <img src="${SA_LOGO_SRC}" alt="Swindon Airsoft" style="width:160px;height:auto;display:block;margin:0 auto 8px;" />
+              <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 8px;height:auto;" />
               <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Email Test</div>
             </div>
             <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;text-align:center;">

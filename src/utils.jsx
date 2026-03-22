@@ -2778,7 +2778,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
       <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Booking Confirmation</div>
     </div>
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
@@ -2843,7 +2843,7 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
     <div style="height:3px;background:#c8ff00;"></div>
     <div style="background:#0d0d0d;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;padding:24px 32px;text-align:center;">
       <div style="font-size:10px;letter-spacing:.3em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⚠ MISSION REMINDER — ${urgency}</div>
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
     </div>
     <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
       <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:8px;font-weight:700;">YOUR UPCOMING GAME</div>
@@ -2912,7 +2912,7 @@ async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
     <div style="height:3px;background:#c8ff00;"></div>
     <div style="background:#0d0d0d;padding:24px 32px;text-align:center;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;">
       <div style="font-size:10px;letter-spacing:.3em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">🎯 SLOT AVAILABLE — ACT FAST</div>
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
     </div>
     <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
       <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin-bottom:20px;">Good news, ${toName}! A <strong style="color:#c8ff00;">${typeLabel}</strong> slot has just opened up for the event you were waitlisted for:</p>
@@ -2946,7 +2946,7 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
   const htmlContent = `
   <div style="background:#0a0a0a;font-family:'Barlow Condensed',Arial,sans-serif;padding:32px;max-width:560px;margin:0 auto;border:1px solid #1a1a1a;">
     <div style="border-bottom:2px solid #c8ff00;padding-bottom:16px;margin-bottom:24px;">
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
       <div style="font-size:26px;font-weight:900;color:#e8f0d8;letter-spacing:.08em;text-transform:uppercase;">Booking Cancelled</div>
     </div>
     <p style="color:#8a9a70;font-size:14px;line-height:1.6;margin:0 0 20px;">Hi ${cu.name || "Operative"},</p>
@@ -2975,7 +2975,7 @@ async function sendWelcomeEmail({ name, email }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
       <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Welcome to the Team</div>
     </div>
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;">
@@ -3017,7 +3017,7 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
       <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Order Confirmation</div>
     </div>
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
@@ -3071,7 +3071,7 @@ async function sendDispatchEmail({ toEmail, toName, order, items, tracking }) {
   const htmlContent = `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
       <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Order Dispatched</div>
     </div>
     <div style="background:#1a2808;border:1px solid #2a3a10;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
@@ -3134,7 +3134,7 @@ async function sendNewEventEmail({ ev, users }) {
     <!-- Header -->
     <div style="background:#0d0d0d;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;padding:28px 32px;text-align:center;">
       <div style="font-size:11px;letter-spacing:.3em;color:#c8ff00;text-transform:uppercase;margin-bottom:10px;font-weight:700;">◈ NEW EVENT</div>
-      <div style="font-size:28px;font-weight:900;letter-spacing:.1em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
       <div style="font-size:10px;color:#3a3a3a;letter-spacing:.25em;margin-top:6px;text-transform:uppercase;">FIELD INTELLIGENCE</div>
     </div>
 
@@ -3257,7 +3257,7 @@ async function sendAdminBookingNotification({ adminEmail, cu, ev, bookings, tota
   <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
     <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
       <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
-        <div style="font-size:22px;font-weight:900;letter-spacing:.08em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+        <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
         <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">Swindon Airsoft · Admin Alert</div>
         <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.04em;">NEW BOOKING</div>
       </div>
@@ -3297,7 +3297,7 @@ async function sendAdminOrderNotification({ adminEmail, cu, order, items }) {
   <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
     <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
       <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
-        <div style="font-size:22px;font-weight:900;letter-spacing:.08em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+        <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
         <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">Swindon Airsoft · Admin Alert</div>
         <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.04em;">NEW SHOP ORDER</div>
       </div>
@@ -3330,7 +3330,7 @@ async function sendAdminReturnNotification({ adminEmail, order }) {
   <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
     <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
       <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
-        <div style="font-size:22px;font-weight:900;letter-spacing:.08em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
+        <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
         <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">Swindon Airsoft · Admin Alert</div>
         <div style="font-size:22px;font-weight:900;color:#e0a000;letter-spacing:.04em;">&#8617; RETURN REQUESTED</div>
       </div>
