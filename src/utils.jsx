@@ -2755,20 +2755,22 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(b.id||'ticket')}&bgcolor=0a0a0a&color=c8ff00&qzone=1`;
     return `
     <div style="background:#0a1005;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:20px 24px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;">
-        <div style="flex:1;">
-          <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;font-weight:700;text-transform:uppercase;margin-bottom:6px;">▸ FIELD PASS</div>
-          <div style="font-size:24px;font-weight:900;color:#c8ff00;text-transform:uppercase;letter-spacing:.06em;line-height:1;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
-          <div style="font-size:13px;color:#8aaa60;margin-top:6px;">Qty: ${b.qty}${b.total > 0 ? ` &middot; <span style="color:#c8ff00;font-weight:700;">£${(b.total||0).toFixed(2)}</span>` : ' &middot; <span style="color:#4fc3f7;">Complimentary</span>'}</div>
-          <div style="font-size:10px;color:#2a3a10;margin-top:10px;font-family:monospace;letter-spacing:.12em;border-top:1px solid #1a2808;padding-top:8px;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="background:#0a0a0a;padding:6px;border:1px solid #c8ff00;display:inline-block;">
-            <img src="${qrUrl}" width="130" height="130" alt="QR Code" style="display:block;" />
-          </div>
-          <div style="font-size:9px;color:#3a5010;margin-top:5px;letter-spacing:.12em;text-transform:uppercase;">Scan on arrival</div>
-        </div>
-      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;font-weight:700;text-transform:uppercase;margin-bottom:6px;">▸ FIELD PASS</div>
+            <div style="font-size:24px;font-weight:900;color:#c8ff00;text-transform:uppercase;letter-spacing:.06em;line-height:1;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
+            <div style="font-size:13px;color:#8aaa60;margin-top:6px;">Qty: ${b.qty} &middot; ${b.total > 0 ? `<span style="color:#c8ff00;font-weight:700;">£${(b.total||0).toFixed(2)}</span>` : '<span style="color:#4fc3f7;">Complimentary</span>'}</div>
+            <div style="font-size:10px;color:#2a3a10;margin-top:10px;font-family:monospace;letter-spacing:.12em;border-top:1px solid #1a2808;padding-top:8px;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
+          </td>
+          <td style="vertical-align:top;text-align:right;width:160px;padding-left:16px;">
+            <div style="background:#0a0a0a;padding:6px;border:1px solid #c8ff00;display:inline-block;">
+              <img src="${qrUrl}" width="140" height="140" alt="QR Code" style="display:block;" />
+            </div>
+            <div style="font-size:9px;color:#3a5010;margin-top:5px;letter-spacing:.12em;text-transform:uppercase;text-align:center;">Scan on arrival</div>
+          </td>
+        </tr>
+      </table>
     </div>`;
   }).join("");
 
@@ -2816,9 +2818,8 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
     <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:20px 32px;">
       <div style="font-size:8px;letter-spacing:.25em;color:#2a3a10;text-transform:uppercase;margin-bottom:10px;font-weight:700;">PRE-GAME CHECKLIST</div>
       <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:5px 0;font-size:12px;color:#c8ff00;line-height:1.6;">▸ All players must check-in with a marshal on arrival</td></tr>
         <tr><td style="padding:5px 0;font-size:12px;color:#c8ff00;line-height:1.6;">▸ Show your QR code on arrival for check-in</td></tr>
-        <tr><td style="padding:5px 0;font-size:12px;color:#8aaa60;line-height:1.6;">▸ Arrive 30 minutes before start time</td></tr>
-        <tr><td style="padding:5px 0;font-size:12px;color:#8aaa60;line-height:1.6;">▸ Mandatory full-seal eye protection must be worn at all times</td></tr>
         <tr><td style="padding:5px 0;font-size:12px;color:#8aaa60;line-height:1.6;">▸ Under 18s must have signed parental consent</td></tr>
       </table>
     </div>
