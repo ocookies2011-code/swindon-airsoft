@@ -1300,7 +1300,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       });
       showToast(`📧 Ticket resent to ${player.email}`);
     } catch (e) {
-      showToast("Failed to resend ticket: " + e.message, "red");
+      console.error("resendTicket error:", e);
+      showToast("Failed to resend ticket: " + (e?.message || String(e) || "Unknown error"), "red");
     } finally {
       setResendBusy(prev => ({ ...prev, [b.id]: false }));
     }
