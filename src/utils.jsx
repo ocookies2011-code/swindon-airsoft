@@ -2753,8 +2753,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
 
   const ticketRows = bookings.map(b => {
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(b.id||'ticket')}&bgcolor=0a0a0a&color=c8ff00&qzone=1`;
-    return `
-    <div style="background:#0a1005;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:20px 24px;margin-bottom:12px;">
+    return `<div style="background:#0a1005;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:20px 24px;margin-bottom:12px;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="vertical-align:top;">
@@ -2774,14 +2773,13 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
     </div>`;
   }).join("");
 
-  const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+  const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;line-height:1;">
     <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
-    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+    <div style="background:#0d0d0d;padding:16px 24px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
       <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ BOOKING CONFIRMATION</div>
     </div>
-    <div style="background:#0a1005;border-left:1px solid #1a2808;border-right:1px solid #1a2808;padding:28px 32px;border-top:none;">
+    <div style="background:#0a1005;border-left:1px solid #1a2808;border-right:1px solid #1a2808;padding:16px 24px;border-top:none;">
       <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:8px;">MISSION BRIEFING</div>
       <div style="font-size:28px;font-weight:900;color:#e8f0d8;text-transform:uppercase;letter-spacing:.04em;line-height:1.1;margin-bottom:20px;">${ev.title}</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
@@ -2815,7 +2813,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
         <div style="font-size:26px;font-weight:900;color:#c8ff00;">£${totalPaid.toFixed(2)}</div>
       </div>` : ""}
     </div>
-    <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:20px 32px;">
+    <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:14px 24px;">
       <div style="font-size:8px;letter-spacing:.25em;color:#2a3a10;text-transform:uppercase;margin-bottom:10px;font-weight:700;">PRE-GAME CHECKLIST</div>
       <table style="width:100%;border-collapse:collapse;">
         <tr><td style="padding:5px 0;font-size:12px;color:#c8ff00;line-height:1.6;">▸ All players must check-in with a marshal on arrival</td></tr>
@@ -2823,7 +2821,7 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
         <tr><td style="padding:5px 0;font-size:12px;color:#8aaa60;line-height:1.6;">▸ Under 18s must have signed parental consent</td></tr>
       </table>
     </div>
-    <div style="background:#0a0f06;border-left:1px solid #1a2808;border-right:1px solid #1a2808;border-top:none;padding:16px 32px;text-align:center;">
+    <div style="background:#0a0f06;border-left:1px solid #1a2808;border-right:1px solid #1a2808;border-top:none;padding:12px 24px;text-align:center;">
       <a href="https://swindon-airsoft.com/#profile/bookings" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;padding:12px 30px;text-decoration:none;">VIEW MY BOOKING &rarr;</a>
     </div>
     <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
@@ -2856,14 +2854,13 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
 
   for (const user of bookedUsers) {
     if (!user.email) { failed++; continue; }
-    const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:0;font-family:Arial,sans-serif;color:#e0e0e0;">
+    const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:0;font-family:Arial,sans-serif;color:#e0e0e0;">
     <div style="height:3px;background:#c8ff00;"></div>
     <div style="background:#0d0d0d;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;padding:24px 32px;text-align:center;">
       <div style="font-size:10px;letter-spacing:.3em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⚠ MISSION REMINDER — ${urgency}</div>
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
     </div>
-    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:16px 24px;">
       <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:8px;font-weight:700;">YOUR UPCOMING GAME</div>
       <div style="font-size:28px;font-weight:900;color:#e8f0d8;text-transform:uppercase;letter-spacing:.05em;line-height:1.1;margin-bottom:20px;">${ev.title}</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
@@ -2929,14 +2926,13 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
 async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
   const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const typeLabel = ticketType === "walkOn" ? "Walk-On" : "Rental Package";
-  const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#e0e0e0;">
+  const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#e0e0e0;">
     <div style="height:3px;background:#c8ff00;"></div>
     <div style="background:#0d0d0d;padding:24px 32px;text-align:center;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;">
       <div style="font-size:10px;letter-spacing:.3em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">🎯 SLOT AVAILABLE — ACT FAST</div>
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
     </div>
-    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:16px 24px;">
       <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin-bottom:20px;">Good news, ${toName}! A <strong style="color:#c8ff00;">${typeLabel}</strong> slot has just opened up for the event you were waitlisted for:</p>
       <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:16px 20px;margin-bottom:20px;">
         <div style="font-size:22px;font-weight:900;color:#e8f0d8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${ev.title}</div>
@@ -2970,8 +2966,7 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
     ? `£${refundAmount.toFixed(2)} has been added to your game credits and will automatically apply at your next checkout.`
     : `£${refundAmount.toFixed(2)} has been refunded to your original payment method. Please allow 3–5 working days.`;
   const rentalNote = isRental ? `<p style="margin:8px 0 0;font-size:12px;color:#888;">A 10% rental preparation fee has been applied to this cancellation.</p>` : "";
-  const htmlContent = `
-  <div style="background:#0a0a0a;font-family:'Barlow Condensed',Arial,sans-serif;padding:32px;max-width:560px;margin:0 auto;border:1px solid #1a1a1a;">
+  const htmlContent = `<div style="background:#0a0a0a;font-family:'Barlow Condensed',Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #1a1a1a;">
     <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -32px 24px;"></div>
     <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
@@ -2993,7 +2988,7 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
     <div style="margin-top:28px;text-align:center;">
       <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK ANOTHER GAME →</a>
     </div>
-    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:14px 24px;text-align:center;">
       <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
       <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
@@ -3002,14 +2997,13 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
 }
 
 async function sendWelcomeEmail({ name, email }) {
-  const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+  const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;line-height:1;">
     <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
-    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+    <div style="background:#0d0d0d;padding:16px 24px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
       <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ WELCOME TO THE TEAM</div>
     </div>
-    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:16px 24px;">
       <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:10px;">OPERATIVE ONBOARDING</div>
       <div style="font-size:24px;font-weight:900;color:#c8ff00;letter-spacing:.04em;margin-bottom:16px;">Welcome, ${name}.</div>
       <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin:0 0 20px;">Your account has been created. You are now part of the Swindon Airsoft community — run by airsofters, for airsofters.</p>
@@ -3025,7 +3019,7 @@ async function sendWelcomeEmail({ name, email }) {
         <div style="font-size:13px;font-weight:700;color:#c8ff00;letter-spacing:.05em;">See you on the field, soldier. 🎯</div>
       </div>
     </div>
-    <div style="background:#0a0f06;border-left:1px solid #1a2808;border-right:1px solid #1a2808;border-top:none;padding:16px 32px;text-align:center;">
+    <div style="background:#0a0f06;border-left:1px solid #1a2808;border-right:1px solid #1a2808;border-top:none;padding:12px 24px;text-align:center;">
       <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;padding:12px 30px;text-decoration:none;">BOOK YOUR FIRST GAME &rarr;</a>
     </div>
     <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
@@ -3052,14 +3046,13 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
       <td style="padding:10px 14px;border:1px solid #1a2808;border-left:none;background:#0a1005;font-size:13px;color:#c8ff00;font-weight:700;text-align:right;">£${(Number(i.price)*i.qty).toFixed(2)}</td>
     </tr>`).join("");
 
-  const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+  const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;line-height:1;">
     <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
-    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+    <div style="background:#0d0d0d;padding:16px 24px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
       <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ ORDER CONFIRMATION</div>
     </div>
-    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:16px 24px;">
       <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:6px;">ORDER REFERENCE</div>
       <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.08em;margin-bottom:20px;">#${(order.id||"").slice(0,8).toUpperCase()}</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:4px;">
@@ -3110,14 +3103,13 @@ async function sendDispatchEmail({ toEmail, toName, order, items, tracking }) {
       <td style="padding:9px 14px;border:1px solid #1a2808;border-left:none;background:#0a1005;font-size:13px;color:#8aaa60;text-align:center;">${i.qty}</td>
     </tr>`).join("");
 
-  const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+  const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;line-height:1;">
     <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
-    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+    <div style="background:#0d0d0d;padding:16px 24px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
       <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ ORDER DISPATCHED</div>
     </div>
-    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:16px 24px;">
       <div style="background:#0d1f0a;border:1px solid #c8ff00;padding:18px 20px;text-align:center;margin-bottom:20px;">
         <div style="font-size:11px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;margin-bottom:6px;">STATUS UPDATE</div>
         <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.05em;text-transform:uppercase;">📦 Your order is on its way!</div>
@@ -3174,8 +3166,7 @@ async function sendNewEventEmail({ ev, users }) {
     Number(ev.rentalPrice) || 0
   );
 
-  const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:0;font-family:Arial,sans-serif;color:#e0e0e0;">
+  const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:0;font-family:Arial,sans-serif;color:#e0e0e0;">
 
     <!-- Top accent bar -->
     <div style="height:3px;background:#c8ff00;"></div>
@@ -3191,7 +3182,7 @@ async function sendNewEventEmail({ ev, users }) {
     ${ev.banner ? `<div style="background:#111;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;"><img src="${ev.banner}" style="width:100%;display:block;max-height:260px;object-fit:cover;opacity:.85;" alt="${ev.title}" /></div>` : ""}
 
     <!-- Event title -->
-    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:16px 24px;">
       <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:10px;font-weight:700;">MISSION BRIEFING</div>
       <div style="font-size:30px;font-weight:900;letter-spacing:.05em;color:#e8f0d8;text-transform:uppercase;line-height:1.1;margin-bottom:20px;">${ev.title}</div>
 
@@ -3304,8 +3295,7 @@ async function sendAdminBookingNotification({ adminEmail, cu, ev, bookings, tota
       <td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-weight:700;">£${Number(b.total).toFixed(2)}</td>
     </tr>`
   ).join("");
-  const htmlContent = `
-  <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
+  const htmlContent = `<div style="background:#0a0a0a;font-family:'Arial',sans-serif;">
     <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
       <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
         <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
@@ -3344,8 +3334,7 @@ async function sendAdminOrderNotification({ adminEmail, cu, order, items }) {
       <td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-weight:700;">£${Number(i.price * i.qty).toFixed(2)}</td>
     </tr>`
   ).join("");
-  const htmlContent = `
-  <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
+  const htmlContent = `<div style="background:#0a0a0a;font-family:'Arial',sans-serif;">
     <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
       <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
         <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
@@ -3377,8 +3366,7 @@ async function sendAdminOrderNotification({ adminEmail, cu, order, items }) {
 // ── Admin: Return Request Notification ───────────────────────
 async function sendAdminReturnNotification({ adminEmail, order }) {
   if (!adminEmail) return;
-  const htmlContent = `
-  <div style="background:#0a0a0a;padding:32px 16px;font-family:'Arial',sans-serif;">
+  const htmlContent = `<div style="background:#0a0a0a;font-family:'Arial',sans-serif;">
     <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
       <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
         <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
@@ -3412,7 +3400,7 @@ async function sendAdminReturnNotification({ adminEmail, order }) {
 async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejectionReason }) {
   const orderRef = (order.id || "").slice(0, 8).toUpperCase();
   const htmlContent = approved ? `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#fff;line-height:1;">
     <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -16px 24px;"></div>
     <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
@@ -3436,12 +3424,12 @@ async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejec
     <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.6;">
       Once we receive and inspect your return, a refund will be processed to your original payment method within 5–10 business days. Deductions may be made for items that are not in original unused condition or are missing packaging.
     </div>
-    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:14px 24px;text-align:center;">
       <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
       <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
   </div>` : `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#fff;line-height:1;">
     <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -16px 24px;"></div>
     <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
@@ -3459,7 +3447,7 @@ async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejec
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 20px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.7;">
       If you believe this decision is incorrect or would like to discuss further, please reply to this email or contact us through the website — we are happy to help.
     </div>
-    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:14px 24px;text-align:center;">
       <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
       <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
