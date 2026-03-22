@@ -2809,9 +2809,9 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
         <li>Under 18s must have signed parental consent</li>
       </ul>
     </div>
-    <div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;">
-      <div style="font-size:14px;font-weight:900;letter-spacing:.08em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
-      <div style="font-size:10px;color:#444;margin-top:3px;letter-spacing:.1em;">swindonairsoft.co.uk</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
   </div>`;
 
@@ -2887,7 +2887,7 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
         <div style="font-size:12px;color:#8a7040;line-height:1.7;">Your rental kit will be prepared and waiting. Please collect from the marshal station on arrival. Do not modify or disassemble any equipment.</div>
       </div>` : ""}
       <div style="text-align:center;margin-top:8px;">
-        <a href="https://swindonairsoft.co.uk/#profile/bookings" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:12px 32px;text-decoration:none;">VIEW MY BOOKING →</a>
+        <a href="https://swindon-airsoft.com/#profile/bookings" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:12px 32px;text-decoration:none;">VIEW MY BOOKING →</a>
       </div>
     </div>
     <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:16px 32px;font-size:11px;color:#2a2a2a;text-align:center;">
@@ -2927,7 +2927,7 @@ async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
         <div style="font-size:11px;color:#8aaa60;margin-top:4px;">You will not be notified again if this slot fills up.</div>
       </div>
       <div style="text-align:center;">
-        <a href="https://swindonairsoft.co.uk/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK NOW →</a>
+        <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK NOW →</a>
       </div>
     </div>
     <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:14px 32px;font-size:11px;color:#2a2a2a;text-align:center;">
@@ -2962,10 +2962,11 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
     <p style="color:#8a9a70;font-size:13px;line-height:1.6;margin:0 0 8px;">${refundLine}</p>
     ${rentalNote}
     <div style="margin-top:28px;text-align:center;">
-      <a href="https://swindonairsoft.co.uk/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK ANOTHER GAME →</a>
+      <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK ANOTHER GAME →</a>
     </div>
-    <div style="margin-top:24px;padding-top:16px;border-top:1px solid #1a1a1a;font-size:11px;color:#2a2a2a;text-align:center;">
-      Questions? Contact us at swindonairsoft.co.uk · Swindon Airsoft
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
   </div>`;
   await sendEmail({ toEmail: cu.email, toName: cu.name, subject: `Booking Cancelled — ${eventTitle}`, htmlContent });
@@ -2991,9 +2992,9 @@ async function sendWelcomeEmail({ name, email }) {
     <div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;text-align:center;">
       <div style="font-size:14px;font-weight:700;color:#fff;">See you on the field, soldier. 🎯</div>
     </div>
-    <div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;">
-      <div style="font-size:14px;font-weight:900;letter-spacing:.08em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
-      <div style="font-size:10px;color:#444;margin-top:3px;letter-spacing:.1em;">swindonairsoft.co.uk</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
   </div>`;
 
@@ -3046,9 +3047,9 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
     <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
       We'll notify you when your order is dispatched. Allow 3–5 working days for delivery.
     </div>
-    <div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;">
-      <div style="font-size:14px;font-weight:900;letter-spacing:.08em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
-      <div style="font-size:10px;color:#444;margin-top:3px;letter-spacing:.1em;">swindonairsoft.co.uk</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
   </div>`;
 
@@ -3100,9 +3101,9 @@ async function sendDispatchEmail({ toEmail, toName, order, items, tracking }) {
     <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
       Allow 3–5 working days for delivery. If you have any questions reply to this email or contact us through the website.
     </div>
-    <div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;">
-      <div style="font-size:14px;font-weight:900;letter-spacing:.08em;color:#fff;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
-      <div style="font-size:10px;color:#444;margin-top:3px;letter-spacing:.1em;">swindonairsoft.co.uk</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
   </div>`;
 
@@ -3197,7 +3198,7 @@ async function sendNewEventEmail({ ev, users }) {
 
       <!-- CTA -->
       <div style="text-align:center;margin-top:8px;">
-        <a href="https://swindonairsoft.co.uk/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK YOUR SLOT →</a>
+        <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK YOUR SLOT →</a>
       </div>
     </div>
 
@@ -3213,8 +3214,10 @@ async function sendNewEventEmail({ ev, users }) {
     <!-- Bottom bar -->
     <div style="height:1px;background:#1a1a1a;"></div>
     <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:16px 32px;text-align:center;">
-      <div style="font-size:14px;font-weight:900;letter-spacing:.08em;color:#555;font-family:Arial,sans-serif;">SWINDON <span style="color:#3a5010;">AIRSOFT</span></div>
-      <div style="font-size:9px;color:#2a2a2a;letter-spacing:.2em;text-transform:uppercase;margin-top:2px;">swindonairsoft.co.uk</div>
+      <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
       <div style="font-size:9px;color:#1e1e1e;margin-top:4px;letter-spacing:.1em;">You're receiving this because you have an account. Log in to manage your preferences.</div>
     </div>
     <div style="height:3px;background:#1a2808;"></div>
@@ -3274,9 +3277,9 @@ async function sendAdminBookingNotification({ adminEmail, cu, ev, bookings, tota
           ${rows}
         </table>
       </div>
-      <div style="padding:12px 24px;border-top:1px solid #1a2808;text-align:center;">
-      <div style="font-size:13px;font-weight:900;letter-spacing:.08em;color:#3a5010;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
-      <div style="font-size:9px;color:#2a3a10;letter-spacing:.15em;text-transform:uppercase;margin-top:2px;">Admin · Auto-generated notification</div>
+      <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:12px 24px;text-align:center;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:9px;color:#3a5010;letter-spacing:.15em;text-transform:uppercase;margin-top:3px;">Admin · Auto-generated notification</div>
     </div>
     </div>
   </div>`;
@@ -3314,9 +3317,9 @@ async function sendAdminOrderNotification({ adminEmail, cu, order, items }) {
           ${rows}
         </table>
       </div>
-      <div style="padding:12px 24px;border-top:1px solid #1a2808;text-align:center;">
-      <div style="font-size:13px;font-weight:900;letter-spacing:.08em;color:#3a5010;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
-      <div style="font-size:9px;color:#2a3a10;letter-spacing:.15em;text-transform:uppercase;margin-top:2px;">Admin · Auto-generated notification</div>
+      <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:12px 24px;text-align:center;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:9px;color:#3a5010;letter-spacing:.15em;text-transform:uppercase;margin-top:3px;">Admin · Auto-generated notification</div>
     </div>
     </div>
   </div>`;
@@ -3348,9 +3351,9 @@ async function sendAdminReturnNotification({ adminEmail, order }) {
           Log in to the admin panel &#8594; Shop &#8594; Orders to approve or reject this return request.
         </div>
       </div>
-      <div style="padding:12px 24px;border-top:1px solid #1a2808;text-align:center;">
-      <div style="font-size:13px;font-weight:900;letter-spacing:.08em;color:#3a5010;font-family:Arial,sans-serif;">SWINDON <span style="color:#c8ff00;">AIRSOFT</span></div>
-      <div style="font-size:9px;color:#2a3a10;letter-spacing:.15em;text-transform:uppercase;margin-top:2px;">Admin · Auto-generated notification</div>
+      <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:12px 24px;text-align:center;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:9px;color:#3a5010;letter-spacing:.15em;text-transform:uppercase;margin-top:3px;">Admin · Auto-generated notification</div>
     </div>
     </div>
   </div>`;
@@ -3384,7 +3387,10 @@ async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejec
     <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.6;">
       Once we receive and inspect your return, a refund will be processed to your original payment method within 5–10 business days. Deductions may be made for items that are not in original unused condition or are missing packaging.
     </div>
-    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft — reply to this email or use the Contact page if you have questions.</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
   </div>` : `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
@@ -3403,7 +3409,10 @@ async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejec
     <div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 20px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.7;">
       If you believe this decision is incorrect or would like to discuss further, please reply to this email or contact us through the website — we are happy to help.
     </div>
-    <div style="text-align:center;font-size:11px;color:#444;padding-top:16px;border-top:1px solid #1a1a1a;">Swindon Airsoft — reply to this email or use the Contact page if you have questions.</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
   </div>`;
   await sendEmail({
     toEmail,
