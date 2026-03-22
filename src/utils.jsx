@@ -2752,67 +2752,84 @@ async function sendTicketEmail({ cu, ev, bookings, extras }) {
   const totalPaid = bookings.reduce((s, b) => s + (b.total || 0), 0);
 
   const ticketRows = bookings.map(b => {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(b.id||'ticket')}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(b.id||'ticket')}&bgcolor=0a0a0a&color=c8ff00&qzone=1`;
     return `
-    <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:20px 24px;margin-bottom:12px;">
+    <div style="background:#0a1005;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:20px 24px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;">
-        <div>
-          <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">TICKET</div>
-          <div style="font-size:20px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.05em;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
-          <div style="font-size:13px;color:#aaa;margin-top:4px;">Qty: ${b.qty}${b.total > 0 ? ` · £${(b.total||0).toFixed(2)}` : ' · Complimentary'}</div>
-          <div style="font-size:10px;color:#555;margin-top:8px;font-family:monospace;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
+        <div style="flex:1;">
+          <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;font-weight:700;text-transform:uppercase;margin-bottom:6px;">▸ FIELD PASS</div>
+          <div style="font-size:24px;font-weight:900;color:#c8ff00;text-transform:uppercase;letter-spacing:.06em;line-height:1;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div>
+          <div style="font-size:13px;color:#8aaa60;margin-top:6px;">Qty: ${b.qty}${b.total > 0 ? ` &middot; <span style="color:#c8ff00;font-weight:700;">£${(b.total||0).toFixed(2)}</span>` : ' &middot; <span style="color:#4fc3f7;">Complimentary</span>'}</div>
+          <div style="font-size:10px;color:#2a3a10;margin-top:10px;font-family:monospace;letter-spacing:.12em;border-top:1px solid #1a2808;padding-top:8px;">REF: ${(b.id||"").slice(0,8).toUpperCase()}</div>
         </div>
         <div style="text-align:center;">
-          <div style="background:#fff;padding:8px;border-radius:4px;display:inline-block;">
-            <img src="${qrUrl}" width="120" height="120" alt="QR Code" />
+          <div style="background:#0a0a0a;padding:6px;border:1px solid #c8ff00;display:inline-block;">
+            <img src="${qrUrl}" width="130" height="130" alt="QR Code" style="display:block;" />
           </div>
-          <div style="font-size:10px;color:#888;margin-top:4px;">Show on arrival</div>
+          <div style="font-size:9px;color:#3a5010;margin-top:5px;letter-spacing:.12em;text-transform:uppercase;">Scan on arrival</div>
         </div>
-      </div>
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #333;font-size:12px;color:#888;">
-        📱 <strong style="color:#ccc;">To save this ticket:</strong> Screenshot this email, or use your email app's print/save option. Your QR code above is all you need for check-in.
       </div>
     </div>`;
   }).join("");
 
   const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
-      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Booking Confirmation</div>
+  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
+    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ BOOKING CONFIRMATION</div>
     </div>
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">EVENT</div>
-      <div style="font-size:22px;font-weight:900;color:#fff;">${ev.title}</div>
-      <div style="font-size:14px;color:#aaa;margin-top:6px;">📅 ${dateStr}</div>
-      <div style="font-size:14px;color:#aaa;margin-top:2px;">🕐 ${ev.time || ""} GMT</div>
-      <div style="font-size:14px;color:#aaa;margin-top:2px;">📍 ${ev.location || ""}</div>
-    </div>
-    <div style="margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:10px;">YOUR TICKETS</div>
+    <div style="background:#0a1005;border-left:1px solid #1a2808;border-right:1px solid #1a2808;padding:28px 32px;border-top:none;">
+      <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:8px;">MISSION BRIEFING</div>
+      <div style="font-size:28px;font-weight:900;color:#e8f0d8;text-transform:uppercase;letter-spacing:.04em;line-height:1.1;margin-bottom:20px;">${ev.title}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr>
+          <td style="padding:10px 14px;background:#080e04;border:1px solid #1a2808;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">DATE</div>
+            <div style="font-size:13px;font-weight:700;color:#c8ff00;">${dateStr}</div>
+          </td>
+          <td style="padding:10px 14px;background:#080e04;border:1px solid #1a2808;border-left:none;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">TIME</div>
+            <div style="font-size:13px;font-weight:700;color:#4fc3f7;">${ev.time || "TBC"} GMT</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;background:#080e04;border:1px solid #1a2808;border-top:none;vertical-align:top;" colspan="2">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">LOCATION</div>
+            <div style="font-size:13px;font-weight:700;color:#ce93d8;">${ev.location || "Swindon Airsoft Field"}</div>
+          </td>
+        </tr>
+      </table>
+      <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:10px;">YOUR FIELD PASSES</div>
       ${ticketRows}
+      ${extrasText !== "None" ? `
+      <div style="background:#080e04;border:1px solid #1a2808;border-left:3px solid #4fc3f7;padding:14px 18px;margin-top:12px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:6px;font-weight:700;">GAME DAY EXTRAS</div>
+        <div style="font-size:13px;color:#8aaa60;">${extrasText}</div>
+      </div>` : ""}
+      ${totalPaid > 0 ? `
+      <div style="background:#0d1f0a;border:1px solid #c8ff00;padding:14px 18px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:10px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;font-weight:700;">Total Paid</div>
+        <div style="font-size:26px;font-weight:900;color:#c8ff00;">£${totalPaid.toFixed(2)}</div>
+      </div>` : ""}
     </div>
-    ${extrasText !== "None" ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:6px;">GAME DAY EXTRAS</div>
-      <div style="font-size:14px;color:#ddd;">${extrasText}</div>
-    </div>` : ""}
-    ${totalPaid > 0 ? `<div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.08em;">Total Paid</div>
-      <div style="font-size:24px;font-weight:900;color:#fff;">£${totalPaid.toFixed(2)}</div>
-    </div>` : ""}
-    <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:16px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:8px;">IMPORTANT</div>
-      <ul style="font-size:13px;color:#ccc;padding-left:18px;line-height:2;">
-        <li>Show your QR code on arrival for check-in</li>
-        <li>Arrive 30 minutes before start time</li>
-        <li>Mandatory eye protection must be worn at all times</li>
-        <li>Under 18s must have signed parental consent</li>
-      </ul>
+    <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:20px 32px;">
+      <div style="font-size:8px;letter-spacing:.25em;color:#2a3a10;text-transform:uppercase;margin-bottom:10px;font-weight:700;">PRE-GAME CHECKLIST</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:5px 0;font-size:12px;color:#c8ff00;line-height:1.6;">▸ Show your QR code on arrival for check-in</td></tr>
+        <tr><td style="padding:5px 0;font-size:12px;color:#8aaa60;line-height:1.6;">▸ Arrive 30 minutes before start time</td></tr>
+        <tr><td style="padding:5px 0;font-size:12px;color:#8aaa60;line-height:1.6;">▸ Mandatory full-seal eye protection must be worn at all times</td></tr>
+        <tr><td style="padding:5px 0;font-size:12px;color:#8aaa60;line-height:1.6;">▸ Under 18s must have signed parental consent</td></tr>
+      </table>
     </div>
-    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
-      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
-      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    <div style="background:#0a0f06;border-left:1px solid #1a2808;border-right:1px solid #1a2808;border-top:none;padding:16px 32px;text-align:center;">
+      <a href="https://swindon-airsoft.com/#profile/bookings" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;padding:12px 30px;text-decoration:none;">VIEW MY BOOKING &rarr;</a>
     </div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
   </div>`;
 
   await sendEmail({
@@ -2890,10 +2907,14 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
         <a href="https://swindon-airsoft.com/#profile/bookings" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:12px 32px;text-decoration:none;">VIEW MY BOOKING →</a>
       </div>
     </div>
-    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:16px 32px;font-size:11px;color:#2a2a2a;text-align:center;">
-      Need to cancel? Log in and visit Profile → Bookings. Cancellations within 48h receive game credits. · Swindon Airsoft
+    <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:14px 32px;font-size:11px;color:#2a3a10;text-align:center;letter-spacing:.08em;">
+      Need to cancel? Log in and visit Profile &rarr; Bookings. Cancellations within 48h receive game credits.
     </div>
-    <div style="height:1px;background:#1a1a1a;"></div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
   </div>`;
     try {
       await sendEmail({ toEmail: user.email, toName: user.name || "Player", subject: `⚠ Reminder: ${ev.title} is ${urgency.toLowerCase()}`, htmlContent });
@@ -2930,9 +2951,14 @@ async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
         <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK NOW →</a>
       </div>
     </div>
-    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:14px 32px;font-size:11px;color:#2a2a2a;text-align:center;">
-      You received this because you joined the waitlist for this event. · Swindon Airsoft
+    <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:14px 32px;font-size:11px;color:#2a3a10;text-align:center;letter-spacing:.08em;">
+      You received this because you joined the waitlist for this event.
     </div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
   </div>`;
   await sendEmail({ toEmail, toName, subject: `🎯 A slot just opened — ${ev.title}`, htmlContent });
 }
@@ -2945,9 +2971,11 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
   const rentalNote = isRental ? `<p style="margin:8px 0 0;font-size:12px;color:#888;">A 10% rental preparation fee has been applied to this cancellation.</p>` : "";
   const htmlContent = `
   <div style="background:#0a0a0a;font-family:'Barlow Condensed',Arial,sans-serif;padding:32px;max-width:560px;margin:0 auto;border:1px solid #1a1a1a;">
-    <div style="border-bottom:2px solid #c8ff00;padding-bottom:16px;margin-bottom:24px;">
-      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
-      <div style="font-size:26px;font-weight:900;color:#e8f0d8;letter-spacing:.08em;text-transform:uppercase;">Booking Cancelled</div>
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -32px 24px;"></div>
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:6px;">◈ BOOKING UPDATE</div>
+      <div style="font-size:24px;font-weight:900;color:#e8f0d8;letter-spacing:.06em;text-transform:uppercase;">Booking Cancelled</div>
     </div>
     <p style="color:#8a9a70;font-size:14px;line-height:1.6;margin:0 0 20px;">Hi ${cu.name || "Operative"},</p>
     <p style="color:#8a9a70;font-size:14px;line-height:1.6;margin:0 0 24px;">Your booking has been successfully cancelled. Here's a summary:</p>
@@ -2974,28 +3002,36 @@ async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, re
 
 async function sendWelcomeEmail({ name, email }) {
   const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
-      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Welcome to the Team</div>
+  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
+    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ WELCOME TO THE TEAM</div>
     </div>
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;">
-      <div style="font-size:22px;font-weight:900;margin-bottom:12px;">Hey ${name}! 👋</div>
-      <p style="font-size:14px;color:#ccc;line-height:1.8;">Your account has been created. You're now part of the Swindon Airsoft community.</p>
-      <p style="font-size:14px;color:#ccc;line-height:1.8;margin-top:8px;">Here's what to do next:</p>
-      <ul style="font-size:13px;color:#ccc;padding-left:18px;line-height:2.2;margin-top:8px;">
-        <li>Sign your liability waiver in your profile</li>
-        <li>Browse upcoming events and book your slot</li>
-        <li>Attend 3 games to qualify for VIP membership</li>
-      </ul>
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+      <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:10px;">OPERATIVE ONBOARDING</div>
+      <div style="font-size:24px;font-weight:900;color:#c8ff00;letter-spacing:.04em;margin-bottom:16px;">Welcome, ${name}.</div>
+      <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin:0 0 20px;">Your account has been created. You are now part of the Swindon Airsoft community — run by airsofters, for airsofters.</p>
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:16px 20px;margin-bottom:20px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:10px;font-weight:700;">NEXT STEPS</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:6px 0;font-size:13px;color:#c8ff00;line-height:1.6;">▸ Sign your liability waiver in your profile</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#8aaa60;line-height:1.6;">▸ Browse upcoming events and book your slot</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#8aaa60;line-height:1.6;">▸ Attend 3 games to qualify for VIP membership</td></tr>
+        </table>
+      </div>
+      <div style="background:#0d1f0a;border:1px solid #c8ff00;padding:16px 20px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:#c8ff00;letter-spacing:.05em;">See you on the field, soldier. 🎯</div>
+      </div>
     </div>
-    <div style="background:#e05c00;border-radius:8px;padding:16px 24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:14px;font-weight:700;color:#fff;">See you on the field, soldier. 🎯</div>
+    <div style="background:#0a0f06;border-left:1px solid #1a2808;border-right:1px solid #1a2808;border-top:none;padding:16px 32px;text-align:center;">
+      <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;padding:12px 30px;text-decoration:none;">BOOK YOUR FIRST GAME &rarr;</a>
     </div>
-    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
-      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
-      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
   </div>`;
 
   await sendEmail({
@@ -3010,47 +3046,51 @@ async function sendWelcomeEmail({ name, email }) {
 async function sendOrderEmail({ cu, order, items, postageName }) {
   const itemRows = (items || []).map(i => `
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#ddd;">${i.name}${i.variant ? ` — ${i.variant}` : ""}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#aaa;text-align:center;">${i.qty}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#e05c00;text-align:right;">£${(Number(i.price)*i.qty).toFixed(2)}</td>
+      <td style="padding:10px 14px;border:1px solid #1a2808;background:#0a1005;font-size:13px;color:#e8f0d8;">${i.name}${i.variant ? ` &mdash; ${i.variant}` : ""}</td>
+      <td style="padding:10px 14px;border:1px solid #1a2808;border-left:none;background:#0a1005;font-size:13px;color:#8aaa60;text-align:center;">${i.qty}</td>
+      <td style="padding:10px 14px;border:1px solid #1a2808;border-left:none;background:#0a1005;font-size:13px;color:#c8ff00;font-weight:700;text-align:right;">£${(Number(i.price)*i.qty).toFixed(2)}</td>
     </tr>`).join("");
 
   const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
-      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Order Confirmation</div>
+  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
+    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ ORDER CONFIRMATION</div>
     </div>
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">ORDER #${(order.id||"").slice(0,8).toUpperCase()}</div>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead><tr>
-          <th style="text-align:left;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Item</th>
-          <th style="text-align:center;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Qty</th>
-          <th style="text-align:right;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Total</th>
-        </tr></thead>
-        <tbody>${itemRows}</tbody>
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+      <div style="font-size:8px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:6px;">ORDER REFERENCE</div>
+      <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.08em;margin-bottom:20px;">#${(order.id||"").slice(0,8).toUpperCase()}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:4px;">
+        <tr style="background:#060d02;">
+          <th style="padding:8px 14px;text-align:left;font-size:8px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;border:1px solid #1a2808;">Item</th>
+          <th style="padding:8px 14px;text-align:center;font-size:8px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;border:1px solid #1a2808;border-left:none;">Qty</th>
+          <th style="padding:8px 14px;text-align:right;font-size:8px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;border:1px solid #1a2808;border-left:none;">Total</th>
+        </tr>
+        ${itemRows}
+        <tr>
+          <td colspan="2" style="padding:10px 14px;border:1px solid #1a2808;border-top:none;background:#060d02;font-size:12px;color:#3a5010;">Postage (${postageName || "Standard"})</td>
+          <td style="padding:10px 14px;border:1px solid #1a2808;border-top:none;border-left:none;background:#060d02;font-size:12px;color:#8aaa60;text-align:right;">£${Number(order.postage||0).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding:12px 14px;border:1px solid #1a2808;border-top:none;background:#0d1f0a;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8aaa60;">Total Paid</td>
+          <td style="padding:12px 14px;border:1px solid #1a2808;border-top:none;border-left:none;background:#0d1f0a;font-size:20px;font-weight:900;color:#c8ff00;text-align:right;">£${Number(order.total||0).toFixed(2)}</td>
+        </tr>
       </table>
-      <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:13px;color:#aaa;border-bottom:1px solid #222;">
-        <span>Postage (${postageName || "Standard"})</span>
-        <span>£${Number(order.postage||0).toFixed(2)}</span>
+      ${order.customerAddress ? `
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #4fc3f7;padding:14px 18px;margin-top:16px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:6px;font-weight:700;">SHIPPING TO</div>
+        <div style="font-size:13px;color:#8aaa60;white-space:pre-line;">${order.customerAddress}</div>
+      </div>` : ""}
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:14px 18px;margin-top:16px;font-size:12px;color:#3a5010;line-height:1.7;">
+        ▸ We'll notify you when your order is dispatched. Allow 3&ndash;5 working days for delivery.
       </div>
-      <div style="padding:12px;display:flex;justify-content:space-between;font-size:16px;font-weight:900;color:#fff;">
-        <span>TOTAL PAID</span>
-        <span style="color:#e05c00;">£${Number(order.total||0).toFixed(2)}</span>
-      </div>
     </div>
-    ${order.customerAddress ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">SHIPPING TO</div>
-      <div style="font-size:13px;color:#ccc;white-space:pre-line;">${order.customerAddress}</div>
-    </div>` : ""}
-    <div style="background:#111;border:1px solid #333;border-left:3px solid #e05c00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
-      We'll notify you when your order is dispatched. Allow 3–5 working days for delivery.
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
-    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
-      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
-      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
-    </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
   </div>`;
 
   await sendEmail({
@@ -3065,46 +3105,53 @@ async function sendOrderEmail({ cu, order, items, postageName }) {
 async function sendDispatchEmail({ toEmail, toName, order, items, tracking }) {
   const itemRows = (items || []).map(i => `
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#ddd;">${i.name}${i.variant ? ` — ${i.variant}` : ""}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #222;font-size:13px;color:#aaa;text-align:center;">${i.qty}</td>
+      <td style="padding:9px 14px;border:1px solid #1a2808;background:#0a1005;font-size:13px;color:#e8f0d8;">${i.name}${i.variant ? ` &mdash; ${i.variant}` : ""}</td>
+      <td style="padding:9px 14px;border:1px solid #1a2808;border-left:none;background:#0a1005;font-size:13px;color:#8aaa60;text-align:center;">${i.qty}</td>
     </tr>`).join("");
 
   const htmlContent = `
-  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
-      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:12px;text-transform:uppercase;">Order Dispatched</div>
+  <div style="max-width:600px;margin:0 auto;background:#080e04;font-family:Arial,sans-serif;color:#e8f0d8;">
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);"></div>
+    <div style="background:#0d0d0d;padding:28px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ ORDER DISPATCHED</div>
     </div>
-    <div style="background:#1a2808;border:1px solid #2a3a10;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:36px;margin-bottom:8px;">📦</div>
-      <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.08em;text-transform:uppercase;">Your order is on its way!</div>
-      <div style="font-size:13px;color:#8aaa60;margin-top:8px;">Order #${(order.id||"").slice(0,8).toUpperCase()}</div>
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:28px 32px;">
+      <div style="background:#0d1f0a;border:1px solid #c8ff00;padding:18px 20px;text-align:center;margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;margin-bottom:6px;">STATUS UPDATE</div>
+        <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.05em;text-transform:uppercase;">📦 Your order is on its way!</div>
+        <div style="font-size:12px;color:#3a5010;margin-top:6px;font-family:monospace;letter-spacing:.12em;">REF: #${(order.id||"").slice(0,8).toUpperCase()}</div>
+      </div>
+      ${itemRows ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;font-weight:700;margin-bottom:8px;">ITEMS DISPATCHED</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr style="background:#060d02;">
+            <th style="padding:8px 14px;text-align:left;font-size:8px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;border:1px solid #1a2808;">Item</th>
+            <th style="padding:8px 14px;text-align:center;font-size:8px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;border:1px solid #1a2808;border-left:none;">Qty</th>
+          </tr>
+          ${itemRows}
+        </table>
+      </div>` : ""}
+      ${order.customerAddress ? `
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #4fc3f7;padding:14px 18px;margin-bottom:16px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:6px;font-weight:700;">SHIPPING TO</div>
+        <div style="font-size:13px;color:#8aaa60;white-space:pre-line;">${order.customerAddress}</div>
+      </div>` : ""}
+      ${tracking ? `
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:14px 18px;margin-bottom:16px;">
+        <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:6px;font-weight:700;">📮 TRACKING NUMBER</div>
+        <div style="font-size:20px;font-weight:900;color:#c8ff00;font-family:monospace;letter-spacing:.1em;">${tracking}</div>
+      </div>` : ""}
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #8aaa60;padding:14px 18px;font-size:12px;color:#3a5010;line-height:1.7;">
+        ▸ Allow 3&ndash;5 working days for delivery. Any questions? Reply to this email or visit the website.
+      </div>
     </div>
-    ${itemRows ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:12px;">ITEMS DISPATCHED</div>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead><tr>
-          <th style="text-align:left;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Item</th>
-          <th style="text-align:center;font-size:11px;letter-spacing:.1em;color:#666;padding:8px 12px;border-bottom:1px solid #333;text-transform:uppercase;">Qty</th>
-        </tr></thead>
-        <tbody>${itemRows}</tbody>
-      </table>
-    </div>` : ""}
-    ${order.customerAddress ? `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#e05c00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">SHIPPING TO</div>
-      <div style="font-size:13px;color:#ccc;white-space:pre-line;">${order.customerAddress}</div>
-    </div>` : ""}
-    ${tracking ? `<div style="background:#1a2808;border:1px solid #2a3a10;border-radius:8px;padding:16px 24px;margin-bottom:20px;">
-      <div style="font-size:11px;letter-spacing:.15em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">📮 TRACKING NUMBER</div>
-      <div style="font-size:18px;font-weight:900;color:#fff;font-family:monospace;letter-spacing:.08em;">${tracking}</div>
-    </div>` : ""}
-    <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:13px;color:#aaa;">
-      Allow 3–5 working days for delivery. If you have any questions reply to this email or contact us through the website.
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
-    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
-      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
-      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
-    </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
   </div>`;
 
   await sendEmail({
@@ -3213,14 +3260,14 @@ async function sendNewEventEmail({ ev, users }) {
 
     <!-- Bottom bar -->
     <div style="height:1px;background:#1a1a1a;"></div>
-    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;padding:16px 32px;text-align:center;">
-      <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:16px 24px;text-align:center;margin-top:8px;">
-      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
-      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:14px 32px;text-align:center;">
+      <div style="font-size:9px;color:#2a3a10;letter-spacing:.1em;">You're receiving this because you have a Swindon Airsoft account.</div>
     </div>
-      <div style="font-size:9px;color:#1e1e1e;margin-top:4px;letter-spacing:.1em;">You're receiving this because you have an account. Log in to manage your preferences.</div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
     </div>
-    <div style="height:3px;background:#1a2808;"></div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
   </div>`;
 
   const recipients = (users || []).filter(u => u.email && u.role !== "admin");
@@ -3365,9 +3412,10 @@ async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejec
   const orderRef = (order.id || "").slice(0, 8).toUpperCase();
   const htmlContent = approved ? `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
-      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Return Approved</div>
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -16px 24px;"></div>
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ RETURN APPROVED</div>
     </div>
     <div style="background:#0d1f0a;border:1px solid #1a3a10;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
       <div style="font-size:36px;margin-bottom:8px;">&#10003;</div>
@@ -3393,9 +3441,10 @@ async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejec
     </div>
   </div>` : `
   <div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:32px 16px;font-family:Arial,sans-serif;color:#fff;">
-    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;">
-      <div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:#fff;">SWINDON <span style="color:#e05c00;">AIRSOFT</span></div>
-      <div style="font-size:11px;color:#666;letter-spacing:.2em;margin-top:4px;text-transform:uppercase;">Return Update</div>
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -16px 24px;"></div>
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">◈ RETURN UPDATE</div>
     </div>
     <div style="background:#1a0808;border:1px solid #3a1010;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
       <div style="font-size:36px;margin-bottom:8px;">&#10007;</div>
