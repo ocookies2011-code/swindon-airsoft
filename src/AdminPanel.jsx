@@ -9124,6 +9124,11 @@ function AdminCash({ data, cu, showToast }) {
       const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
       const customerName = player ? player.name : (manual.name || "Walk-in");
       const note = `Swindon Airsoft — ${customerName} — ${items.map(i => `${i.name} x${i.qty}`).join(", ")}`;
+      console.log("=== Terminal Debug ===");
+      console.log("locationId:", locationId);
+      console.log("deviceId:", terminalDeviceId);
+      console.log("env:", squareEnv);
+      console.log("amount (pence):", amountPence);
       const result = await terminalInvoke({
         action: "create",
         deviceId: terminalDeviceId,
