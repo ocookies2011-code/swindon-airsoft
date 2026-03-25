@@ -71,6 +71,10 @@ async function loadSquareConfig() {
   _squareConfigLoaded = true;
 }
 
+function resetSquareConfig() {
+  _squareConfigLoaded = false;
+}
+
 function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
   const [sqReady, setSqReady] = useState(false);
   const [sqError, setSqError] = useState(null);
@@ -3568,7 +3572,7 @@ export {
   gmtNow, gmtDate, gmtShort, fmtDate, uid,
   CSS,
   // Square
-  loadSquareConfig, SquareCheckoutButton,
+  loadSquareConfig, resetSquareConfig, SquareCheckoutButton,
   ShopifyCheckoutButton, loadShopifyConfig,
   _squareAppId, _squareLocationId, _squareEnv,
   // Tracking

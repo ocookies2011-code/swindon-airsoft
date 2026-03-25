@@ -20,7 +20,7 @@ import {
   sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
   sendReturnDecisionEmail,
   WaiverModal,
-  RankInsignia, DesignationInsignia,
+  RankInsignia, DesignationInsignia, resetSquareConfig,
 } from "./utils";
 
 function AdminDiscountCodes({ data, showToast, cu }) {
@@ -8423,7 +8423,7 @@ function AdminSettings({ showToast, cu }) {
       await api.settings.set("square_env", squareEnv);
       await api.settings.set("square_terminal_device_id", squareTerminalDeviceId.trim());
       // Access token is stored in Supabase Edge Function secrets, not the DB
-      _squareConfigLoaded = false;
+      resetSquareConfig();
       showToast("✅ Square settings saved! Changes take effect on next checkout.");
       logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Square settings saved", detail: `env: ${squareEnv}` });
     } catch (e) {
