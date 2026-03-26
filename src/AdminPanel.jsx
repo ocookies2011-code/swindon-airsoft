@@ -1053,9 +1053,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         BLABELS
       );
       const transferNote = editBooking.newEventId
-        ? \` | Event transferred from "\${editBooking._orig.eventTitle}" to "\${data.events.find(e => e.id === editBooking.newEventId)?.title || editBooking.newEventId}"\`
+        ? ` | Event transferred from "${editBooking._orig.eventTitle}" to "${data.events.find(e => e.id === editBooking.newEventId)?.title || editBooking.newEventId}"`
         : "";
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking updated", detail: \`\${editBooking.userName} @ \${editBooking.eventTitle}\${bDiff ? \` | \${bDiff}\` : ""}\${transferNote || (!bDiff ? " (no field changes)" : "")}\` });
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking updated", detail: `${editBooking.userName} @ ${editBooking.eventTitle}${bDiff ? ` | ${bDiff}` : ""}${transferNote || (!bDiff ? " (no field changes)" : "")}` });
       setEditBooking(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     finally { setBookingBusy(false); }
@@ -1069,7 +1069,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("Booking deleted!");
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking deleted", detail: \`Booking ID: \${delConfirm.id} — \${delConfirm.userName || ""}\` });
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking deleted", detail: `Booking ID: ${delConfirm.id} — ${delConfirm.userName || ""}` });
       setDelConfirm(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     finally { setBookingBusy(false); }
@@ -1093,8 +1093,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       }).eq("id", booking.id);
       const evList = await api.events.getAll();
       save({ events: evList });
-      showToast(\`✅ Refund of £\${amt.toFixed(2)} issued via Square!\`);
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: \`Booking ID: \${booking.id} — \${booking.userName} | Refund: £\${amt.toFixed(2)}\${refundNote ? \` | Note: \${refundNote}\` : ""}\` });
+      showToast(`✅ Refund of £${amt.toFixed(2)} issued via Square!`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: `Booking ID: ${booking.id} — ${booking.userName} | Refund: £${amt.toFixed(2)}${refundNote ? ` | Note: ${refundNote}` : ""}` });
       setRefundModal(null); setRefundAmt(""); setRefundNote("");
     } catch (e) { showToast("❌ Refund failed: " + (e.message || String(e)), "red"); }
     finally { setRefunding(false); }
