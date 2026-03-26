@@ -943,354 +943,6 @@ function AdminDash({ data, setSection }) {
 
 // ── Admin Check-In ────────────────────────────────────────
 // ── Admin Bookings & Check-In (merged) ────────────────────
-function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu, onHandlers }) {
-  const [editBooking, setEditBooking] = useState(null);
-  const [delConfirm, setDelConfirm] = useState(null);
-  const [viewBooking, setViewBooking] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [refundModal, setRefundModal] = useState(null); // { booking }
-  const [refundAmt, setRefundAmt] = useState("");
-  const [refundNote, setRefundNote] = useState("");
-  const [refunding, setRefunding] = useState(false);
-  useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
-  const [search, setSearch] = useState("");
-
-  const filtered = allBookings.filter(b =>
-    !search || b.userName.toLowerCase().includes(search.toLowerCase()) ||
-    b.eventTitle.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const openEdit = (b) => setEditBooking({
-    id: b.id, userId: b.userId, userName: b.userName,
-    eventTitle: b.eventTitle, eventObj: b.eventObj,
-    eventId: b.eventObj?.id || null,
-    newEventId: null,
-    type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn,
-    _orig: { type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn, eventId: b.eventObj?.id || null, eventTitle: b.eventTitle },
-  });
-
-  // Expose action handlers to parent (used by check-in tab rows)
-  useEffect(() => {
-    if (onHandlers) onHandlers({
-      openEdit,
-      openView: (b) => setViewBooking(b),
-      openDel:  (b) => setDelConfirm(b),
-      openRefund: (b) => { setRefundModal({ booking: b }); setRefundAmt(b.total.toFixed(2)); setRefundNote(""); },
-    });
-  }, []);
-
-  const saveEdit = async () => {
-    setBusy(true);
-    try {
-      await api.bookings.update(editBooking.id, editBooking);
-      const evList = await api.events.getAll();
-      save({ events: evList });
-      showToast("Booking updated!");
-      const BLABELS = { type: "Type", qty: "Qty", total: "Total", checkedIn: "Checked in" };
-      const bDiff = diffFields(
-        editBooking._orig || {},
-        { type: editBooking.type, qty: editBooking.qty, total: editBooking.total, checkedIn: editBooking.checkedIn },
-        BLABELS
-      );
-      const transferNote = editBooking.newEventId
-        ? ` | Event transferred from "${editBooking._orig.eventTitle}" to "${data.events.find(e => e.id === editBooking.newEventId)?.title || editBooking.newEventId}"`
-        : "";
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking updated", detail: `${editBooking.userName} @ ${editBooking.eventTitle}${bDiff ? ` | ${bDiff}` : ""}${transferNote || (!bDiff ? " (no field changes)" : "")}` });
-      setEditBooking(null);
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
-    finally { setBusy(false); }
-  };
-
-  const confirmDelete = async () => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.from('bookings').delete().eq('id', delConfirm.id);
-      if (error) throw new Error(error.message);
-      const evList = await api.events.getAll();
-      save({ events: evList });
-      showToast("Booking deleted!");
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking deleted", detail: `Booking ID: ${delConfirm.id} — ${delConfirm.name || ""}` });
-      setDelConfirm(null);
-    } catch (e) { showToast("Failed: " + e.message, "red"); }
-    finally { setBusy(false); }
-  };
-
-  const doRefundBooking = async () => {
-    const { booking } = refundModal;
-    const amt = parseFloat(refundAmt);
-    if (isNaN(amt) || amt <= 0) { showToast("Enter a valid refund amount", "red"); return; }
-    if (amt > booking.total) { showToast("Refund amount exceeds booking total", "red"); return; }
-    if (!booking.squareOrderId) { showToast("No Square payment ID on this booking — refund manually in your Square Dashboard.", "red"); return; }
-    setRefunding(true);
-    try {
-      const locationId = await api.settings.get("square_location_id");
-      const isFullRefund = Math.abs(amt - booking.total) < 0.01;
-      await squareRefund({ squarePaymentId: booking.squareOrderId, amount: isFullRefund ? null : amt, locationId });
-      // Record refund on the booking row
-      await supabase.from('bookings').update({
-        refund_amount: amt,
-        refund_note: refundNote || null,
-        refunded_at: new Date().toISOString(),
-      }).eq('id', booking.id);
-      const evList = await api.events.getAll();
-      save({ events: evList });
-      showToast(`✅ Refund of £${amt.toFixed(2)} issued via Square!`);
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: `Booking ID: ${booking.id} — ${booking.userName} | Refund: £${amt.toFixed(2)}${refundNote ? ` | Note: ${refundNote}` : ""}` });
-      setRefundModal(null);
-      setRefundAmt(""); setRefundNote("");
-    } catch (e) {
-      showToast("❌ Refund failed: " + (e.message || String(e)), "red");
-    } finally { setRefunding(false); }
-  };
-
-  return (
-    <div className="card">
-      <div style={{ marginBottom: 12 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search player or event…"
-          style={{ maxWidth: 280 }} />
-      </div>
-      <div className="table-wrap"><table className="data-table">
-        <thead>
-          <tr><th>Player</th><th>Event</th><th>Date</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Status</th><th>Actions</th></tr>
-        </thead>
-        <tbody>
-          {filtered.length === 0 && (
-            <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No bookings found</td></tr>
-          )}
-          {filtered.map(b => (
-            <tr key={b.id}>
-              <td style={{ fontWeight: 600 }}>{b.userName}</td>
-              <td>{b.eventTitle}</td>
-              <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
-              <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
-              <td>{b.qty}</td>
-              <td style={{ fontSize: 11 }}>
-                {(() => {
-                  const entries = Object.entries(b.extras || {}).filter(([,v]) => v > 0);
-                  if (!entries.length) return <span style={{ color: "var(--muted)" }}>—</span>;
-                  return entries.map(([key, qty]) => {
-                    const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-                    const ex = b.eventObj?.extras?.find(e => e.id === extraId);
-                    const lp = (data?.shop || []).find(p => p.id === ex?.productId);
-                    const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-                    const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
-                    return (
-                      <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
-                        {label} ×{qty}
-                      </div>
-                    );
-                  });
-                })()}
-              </td>
-              <td className="text-green">£{b.total.toFixed(2)}</td>
-              <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
-              <td>
-                <div className="gap-2">
-                  {!b.checkedIn && (
-                    <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, b.eventObj)}>✓ In</button>
-                  )}
-                  <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking(b)}>View</button>
-                  <button className="btn btn-sm btn-ghost" onClick={() => openEdit(b)}>Edit</button>
-                  {b.squareOrderId && b.total > 0 && (
-                    <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
-                      onClick={() => { setRefundModal({ booking: b }); setRefundAmt(b.total.toFixed(2)); setRefundNote(""); }}>
-                      £ Refund
-                    </button>
-                  )}
-                  <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(b)}>Del</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table></div>
-
-      {/* Edit modal */}
-      {editBooking && (
-        <div className="overlay" onClick={() => setEditBooking(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">✏️ Edit Booking</div>
-            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
-              {editBooking.userName} — {editBooking.eventTitle}
-            </div>
-            <div className="form-group">
-              <label>Transfer to Different Event</label>
-              <select
-                value={editBooking.newEventId || editBooking.eventId || ""}
-                onChange={e => {
-                  const val = e.target.value;
-                  setEditBooking(p => ({ ...p, newEventId: val === p.eventId ? null : val }));
-                }}
-              >
-                {data.events
-                  .slice()
-                  .sort((a, b) => new Date(a.date) - new Date(b.date))
-                  .map(ev => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
-                    </option>
-                  ))
-                }
-              </select>
-              {editBooking.newEventId && editBooking.newEventId !== editBooking.eventId && (
-                <div style={{ marginTop:6, padding:"6px 10px", background:"rgba(255,160,0,.1)", border:"1px solid rgba(255,160,0,.35)", borderRadius:3, fontSize:12, color:"#ffc060" }}>
-                  ⚠️ This booking will be moved from <strong>{editBooking._orig.eventTitle}</strong> to <strong>{data.events.find(e => e.id === editBooking.newEventId)?.title}</strong>.
-                </div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>Ticket Type</label>
-              <select value={editBooking.type} onChange={e => setEditBooking(p => ({ ...p, type: e.target.value }))}>
-                <option value="walkOn">Walk-On</option>
-                <option value="rental">Rental</option>
-              </select>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Quantity</label>
-                <input type="number" min={1} value={editBooking.qty}
-                  onChange={e => setEditBooking(p => ({ ...p, qty: +e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>Total (£)</label>
-                <input type="number" step="0.01" min={0} value={editBooking.total}
-                  onChange={e => setEditBooking(p => ({ ...p, total: +e.target.value }))} />
-              </div>
-            </div>
-            <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input type="checkbox" id="ci-edit" checked={editBooking.checkedIn}
-                onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
-              <label htmlFor="ci-edit" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
-            </div>
-            <div className="gap-2 mt-2">
-              <button className="btn btn-primary" disabled={busy} onClick={saveEdit}>
-                {busy ? "Saving…" : "Save Changes"}
-              </button>
-              <button className="btn btn-ghost" onClick={() => setEditBooking(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete confirm modal */}
-      {viewBooking && (() => {
-        const currentBooking = viewBooking;
-        const extras = Object.entries(currentBooking.extras || {}).filter(([,v]) => v > 0);
-        const ticketLabel = currentBooking.type === "walkOn" ? "Walk-On" : "Rental Package";
-        const ticketPrice = currentBooking.type === "walkOn" ? currentBooking.eventObj?.walkOnPrice : currentBooking.eventObj?.rentalPrice;
-        return (
-          <div className="overlay" onClick={() => setViewBooking(null)}>
-            <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-              <div className="modal-title">🎟 Booking Details</div>
-
-              {/* Header info */}
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{currentBooking.userName}</div></div>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{currentBooking.eventTitle}</div></div>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(currentBooking.date)}</div></div>
-                <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{currentBooking.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
-              </div>
-
-              {/* Order breakdown */}
-              <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
-                <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>
-                <div style={{ padding:"0 14px" }}>
-                  {/* Ticket */}
-                  <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
-                    <span>{ticketLabel} ×{currentBooking.qty}</span>
-                    <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(Number(ticketPrice) * currentBooking.qty).toFixed(2)}</span>
-                  </div>
-                  {/* Extras */}
-                  {extras.length > 0 && extras.map(([key, qty]) => {
-                    const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-                    const ex = currentBooking.eventObj?.extras?.find(e => e.id === extraId);
-                    const lp = (data?.shop || []).find(p => p.id === ex?.productId);
-                    const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-                    const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
-                    const unitPrice = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : 0);
-                    return (
-                      <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
-                        <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
-                        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
-                      </div>
-                    );
-                  })}
-                  {/* Total */}
-                  <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>
-                    <span>TOTAL</span>
-                    <span style={{ color:"var(--accent)" }}>£{currentBooking.total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="gap-2">
-                <button className="btn btn-ghost" onClick={() => setViewBooking(null)}>Close</button>
-                <button className="btn btn-ghost" onClick={() => { setViewBooking(null); openEdit(currentBooking); }}>Edit Booking</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {delConfirm && (
-        <div className="overlay" onClick={() => setDelConfirm(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">🗑 Delete Booking?</div>
-            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 20px" }}>
-              Delete <strong style={{ color: "var(--text)" }}>{delConfirm.userName}</strong>'s booking for <strong style={{ color: "var(--text)" }}>{delConfirm.eventTitle}</strong>?
-              This cannot be undone.
-            </p>
-            <div className="gap-2">
-              <button className="btn btn-danger" disabled={busy} onClick={confirmDelete}>
-                {busy ? "Deleting…" : "Yes, Delete"}
-              </button>
-              <button className="btn btn-ghost" onClick={() => setDelConfirm(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {refundModal && (
-        <div className="overlay" onClick={() => !refunding && setRefundModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">💸 Refund Booking</div>
-            <div style={{ background:"var(--bg3)", border:"1px solid var(--border)", padding:"12px 14px", borderRadius:4, marginBottom:16 }}>
-              <div style={{ fontWeight:700 }}>{refundModal.booking.userName}</div>
-              <div style={{ color:"var(--muted)", marginTop:2, fontSize:13 }}>{refundModal.booking.eventTitle} — {refundModal.booking.type === "walkOn" ? "Walk-On" : "Rental"} ×{refundModal.booking.qty}</div>
-              <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>Square ref: {refundModal.booking.squareOrderId}</div>
-            </div>
-            <div className="form-group">
-              <label>Refund Amount (£)</label>
-              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                <input type="number" step="0.01" min="0.01" max={refundModal.booking.total}
-                  value={refundAmt} onChange={e => setRefundAmt(e.target.value)} autoFocus style={{ maxWidth:120 }} />
-                <button className="btn btn-sm btn-ghost" onClick={() => setRefundAmt(refundModal.booking.total.toFixed(2))}>Full £{refundModal.booking.total.toFixed(2)}</button>
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Note (optional)</label>
-              <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Event cancelled, player request" />
-            </div>
-            <p style={{ fontSize:12, color:"var(--red)", marginBottom:16 }}>⚠️ This will immediately issue a refund via Square. This cannot be undone.</p>
-            <div className="gap-2">
-              <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
-                onClick={doRefundBooking} disabled={refunding}>
-                {refunding ? "⏳ Processing…" : `✓ Confirm Refund · £${parseFloat(refundAmt||0).toFixed(2)}`}
-              </button>
-              <button className="btn btn-ghost" onClick={() => setRefundModal(null)} disabled={refunding}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
   const [waitlistLoading, setWaitlistLoading] = useState(false);
@@ -1364,11 +1016,89 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   const f = setField;
 
   // ── Check-in state ──
-  const [checkinSubTab, setCheckinSubTab] = useState("list");
   const [evId, setEvId] = useState(data.events[0]?.id || "");
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
-  const bookingActions = useRef(null); // populated by BookingsTab via onHandlers
+
+  // ── Booking action state (edit / view / delete / refund) ──
+  const [editBooking, setEditBooking] = useState(null);
+  const [delConfirm, setDelConfirm] = useState(null);
+  const [viewBooking, setViewBooking] = useState(null);
+  const [bookingBusy, setBookingBusy] = useState(false);
+  const [refundModal, setRefundModal] = useState(null);
+  const [refundAmt, setRefundAmt] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [refunding, setRefunding] = useState(false);
+
+  const openEdit = (b) => setEditBooking({
+    id: b.id, userId: b.userId, userName: b.userName,
+    eventTitle: b.eventTitle || b.eventObj?.title, eventObj: b.eventObj,
+    eventId: b.eventObj?.id || null,
+    newEventId: null,
+    type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn,
+    _orig: { type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn, eventId: b.eventObj?.id || null, eventTitle: b.eventTitle || b.eventObj?.title },
+  });
+
+  const saveEdit = async () => {
+    setBookingBusy(true);
+    try {
+      await api.bookings.update(editBooking.id, editBooking);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Booking updated!");
+      const BLABELS = { type: "Type", qty: "Qty", total: "Total", checkedIn: "Checked in" };
+      const bDiff = diffFields(
+        editBooking._orig || {},
+        { type: editBooking.type, qty: editBooking.qty, total: editBooking.total, checkedIn: editBooking.checkedIn },
+        BLABELS
+      );
+      const transferNote = editBooking.newEventId
+        ? \` | Event transferred from "\${editBooking._orig.eventTitle}" to "\${data.events.find(e => e.id === editBooking.newEventId)?.title || editBooking.newEventId}"\`
+        : "";
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking updated", detail: \`\${editBooking.userName} @ \${editBooking.eventTitle}\${bDiff ? \` | \${bDiff}\` : ""}\${transferNote || (!bDiff ? " (no field changes)" : "")}\` });
+      setEditBooking(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBookingBusy(false); }
+  };
+
+  const confirmDelete = async () => {
+    setBookingBusy(true);
+    try {
+      const { error } = await supabase.from("bookings").delete().eq("id", delConfirm.id);
+      if (error) throw new Error(error.message);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast("Booking deleted!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking deleted", detail: \`Booking ID: \${delConfirm.id} — \${delConfirm.userName || ""}\` });
+      setDelConfirm(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBookingBusy(false); }
+  };
+
+  const doRefundBooking = async () => {
+    const { booking } = refundModal;
+    const amt = parseFloat(refundAmt);
+    if (isNaN(amt) || amt <= 0) { showToast("Enter a valid refund amount", "red"); return; }
+    if (amt > booking.total) { showToast("Refund amount exceeds booking total", "red"); return; }
+    if (!booking.squareOrderId) { showToast("No Square payment ID on this booking — refund manually in your Square Dashboard.", "red"); return; }
+    setRefunding(true);
+    try {
+      const locationId = await api.settings.get("square_location_id");
+      const isFullRefund = Math.abs(amt - booking.total) < 0.01;
+      await squareRefund({ squarePaymentId: booking.squareOrderId, amount: isFullRefund ? null : amt, locationId });
+      await supabase.from("bookings").update({
+        refund_amount: amt,
+        refund_note: refundNote || null,
+        refunded_at: new Date().toISOString(),
+      }).eq("id", booking.id);
+      const evList = await api.events.getAll();
+      save({ events: evList });
+      showToast(\`✅ Refund of £\${amt.toFixed(2)} issued via Square!\`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: \`Booking ID: \${booking.id} — \${booking.userName} | Refund: £\${amt.toFixed(2)}\${refundNote ? \` | Note: \${refundNote}\` : ""}\` });
+      setRefundModal(null); setRefundAmt(""); setRefundNote("");
+    } catch (e) { showToast("❌ Refund failed: " + (e.message || String(e)), "red"); }
+    finally { setRefunding(false); }
+  };
 
   const ev = data.events.find(e => e.id === evId);
   const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
@@ -1686,7 +1416,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         </div>
         <div className="gap-2">
           {tab === "events" && <button className="btn btn-primary" onClick={() => { setForm(blank); bannerFileRef.current = null; setModal("new"); }}>+ New Event</button>}
-          {tab === "checkin" && checkinSubTab === "list" && <>
+          {tab === "checkin" && <>
             <button className="btn btn-primary" onClick={() => setScanning(true)}>📷 Scan QR</button>
             <button className="btn btn-ghost" onClick={downloadList}>⬇ Export</button>
           </>}
@@ -1751,24 +1481,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       {/* ── CHECK-IN TAB ── */}
       {tab === "checkin" && (
         <div>
-          <div className="nav-tabs" style={{ marginBottom: 16 }}>
-            <button className={`nav-tab ${checkinSubTab === "list" ? "active" : ""}`} onClick={() => setCheckinSubTab("list")}>✅ Check-In List</button>
-            <button className={`nav-tab ${checkinSubTab === "all" ? "active" : ""}`} onClick={() => setCheckinSubTab("all")}>🎟 All Bookings</button>
-          </div>
 
-          {checkinSubTab === "all" && (
-            <BookingsTab
-              allBookings={allBookings}
-              data={data}
-              doCheckin={doCheckin}
-              save={save}
-              showToast={showToast}
-              cu={cu}
-              onHandlers={(h) => { bookingActions.current = h; }}
-            />
-          )}
-
-          {checkinSubTab === "list" && <div>
           <div className="grid-2 mb-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label>Select Event</label>
@@ -1892,25 +1605,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                               ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ In</button>
                               : <span className="text-muted" style={{ fontSize: 11 }}>✓ Done</span>
                             }
-                            <button className="btn btn-sm btn-ghost" onClick={() => {
-                              if (checkinSubTab !== "all") setCheckinSubTab("all");
-                              setTimeout(() => bookingActions.current?.openView(b), 50);
-                            }}>View</button>
-                            <button className="btn btn-sm btn-ghost" onClick={() => {
-                              if (checkinSubTab !== "all") setCheckinSubTab("all");
-                              setTimeout(() => bookingActions.current?.openEdit({ ...b, eventTitle: ev.title, eventObj: ev }), 50);
-                            }}>Edit</button>
+                            <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking(b)}>View</button>
+                            <button className="btn btn-sm btn-ghost" onClick={() => openEdit({ ...b, eventTitle: ev.title, eventObj: ev })}>Edit</button>
                             {b.squareOrderId && b.total > 0 && (
                               <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
-                                onClick={() => {
-                                  if (checkinSubTab !== "all") setCheckinSubTab("all");
-                                  setTimeout(() => bookingActions.current?.openRefund(b), 50);
-                                }}>£ Refund</button>
+                                onClick={() => { setRefundModal({ booking: b }); setRefundAmt(b.total.toFixed(2)); setRefundNote(""); }}>£ Refund</button>
                             )}
-                            <button className="btn btn-sm btn-danger" onClick={() => {
-                              if (checkinSubTab !== "all") setCheckinSubTab("all");
-                              setTimeout(() => bookingActions.current?.openDel(b), 50);
-                            }}>Del</button>
+                            <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(b)}>Del</button>
                             <button onClick={downloadTicket} style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", borderRadius:2, whiteSpace:"nowrap" }}>
                               ⬇ Ticket
                             </button>
@@ -1930,7 +1631,177 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               </table></div>
             </div>
           )}
-          </div>}
+
+          {/* ── Edit Booking Modal ── */}
+          {editBooking && (
+            <div className="overlay" onClick={() => setEditBooking(null)}>
+              <div className="modal-box" onClick={e => e.stopPropagation()}>
+                <div className="modal-title">✏️ Edit Booking</div>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+                  {editBooking.userName} — {editBooking.eventTitle}
+                </div>
+                <div className="form-group">
+                  <label>Transfer to Different Event</label>
+                  <select
+                    value={editBooking.newEventId || editBooking.eventId || ""}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditBooking(p => ({ ...p, newEventId: val === p.eventId ? null : val }));
+                    }}
+                  >
+                    {data.events
+                      .slice()
+                      .sort((a, b) => new Date(a.date) - new Date(b.date))
+                      .map(ev => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+                        </option>
+                      ))
+                    }
+                  </select>
+                  {editBooking.newEventId && editBooking.newEventId !== editBooking.eventId && (
+                    <div style={{ marginTop:6, padding:"6px 10px", background:"rgba(255,160,0,.1)", border:"1px solid rgba(255,160,0,.35)", borderRadius:3, fontSize:12, color:"#ffc060" }}>
+                      ⚠️ This booking will be moved from <strong>{editBooking._orig.eventTitle}</strong> to <strong>{data.events.find(e => e.id === editBooking.newEventId)?.title}</strong>.
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>Ticket Type</label>
+                  <select value={editBooking.type} onChange={e => setEditBooking(p => ({ ...p, type: e.target.value }))}>
+                    <option value="walkOn">Walk-On</option>
+                    <option value="rental">Rental</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Quantity</label>
+                    <input type="number" min={1} value={editBooking.qty}
+                      onChange={e => setEditBooking(p => ({ ...p, qty: +e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label>Total (£)</label>
+                    <input type="number" step="0.01" min={0} value={editBooking.total}
+                      onChange={e => setEditBooking(p => ({ ...p, total: +e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" id="ci-edit-checkin" checked={editBooking.checkedIn}
+                    onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
+                  <label htmlFor="ci-edit-checkin" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
+                </div>
+                <div className="gap-2 mt-2">
+                  <button className="btn btn-primary" disabled={bookingBusy} onClick={saveEdit}>
+                    {bookingBusy ? "Saving…" : "Save Changes"}
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setEditBooking(null)}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── View Booking Modal ── */}
+          {viewBooking && (() => {
+            const cb = viewBooking;
+            const extras = Object.entries(cb.extras || {}).filter(([,v]) => v > 0);
+            const ticketLabel = cb.type === "walkOn" ? "Walk-On" : "Rental Package";
+            const ticketPrice = cb.type === "walkOn" ? cb.eventObj?.walkOnPrice : cb.eventObj?.rentalPrice;
+            return (
+              <div className="overlay" onClick={() => setViewBooking(null)}>
+                <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+                  <div className="modal-title">🎟 Booking Details</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.userName}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || cb.eventObj?.title}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
+                  </div>
+                  <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
+                    <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>
+                    <div style={{ padding:"0 14px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
+                        <span>{ticketLabel} ×{cb.qty}</span>
+                        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(Number(ticketPrice) * cb.qty).toFixed(2)}</span>
+                      </div>
+                      {extras.map(([key, qty]) => {
+                        const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+                        const ex = cb.eventObj?.extras?.find(e => e.id === extraId);
+                        const lp = (data?.shop || []).find(p => p.id === ex?.productId);
+                        const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
+                        const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
+                        const unitPrice = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : 0);
+                        return (
+                          <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
+                            <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
+                            <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
+                          </div>
+                        );
+                      })}
+                      <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>
+                        <span>TOTAL</span>
+                        <span style={{ color:"var(--accent)" }}>£{cb.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="gap-2">
+                    <button className="btn btn-ghost" onClick={() => setViewBooking(null)}>Close</button>
+                    <button className="btn btn-ghost" onClick={() => { setViewBooking(null); openEdit(cb); }}>Edit Booking</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── Delete Confirm Modal ── */}
+          {delConfirm && (
+            <div className="overlay" onClick={() => setDelConfirm(null)}>
+              <div className="modal-box" onClick={e => e.stopPropagation()}>
+                <div className="modal-title">🗑 Delete Booking?</div>
+                <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 20px" }}>
+                  Delete <strong style={{ color: "var(--text)" }}>{delConfirm.userName}</strong>'s booking for <strong style={{ color: "var(--text)" }}>{delConfirm.eventTitle || delConfirm.eventObj?.title}</strong>? This cannot be undone.
+                </p>
+                <div className="gap-2">
+                  <button className="btn btn-danger" disabled={bookingBusy} onClick={confirmDelete}>
+                    {bookingBusy ? "Deleting…" : "Yes, Delete"}
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setDelConfirm(null)}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Refund Modal ── */}
+          {refundModal && (
+            <div className="overlay" onClick={() => !refunding && setRefundModal(null)}>
+              <div className="modal-box" onClick={e => e.stopPropagation()}>
+                <div className="modal-title">💸 Refund Booking</div>
+                <div style={{ background:"var(--bg3)", border:"1px solid var(--border)", padding:"12px 14px", borderRadius:4, marginBottom:16 }}>
+                  <div style={{ fontWeight:700 }}>{refundModal.booking.userName}</div>
+                  <div style={{ color:"var(--muted)", marginTop:2, fontSize:13 }}>{refundModal.booking.eventTitle} — {refundModal.booking.type === "walkOn" ? "Walk-On" : "Rental"} ×{refundModal.booking.qty}</div>
+                  <div style={{ color:"var(--muted)", fontSize:11, marginTop:2 }}>Square ref: {refundModal.booking.squareOrderId}</div>
+                </div>
+                <div className="form-group">
+                  <label>Refund Amount (£)</label>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <input type="number" step="0.01" min="0.01" max={refundModal.booking.total}
+                      value={refundAmt} onChange={e => setRefundAmt(e.target.value)} autoFocus style={{ maxWidth:120 }} />
+                    <button className="btn btn-sm btn-ghost" onClick={() => setRefundAmt(refundModal.booking.total.toFixed(2))}>Full £{refundModal.booking.total.toFixed(2)}</button>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Note (optional)</label>
+                  <input value={refundNote} onChange={e => setRefundNote(e.target.value)} placeholder="e.g. Event cancelled, player request" />
+                </div>
+                <p style={{ fontSize:12, color:"var(--red)", marginBottom:16 }}>⚠️ This will immediately issue a refund via Square. This cannot be undone.</p>
+                <div className="gap-2">
+                  <button className="btn btn-sm" style={{ background:"var(--red)", color:"#fff", border:"none", opacity: refunding ? .6 : 1 }}
+                    onClick={doRefundBooking} disabled={refunding}>
+                    {refunding ? "⏳ Processing…" : `✓ Confirm Refund · £${parseFloat(refundAmt||0).toFixed(2)}`}
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setRefundModal(null)} disabled={refunding}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
