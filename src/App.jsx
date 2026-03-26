@@ -264,15 +264,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           }
         }
 
-        // ── Duplicate booking guard: check DB for existing booking by this user for this event ──
-        const { data: existingBookings } = await supabase
-          .from('bookings').select('id').eq('event_id', ev.id).eq('user_id', cu.id).limit(1);
-        if (existingBookings && existingBookings.length > 0) {
-          clearTimeout(safety);
-          setBookingBusy(false);
-          setSquareError("You already have a booking for this event. If you need to change it, please cancel your existing booking first.");
-          return;
-        }
         const extrasToCheck = Object.entries(extrasSnapshot).filter(([,qty]) => qty > 0);
         if (extrasToCheck.length > 0) {
           const productIds = [...new Set(extrasToCheck.map(([key]) => {
@@ -670,6 +661,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* ── ADD MORE TICKETS NOTICE ── */}
+              {myBookings.length > 0 && (
+                <div style={{ background:"rgba(0,80,160,.12)", border:"1px solid rgba(0,140,255,.3)", padding:"10px 14px", marginBottom:12, borderRadius:3, fontSize:12, color:"#80c8ff", lineHeight:1.5 }}>
+                  ℹ️ <strong style={{ color:"#a0d8ff" }}>Adding more tickets</strong> — you already have a booking for this event. Any new tickets you buy below will be added to your existing booking.
                 </div>
               )}
 

@@ -118,6 +118,12 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
         if (cancelled) return;
         const payments = window.Square.payments(_squareAppId, _squareLocationId);
         paymentsRef.current = payments;
+        // Destroy any stale card instance before creating a new one.
+        // Skipping this causes Square to throw "ID already deployed" on re-renders.
+        if (cardInstance.current) {
+          try { cardInstance.current.destroy(); } catch {}
+          cardInstance.current = null;
+        }
         const card = await payments.card();
         if (cancelled) return;
         cardInstance.current = card;
