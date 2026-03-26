@@ -478,8 +478,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
         {/* Banner */}
         <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, overflow:"hidden", marginBottom:20 }}>
-          <div style={{ height:220, background:"linear-gradient(135deg,#150e08,#111827)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", position:"relative" }}>
-            {ev.banner ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} alt="" /> : <span style={{ fontSize:28, fontWeight:900, color:"var(--accent)" }}>{ev.title}</span>}
+          <div style={{ height:320, background:"linear-gradient(135deg,#150e08,#111827)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", position:"relative" }}>
+            {ev.banner ? <img src={ev.banner} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center center" }} alt="" /> : <span style={{ fontSize:28, fontWeight:900, color:"var(--accent)" }}>{ev.title}</span>}
           </div>
           {/* Military-style header */}
           <div style={{
