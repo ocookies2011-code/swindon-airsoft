@@ -1339,7 +1339,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
-    return p[0]==="admin" && p[1]==="events" && ["events","bookings","checkin"].includes(p[2]) ? p[2] : "events";
+    return p[0]==="admin" && p[1]==="events" && ["events","checkin"].includes(p[2]) ? p[2] : "events";
   };
   const [tab, setTabState] = useState(getInitTab);
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/events/" + t; };
@@ -1354,6 +1354,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   const f = setField;
 
   // ── Check-in state ──
+  const [checkinSubTab, setCheckinSubTab] = useState("list");
   const [evId, setEvId] = useState(data.events[0]?.id || "");
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -1674,7 +1675,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         </div>
         <div className="gap-2">
           {tab === "events" && <button className="btn btn-primary" onClick={() => { setForm(blank); bannerFileRef.current = null; setModal("new"); }}>+ New Event</button>}
-          {tab === "checkin" && <>
+          {tab === "checkin" && checkinSubTab === "list" && <>
             <button className="btn btn-primary" onClick={() => setScanning(true)}>📷 Scan QR</button>
             <button className="btn btn-ghost" onClick={downloadList}>⬇ Export</button>
           </>}
@@ -1683,7 +1684,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
       <div className="nav-tabs">
         <button className={`nav-tab ${tab === "events" ? "active" : ""}`} onClick={() => setTab("events")}>📅 Events</button>
-        <button className={`nav-tab ${tab === "bookings" ? "active" : ""}`} onClick={() => setTab("bookings")}>🎟 All Bookings</button>
         <button className={`nav-tab ${tab === "checkin" ? "active" : ""}`} onClick={() => setTab("checkin")}>✅ Check-In</button>
       </div>
 
@@ -1737,21 +1737,26 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         </table></div>
       )}
 
-      {/* ── ALL BOOKINGS TAB ── */}
-      {tab === "bookings" && (
-        <BookingsTab
-          allBookings={allBookings}
-          data={data}
-          doCheckin={doCheckin}
-          save={save}
-          showToast={showToast}
-          cu={cu}
-        />
-      )}
-
       {/* ── CHECK-IN TAB ── */}
       {tab === "checkin" && (
         <div>
+          <div className="nav-tabs" style={{ marginBottom: 16 }}>
+            <button className={`nav-tab ${checkinSubTab === "list" ? "active" : ""}`} onClick={() => setCheckinSubTab("list")}>✅ Check-In List</button>
+            <button className={`nav-tab ${checkinSubTab === "all" ? "active" : ""}`} onClick={() => setCheckinSubTab("all")}>🎟 All Bookings</button>
+          </div>
+
+          {checkinSubTab === "all" && (
+            <BookingsTab
+              allBookings={allBookings}
+              data={data}
+              doCheckin={doCheckin}
+              save={save}
+              showToast={showToast}
+              cu={cu}
+            />
+          )}
+
+          {checkinSubTab === "list" && <div>
           <div className="grid-2 mb-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label>Select Event</label>
@@ -1894,6 +1899,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               </table></div>
             </div>
           )}
+          </div>}
         </div>
       )}
 
