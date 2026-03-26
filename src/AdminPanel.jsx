@@ -943,7 +943,7 @@ function AdminDash({ data, setSection }) {
 
 // ── Admin Check-In ────────────────────────────────────────
 // ── Admin Bookings & Check-In (merged) ────────────────────
-function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
+function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu, onHandlers }) {
   const [editBooking, setEditBooking] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null);
   const [viewBooking, setViewBooking] = useState(null);
@@ -972,6 +972,16 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
     type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn,
     _orig: { type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn, eventId: b.eventObj?.id || null, eventTitle: b.eventTitle },
   });
+
+  // Expose action handlers to parent (used by check-in tab rows)
+  useEffect(() => {
+    if (onHandlers) onHandlers({
+      openEdit,
+      openView: (b) => setViewBooking(b),
+      openDel:  (b) => setDelConfirm(b),
+      openRefund: (b) => { setRefundModal({ booking: b }); setRefundAmt(b.total.toFixed(2)); setRefundNote(""); },
+    });
+  }, []);
 
   const saveEdit = async () => {
     setBusy(true);
@@ -1358,6 +1368,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   const [evId, setEvId] = useState(data.events[0]?.id || "");
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
+  const bookingActions = useRef(null); // populated by BookingsTab via onHandlers
 
   const ev = data.events.find(e => e.id === evId);
   const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
@@ -1753,6 +1764,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               save={save}
               showToast={showToast}
               cu={cu}
+              onHandlers={(h) => { bookingActions.current = h; }}
             />
           )}
 
@@ -1875,11 +1887,30 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
                         <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
                         <td>
-                          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                          <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
                             {!b.checkedIn
-                              ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ Check In</button>
+                              ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ In</button>
                               : <span className="text-muted" style={{ fontSize: 11 }}>✓ Done</span>
                             }
+                            <button className="btn btn-sm btn-ghost" onClick={() => {
+                              if (checkinSubTab !== "all") setCheckinSubTab("all");
+                              setTimeout(() => bookingActions.current?.openView(b), 50);
+                            }}>View</button>
+                            <button className="btn btn-sm btn-ghost" onClick={() => {
+                              if (checkinSubTab !== "all") setCheckinSubTab("all");
+                              setTimeout(() => bookingActions.current?.openEdit({ ...b, eventTitle: ev.title, eventObj: ev }), 50);
+                            }}>Edit</button>
+                            {b.squareOrderId && b.total > 0 && (
+                              <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
+                                onClick={() => {
+                                  if (checkinSubTab !== "all") setCheckinSubTab("all");
+                                  setTimeout(() => bookingActions.current?.openRefund(b), 50);
+                                }}>£ Refund</button>
+                            )}
+                            <button className="btn btn-sm btn-danger" onClick={() => {
+                              if (checkinSubTab !== "all") setCheckinSubTab("all");
+                              setTimeout(() => bookingActions.current?.openDel(b), 50);
+                            }}>Del</button>
                             <button onClick={downloadTicket} style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", borderRadius:2, whiteSpace:"nowrap" }}>
                               ⬇ Ticket
                             </button>
