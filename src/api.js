@@ -299,13 +299,16 @@ export const bookings = wrapWithTimeout({
   },
 
   async update(bookingId, patch) {
+    const fields = {
+      ticket_type: patch.type,
+      qty:         patch.qty,
+      total:       patch.total,
+      checked_in:  patch.checkedIn,
+    }
+    // Allow transferring a booking to a different event
+    if (patch.newEventId) fields.event_id = patch.newEventId
     const { error } = await supabase
-      .from('bookings').update({
-        ticket_type: patch.type,
-        qty:         patch.qty,
-        total:       patch.total,
-        checked_in:  patch.checkedIn,
-      }).eq('id', bookingId)
+      .from('bookings').update(fields).eq('id', bookingId)
     if (error) throw error
   },
 

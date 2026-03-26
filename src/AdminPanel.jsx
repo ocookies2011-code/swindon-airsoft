@@ -967,8 +967,10 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
   const openEdit = (b) => setEditBooking({
     id: b.id, userId: b.userId, userName: b.userName,
     eventTitle: b.eventTitle, eventObj: b.eventObj,
+    eventId: b.eventObj?.id || null,
+    newEventId: null,
     type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn,
-    _orig: { type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn },
+    _orig: { type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn, eventId: b.eventObj?.id || null, eventTitle: b.eventTitle },
   });
 
   const saveEdit = async () => {
@@ -984,7 +986,10 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
         { type: editBooking.type, qty: editBooking.qty, total: editBooking.total, checkedIn: editBooking.checkedIn },
         BLABELS
       );
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking updated", detail: `${editBooking.userName} @ ${editBooking.eventTitle}${bDiff ? ` | ${bDiff}` : " (no field changes)"}` });
+      const transferNote = editBooking.newEventId
+        ? ` | Event transferred from "${editBooking._orig.eventTitle}" to "${data.events.find(e => e.id === editBooking.newEventId)?.title || editBooking.newEventId}"`
+        : "";
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking updated", detail: `${editBooking.userName} @ ${editBooking.eventTitle}${bDiff ? ` | ${bDiff}` : ""}${transferNote || (!bDiff ? " (no field changes)" : "")}` });
       setEditBooking(null);
     } catch (e) { showToast("Failed: " + e.message, "red"); }
     finally { setBusy(false); }
@@ -1102,6 +1107,31 @@ function BookingsTab({ allBookings, data, doCheckin, save, showToast, cu }) {
             <div className="modal-title">✏️ Edit Booking</div>
             <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
               {editBooking.userName} — {editBooking.eventTitle}
+            </div>
+            <div className="form-group">
+              <label>Transfer to Different Event</label>
+              <select
+                value={editBooking.newEventId || editBooking.eventId || ""}
+                onChange={e => {
+                  const val = e.target.value;
+                  setEditBooking(p => ({ ...p, newEventId: val === p.eventId ? null : val }));
+                }}
+              >
+                {data.events
+                  .slice()
+                  .sort((a, b) => new Date(a.date) - new Date(b.date))
+                  .map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+                    </option>
+                  ))
+                }
+              </select>
+              {editBooking.newEventId && editBooking.newEventId !== editBooking.eventId && (
+                <div style={{ marginTop:6, padding:"6px 10px", background:"rgba(255,160,0,.1)", border:"1px solid rgba(255,160,0,.35)", borderRadius:3, fontSize:12, color:"#ffc060" }}>
+                  ⚠️ This booking will be moved from <strong>{editBooking._orig.eventTitle}</strong> to <strong>{data.events.find(e => e.id === editBooking.newEventId)?.title}</strong>.
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label>Ticket Type</label>
