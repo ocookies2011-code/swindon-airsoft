@@ -2562,6 +2562,31 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [bulkEmailSubject, setBulkEmailSubject] = useState("");
   const [bulkEmailBody, setBulkEmailBody] = useState("");
   const [bulkEmailModal, setBulkEmailModal] = useState(false);
+  const [squareCustomerSyncing, setSquareCustomerSyncing] = useState(false);
+  const [squareCustomerSyncStatus, setSquareCustomerSyncStatus] = useState(null); // null|"ok"|"error"
+
+  // ── Bulk sync all players to Square Customer Directory ────────
+  const syncAllPlayersToSquare = async () => {
+    if (!window.confirm("Sync all players to Square Customer Directory? This may take a minute.")) return;
+    setSquareCustomerSyncing(true);
+    setSquareCustomerSyncStatus(null);
+    try {
+      const allPlayers = (localUsers || data.users || []).filter(u => u.role === "player" && u.email);
+      const { data: result, error } = await supabase.functions.invoke("square-customer-sync", {
+        body: { action: "bulk-sync", profiles: allPlayers },
+      });
+      if (error || !result?.ok) throw new Error(error?.message || result?.error || "Sync failed");
+      setSquareCustomerSyncStatus("ok");
+      showToast(`✅ ${result.succeeded} players synced to Square${result.failed > 0 ? ` (${result.failed} failed)` : ""}!`);
+      setTimeout(() => setSquareCustomerSyncStatus(null), 5000);
+    } catch (e) {
+      setSquareCustomerSyncStatus("error");
+      showToast("Square sync failed: " + e.message, "red");
+      setTimeout(() => setSquareCustomerSyncStatus(null), 8000);
+    } finally {
+      setSquareCustomerSyncing(false);
+    }
+  };
 
   const loadUsers = () =>
     api.profiles.getAll()
@@ -2722,6 +2747,11 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       };
       const diff = diffFields(before, after, LABELS);
       logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player updated", detail: `${edit.name}${diff ? ` — ${diff}` : " (no field changes)"}` });
+      // Sync to Square Customer Directory in background
+      const updatedPlayer = updated.find(u => u.id === edit.id) || edit;
+      supabase.functions.invoke("square-customer-sync", {
+        body: { action: "upsert", profile: updatedPlayer },
+      }).catch(e => console.warn("Square customer sync failed:", e.message));
       setEdit(null);
     } catch (e) {
       showToast("Save failed: " + fmtErr(e), "red");
@@ -2765,7 +2795,18 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   return (
     <div>
       <div className="page-header">
-        <div><div className="page-title">Players</div><div className="page-sub">{players.length} registered</div></div>
+        <div>
+          <div className="page-title">Players</div>
+          <div className="page-sub">{players.length} registered
+            {squareCustomerSyncStatus === "ok"    && <span style={{ color:"#81c784", marginLeft:8 }}>✓ Synced to Square</span>}
+            {squareCustomerSyncStatus === "error"  && <span style={{ color:"var(--red)", marginLeft:8 }}>⚠ Square sync failed</span>}
+          </div>
+        </div>
+        <button className="btn btn-sm btn-ghost" onClick={syncAllPlayersToSquare} disabled={squareCustomerSyncing}
+          title="Sync all players to Square Customer Directory"
+          style={{ fontSize:11, color:"#4fc3f7", borderColor:"rgba(79,195,247,.3)" }}>
+          {squareCustomerSyncing ? "⏳ Syncing…" : "🔄 Sync Players to Square"}
+        </button>
         <button className="btn btn-ghost btn-sm" onClick={recalcAll} disabled={recalcBusy} title="Recalculate all players' game counts from actual check-ins">
           {recalcBusy ? "Recalculating…" : "🔄 Recalc Game Counts"}
         </button>
@@ -4472,7 +4513,6 @@ function AdminShop({ data, save, showToast, cu }) {
     setDeletingProduct(true);
     try {
       await api.shop.delete(delProductConfirm.id);
-      syncToSquare("delete", delProductConfirm);
       save({ shop: await api.shop.getAll() });
       showToast("Product deleted");
       logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Product deleted", detail: delProductConfirm.name || delProductConfirm.id });
@@ -4482,66 +4522,6 @@ function AdminShop({ data, save, showToast, cu }) {
   };
 
   const [savingProduct, setSavingProduct] = useState(false);
-  const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null|"syncing"|"ok"|"error"
-  const [bulkSyncing, setBulkSyncing] = useState(false);
-
-  // ── Sync a single product to Square (background, non-blocking) ──
-  const syncToSquare = async (action, product) => {
-    setSquareSyncStatus("syncing");
-    try {
-      const { data: result, error } = await supabase.functions.invoke("square-catalog-sync", {
-        body: { action, product },
-      });
-      if (error || !result?.ok) throw new Error(error?.message || result?.error || "Sync failed");
-      setSquareSyncStatus("ok");
-      setTimeout(() => setSquareSyncStatus(null), 4000);
-    } catch (e) {
-      console.warn("Square sync failed:", e.message);
-      setSquareSyncStatus("error");
-      setTimeout(() => setSquareSyncStatus(null), 8000);
-    }
-  };
-
-  // ── Cleanup Square duplicates then bulk re-sync all products ──
-  const runCleanupAndSync = async () => {
-    if (!window.confirm("This will DELETE all items from your Square Terminal and re-sync from your website. Continue?")) return;
-    setBulkSyncing(true);
-    setSquareSyncStatus("syncing");
-    try {
-      // Step 1: Delete everything from Square
-      const { data: cleanResult, error: cleanErr } = await supabase.functions.invoke("square-catalog-sync", {
-        body: { action: "cleanup" },
-      });
-      if (cleanErr || !cleanResult?.ok) throw new Error(cleanErr?.message || cleanResult?.error || "Cleanup failed");
-
-      // Step 2: Clear square_catalog_id from all products in DB so bulk-sync starts fresh
-      await supabase.from("shop_products").update({ square_catalog_id: null, square_variation_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
-
-      // Step 3: Bulk sync all current products
-      const freshShop = await api.shop.getAll();
-      const { data: syncResult, error: syncErr } = await supabase.functions.invoke("square-catalog-sync", {
-        body: { action: "bulk-sync", products: freshShop },
-      });
-      if (syncErr || !syncResult?.ok) throw new Error(syncErr?.message || syncResult?.error || "Bulk sync failed");
-
-      const failed = syncResult.results?.filter((r) => !r.ok) || [];
-      if (failed.length > 0) {
-        setSquareSyncStatus("error");
-        showToast(`Sync done — ${failed.length} product(s) failed. Check logs.`, "red");
-      } else {
-        setSquareSyncStatus("ok");
-        showToast(`✅ All ${freshShop.length} products synced to Square Terminal!`);
-        save({ shop: await api.shop.getAll() });
-      }
-      setTimeout(() => setSquareSyncStatus(null), 5000);
-    } catch (e) {
-      setSquareSyncStatus("error");
-      showToast("Sync failed: " + e.message, "red");
-      setTimeout(() => setSquareSyncStatus(null), 8000);
-    } finally {
-      setBulkSyncing(false);
-    }
-  };
 
   // Reset any stuck saving state when the tab becomes visible again
   // (browser can freeze JS mid-async when tab is hidden, leaving busy=true forever)
@@ -4566,16 +4546,6 @@ function AdminShop({ data, save, showToast, cu }) {
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
       showToast("Product saved!");
-      // Sync to Square in background — fetch fresh product so square_catalog_id is included
-      const savedProduct = modal === "new"
-        ? freshShop.find(p => p.name === form.name) || form
-        : freshShop.find(p => p.id === form.id) || form;
-      // For edits, preserve existing square_catalog_id in case freshShop hasn't updated yet
-      if (modal !== "new" && !savedProduct.square_catalog_id && form.square_catalog_id) {
-        savedProduct.square_catalog_id = form.square_catalog_id;
-        savedProduct.square_variation_id = form.square_variation_id;
-      }
-      syncToSquare("upsert", savedProduct);
       if (modal === "new") {
         logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Product created", detail: `Name: ${form.name} | Price: £${Number(form.price || 0).toFixed(2)} | Stock: ${form.stock ?? "?"}` });
       } else {
@@ -4627,23 +4597,9 @@ function AdminShop({ data, save, showToast, cu }) {
   return (
     <div>
       <div className="page-header">
-        <div>
-          <div className="page-title">Shop</div>
-          {squareSyncStatus === "syncing" && <div style={{ fontSize:11, color:"#4fc3f7", marginTop:3 }}>⏳ Syncing to Square…</div>}
-          {squareSyncStatus === "ok"      && <div style={{ fontSize:11, color:"#81c784", marginTop:3 }}>✓ Synced to Square Terminal</div>}
-          {squareSyncStatus === "error"   && <div style={{ fontSize:11, color:"var(--red)", marginTop:3 }}>⚠ Square sync failed — check Edge Function logs</div>}
-        </div>
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          {tab === "products" && (
-            <button className="btn btn-sm btn-ghost" onClick={runCleanupAndSync} disabled={bulkSyncing}
-              title="Delete all Square items and re-sync cleanly from your website"
-              style={{ fontSize:11, color:"#4fc3f7", borderColor:"rgba(79,195,247,.3)" }}>
-              {bulkSyncing ? "⏳ Syncing…" : "🔄 Sync All to Square"}
-            </button>
-          )}
-          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
-          {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
-        </div>
+        <div><div className="page-title">Shop</div></div>
+        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+        {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
       </div>
 
       <div className="nav-tabs">
@@ -9051,14 +9007,27 @@ function AdminCash({ data, cu, showToast }) {
   // ── Save the completed sale to DB ─────────────────────
   const saveSaleToDB = async (squarePaymentId = null) => {
     const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+
+    // If a registered player is selected, ensure they exist in Square Customer Directory
+    let squareCustomerId = player?.square_customer_id || null;
+    if (player && !squareCustomerId) {
+      try {
+        const { data: custResult } = await supabase.functions.invoke("square-customer-sync", {
+          body: { action: "upsert", profile: player },
+        });
+        squareCustomerId = custResult?.squareCustomerId || null;
+      } catch (e) { console.warn("Customer sync failed:", e.message); }
+    }
+
     const payload = {
-      customer_name:  player ? player.name : (manual.name || "Walk-in"),
-      customer_email: player ? (player.email || "") : (manual.email || ""),
-      user_id:        player?.id ?? null,
-      items:          items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      customer_name:      player ? player.name : (manual.name || "Walk-in"),
+      customer_email:     player ? (player.email || "") : (manual.email || ""),
+      user_id:            player?.id ?? null,
+      items:              items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
       total,
-      payment_method: squarePaymentId ? "terminal" : "cash",
-      square_payment_id: squarePaymentId || null,
+      payment_method:     squarePaymentId ? "terminal" : "cash",
+      square_payment_id:  squarePaymentId || null,
+      square_customer_id: squareCustomerId || null,
     };
     const insertPromise = supabase.from('cash_sales').insert(payload).select();
     const timeoutPromise = new Promise((_, reject) =>
