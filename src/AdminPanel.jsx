@@ -4566,10 +4566,15 @@ function AdminShop({ data, save, showToast, cu }) {
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
       showToast("Product saved!");
-      // Sync to Square in background
+      // Sync to Square in background — fetch fresh product so square_catalog_id is included
       const savedProduct = modal === "new"
         ? freshShop.find(p => p.name === form.name) || form
         : freshShop.find(p => p.id === form.id) || form;
+      // For edits, preserve existing square_catalog_id in case freshShop hasn't updated yet
+      if (modal !== "new" && !savedProduct.square_catalog_id && form.square_catalog_id) {
+        savedProduct.square_catalog_id = form.square_catalog_id;
+        savedProduct.square_variation_id = form.square_variation_id;
+      }
       syncToSquare("upsert", savedProduct);
       if (modal === "new") {
         logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Product created", detail: `Name: ${form.name} | Price: £${Number(form.price || 0).toFixed(2)} | Stock: ${form.stock ?? "?"}` });
