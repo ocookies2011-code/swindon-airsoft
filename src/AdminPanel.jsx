@@ -8564,16 +8564,16 @@ function AdminSettings({ showToast, cu }) {
         </div>
 
         <div className="form-group">
-          <label>Terminal Device ID <span style={{ color:"var(--muted)", fontSize:11, fontWeight:400 }}>— for Cash Sales terminal payments</span></label>
+          <label>Square Application ID <span style={{ color:"var(--muted)", fontSize:11, fontWeight:400 }}>— for Cash Sales terminal payments (Point of Sale API)</span></label>
           <input
             value={squareTerminalDeviceId}
             onChange={e => setSquareTerminalDeviceId(e.target.value)}
-            placeholder="device:... (from Square Dashboard → Devices)"
+            placeholder="sq0idp-... (from Square Developer Dashboard → Credentials)"
           />
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.7 }}>
-            Found in <a href="https://squareup.com/dashboard/devices" target="_blank" rel="noreferrer" style={{ color:"var(--accent)" }}>Square Dashboard → Devices</a>.
-            Click your Terminal → copy the <strong style={{ color:"var(--text)" }}>Device ID</strong> (starts with <code style={{ background:"rgba(255,255,255,.08)", padding:"1px 4px", borderRadius:2 }}>device:</code>).
-            Leave blank to hide the terminal option in Cash Sales.
+            Found in <a href="https://developer.squareup.com" target="_blank" rel="noreferrer" style={{ color:"var(--accent)" }}>Square Developer Dashboard</a> → your app → <strong style={{ color:"var(--text)" }}>Credentials</strong> → <strong style={{ color:"var(--text)" }}>Application ID</strong>.
+            This is used to launch the Square POS app from Cash Sales.
+            Leave blank to hide the terminal option.
           </div>
         </div>
 
@@ -8906,35 +8906,86 @@ function AdminCash({ data, cu, showToast }) {
   // ── Payment method: "cash" | "terminal"
   const [payMethod, setPayMethod] = useState("cash");
 
-  // ── Terminal state
-  const [terminalDeviceId, setTerminalDeviceId] = useState(""); // from settings
-  const [squareEnv, setSquareEnv] = useState("production");
-  const [terminalCheckoutId, setTerminalCheckoutId] = useState(null); // active checkout
-  const [terminalStatus, setTerminalStatus] = useState(null); // PENDING|IN_PROGRESS|COMPLETED|CANCELLED
-  const [terminalPaymentId, setTerminalPaymentId] = useState(null);
-  const [terminalPolling, setTerminalPolling] = useState(false);
+  // ── Terminal state (Point of Sale API)
+  const [squareAppId, setSquareAppId] = useState("");         // Square application ID
+  const [squareLocationId, setSquareLocationId] = useState(""); // Square location ID
   const [terminalBusy, setTerminalBusy] = useState(false);
-  const pollRef = useRef(null);
+  const [terminalStatus, setTerminalStatus] = useState(null); // PENDING|COMPLETED|CANCELLED|FAILED
+  const [terminalPaymentId, setTerminalPaymentId] = useState(null);
+  const posCallbackRef = useRef(null);
 
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
 
+  // ── Handle return from Square POS app ────────────────
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
+    const onVisible = async () => {
+      if (document.visibilityState !== "visible") return;
+      setBusy(false);
+      if (!posCallbackRef.current) return;
+      const { savedItems, savedPlayerId, savedManual, savedTotal } = posCallbackRef.current;
+      posCallbackRef.current = null;
+
+      // Parse Square POS result from URL query string
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get("status") || params.get("com.squareup.pos.STATUS");
+      const errorCode = params.get("error_code") || params.get("com.squareup.pos.ERROR_CODE");
+      const serverTransId = params.get("server_transaction_id") || params.get("com.squareup.pos.SERVER_TRANSACTION_ID");
+
+      // Clean the URL so params don't persist on refresh
+      window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+
+      if (status === "ok" || serverTransId) {
+        setTerminalStatus("COMPLETED");
+        setTerminalPaymentId(serverTransId || null);
+        try {
+          const player = savedPlayerId !== "manual" ? data.users.find(u => u.id === savedPlayerId) : null;
+          const payload = {
+            customer_name:     player ? player.name : (savedManual.name || "Walk-in"),
+            customer_email:    player ? (player.email || "") : (savedManual.email || ""),
+            user_id:           player?.id ?? null,
+            items:             savedItems.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+            total:             savedTotal,
+            payment_method:    "terminal",
+            square_payment_id: serverTransId || null,
+          };
+          const insertPromise = supabase.from("cash_sales").insert(payload).select();
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 6000));
+          const { error: dbErr } = await Promise.race([insertPromise, timeoutPromise]);
+          if (dbErr) throw new Error("DB Error: " + dbErr.message);
+          for (const item of savedItems) {
+            await supabase.rpc("deduct_stock", { product_id: item.id, qty: item.qty });
+          }
+          logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Terminal sale recorded (POS API)",
+            detail: `Customer: ${payload.customer_name} | Total: £${savedTotal.toFixed(2)} | Items: ${savedItems.map(i=>`${i.name} x${i.qty}`).join(", ")}${serverTransId ? ` | Square: ${serverTransId}` : ""}` });
+          showToast(`✅ Terminal payment £${savedTotal.toFixed(2)} confirmed!`);
+          resetSale();
+        } catch (e) {
+          setLastError("Payment taken but DB save failed: " + e.message);
+          showToast("Payment taken but DB save failed — see error below", "red");
+        }
+      } else if (errorCode) {
+        setTerminalStatus("FAILED");
+        const msg = `Terminal payment failed: ${errorCode}`;
+        setLastError(msg);
+        showToast(msg, "red");
+      } else {
+        setTerminalStatus("CANCELLED");
+        showToast("Terminal payment cancelled or Square POS app not found.", "red");
+      }
+      setTerminalBusy(false);
+    };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+  }, [data.users, cu]);
 
   useEffect(() => {
     api.shop.getAll()
       .then(list => { setShopProducts(list); setShopLoading(false); })
       .catch(() => { setShopProducts(data.shop || []); setShopLoading(false); });
-    // Load terminal device ID + env from settings
-    api.settings.get("square_terminal_device_id").then(v => { if (v) setTerminalDeviceId(v); }).catch(() => {});
-    api.settings.get("square_env").then(v => { if (v) setSquareEnv(v); }).catch(() => {});
+    // Load Square POS API credentials from settings
+    api.settings.get("square_app_id").then(v => { if (v) setSquareAppId(v); }).catch(() => {});
+    api.settings.get("square_location_id").then(v => { if (v) setSquareLocationId(v); }).catch(() => {});
   }, []);
-
-  // Clear polling on unmount
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   const add = (item) => setItems(c => {
     const ex = c.find(x => x.id === item.id);
@@ -8953,14 +9004,42 @@ function AdminCash({ data, cu, showToast }) {
     }
   };
 
-  // ── Invoke the square-terminal Edge Function ──────────
-  const terminalInvoke = async (body) => {
-    const { data: d, error } = await supabase.functions.invoke("square-terminal", {
-      body: { ...body, env: squareEnv },
-    });
-    if (error) throw new Error(error.message || "Terminal function error");
-    if (d?.error) throw new Error(d.error);
-    return d;
+  // ── Launch Square Point of Sale app ──────────────────
+  const startPOSCheckout = () => {
+    if (items.length === 0) { showToast("Add items first", "red"); return; }
+    if (!squareAppId) { showToast("Square App ID not configured — add it in Settings → Square", "red"); return; }
+    if (!squareLocationId) { showToast("Square Location ID not configured — add it in Settings → Square", "red"); return; }
+
+    const amountPence = Math.round(total * 100);
+    const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+    const customerName = player ? player.name : (manual.name || "Walk-in");
+    const note = `Swindon Airsoft — ${customerName} — ${items.map(i => `${i.name} x${i.qty}`).join(", ")}`.slice(0, 200);
+    const callbackUrl = encodeURIComponent(window.location.href.split("?")[0]);
+
+    // Save sale context so visibilitychange handler can complete the DB write on return
+    posCallbackRef.current = {
+      savedItems: items,
+      savedPlayerId: playerId,
+      savedManual: { ...manual },
+      savedTotal: total,
+    };
+
+    setTerminalBusy(true);
+    setTerminalStatus("PENDING");
+    setLastError(null);
+
+    // Build Square POS deep link — works on iOS and Android
+    const posUrl = `square-commerce-v1://payment/create?data=${encodeURIComponent(JSON.stringify({
+      amount_money: { amount: amountPence, currency_code: "GBP" },
+      callback_url: decodeURIComponent(callbackUrl),
+      client_id: squareAppId,
+      location_id: squareLocationId,
+      notes: note,
+      options: { supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER"] },
+    }))}`;
+
+    showToast("📟 Opening Square POS — complete payment on the device…");
+    window.location.href = posUrl;
   };
 
   // ── Save the completed sale to DB ─────────────────────
@@ -9018,11 +9097,10 @@ function AdminCash({ data, cu, showToast }) {
     setPlayerId("manual");
     setLastError(null);
     setDiagResult(null);
-    setTerminalCheckoutId(null);
     setTerminalStatus(null);
     setTerminalPaymentId(null);
-    setTerminalPolling(false);
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    setTerminalBusy(false);
+    posCallbackRef.current = null;
   };
 
   // ── Cash payment ──────────────────────────────────────
@@ -9047,92 +9125,7 @@ function AdminCash({ data, cu, showToast }) {
     }
   };
 
-  // ── Terminal: send checkout to device ────────────────
-  const startTerminalCheckout = async () => {
-    if (items.length === 0) { showToast("Add items first", "red"); return; }
-    if (!terminalDeviceId) { showToast("No Terminal Device ID configured — add it in Settings → Square", "red"); return; }
-    setTerminalBusy(true);
-    setLastError(null);
-    setTerminalStatus("PENDING");
-    setTerminalCheckoutId(null);
-    setTerminalPaymentId(null);
-    try {
-      const locationId = await api.settings.get("square_location_id");
-      const amountPence = Math.round(total * 100);
-      const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
-      const customerName = player ? player.name : (manual.name || "Walk-in");
-      const note = `Swindon Airsoft — ${customerName} — ${items.map(i => `${i.name} x${i.qty}`).join(", ")}`;
-      console.log("=== Terminal Debug ===");
-      console.log("locationId:", locationId);
-      console.log("deviceId:", terminalDeviceId);
-      console.log("env:", squareEnv);
-      console.log("amount (pence):", amountPence);
-      const result = await terminalInvoke({
-        action: "create",
-        deviceId: terminalDeviceId,
-        amount: amountPence,
-        currency: "GBP",
-        note: note.slice(0, 200),
-        locationId,
-      });
-      setTerminalCheckoutId(result.checkoutId);
-      setTerminalStatus(result.status || "PENDING");
-      showToast("📟 Payment sent to terminal — waiting for customer…");
-      // Start polling every 3 seconds
-      setTerminalPolling(true);
-      pollRef.current = setInterval(() => pollTerminal(result.checkoutId), 3000);
-    } catch (e) {
-      setTerminalStatus(null);
-      setLastError("Terminal error: " + e.message);
-      showToast("Terminal error: " + e.message, "red");
-      await logFailedPayment(e.message, "terminal");
-    } finally {
-      setTerminalBusy(false);
-    }
-  };
-
-  // ── Terminal: poll for status ─────────────────────────
-  const pollTerminal = async (checkoutId) => {
-    try {
-      const result = await terminalInvoke({ action: "get", checkoutId });
-      setTerminalStatus(result.status);
-      if (result.status === "COMPLETED") {
-        clearInterval(pollRef.current); pollRef.current = null;
-        setTerminalPolling(false);
-        setTerminalPaymentId(result.paymentId);
-        // Save to DB with the Square payment ID
-        try {
-          await saveSaleToDB(result.paymentId);
-          showToast(`✅ Terminal payment £${total.toFixed(2)} confirmed!`);
-          resetSale();
-        } catch (dbErr) {
-          setLastError("Payment taken but DB save failed: " + dbErr.message);
-          showToast("Payment taken but DB save failed — see error below", "red");
-          await logFailedPayment("Payment taken but DB save failed: " + dbErr.message, "terminal", result.paymentId);
-        }
-      } else if (result.status === "CANCELLED" || result.status === "CANCEL_REQUESTED") {
-        clearInterval(pollRef.current); pollRef.current = null;
-        setTerminalPolling(false);
-        showToast("❌ Terminal payment cancelled.", "red");
-      }
-    } catch { /* polling errors are non-fatal — keep trying */ }
-  };
-
-  // ── Terminal: cancel checkout ─────────────────────────
-  const cancelTerminalCheckout = async () => {
-    if (!terminalCheckoutId) return;
-    try {
-      await terminalInvoke({ action: "cancel", checkoutId: terminalCheckoutId });
-      clearInterval(pollRef.current); pollRef.current = null;
-      setTerminalPolling(false);
-      setTerminalStatus("CANCELLED");
-      showToast("Terminal payment cancelled.");
-    } catch (e) {
-      showToast("Cancel failed: " + e.message, "red");
-    }
-  };
-
-  const terminalActive = terminalPolling || terminalStatus === "PENDING" || terminalStatus === "IN_PROGRESS";
+  const terminalActive = terminalBusy || terminalStatus === "PENDING";
 
   return (
     <div>
@@ -9151,26 +9144,24 @@ function AdminCash({ data, cu, showToast }) {
         </div>
       )}
 
-      {/* ── Active terminal checkout status banner ── */}
+      {/* ── Active POS checkout status banner ── */}
       {terminalActive && (
         <div style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.35)", borderRadius:6, padding:"14px 18px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
           <div>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".08em", color:"#4fc3f7", marginBottom:4 }}>
-              📟 TERMINAL CHECKOUT — {terminalStatus || "PENDING"}
+              📟 OPENING SQUARE POS…
             </div>
             <div style={{ fontSize:12, color:"var(--muted)" }}>
-              {terminalStatus === "PENDING" && "Sending to device…"}
-              {terminalStatus === "IN_PROGRESS" && "Waiting for customer to pay on the terminal…"}
-              <span style={{ fontFamily:"monospace", fontSize:10, marginLeft:8, color:"#2a3a50" }}>{terminalCheckoutId}</span>
+              Complete the payment in the Square POS app, then return here.
             </div>
           </div>
-          <button className="btn btn-sm btn-danger" onClick={cancelTerminalCheckout}>
-            ✕ Cancel
-          </button>
         </div>
       )}
       {terminalStatus === "CANCELLED" && (
         <div className="alert alert-red mb-2" style={{ fontSize:12 }}>❌ Terminal payment was cancelled. You can retry or switch to cash.</div>
+      )}
+      {terminalStatus === "FAILED" && (
+        <div className="alert alert-red mb-2" style={{ fontSize:12 }}>❌ Terminal payment failed. Check the error above and retry.</div>
       )}
 
       <div className="grid-2">
@@ -9256,11 +9247,11 @@ function AdminCash({ data, cu, showToast }) {
               <div style={{ display: "flex", gap: 8 }}>
                 {["cash", "terminal"].map(m => {
                   const isTerminal = m === "terminal";
-                  const unavailable = isTerminal && !terminalDeviceId;
+                  const unavailable = isTerminal && !squareAppId;
                   return (
                     <button key={m}
                       onClick={() => !unavailable && setPayMethod(m)}
-                      title={unavailable ? "No Terminal Device ID set — go to Settings → Square" : ""}
+                      title={unavailable ? "Square App ID not set — go to Settings → Square" : ""}
                       style={{
                         flex: 1, padding: "10px 8px", borderRadius: 4, cursor: unavailable ? "not-allowed" : "pointer",
                         fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em",
@@ -9271,14 +9262,14 @@ function AdminCash({ data, cu, showToast }) {
                         opacity: unavailable ? 0.45 : 1,
                       }}>
                       {isTerminal ? "📟 Terminal" : "💵 Cash"}
-                      {isTerminal && !terminalDeviceId && <div style={{ fontSize: 9, fontWeight: 400, marginTop: 2, textTransform: "none", letterSpacing: 0 }}>Not configured</div>}
+                      {isTerminal && !squareAppId && <div style={{ fontSize: 9, fontWeight: 400, marginTop: 2, textTransform: "none", letterSpacing: 0 }}>Not configured</div>}
                     </button>
                   );
                 })}
               </div>
-              {payMethod === "terminal" && terminalDeviceId && (
-                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 6, fontFamily: "monospace" }}>
-                  Device: {terminalDeviceId} · {squareEnv}
+              {payMethod === "terminal" && squareAppId && (
+                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 6 }}>
+                  Opens Square POS app · Payment confirmed on return
                 </div>
               )}
             </div>
@@ -9289,16 +9280,10 @@ function AdminCash({ data, cu, showToast }) {
                 {busy ? "Saving…" : "✓ Complete Cash Sale"}
               </button>
             ) : (
-              terminalActive ? (
-                <button className="btn btn-sm btn-danger" style={{ width: "100%", padding: 10 }} onClick={cancelTerminalCheckout}>
-                  ✕ Cancel Terminal Payment
-                </button>
-              ) : (
-                <button className="btn" style={{ width: "100%", padding: 10, background: "rgba(79,195,247,.15)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: ".08em" }}
-                  disabled={terminalBusy || items.length === 0} onClick={startTerminalCheckout}>
-                  {terminalBusy ? "⏳ Sending…" : "📟 Send to Terminal"}
-                </button>
-              )
+              <button className="btn" style={{ width: "100%", padding: 10, background: "rgba(79,195,247,.15)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: ".08em" }}
+                disabled={terminalBusy || items.length === 0} onClick={startPOSCheckout}>
+                {terminalBusy ? "⏳ Opening POS…" : "📟 Send to Terminal"}
+              </button>
             )}
           </div>
         </div>
