@@ -4486,7 +4486,7 @@ function AdminShop({ data, save, showToast, cu }) {
   const [bulkSyncing, setBulkSyncing] = useState(false);
 
   // ── Sync a single product to Square (background, non-blocking) ──
-  const syncToSquare = async (action: string, product: unknown) => {
+  const syncToSquare = async (action, product) => {
     setSquareSyncStatus("syncing");
     try {
       const { data: result, error } = await supabase.functions.invoke("square-catalog-sync", {
@@ -4524,7 +4524,7 @@ function AdminShop({ data, save, showToast, cu }) {
       });
       if (syncErr || !syncResult?.ok) throw new Error(syncErr?.message || syncResult?.error || "Bulk sync failed");
 
-      const failed = syncResult.results?.filter((r: {ok: boolean}) => !r.ok) || [];
+      const failed = syncResult.results?.filter((r) => !r.ok) || [];
       if (failed.length > 0) {
         setSquareSyncStatus("error");
         showToast(`Sync done — ${failed.length} product(s) failed. Check logs.`, "red");
