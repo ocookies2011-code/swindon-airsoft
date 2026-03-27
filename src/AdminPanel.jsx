@@ -9730,7 +9730,6 @@ function TermsPage({ setPage }) {
             <BulletList items={[
               "Airsoft is a physical sport and carries inherent risks of injury. You voluntarily assume these risks.",
               "You confirm you have no medical conditions that would make participation dangerous without informing site staff.",
-              "You agree to wear all mandatory safety equipment, including full-seal eye protection, at all times in the game zone.",
               "You release Swindon Airsoft, its staff, and marshals from liability for injury or loss sustained during participation, except where caused by gross negligence.",
               "You confirm you are 18 or over, or that a parent/legal guardian has signed on your behalf.",
               "The waiver must be re-signed at the start of each new calendar year.",

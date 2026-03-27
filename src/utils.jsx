@@ -2897,7 +2897,7 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
           ${[
             ["Bring your QR code ticket (check your booking confirmation email)", "#c8ff00"],
             ["Arrive at least 15 minutes before start time for sign-in", "#8aaa60"],
-            ["Approved full-seal eye protection is mandatory at all times", "#8aaa60"],
+            ["Approved eye protection is mandatory at all times", "#8aaa60"],
             ["Wear appropriate clothing for the weather and terrain", "#8aaa60"],
             ["All personal RIFs will be chronographed before play", "#8aaa60"],
           ].map(([item, col]) => `
