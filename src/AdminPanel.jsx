@@ -4472,7 +4472,6 @@ function AdminShop({ data, save, showToast, cu }) {
     setDeletingProduct(true);
     try {
       await api.shop.delete(delProductConfirm.id);
-      // Sync deletion to Square Catalog in the background (non-blocking)
       syncToSquare("delete", delProductConfirm);
       save({ shop: await api.shop.getAll() });
       showToast("Product deleted");
@@ -4483,7 +4482,66 @@ function AdminShop({ data, save, showToast, cu }) {
   };
 
   const [savingProduct, setSavingProduct] = useState(false);
-  const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null | "syncing" | "ok" | "error"
+  const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null|"syncing"|"ok"|"error"
+  const [bulkSyncing, setBulkSyncing] = useState(false);
+
+  // ── Sync a single product to Square (background, non-blocking) ──
+  const syncToSquare = async (action: string, product: unknown) => {
+    setSquareSyncStatus("syncing");
+    try {
+      const { data: result, error } = await supabase.functions.invoke("square-catalog-sync", {
+        body: { action, product },
+      });
+      if (error || !result?.ok) throw new Error(error?.message || result?.error || "Sync failed");
+      setSquareSyncStatus("ok");
+      setTimeout(() => setSquareSyncStatus(null), 4000);
+    } catch (e) {
+      console.warn("Square sync failed:", e.message);
+      setSquareSyncStatus("error");
+      setTimeout(() => setSquareSyncStatus(null), 8000);
+    }
+  };
+
+  // ── Cleanup Square duplicates then bulk re-sync all products ──
+  const runCleanupAndSync = async () => {
+    if (!window.confirm("This will DELETE all items from your Square Terminal and re-sync from your website. Continue?")) return;
+    setBulkSyncing(true);
+    setSquareSyncStatus("syncing");
+    try {
+      // Step 1: Delete everything from Square
+      const { data: cleanResult, error: cleanErr } = await supabase.functions.invoke("square-catalog-sync", {
+        body: { action: "cleanup" },
+      });
+      if (cleanErr || !cleanResult?.ok) throw new Error(cleanErr?.message || cleanResult?.error || "Cleanup failed");
+
+      // Step 2: Clear square_catalog_id from all products in DB so bulk-sync starts fresh
+      await supabase.from("shop_products").update({ square_catalog_id: null, square_variation_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
+
+      // Step 3: Bulk sync all current products
+      const freshShop = await api.shop.getAll();
+      const { data: syncResult, error: syncErr } = await supabase.functions.invoke("square-catalog-sync", {
+        body: { action: "bulk-sync", products: freshShop },
+      });
+      if (syncErr || !syncResult?.ok) throw new Error(syncErr?.message || syncResult?.error || "Bulk sync failed");
+
+      const failed = syncResult.results?.filter((r: {ok: boolean}) => !r.ok) || [];
+      if (failed.length > 0) {
+        setSquareSyncStatus("error");
+        showToast(`Sync done — ${failed.length} product(s) failed. Check logs.`, "red");
+      } else {
+        setSquareSyncStatus("ok");
+        showToast(`✅ All ${freshShop.length} products synced to Square Terminal!`);
+        save({ shop: await api.shop.getAll() });
+      }
+      setTimeout(() => setSquareSyncStatus(null), 5000);
+    } catch (e) {
+      setSquareSyncStatus("error");
+      showToast("Sync failed: " + e.message, "red");
+      setTimeout(() => setSquareSyncStatus(null), 8000);
+    } finally {
+      setBulkSyncing(false);
+    }
+  };
 
   // Reset any stuck saving state when the tab becomes visible again
   // (browser can freeze JS mid-async when tab is hidden, leaving busy=true forever)
@@ -4494,36 +4552,6 @@ function AdminShop({ data, save, showToast, cu }) {
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
-
-  // ── Sync product to Square Catalog (background, non-blocking) ──
-  const syncToSquare = async (action, product) => {
-    setSquareSyncStatus("syncing");
-    try {
-      const { data: result, error } = await supabase.functions.invoke("square-catalog-sync", {
-        body: { action, product },
-      });
-      if (error || !result?.ok) throw new Error(error?.message || result?.error || "Sync failed");
-      // If Square returned new catalog IDs, persist them back to our DB
-      if (action === "upsert" && result.square_catalog_id) {
-        const patch = { square_catalog_id: result.square_catalog_id };
-        if (result.square_variation_id) patch.square_variation_id = result.square_variation_id;
-        // Patch variation IDs onto variants if present
-        if (result.variation_id_map && product.variants?.length > 0) {
-          patch.variants = product.variants.map(v => ({
-            ...v,
-            square_variation_id: result.variation_id_map[v.id] || v.square_variation_id || null,
-          }));
-        }
-        await api.shop.update(product.id, patch);
-      }
-      setSquareSyncStatus("ok");
-      setTimeout(() => setSquareSyncStatus(null), 4000);
-    } catch (e) {
-      console.warn("Square catalog sync failed (non-fatal):", e.message);
-      setSquareSyncStatus("error");
-      setTimeout(() => setSquareSyncStatus(null), 8000);
-    }
-  };
   const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
     setSavingProduct(true);
@@ -4538,9 +4566,9 @@ function AdminShop({ data, save, showToast, cu }) {
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
       showToast("Product saved!");
-      // Sync to Square Catalog in the background (non-blocking)
+      // Sync to Square in background
       const savedProduct = modal === "new"
-        ? freshShop.find(p => p.name === form.name && p.price === form.price) || form
+        ? freshShop.find(p => p.name === form.name) || form
         : freshShop.find(p => p.id === form.id) || form;
       syncToSquare("upsert", savedProduct);
       if (modal === "new") {
@@ -4600,8 +4628,17 @@ function AdminShop({ data, save, showToast, cu }) {
           {squareSyncStatus === "ok"      && <div style={{ fontSize:11, color:"#81c784", marginTop:3 }}>✓ Synced to Square Terminal</div>}
           {squareSyncStatus === "error"   && <div style={{ fontSize:11, color:"var(--red)", marginTop:3 }}>⚠ Square sync failed — check Edge Function logs</div>}
         </div>
-        {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
-        {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          {tab === "products" && (
+            <button className="btn btn-sm btn-ghost" onClick={runCleanupAndSync} disabled={bulkSyncing}
+              title="Delete all Square items and re-sync cleanly from your website"
+              style={{ fontSize:11, color:"#4fc3f7", borderColor:"rgba(79,195,247,.3)" }}>
+              {bulkSyncing ? "⏳ Syncing…" : "🔄 Sync All to Square"}
+            </button>
+          )}
+          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+          {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
+        </div>
       </div>
 
       <div className="nav-tabs">
