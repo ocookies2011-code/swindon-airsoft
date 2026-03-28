@@ -674,7 +674,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "staff-admin",       label: "Staff",             icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, group: null },
     { id: "contact-admin",     label: "Contact Depts",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, group: null },
     { id: "messages",          label: "Site Messages",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f48fb1" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>, group: null },
-    { id: "cash",              label: "Cash Sales",        icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, group: "TOOLS" },
+    // { id: "cash", label: "Cash Sales", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, group: "TOOLS" }, // hidden — terminal sales now go to shop_orders automatically
     { id: "purchase-orders",   label: "Purchase Orders",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, group: null },
     { id: "discount-codes",    label: "Discount Codes",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>, group: null },
     { id: "settings",          label: "Settings",          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, group: "SYSTEM" },
@@ -9085,9 +9085,8 @@ function AdminCash({ data, cu, showToast }) {
   // ── Save the completed sale to DB ─────────────────────
   const saveSaleToDB = async (squarePaymentId = null) => {
     const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
-    const isTerminal = !!squarePaymentId;
 
-    // Ensure player exists in Square Customer Directory
+    // If a registered player is selected, ensure they exist in Square Customer Directory
     let squareCustomerId = player?.square_customer_id || null;
     if (player && !squareCustomerId) {
       try {
@@ -9098,61 +9097,34 @@ function AdminCash({ data, cu, showToast }) {
       } catch (e) { console.warn("Customer sync failed:", e.message); }
     }
 
-    const customerName  = player ? player.name : (manual.name || "Walk-in");
-    const customerEmail = player ? (player.email || "") : (manual.email || "");
-    const userId        = player?.id ?? null;
-    const saleItems     = items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }));
-
-    if (isTerminal) {
-      // ── Terminal sales → shop_orders (shows on customer's account) ──
-      const orderPayload = {
-        customer_name:   customerName,
-        customer_email:  customerEmail,
-        user_id:         userId,
-        items:           saleItems,
-        subtotal:        total,
-        postage:         0,
-        postage_name:    null,
-        total,
-        status:          "terminal",          // distinct status so it shows correctly
-        square_order_id: squarePaymentId,     // store Square payment ID here
-        customer_address: player?.address || null,
-      };
-      const insertPromise  = supabase.from("shop_orders").insert(orderPayload).select();
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 6000));
-      const { error } = await Promise.race([insertPromise, timeoutPromise]);
-      if (error) {
-        const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
-        throw new Error("DB Error: " + msg);
-      }
-    } else {
-      // ── Cash sales → cash_sales ──
-      const cashPayload = {
-        customer_name:      customerName,
-        customer_email:     customerEmail,
-        user_id:            userId,
-        items:              saleItems,
-        total,
-        payment_method:     "cash",
-        square_payment_id:  null,
-        square_customer_id: squareCustomerId || null,
-      };
-      const insertPromise  = supabase.from("cash_sales").insert(cashPayload).select();
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 6000));
-      const { error } = await Promise.race([insertPromise, timeoutPromise]);
-      if (error) {
-        const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
-        throw new Error("DB Error: " + msg);
-      }
+    const payload = {
+      customer_name:      player ? player.name : (manual.name || "Walk-in"),
+      customer_email:     player ? (player.email || "") : (manual.email || ""),
+      user_id:            player?.id ?? null,
+      items:              items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      total,
+      payment_method:     squarePaymentId ? "terminal" : "cash",
+      square_payment_id:  squarePaymentId || null,
+      square_customer_id: squareCustomerId || null,
+    };
+    const insertPromise = supabase.from('cash_sales').insert(payload).select();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("TIMEOUT")), 6000)
+    );
+    const { data: result, error } = await Promise.race([insertPromise, timeoutPromise]);
+    if (error) {
+      const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
+      throw new Error("DB Error: " + msg);
     }
-
     // Deduct stock
     for (const item of items) {
-      await supabase.rpc("deduct_stock", { product_id: item.id, qty: item.qty });
+      await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
     }
+    const cashPlayer = playerId !== "manual" ? data.users?.find(u => u.id === playerId) : null;
+    const cashCustomer = cashPlayer ? cashPlayer.name : (manual.name || "Walk-in");
     const cashItems = items.map(i => `${i.name} x${i.qty} (£${Number(i.price * i.qty).toFixed(2)})`).join(", ");
-    const method    = isTerminal ? "Terminal" : "Cash";
-    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: ${customerName} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
+    const method = squarePaymentId ? "Terminal" : "Cash";
+    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: £{cashCustomer} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
   };
 
   const logFailedPayment = async (errorMessage, paymentMethod, squarePaymentId = null) => {
