@@ -1642,7 +1642,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                               ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ In</button>
                               : <span className="text-muted" style={{ fontSize: 11 }}>✓ Done</span>
                             }
-                            <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking(b)}>View</button>
+                            <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking({ ...b, eventObj: ev, eventTitle: ev.title })}>View</button>
                             <button className="btn btn-sm btn-ghost" onClick={() => openEdit({ ...b, eventTitle: ev.title, eventObj: ev })}>Edit</button>
                             {b.squareOrderId && b.total > 0 && (
                               <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
@@ -1739,16 +1739,21 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           {/* ── View Booking Modal ── */}
           {viewBooking && (() => {
             const cb = viewBooking;
+            const evObj = cb.eventObj || data.events.find(e => e.id === cb.eventId) || null;
             const extras = Object.entries(cb.extras || {}).filter(([,v]) => v > 0);
             const ticketLabel = cb.type === "walkOn" ? "Walk-On" : "Rental Package";
-            const ticketPrice = cb.type === "walkOn" ? cb.eventObj?.walkOnPrice : cb.eventObj?.rentalPrice;
+            const ticketPrice = cb.type === "walkOn" ? evObj?.walkOnPrice : evObj?.rentalPrice;
+            // Fall back to total when price can't be determined
+            const ticketLineTotal = ticketPrice != null
+              ? (Number(ticketPrice) * cb.qty).toFixed(2)
+              : cb.total?.toFixed(2) ?? "—";
             return (
               <div className="overlay" onClick={() => setViewBooking(null)}>
                 <div className="modal-box wide" onClick={e => e.stopPropagation()}>
                   <div className="modal-title">🎟 Booking Details</div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.userName}</div></div>
-                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || cb.eventObj?.title}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || evObj?.title}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
                   </div>
@@ -1757,11 +1762,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     <div style={{ padding:"0 14px" }}>
                       <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                         <span>{ticketLabel} ×{cb.qty}</span>
-                        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(Number(ticketPrice) * cb.qty).toFixed(2)}</span>
+                        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{ticketLineTotal}</span>
                       </div>
                       {extras.map(([key, qty]) => {
                         const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-                        const ex = cb.eventObj?.extras?.find(e => e.id === extraId);
+                        const ex = evObj?.extras?.find(e => e.id === extraId);
                         const lp = (data?.shop || []).find(p => p.id === ex?.productId);
                         const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
                         const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
