@@ -4668,15 +4668,24 @@ function AdminShop({ data, save, showToast, cu }) {
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
       showToast("Product saved!");
-      // Sync to Square in background
-      const savedProduct = modal === "new"
-        ? freshShop.find(p => p.name === form.name) || form
-        : freshShop.find(p => p.id === form.id) || form;
-      if (modal !== "new" && !savedProduct.square_catalog_id && form.square_catalog_id) {
-        savedProduct.square_catalog_id   = form.square_catalog_id;
-        savedProduct.square_variation_id = form.square_variation_id;
-      }
-      syncToSquare("upsert", savedProduct);
+      // Use form data for Square sync — it has full variant images in memory
+      // freshShop may have images truncated by Supabase response size limits
+      const dbProduct = modal === "new"
+        ? freshShop.find(p => p.name === form.name)
+        : freshShop.find(p => p.id === form.id);
+      const syncProduct = {
+        ...form,
+        id: dbProduct?.id || form.id,
+        // Prefer DB square IDs (most up to date) over form state
+        square_catalog_id:   dbProduct?.square_catalog_id   || form.square_catalog_id   || null,
+        square_variation_id: dbProduct?.square_variation_id || form.square_variation_id || null,
+        // Merge square_variation_id onto variants from DB if available
+        variants: (form.variants || []).map(v => {
+          const dbVariant = dbProduct?.variants?.find(dv => dv.id === v.id);
+          return { ...v, square_variation_id: dbVariant?.square_variation_id || v.square_variation_id || null };
+        }),
+      };
+      syncToSquare("upsert", syncProduct);
       if (modal === "new") {
         logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Product created", detail: `Name: ${form.name} | Price: £${Number(form.price || 0).toFixed(2)} | Stock: ${form.stock ?? "?"}` });
       } else {
