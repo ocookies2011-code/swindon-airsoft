@@ -1178,17 +1178,35 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     bookings.forEach(b => {
       ticketTypes[b.type] = (ticketTypes[b.type] || 0) + (b.qty || 1);
       if (b.extras) Object.entries(b.extras).forEach(([k, v]) => {
-        if (v) extraCounts[k] = (extraCounts[k] || 0) + (typeof v === 'number' ? v : 1);
+        if (!v) return;
+        const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
+        const exDef = ev.extras?.find(e => e.id === xId);
+        const shopP = exDef ? (data?.shop || []).find(p => p.id === exDef.productId) : null;
+        const varDef = vId && shopP ? (shopP.variants || []).find(vv => vv.id === vId) : null;
+        const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : xId;
+        extraCounts[label] = (extraCounts[label] || 0) + (typeof v === 'number' ? v : 1);
       });
     });
-    const rows = bookings.map(b => `
+    const rows = bookings.map(b => {
+      const extrasText = b.extras
+        ? Object.entries(b.extras).filter(([,v]) => v > 0).map(([k, v]) => {
+            const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
+            const exDef = ev.extras?.find(e => e.id === xId);
+            const shopP = exDef ? (data?.shop || []).find(p => p.id === exDef.productId) : null;
+            const varDef = vId && shopP ? (shopP.variants || []).find(vv => vv.id === vId) : null;
+            const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : xId;
+            return `${label} ×${v}`;
+          }).join(", ")
+        : "—";
+      return `
       <tr>
         <td>${b.userName || 'Unknown'}</td>
         <td>${b.type}</td>
         <td>${b.qty || 1}</td>
         <td>${b.checkedIn ? '✓' : ''}</td>
-        <td style="font-size:11px">${b.extras ? Object.entries(b.extras).filter(([,v])=>v).map(([k,v])=>`${k}${typeof v==='number'?` x${v}`:''}`).join(', ') : '—'}</td>
-      </tr>`).join('');
+        <td style="font-size:11px">${extrasText || '—'}</td>
+      </tr>`;
+    }).join('');
     const ticketSummary = Object.entries(ticketTypes).map(([t,c])=>`<span style="margin-right:16px"><strong>${c}</strong> × ${t}</span>`).join('');
     const extraSummary = Object.entries(extraCounts).length ? Object.entries(extraCounts).map(([k,v])=>`<span style="margin-right:16px"><strong>${v}</strong> × ${k}</span>`).join('') : 'None';
     const win = window.open('','_blank','width=900,height=700');
@@ -1524,7 +1542,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                   )}
                   {ev.bookings.map(b => {
                     const bookedExtras = b.extras && typeof b.extras === "object"
-                      ? ev.extras.filter(ex => (b.extras[ex.id] || 0) > 0)
+                      ? ev.extras.filter(ex => {
+                          // Check both plain ID and variant key format "extraId:variantId"
+                          const directMatch = (b.extras[ex.id] || 0) > 0;
+                          const variantMatch = Object.keys(b.extras).some(k => k.startsWith(ex.id + ":") && (b.extras[k] || 0) > 0);
+                          return directMatch || variantMatch;
+                        })
                       : [];
 
                     const downloadTicket = () => {
@@ -1589,11 +1612,25 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <td style={{ fontSize: 11 }}>
                           {bookedExtras.length === 0
                             ? <span style={{ color: "var(--muted)" }}>—</span>
-                            : bookedExtras.map(ex => (
-                                <div key={ex.id} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
-                                  {ex.name} ×{b.extras[ex.id]}
-                                </div>
-                              ))
+                            : bookedExtras.map(ex => {
+                                // Collect all keys for this extra (plain or variant)
+                                const keys = Object.keys(b.extras || {}).filter(k =>
+                                  k === ex.id || k.startsWith(ex.id + ":")
+                                );
+                                return keys.map(key => {
+                                  const qty = b.extras[key] || 0;
+                                  if (!qty) return null;
+                                  const variantId = key.includes(":") ? key.split(":")[1] : null;
+                                  const shopP = (data.shop || []).find(p => p.id === ex.productId);
+                                  const varDef = variantId && shopP ? (shopP.variants || []).find(vv => vv.id === variantId) : null;
+                                  const label = varDef ? `${ex.name} — ${varDef.name}` : ex.name;
+                                  return (
+                                    <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
+                                      {label} ×{qty}
+                                    </div>
+                                  );
+                                });
+                              })
                           }
                         </td>
                         <td className="text-green">£{b.total.toFixed(2)}</td>
