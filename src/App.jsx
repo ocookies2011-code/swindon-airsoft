@@ -2446,7 +2446,19 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
       {ev && ev.bookings.length > 0 && (
         <div className="card">
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 12 }}>Booking List</div>
-          {ev.bookings.map(b => (
+          {ev.bookings.map(b => {
+            // Build extras labels for this booking
+            const extrasEntries = Object.entries(b.extras || {}).filter(([,v]) => v > 0);
+            const extrasLabels = extrasEntries.map(([k, qty]) => {
+              const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
+              const exDef = ev.extras?.find(e => e.id === xId);
+              const shopP = exDef ? (data.shop || []).find(p => p.id === exDef.productId) : null;
+              const varDef = vId && shopP ? (shopP.variants || []).find(vv => vv.id === vId) : null;
+              const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : xId;
+              return `${label} ×${qty}`;
+            });
+
+            return (
             <div key={b.id} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
               borderBottom: "1px solid #1a2808",
@@ -2455,13 +2467,23 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, color: b.checkedIn ? "#3a5010" : "#b0c090", textTransform: "uppercase", letterSpacing: ".06em" }}>{b.userName}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#3a5010", marginTop: 2 }}>{b.type === "walkOn" ? "WALK-ON" : "RENTAL"} · QTY {b.qty}</div>
+                {extrasLabels.length > 0 && (
+                  <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {extrasLabels.map((label, i) => (
+                      <span key={i} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#c8ff00", background: "rgba(200,255,0,.08)", border: "1px solid rgba(200,255,0,.2)", padding: "2px 6px", borderRadius: 2, whiteSpace: "nowrap" }}>
+                        + {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               {b.checkedIn
                 ? <span className="tag tag-green" style={{ flexShrink: 0 }}>✓ IN</span>
                 : <button className="btn btn-sm btn-primary" style={{ flexShrink: 0 }} onClick={() => doCheckin(b, ev)} disabled={busy}>✓ Check In</button>
               }
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
