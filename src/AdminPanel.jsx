@@ -9085,8 +9085,9 @@ function AdminCash({ data, cu, showToast }) {
   // ── Save the completed sale to DB ─────────────────────
   const saveSaleToDB = async (squarePaymentId = null) => {
     const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
+    const isTerminal = !!squarePaymentId;
 
-    // If a registered player is selected, ensure they exist in Square Customer Directory
+    // Ensure player exists in Square Customer Directory
     let squareCustomerId = player?.square_customer_id || null;
     if (player && !squareCustomerId) {
       try {
@@ -9097,34 +9098,61 @@ function AdminCash({ data, cu, showToast }) {
       } catch (e) { console.warn("Customer sync failed:", e.message); }
     }
 
-    const payload = {
-      customer_name:      player ? player.name : (manual.name || "Walk-in"),
-      customer_email:     player ? (player.email || "") : (manual.email || ""),
-      user_id:            player?.id ?? null,
-      items:              items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
-      total,
-      payment_method:     squarePaymentId ? "terminal" : "cash",
-      square_payment_id:  squarePaymentId || null,
-      square_customer_id: squareCustomerId || null,
-    };
-    const insertPromise = supabase.from('cash_sales').insert(payload).select();
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TIMEOUT")), 6000)
-    );
-    const { data: result, error } = await Promise.race([insertPromise, timeoutPromise]);
-    if (error) {
-      const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
-      throw new Error("DB Error: " + msg);
+    const customerName  = player ? player.name : (manual.name || "Walk-in");
+    const customerEmail = player ? (player.email || "") : (manual.email || "");
+    const userId        = player?.id ?? null;
+    const saleItems     = items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }));
+
+    if (isTerminal) {
+      // ── Terminal sales → shop_orders (shows on customer's account) ──
+      const orderPayload = {
+        customer_name:   customerName,
+        customer_email:  customerEmail,
+        user_id:         userId,
+        items:           saleItems,
+        subtotal:        total,
+        postage:         0,
+        postage_name:    null,
+        total,
+        status:          "terminal",          // distinct status so it shows correctly
+        square_order_id: squarePaymentId,     // store Square payment ID here
+        customer_address: player?.address || null,
+      };
+      const insertPromise  = supabase.from("shop_orders").insert(orderPayload).select();
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 6000));
+      const { error } = await Promise.race([insertPromise, timeoutPromise]);
+      if (error) {
+        const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
+        throw new Error("DB Error: " + msg);
+      }
+    } else {
+      // ── Cash sales → cash_sales ──
+      const cashPayload = {
+        customer_name:      customerName,
+        customer_email:     customerEmail,
+        user_id:            userId,
+        items:              saleItems,
+        total,
+        payment_method:     "cash",
+        square_payment_id:  null,
+        square_customer_id: squareCustomerId || null,
+      };
+      const insertPromise  = supabase.from("cash_sales").insert(cashPayload).select();
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 6000));
+      const { error } = await Promise.race([insertPromise, timeoutPromise]);
+      if (error) {
+        const msg = [error.message, error.details, error.hint].filter(Boolean).join(" | ") || JSON.stringify(error);
+        throw new Error("DB Error: " + msg);
+      }
     }
+
     // Deduct stock
     for (const item of items) {
-      await supabase.rpc('deduct_stock', { product_id: item.id, qty: item.qty });
+      await supabase.rpc("deduct_stock", { product_id: item.id, qty: item.qty });
     }
-    const cashPlayer = playerId !== "manual" ? data.users?.find(u => u.id === playerId) : null;
-    const cashCustomer = cashPlayer ? cashPlayer.name : (manual.name || "Walk-in");
     const cashItems = items.map(i => `${i.name} x${i.qty} (£${Number(i.price * i.qty).toFixed(2)})`).join(", ");
-    const method = squarePaymentId ? "Terminal" : "Cash";
-    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: £{cashCustomer} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
+    const method    = isTerminal ? "Terminal" : "Cash";
+    logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: ${customerName} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
   };
 
   const logFailedPayment = async (errorMessage, paymentMethod, squarePaymentId = null) => {
