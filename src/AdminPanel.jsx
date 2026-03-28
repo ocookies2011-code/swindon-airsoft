@@ -3040,8 +3040,8 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                     </div>
                   </td>
                 </tr>
-              {waiverViewPlayer?.id === u.id && (() => {
-                const wu = u;
+              {waiverViewPlayer?.id === u.id && ((_wu => {
+                const wu = _wu;
                 const allWaivers = [wu.waiverData, ...(wu.extraWaivers || [])].filter(Boolean);
                 const wFields = (w) => [
                   ["Name", w.name], ["DOB", w.dob],
@@ -3169,7 +3169,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                     </td>
                   </tr>
                 );
-              })()}
+              })(u)}
             ))}
             </tbody>
           </table></div>
