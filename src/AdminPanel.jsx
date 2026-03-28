@@ -1540,7 +1540,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                   {ev.bookings.length === 0 && (
                     <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No bookings for this event</td></tr>
                   )}
-                  {ev.bookings.map(b => {
+                  {[...ev.bookings].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => {
                     const bookedExtras = b.extras && typeof b.extras === "object"
                       ? ev.extras.filter(ex => {
                           // Check both plain ID and variant key format "extraId:variantId"
@@ -1857,9 +1857,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             </div>
             <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{fmtDate(viewEv.date)} @ {viewEv.time} GMT | {viewEv.location} · {viewEv.bookings.length} booked</p>
             <div className="table-wrap"><table className="data-table">
-              <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Status</th></tr></thead>
+              <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Booked</th><th>Status</th></tr></thead>
               <tbody>
-                {viewEv.bookings.map(b => (
+                {[...viewEv.bookings].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => (
                   <tr key={b.id}>
                     <td>{b.userName}</td>
                     <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
@@ -1879,10 +1879,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       })()}
                     </td>
                     <td className="text-green">£{b.total.toFixed(2)}</td>
+                    <td className="mono" style={{ fontSize:11 }}>{gmtShort(b.date)}</td>
                     <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
                   </tr>
                 ))}
-                {viewEv.bookings.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No bookings</td></tr>}
+                {viewEv.bookings.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No bookings</td></tr>}
               </tbody>
             </table></div>
             <button className="btn btn-ghost mt-2" onClick={() => setViewId(null)}>Close</button>
