@@ -3755,6 +3755,39 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
 function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, cu }) {
   const [view, setView] = useState(null);
   const [localUsers, setLocalUsers] = useState(null);
+  const [sendingReminderFor, setSendingReminderFor] = useState(null);
+
+  const sendWaiverReminder = async (u) => {
+    if (!u.email) { showToast("No email address on file for this player.", "red"); return; }
+    setSendingReminderFor(u.id);
+    try {
+      const htmlContent = `<div style="font-family:Arial,sans-serif;background:#0a0a0a;color:#e0e0e0;padding:32px 24px;max-width:600px;margin:0 auto">
+        <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 0 8px;height:auto;" />
+        <div style="height:2px;background:#1a2808;margin-bottom:24px"></div>
+        <div style="font-size:14px;margin-bottom:16px">Hi ${u.name},</div>
+        <div style="font-size:14px;line-height:1.8">
+          <p>This is a friendly reminder that you have not yet signed your Swindon Airsoft waiver for <strong>${new Date().getFullYear()}</strong>.</p>
+          <p>Waivers must be signed before you can participate in any game days. Please log in to your account and complete your waiver as soon as possible.</p>
+          <p style="margin-top:24px">
+            <a href="https://www.swindon-airsoft.com" style="display:inline-block;background:#c8ff00;color:#000;font-weight:700;padding:12px 28px;text-decoration:none;border-radius:3px;font-family:'Barlow Condensed',Arial,sans-serif;font-size:14px;letter-spacing:.08em">
+              SIGN YOUR WAIVER →
+            </a>
+          </p>
+          <p style="font-size:13px;color:#888;margin-top:8px">Log in and navigate to the Waiver section of your account.</p>
+        </div>
+        <div style="margin-top:32px;padding-top:16px;border-top:1px solid #1a2808;font-size:11px;color:#555">
+          Swindon Airsoft — Please do not reply to this address. Contact us via the website if you need help.
+        </div>
+      </div>`;
+      await sendEmail({ toEmail: u.email, toName: u.name, subject: `Action required: Sign your ${new Date().getFullYear()} waiver — Swindon Airsoft`, htmlContent });
+      showToast(`✅ Reminder sent to ${u.name}`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver reminder sent", detail: `${u.name} <${u.email}>` });
+    } catch(e) {
+      showToast("Failed to send reminder: " + (e.message || String(e)), "red");
+    } finally {
+      setSendingReminderFor(null);
+    }
+  };
 
   useEffect(() => {
     api.profiles.getAll()
@@ -3816,7 +3849,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
       {!embedded && <div className="page-header"><div><div className="page-title">{filterUnsigned ? "Unsigned Waivers" : "Waivers"}</div><div className="page-sub">{filterUnsigned ? `${displayUsers.length} player(s) without a signed waiver` : `Valid for ${new Date().getFullYear()} calendar year`}</div></div></div>}
       <div className="card">
         <div className="table-wrap"><table className="data-table">
-          <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Players</th><th>Pending</th><th></th></tr></thead>
+          <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Players</th><th>Pending</th><th></th>{filterUnsigned && <th></th>}</tr></thead>
           <tbody>
             {displayUsers.map(u => {
               const totalWaivers = 1 + (u.extraWaivers?.length || 0);
@@ -3828,10 +3861,22 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
                   <td>{totalWaivers > 1 ? <span className="tag tag-blue">{totalWaivers} players</span> : <span style={{ color:"var(--muted)", fontSize:12 }}>1</span>}</td>
                   <td>{u.waiverPending ? (u.waiverPending._removeExtra ? <span className="tag tag-red">🗑 Removal</span> : <span className="tag tag-gold">⚠ Pending</span>) : "—"}</td>
                   <td><button className="btn btn-sm btn-ghost" onClick={() => setView(u.id)}>View</button></td>
+                  {filterUnsigned && (
+                    <td>
+                      <button
+                        className="btn btn-sm"
+                        disabled={sendingReminderFor === u.id}
+                        onClick={() => sendWaiverReminder(u)}
+                        style={{ background:"rgba(200,160,0,.12)", border:"1px solid rgba(200,160,0,.35)", color:"var(--gold)", whiteSpace:"nowrap" }}
+                      >
+                        {sendingReminderFor === u.id ? "⏳ Sending…" : "📧 Remind"}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
-            {displayUsers.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>{filterUnsigned ? "All players have signed waivers ✓" : "No waivers on file"}</td></tr>}
+            {displayUsers.length === 0 && <tr><td colSpan={filterUnsigned ? 7 : 6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>{filterUnsigned ? "All players have signed waivers ✓" : "No waivers on file"}</td></tr>}
           </tbody>
         </table></div>
       </div>
