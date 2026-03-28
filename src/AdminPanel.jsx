@@ -9154,6 +9154,8 @@ function AdminCash({ data, cu, showToast }) {
     const cashItems = items.map(i => `${i.name} x${i.qty} (£${Number(i.price * i.qty).toFixed(2)})`).join(", ");
     const method    = isTerminal ? "Terminal" : "Cash";
     logAction({ adminEmail: cu?.email, adminName: cu?.name, action: `${method} sale recorded`, detail: `Customer: ${customerName} | Total: £${total.toFixed(2)} | Items: ${cashItems}${squarePaymentId ? ` | Square: ${squarePaymentId}` : ""}` });
+  };
+
   const logFailedPayment = async (errorMessage, paymentMethod, squarePaymentId = null) => {
     const player = playerId !== "manual" ? data.users.find(u => u.id === playerId) : null;
     await supabase.from('failed_payments').insert({
