@@ -819,8 +819,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   );
                 })()}
 
-                {/* Extras */}
-                {ev.extras.length > 0 && (
+                {/* Extras — only shown when buying a ticket in this transaction.
+                    Players who already have a booking but no ticket in cart see a notice instead. */}
+                {ev.extras.length > 0 && myBookings.length > 0 && bCart.walkOn === 0 && bCart.rental === 0 && (
+                  <div style={{ margin:"0 16px 14px", padding:"10px 14px", background:"rgba(200,255,0,.04)", border:"1px solid #2a3a10", fontSize:12, color:"var(--muted)", lineHeight:1.5 }}>
+                    🎒 <strong style={{ color:"var(--text)" }}>Game day extras</strong> must be purchased together with a ticket. To add extras, please contact us directly.
+                  </div>
+                )}
+                {ev.extras.length > 0 && (bCart.walkOn > 0 || bCart.rental > 0) && (
                   <div style={{ padding:"0 16px 14px" }}>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
                     {visibleExtras.map(ex => {
