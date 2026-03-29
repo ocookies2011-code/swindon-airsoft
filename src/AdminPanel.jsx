@@ -4137,7 +4137,8 @@ function AdminOrdersInline({ showToast, cu }) {
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
   const [statusTab, setStatusTab] = useState("pending");
   const STATUS_TABS = ["pending","processing","dispatched","completed","terminal","cancelled","return_requested","return_approved","return_received","all","refunded"];
-  const visibleOrders = statusTab === "all" ? orders : orders.filter(o => o.status === statusTab);
+  const isTerminalOrder = (o) => o.postage_name === null && Number(o.postage) === 0;
+  const visibleOrders = statusTab === "all" ? orders : statusTab === "terminal" ? orders.filter(isTerminalOrder) : orders.filter(o => o.status === statusTab && !isTerminalOrder(o));
 
   return (
     <div>
@@ -6237,8 +6238,8 @@ function AdminRevenue({ data, save, showToast, cu }) {
       id: o.id,
       userName: o.customer_name,
       customerEmail: o.customer_email,
-      source: o.status === "terminal" ? "terminal" : "shop",
-      eventTitle: o.status === "terminal" ? "Terminal Sale" : "Shop Order",
+      source: o.postage_name === null && o.postage === 0 ? "terminal" : "shop",
+      eventTitle: o.postage_name === null && o.postage === 0 ? "Terminal Sale" : "Shop Order",
       items: Array.isArray(o.items) ? o.items : [],
       total: Number(o.total),
       subtotal: Number(o.subtotal),
@@ -9239,7 +9240,7 @@ function AdminCash({ data, cu, showToast }) {
         postage:          0,
         postage_name:     null,
         total,
-        status:           "terminal",
+        status:           "completed",
         square_order_id:  squarePaymentId,
         customer_address: player?.address || null,
       };
