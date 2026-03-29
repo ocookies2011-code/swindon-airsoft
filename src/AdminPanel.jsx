@@ -4137,8 +4137,8 @@ function AdminOrdersInline({ showToast, cu }) {
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
   const [statusTab, setStatusTab] = useState("pending");
   const STATUS_TABS = ["pending","processing","dispatched","completed","terminal","cancelled","return_requested","return_approved","return_received","all","refunded"];
-  const isTerminalOrder = (o) => o.postage_name === null && Number(o.postage) === 0;
-  const visibleOrders = statusTab === "all" ? orders : statusTab === "terminal" ? orders.filter(isTerminalOrder) : orders.filter(o => o.status === statusTab && !isTerminalOrder(o));
+  const isTerminalOrder = (o) => o.postage_name === null && Number(o.postage) === 0 && o.square_order_id;
+  const visibleOrders = statusTab === "all" ? orders : statusTab === "terminal" ? orders.filter(isTerminalOrder) : orders.filter(o => o.status === statusTab);
 
   return (
     <div>
@@ -6238,8 +6238,8 @@ function AdminRevenue({ data, save, showToast, cu }) {
       id: o.id,
       userName: o.customer_name,
       customerEmail: o.customer_email,
-      source: o.postage_name === null && o.postage === 0 ? "terminal" : "shop",
-      eventTitle: o.postage_name === null && o.postage === 0 ? "Terminal Sale" : "Shop Order",
+      source: o.postage_name === null && Number(o.postage) === 0 && o.square_order_id ? "terminal" : "shop",
+      eventTitle: o.postage_name === null && Number(o.postage) === 0 && o.square_order_id ? "Terminal Sale" : "Shop Order",
       items: Array.isArray(o.items) ? o.items : [],
       total: Number(o.total),
       subtotal: Number(o.subtotal),
