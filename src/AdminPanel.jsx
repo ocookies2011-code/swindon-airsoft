@@ -666,7 +666,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "cheat-reports",    label: "Cheat Reports",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, badge: pendingReports || null, badgeColor: "red", group: null },
     { id: "shop",              label: "Shop",              icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>, badge: pendingOrders, badgeColor: "red", group: null },
     { id: "leaderboard-admin", label: "Leaderboard",       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>, group: null },
-    { id: "revenue",           label: "Revenue",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, group: "ANALYTICS" },
+
     { id: "visitor-stats",     label: "Visitor Stats",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, group: null },
     { id: "failed-payments",   label: "Failed Payments",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, group: null },
     { id: "gallery-admin",     label: "Gallery",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, group: null },
@@ -678,7 +678,10 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "purchase-orders",   label: "Purchase Orders",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, group: null },
     { id: "discount-codes",    label: "Discount Codes",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>, group: null },
     { id: "settings",          label: "Settings",          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, group: "SYSTEM" },
-    ...(isSuperAdmin ? [{ id: "audit-log", label: "Audit Log", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef9a9a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>, group: null }] : []),
+    ...(isSuperAdmin ? [
+      { id: "revenue", label: "Revenue", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, group: "ANALYTICS" },
+      { id: "audit-log", label: "Audit Log", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef9a9a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>, group: null },
+    ] : []),
   ];
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -734,7 +737,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           </div>
         </div>
         <div className="admin-content">
-          {section === "dashboard" && <AdminDash data={data} setSection={setSection} />}
+          {section === "dashboard" && <AdminDash data={data} setSection={setSection} isSuperAdmin={isSuperAdmin} />}
           {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} />}
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
           {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
@@ -742,7 +745,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "cheat-reports" && <AdminCheatReports data={data} showToast={showToast} cu={cu} />}
           {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
-          {section === "revenue" && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
+          {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "visitor-stats" && <AdminVisitorStats />}
           {section === "failed-payments" && <AdminFailedPayments showToast={showToast} cu={cu} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
@@ -762,7 +765,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 }
 
 // ── Admin Dashboard ───────────────────────────────────────
-function AdminDash({ data, setSection }) {
+function AdminDash({ data, setSection, isSuperAdmin }) {
   const allBookings = data.events.flatMap(e => e.bookings);
   const revenue = allBookings.filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
   const checkins = allBookings.filter(b => b.checkedIn).length;
@@ -851,9 +854,9 @@ function AdminDash({ data, setSection }) {
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>, label: "Shop Orders", sub: "Manage orders", action: () => setSection("shop"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={unsigned > 0 ? "#f48fb1" : "#81c784"} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, label: "Waivers", sub: unsigned > 0 ? `${unsigned} unsigned` : "All signed", action: () => setSection("unsigned-waivers"), color: unsigned > 0 ? "rgba(220,50,50,.12)" : "rgba(100,180,50,.08)", textColor: unsigned > 0 ? "var(--red)" : "var(--accent)", border: unsigned > 0 ? "rgba(220,50,50,.3)" : "rgba(100,180,50,.2)" },
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, label: "VIP Queue", sub: data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length > 0 ? `${data.users.filter(u=>u.vipApplied&&u.vipStatus!=="active").length} pending` : "No pending", action: () => setSection("players"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
-            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, label: "Revenue", sub: "View report", action: () => setSection("revenue"), color: "rgba(100,180,50,.08)", textColor: "var(--accent)", border: "rgba(100,180,50,.2)" },
+            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, label: "Revenue", sub: "View report", action: () => setSection("revenue"), color: "rgba(100,180,50,.08)", textColor: "var(--accent)", border: "rgba(100,180,50,.2)", superAdminOnly: true },
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, label: "Settings", sub: "Site config", action: () => setSection("settings"), color: "rgba(150,150,150,.08)", textColor: "var(--muted)", border: "rgba(150,150,150,.2)" },
-          ].map(qa => (
+          ].filter(qa => !qa.superAdminOnly || isSuperAdmin).map(qa => (
             <button key={qa.label} onClick={qa.action}
               style={{ background: qa.color, border: `1px solid ${qa.border || "rgba(200,255,0,.25)"}`, padding: "12px 18px", cursor: "pointer", minWidth: 120, textAlign: "left", transition: "all .15s" }}
               onMouseEnter={e => { e.currentTarget.style.opacity = ".8"; e.currentTarget.style.transform = "translateY(-2px)"; }}
@@ -895,13 +898,13 @@ function AdminDash({ data, setSection }) {
 
       <div className="grid-6 mb-2">
         {[
-          { label: "Total Revenue", val: `£${revenue.toFixed(0)}`, sub: "From bookings", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, color: "" },
+          { label: "Total Revenue", val: `£${revenue.toFixed(0)}`, sub: "From bookings", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, color: "", superAdminOnly: true },
           { label: "Bookings", val: allBookings.length, sub: `${data.events.length} events`, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="14.5" x2="15" y2="14.5"/></svg>, color: "gold" },
           { label: "Registered Players", val: players, sub: "Active accounts", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>, color: "blue" },
           { label: "Unsigned Waivers", val: unsigned, sub: unsigned > 0 ? "Action required" : "All clear", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={unsigned > 0 ? "#f48fb1" : "#81c784"} strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, color: unsigned > 0 ? "red" : "", subColor: unsigned > 0 ? "red" : "" },
           { label: "Active Events", val: activeEvents, sub: "Upcoming", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, color: "teal" },
           { label: "Check-Ins", val: checkins, sub: "All events", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>, color: "purple" },
-        ].map(({ label, val, sub, icon, color, subColor }) => (
+        ].filter(s => !s.superAdminOnly || isSuperAdmin).map(({ label, val, sub, icon, color, subColor }) => (
           <div key={label} className={`stat-card ${color}`}>
             <div className="stat-icon">{icon}</div>
             <div className="stat-val">{val}</div>
