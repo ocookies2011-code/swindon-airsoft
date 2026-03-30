@@ -1070,7 +1070,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </button>
               )}
               </div>
-            </div>
             )}
           </div>
         )}
