@@ -1070,7 +1070,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   {bookingBusy ? "⏳ Confirming…" : "✓ CONFIRM — FULLY COVERED BY CREDITS"}
                 </button>
               )}
-              </div>
               </>
             )}
           </div>
