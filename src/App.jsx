@@ -679,6 +679,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#3a3a3a", letterSpacing:".1em" }}>This event has already taken place. Booking is no longer available.</div>
                 </div>
               ) : (
+              <>
               <div style={{ border:"1px solid #2a3a10", marginBottom:16, background:"rgba(4,8,1,.5)" }}>
                 <div style={{ background:"linear-gradient(90deg,rgba(8,18,2,.98) 0%,rgba(12,22,3,.95) 100%)", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, borderBottom:"1px solid #2a3a10", display:"flex", alignItems:"center", gap:8 }}>
                   <span>◈ ADD TICKETS TO ORDER</span>
@@ -1070,6 +1071,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </button>
               )}
               </div>
+              </>
             )}
           </div>
         )}
