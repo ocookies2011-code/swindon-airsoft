@@ -672,6 +672,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               )}
 
               {/* ── TICKET BUILDER ── */}
+              {new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date() ? (
+                <div style={{ border:"1px solid #1a2808", marginBottom:16, background:"rgba(4,8,1,.5)", padding:"32px 16px", textAlign:"center" }}>
+                  <div style={{ fontSize:32, marginBottom:10 }}>🏁</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".12em", color:"#666", textTransform:"uppercase", marginBottom:6 }}>OPERATION CONCLUDED</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#3a3a3a", letterSpacing:".1em" }}>This event has already taken place. Booking is no longer available.</div>
+                </div>
+              ) : (
               <div style={{ border:"1px solid #2a3a10", marginBottom:16, background:"rgba(4,8,1,.5)" }}>
                 <div style={{ background:"linear-gradient(90deg,rgba(8,18,2,.98) 0%,rgba(12,22,3,.95) 100%)", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, borderBottom:"1px solid #2a3a10", display:"flex", alignItems:"center", gap:8 }}>
                   <span>◈ ADD TICKETS TO ORDER</span>
@@ -1064,6 +1071,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               )}
               </div>
             </div>
+            )}
           </div>
         )}
 
@@ -1134,7 +1142,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   }
 
   // ── Event list ──
-  const publishedEvents = data.events.filter(e => e.published);
+  const now = new Date();
+  const publishedEvents = data.events.filter(e =>
+    e.published && new Date(e.date + "T" + (e.endTime || e.time || "23:59") + ":00") > now
+  );
   return (
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
       {/* Header */}
@@ -1178,6 +1189,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             const fillPct = total > 0 ? booked / total : 0;
             const isFull = fillPct >= 1;
             const isAlmostFull = fillPct >= 0.8;
+            const isPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
             const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
             const opCode = operationCodes[idx % operationCodes.length];
             return (
@@ -1271,7 +1283,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
                     </div>
                   </div>
-                  {isFull ? (
+                  {isPast ? (
+                    <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(80,80,80,.15)", border:"1px solid rgba(120,120,120,.4)", color:"#666", cursor:"not-allowed" }} disabled>
+                      ✕ OPERATION ENDED
+                    </button>
+                  ) : isFull ? (
                     <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.5)", color:"var(--gold)" }}>
                       🔔 WAITLIST
                     </button>
