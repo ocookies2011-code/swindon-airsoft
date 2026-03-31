@@ -76,6 +76,15 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   // Clean up booking safety timeout on unmount
   useEffect(() => () => { if (bookingSafetyRef.current) clearTimeout(bookingSafetyRef.current); }, []);
 
+  // ── Live clock — re-renders every 30s so events auto-close when their time passes
+  const [nowTick, setNowTick] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const isEventPast = (event) =>
+    event && new Date(event.date + "T" + (event.endTime || event.time || "23:59") + ":00") <= nowTick;
+
   // Waitlist state
   const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
   const [holdMap, setHoldMap]         = useState({}); // "eventId:ticketType" -> hold | null
@@ -238,6 +247,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
 
     const confirmBookingAfterPayment = async (squarePayment) => {
+      // Guard: reject if event time has now passed
+      if (isEventPast(ev)) {
+        setSquareError("This event has already taken place. Bookings are no longer accepted.");
+        return;
+      }
       setBookingBusy(true);
       setSquareError(null);
       const safety = bookingSafetyRef.current = setTimeout(() => setBookingBusy(false), 30000);
@@ -672,7 +686,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               )}
 
               {/* ── TICKET BUILDER ── */}
-              {new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date() ? (
+              {isEventPast(ev) ? (
                 <div style={{ border:"1px solid #1a2808", marginBottom:16, background:"rgba(4,8,1,.5)", padding:"32px 16px", textAlign:"center" }}>
                   <div style={{ fontSize:32, marginBottom:10 }}>🏁</div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".12em", color:"#666", textTransform:"uppercase", marginBottom:6 }}>OPERATION CONCLUDED</div>
@@ -1142,10 +1156,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   }
 
   // ── Event list ──
-  const now = new Date();
-  const publishedEvents = data.events.filter(e =>
-    e.published && new Date(e.date + "T" + (e.endTime || e.time || "23:59") + ":00") > now
-  );
+  const publishedEvents = data.events.filter(e => e.published && !isEventPast(e));
   return (
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
       {/* Header */}
@@ -1189,7 +1200,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             const fillPct = total > 0 ? booked / total : 0;
             const isFull = fillPct >= 1;
             const isAlmostFull = fillPct >= 0.8;
-            const isPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
+            const isPast = isEventPast(ev);
             const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
             const opCode = operationCodes[idx % operationCodes.length];
             return (
