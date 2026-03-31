@@ -8011,6 +8011,9 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
   const [supModal, setSupModal] = useState(null);   // null | "new" | supplier obj
   const [detailModal, setDetailModal] = useState(null);
   const [viewModal, setViewModal] = useState(null);
+  const [editModal, setEditModal] = useState(null); // null | order obj (edit existing PO)
+  const [editForm, setEditForm] = useState({ supplierId: "", notes: "", items: [] });
+  const [editNewItem, setEditNewItem] = useState({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
@@ -8181,6 +8184,77 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
     catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
+  // ── Edit PO ──
+  const openEdit = (order) => {
+    setEditForm({
+      supplierId: order.supplier_id || "",
+      notes: order.notes || "",
+      items: order.items.map(i => ({
+        id: i.id,
+        productId: i.product_id || null,
+        variantId: i.variant_id || null,
+        productName: i.product_name,
+        supplierCode: i.supplier_code || "",
+        qtyOrdered: i.qty_ordered,
+        unitCost: i.unit_cost,
+      })),
+    });
+    setEditNewItem({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
+    setEditModal(order);
+  };
+
+  const editPoTotal = editForm.items.reduce((s, i) => s + (Number(i.qtyOrdered) * Number(i.unitCost)), 0);
+
+  const addEditPoItem = () => {
+    if (!editNewItem.productName.trim() && !editNewItem.productId) { showToast("Select a product or enter a name", "red"); return; }
+    const product = editNewItem.productId ? (data.shop || []).find(p => p.id === editNewItem.productId) : null;
+    const variant = product && editNewItem.variantId ? product.variants?.find(v => v.id === editNewItem.variantId) : null;
+    const hasVariants = product?.variants?.length > 0;
+    if (hasVariants && !editNewItem.variantId) { showToast("Please select a variant", "red"); return; }
+    const displayName = product
+      ? (variant ? product.name + " — " + variant.name : product.name)
+      : editNewItem.productName;
+    const costPrice = variant?.costPrice ?? variant?.price ?? product?.costPrice ?? Number(editNewItem.unitCost) ?? 0;
+    const supplierCode = variant?.supplierCode || product?.supplierCode || "";
+    setEditForm(prev => ({ ...prev, items: [...prev.items, {
+      id: Math.random().toString(36).slice(2),
+      productId: editNewItem.productId || null,
+      variantId: editNewItem.variantId || null,
+      productName: displayName,
+      supplierCode,
+      qtyOrdered: Number(editNewItem.qtyOrdered) || 1,
+      unitCost: Number(editNewItem.unitCost) || costPrice || 0,
+    }]}));
+    setEditNewItem({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
+  };
+
+  const removeEditPoItem = (id) => setEditForm(prev => ({ ...prev, items: prev.items.filter(i => i.id !== id) }));
+
+  const updateEditPoItem = (id, field, value) => {
+    setEditForm(prev => ({ ...prev, items: prev.items.map(i => i.id === id ? { ...i, [field]: value } : i) }));
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.items.length) { showToast("Add at least one item", "red"); return; }
+    const sup = suppliers.find(s => s.id === editForm.supplierId);
+    setBusy(true);
+    try {
+      await api.purchaseOrders.update(editModal.id, {
+        supplierId: editForm.supplierId || null,
+        supplierName: sup ? sup.name : (editModal.supplier_name || ""),
+        notes: editForm.notes,
+        items: editForm.items,
+        total: editPoTotal,
+      });
+      showToast("Purchase order updated!");
+      const poItemList = editForm.items.map(i => `${i.productName} x${i.qtyOrdered} @ £${Number(i.unitCost).toFixed(2)}`).join(", ");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Purchase order edited", detail: `PO #${editModal.id.slice(-6).toUpperCase()} | Total: £${editPoTotal.toFixed(2)} | Items: ${poItemList}` });
+      await loadAll();
+      setEditModal(null);
+    } catch (e) { showToast("Failed: " + e.message, "red"); }
+    finally { setBusy(false); }
+  };
+
   const statusChange = async (id, status) => {
     try {
       await api.purchaseOrders.updateStatus(id, status); await loadAll(); showToast("Status updated!");
@@ -8237,6 +8311,7 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
                       </td>
                       <td><div className="gap-2">
                         <button className="btn btn-sm btn-ghost" onClick={() => setViewModal(o)}>📄 View</button>
+                        <button className="btn btn-sm btn-ghost" onClick={() => openEdit(o)}>✏️ Edit</button>
                         <button className="btn btn-sm btn-ghost" onClick={() => openDetail(o)}>📥 Receive</button>
                         <button className="btn btn-sm btn-danger" onClick={() => deleteOrder(o.id)}>✕</button>
                       </div></td>
@@ -8560,6 +8635,137 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveReceive} disabled={busy}>{busy ? "Saving…" : "Save Receipt"}</button>
               <button className="btn btn-ghost" onClick={() => setDetailModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit PO Modal ── */}
+      {editModal && (
+        <div className="overlay" onClick={() => setEditModal(null)}>
+          <div className="modal-box wide" onClick={e => e.stopPropagation()} style={{maxWidth:700}}>
+            <div className="modal-title">✏️ Edit Purchase Order — PO-{editModal.id.slice(-6).toUpperCase()}</div>
+
+            <div className="grid-2 mb-2">
+              <div className="form-group">
+                <label>Supplier</label>
+                <select value={editForm.supplierId} onChange={e => setEditForm(p => ({...p, supplierId: e.target.value}))}
+                  style={{fontSize:13, padding:"6px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:3, width:"100%"}}>
+                  <option value="">— No Supplier —</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Notes <span style={{fontWeight:400,color:"var(--muted)"}}>(optional)</span></label>
+                <input value={editForm.notes} onChange={e => setEditForm(p => ({...p, notes: e.target.value}))} placeholder="e.g. Urgent restock" />
+              </div>
+            </div>
+
+            <div style={{fontSize:12, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:10}}>ORDER ITEMS</div>
+
+            {/* Editable items table */}
+            {editForm.items.length > 0 && (
+              <div className="table-wrap" style={{marginBottom:14}}><table className="data-table">
+                <thead><tr><th>Product</th><th>Supplier Code</th><th>Qty</th><th>Unit Cost £</th><th>Line Total</th><th></th></tr></thead>
+                <tbody>
+                  {editForm.items.map(i => (
+                    <tr key={i.id}>
+                      <td>
+                        <input
+                          value={i.productName}
+                          onChange={e => updateEditPoItem(i.id, "productName", e.target.value)}
+                          style={{fontSize:12, minWidth:140}}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={i.supplierCode}
+                          onChange={e => updateEditPoItem(i.id, "supplierCode", e.target.value)}
+                          style={{fontSize:11, width:90, fontFamily:"'Share Tech Mono',monospace"}}
+                          placeholder="—"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number" min="1"
+                          value={i.qtyOrdered}
+                          onChange={e => updateEditPoItem(i.id, "qtyOrdered", e.target.value)}
+                          style={{fontSize:12, width:70}}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number" min="0" step="0.01"
+                          value={i.unitCost}
+                          onChange={e => updateEditPoItem(i.id, "unitCost", e.target.value)}
+                          style={{fontSize:12, width:90}}
+                        />
+                      </td>
+                      <td className="text-green" style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, fontWeight:700}}>
+                        £{(Number(i.qtyOrdered) * Number(i.unitCost)).toFixed(2)}
+                      </td>
+                      <td><button className="btn btn-sm btn-danger" onClick={() => removeEditPoItem(i.id)}>✕</button></td>
+                    </tr>
+                  ))}
+                  <tr style={{borderTop:"2px solid var(--border)"}}>
+                    <td colSpan={3} style={{fontWeight:900, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", fontSize:13}}>TOTAL</td>
+                    <td colSpan={2} className="text-green" style={{fontWeight:900, fontFamily:"'Share Tech Mono',monospace", fontSize:13}}>£{editPoTotal.toFixed(2)}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table></div>
+            )}
+
+            {/* Add new item row */}
+            <div style={{fontSize:11, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:8}}>ADD ITEM</div>
+            <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:14, padding:"12px", background:"var(--bg4)", borderRadius:3, border:"1px solid var(--border)"}}>
+              <div style={{flex:"2 1 160px"}}>
+                <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>PRODUCT</div>
+                <select value={editNewItem.productId} onChange={e => {
+                  const prod = (data.shop||[]).find(p => p.id === e.target.value);
+                  setEditNewItem(n => ({...n, productId: e.target.value, variantId: "", productName: prod ? prod.name : "", unitCost: prod?.costPrice && !prod?.variants?.length ? String(prod.costPrice) : n.unitCost}));
+                }} style={{fontSize:12, padding:"5px 8px", background:"#1a1a1a", border:"1px solid var(--border)", color:"#fff", borderRadius:2, width:"100%"}}>
+                  <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Pick shop product —</option>
+                  {(data.shop||[]).map(p => (
+                    <option key={p.id} value={p.id} style={{background:"#1a1a1a",color:"#fff"}}>
+                      {p.name}{p.supplierCode ? " [" + p.supplierCode + "]" : ""}{p.variants?.length > 0 ? " (" + p.variants.length + " variants)" : (p.stock < 5 ? " (stock: " + p.stock + ")" : "")}
+                    </option>
+                  ))}
+                </select>
+                {editNewItem.productId && (data.shop||[]).find(p => p.id === editNewItem.productId)?.variants?.length > 0 && (
+                  <select value={editNewItem.variantId} onChange={e => {
+                    const prod = (data.shop||[]).find(p => p.id === editNewItem.productId);
+                    const v = prod?.variants?.find(v => v.id === e.target.value);
+                    setEditNewItem(n => ({...n, variantId: e.target.value, unitCost: v?.costPrice ? String(v.costPrice) : (v?.price ? String(v.price) : n.unitCost)}));
+                  }} style={{fontSize:12, padding:"5px 8px", background:"#1a1a1a", border:"1px solid var(--accent)", color:"#fff", borderRadius:2, width:"100%", marginTop:6}}>
+                    <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Select variant —</option>
+                    {(data.shop||[]).find(p => p.id === editNewItem.productId)?.variants?.map(v => (
+                      <option key={v.id} value={v.id} style={{background:"#1a1a1a",color:"#fff"}}>
+                        {v.name}{v.supplierCode ? " [" + v.supplierCode + "]" : ""}{Number(v.stock) < 5 ? " (stock: " + v.stock + ")" : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <div style={{fontSize:10, color:"var(--muted)", marginTop:3}}>or enter free text:</div>
+                <input value={editNewItem.productName} onChange={e => setEditNewItem(n => ({...n, productName: e.target.value, productId: "", variantId: ""}))}
+                  placeholder="Product name" style={{fontSize:12, marginTop:4}} />
+              </div>
+              <div style={{flex:"0 0 80px"}}>
+                <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>QTY</div>
+                <input type="number" min="1" value={editNewItem.qtyOrdered} onChange={e => setEditNewItem(n => ({...n, qtyOrdered: e.target.value}))} style={{fontSize:12}} />
+              </div>
+              <div style={{flex:"0 0 100px"}}>
+                <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>UNIT COST £</div>
+                <input type="number" min="0" step="0.01" value={editNewItem.unitCost} onChange={e => setEditNewItem(n => ({...n, unitCost: e.target.value}))} style={{fontSize:12}} />
+              </div>
+              <div style={{flex:"0 0 auto", display:"flex", alignItems:"flex-end"}}>
+                <button className="btn btn-primary btn-sm" onClick={addEditPoItem}>+ Add</button>
+              </div>
+            </div>
+
+            <div className="gap-2">
+              <button className="btn btn-primary" onClick={saveEdit} disabled={busy || !editForm.items.length}>{busy ? "Saving…" : "Save Changes"}</button>
+              <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
