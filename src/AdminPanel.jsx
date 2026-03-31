@@ -8191,12 +8191,11 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
       notes: order.notes || "",
       items: order.items.map(i => ({
         id: i.id,
-        productId: i.product_id || null,
-        variantId: i.variant_id || null,
-        productName: i.product_name,
-        supplierCode: i.supplier_code || "",
-        qtyOrdered: i.qty_ordered,
-        unitCost: i.unit_cost,
+        productId:    i.product_id    ?? i.productId    ?? null,
+        productName:  i.product_name  ?? i.productName  ?? "",
+        supplierCode: i.supplier_code ?? i.supplierCode ?? "",
+        qtyOrdered:   i.qty_ordered   ?? i.qtyOrdered   ?? 1,
+        unitCost:     i.unit_cost     ?? i.unitCost     ?? 0,
       })),
     });
     setEditNewItem({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
@@ -8237,7 +8236,21 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
     const sup = suppliers.find(s => s.id === editForm.supplierId);
     setBusy(true);
     try {
-      // Update PO header directly via Supabase
+      // Merge edits back into the original items array, preserving qty_received and id
+      const updatedItems = editForm.items.map(i => {
+        const orig = editModal.items.find(o => o.id === i.id);
+        return {
+          id:            i.id,
+          productId:     i.productId || null,
+          productName:   i.productName,
+          supplierCode:  i.supplierCode || "",
+          qtyOrdered:    Number(i.qtyOrdered) || 1,
+          unitCost:      Number(i.unitCost) || 0,
+          // Preserve whatever was already received
+          qtyReceived:   orig?.qtyReceived ?? orig?.qty_received ?? 0,
+        };
+      });
+
       const { error: poErr } = await supabase
         .from("purchase_orders")
         .update({
@@ -8245,54 +8258,10 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
           supplier_name: sup ? sup.name : (editModal.supplier_name || ""),
           notes:         editForm.notes,
           total:         editPoTotal,
+          items:         updatedItems,
         })
         .eq("id", editModal.id);
       if (poErr) throw poErr;
-
-      // Work out which items are existing (real DB id) vs brand new
-      const originalIds = editModal.items.map(i => i.id);
-      const keptItems   = editForm.items.filter(i => originalIds.includes(i.id));
-      const addedItems  = editForm.items.filter(i => !originalIds.includes(i.id));
-      const removedIds  = originalIds.filter(id => !editForm.items.find(i => i.id === id));
-
-      // Delete only items that were explicitly removed
-      if (removedIds.length > 0) {
-        const { error: delErr } = await supabase
-          .from("purchase_order_items")
-          .delete()
-          .in("id", removedIds);
-        if (delErr) throw delErr;
-      }
-
-      // Update existing items in place — preserves qty_received
-      for (const i of keptItems) {
-        const { error: updErr } = await supabase
-          .from("purchase_order_items")
-          .update({
-            product_id:    i.productId || null,
-            product_name:  i.productName,
-            supplier_code: i.supplierCode || null,
-            qty_ordered:   Number(i.qtyOrdered) || 1,
-            unit_cost:     Number(i.unitCost) || 0,
-          })
-          .eq("id", i.id);
-        if (updErr) throw updErr;
-      }
-
-      // Insert genuinely new items only
-      if (addedItems.length > 0) {
-        const toInsert = addedItems.map(i => ({
-          purchase_order_id: editModal.id,
-          product_id:        i.productId || null,
-          product_name:      i.productName,
-          supplier_code:     i.supplierCode || null,
-          qty_ordered:       Number(i.qtyOrdered) || 1,
-          qty_received:      0,
-          unit_cost:         Number(i.unitCost) || 0,
-        }));
-        const { error: insErr } = await supabase.from("purchase_order_items").insert(toInsert);
-        if (insErr) throw insErr;
-      }
 
       showToast("Purchase order updated!");
       const poItemList = editForm.items.map(i => `${i.productName} x${i.qtyOrdered} @ £${Number(i.unitCost).toFixed(2)}`).join(", ");
