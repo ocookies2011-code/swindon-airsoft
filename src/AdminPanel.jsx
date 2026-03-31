@@ -8249,24 +8249,50 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
         .eq("id", editModal.id);
       if (poErr) throw poErr;
 
-      // Delete existing line items and re-insert
-      const { error: delErr } = await supabase
-        .from("purchase_order_items")
-        .delete()
-        .eq("purchase_order_id", editModal.id);
-      if (delErr) throw delErr;
+      // Work out which items are existing (real DB id) vs brand new
+      const originalIds = editModal.items.map(i => i.id);
+      const keptItems   = editForm.items.filter(i => originalIds.includes(i.id));
+      const addedItems  = editForm.items.filter(i => !originalIds.includes(i.id));
+      const removedIds  = originalIds.filter(id => !editForm.items.find(i => i.id === id));
 
-      const newItems = editForm.items.map(i => ({
-        purchase_order_id: editModal.id,
-        product_id:        i.productId || null,
-        product_name:      i.productName,
-        supplier_code:     i.supplierCode || null,
-        qty_ordered:       Number(i.qtyOrdered) || 1,
-        qty_received:      0,
-        unit_cost:         Number(i.unitCost) || 0,
-      }));
-      const { error: insErr } = await supabase.from("purchase_order_items").insert(newItems);
-      if (insErr) throw insErr;
+      // Delete only items that were explicitly removed
+      if (removedIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from("purchase_order_items")
+          .delete()
+          .in("id", removedIds);
+        if (delErr) throw delErr;
+      }
+
+      // Update existing items in place — preserves qty_received
+      for (const i of keptItems) {
+        const { error: updErr } = await supabase
+          .from("purchase_order_items")
+          .update({
+            product_id:    i.productId || null,
+            product_name:  i.productName,
+            supplier_code: i.supplierCode || null,
+            qty_ordered:   Number(i.qtyOrdered) || 1,
+            unit_cost:     Number(i.unitCost) || 0,
+          })
+          .eq("id", i.id);
+        if (updErr) throw updErr;
+      }
+
+      // Insert genuinely new items only
+      if (addedItems.length > 0) {
+        const toInsert = addedItems.map(i => ({
+          purchase_order_id: editModal.id,
+          product_id:        i.productId || null,
+          product_name:      i.productName,
+          supplier_code:     i.supplierCode || null,
+          qty_ordered:       Number(i.qtyOrdered) || 1,
+          qty_received:      0,
+          unit_cost:         Number(i.unitCost) || 0,
+        }));
+        const { error: insErr } = await supabase.from("purchase_order_items").insert(toInsert);
+        if (insErr) throw insErr;
+      }
 
       showToast("Purchase order updated!");
       const poItemList = editForm.items.map(i => `${i.productName} x${i.qtyOrdered} @ £${Number(i.unitCost).toFixed(2)}`).join(", ");
