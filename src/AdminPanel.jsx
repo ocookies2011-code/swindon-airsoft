@@ -8011,7 +8011,7 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
   const [supModal, setSupModal] = useState(null);   // null | "new" | supplier obj
   const [detailModal, setDetailModal] = useState(null);
   const [viewModal, setViewModal] = useState(null);
-  const [editModal, setEditModal] = useState(null); // null | order obj (edit existing PO)
+  const [editModal, setEditModal] = useState(null);
   const [editForm, setEditForm] = useState({ supplierId: "", notes: "", items: [] });
   const [editNewItem, setEditNewItem] = useState({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
   const [busy, setBusy] = useState(false);
@@ -8211,9 +8211,7 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
     const variant = product && editNewItem.variantId ? product.variants?.find(v => v.id === editNewItem.variantId) : null;
     const hasVariants = product?.variants?.length > 0;
     if (hasVariants && !editNewItem.variantId) { showToast("Please select a variant", "red"); return; }
-    const displayName = product
-      ? (variant ? product.name + " — " + variant.name : product.name)
-      : editNewItem.productName;
+    const displayName = product ? (variant ? product.name + " — " + variant.name : product.name) : editNewItem.productName;
     const costPrice = variant?.costPrice ?? variant?.price ?? product?.costPrice ?? Number(editNewItem.unitCost) ?? 0;
     const supplierCode = variant?.supplierCode || product?.supplierCode || "";
     setEditForm(prev => ({ ...prev, items: [...prev.items, {
@@ -8239,13 +8237,38 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
     const sup = suppliers.find(s => s.id === editForm.supplierId);
     setBusy(true);
     try {
-      await api.purchaseOrders.update(editModal.id, {
-        supplierId: editForm.supplierId || null,
-        supplierName: sup ? sup.name : (editModal.supplier_name || ""),
-        notes: editForm.notes,
-        items: editForm.items,
-        total: editPoTotal,
-      });
+      // Update PO header directly via Supabase
+      const { error: poErr } = await supabase
+        .from("purchase_orders")
+        .update({
+          supplier_id:   editForm.supplierId || null,
+          supplier_name: sup ? sup.name : (editModal.supplier_name || ""),
+          notes:         editForm.notes,
+          total:         editPoTotal,
+        })
+        .eq("id", editModal.id);
+      if (poErr) throw poErr;
+
+      // Delete existing line items and re-insert
+      const { error: delErr } = await supabase
+        .from("purchase_order_items")
+        .delete()
+        .eq("purchase_order_id", editModal.id);
+      if (delErr) throw delErr;
+
+      const newItems = editForm.items.map(i => ({
+        purchase_order_id: editModal.id,
+        product_id:        i.productId || null,
+        variant_id:        i.variantId || null,
+        product_name:      i.productName,
+        supplier_code:     i.supplierCode || null,
+        qty_ordered:       Number(i.qtyOrdered) || 1,
+        qty_received:      0,
+        unit_cost:         Number(i.unitCost) || 0,
+      }));
+      const { error: insErr } = await supabase.from("purchase_order_items").insert(newItems);
+      if (insErr) throw insErr;
+
       showToast("Purchase order updated!");
       const poItemList = editForm.items.map(i => `${i.productName} x${i.qtyOrdered} @ £${Number(i.unitCost).toFixed(2)}`).join(", ");
       logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Purchase order edited", detail: `PO #${editModal.id.slice(-6).toUpperCase()} | Total: £${editPoTotal.toFixed(2)} | Items: ${poItemList}` });
@@ -8663,47 +8686,17 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
 
             <div style={{fontSize:12, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:10}}>ORDER ITEMS</div>
 
-            {/* Editable items table */}
             {editForm.items.length > 0 && (
               <div className="table-wrap" style={{marginBottom:14}}><table className="data-table">
                 <thead><tr><th>Product</th><th>Supplier Code</th><th>Qty</th><th>Unit Cost £</th><th>Line Total</th><th></th></tr></thead>
                 <tbody>
                   {editForm.items.map(i => (
                     <tr key={i.id}>
-                      <td>
-                        <input
-                          value={i.productName}
-                          onChange={e => updateEditPoItem(i.id, "productName", e.target.value)}
-                          style={{fontSize:12, minWidth:140}}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          value={i.supplierCode}
-                          onChange={e => updateEditPoItem(i.id, "supplierCode", e.target.value)}
-                          style={{fontSize:11, width:90, fontFamily:"'Share Tech Mono',monospace"}}
-                          placeholder="—"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number" min="1"
-                          value={i.qtyOrdered}
-                          onChange={e => updateEditPoItem(i.id, "qtyOrdered", e.target.value)}
-                          style={{fontSize:12, width:70}}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number" min="0" step="0.01"
-                          value={i.unitCost}
-                          onChange={e => updateEditPoItem(i.id, "unitCost", e.target.value)}
-                          style={{fontSize:12, width:90}}
-                        />
-                      </td>
-                      <td className="text-green" style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, fontWeight:700}}>
-                        £{(Number(i.qtyOrdered) * Number(i.unitCost)).toFixed(2)}
-                      </td>
+                      <td><input value={i.productName} onChange={e => updateEditPoItem(i.id, "productName", e.target.value)} style={{fontSize:12, minWidth:140}} /></td>
+                      <td><input value={i.supplierCode} onChange={e => updateEditPoItem(i.id, "supplierCode", e.target.value)} style={{fontSize:11, width:90, fontFamily:"'Share Tech Mono',monospace"}} placeholder="—" /></td>
+                      <td><input type="number" min="1" value={i.qtyOrdered} onChange={e => updateEditPoItem(i.id, "qtyOrdered", e.target.value)} style={{fontSize:12, width:70}} /></td>
+                      <td><input type="number" min="0" step="0.01" value={i.unitCost} onChange={e => updateEditPoItem(i.id, "unitCost", e.target.value)} style={{fontSize:12, width:90}} /></td>
+                      <td className="text-green" style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, fontWeight:700}}>£{(Number(i.qtyOrdered) * Number(i.unitCost)).toFixed(2)}</td>
                       <td><button className="btn btn-sm btn-danger" onClick={() => removeEditPoItem(i.id)}>✕</button></td>
                     </tr>
                   ))}
@@ -8716,7 +8709,6 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
               </table></div>
             )}
 
-            {/* Add new item row */}
             <div style={{fontSize:11, fontWeight:700, color:"var(--muted)", letterSpacing:".1em", marginBottom:8}}>ADD ITEM</div>
             <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:14, padding:"12px", background:"var(--bg4)", borderRadius:3, border:"1px solid var(--border)"}}>
               <div style={{flex:"2 1 160px"}}>
@@ -8725,12 +8717,8 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
                   const prod = (data.shop||[]).find(p => p.id === e.target.value);
                   setEditNewItem(n => ({...n, productId: e.target.value, variantId: "", productName: prod ? prod.name : "", unitCost: prod?.costPrice && !prod?.variants?.length ? String(prod.costPrice) : n.unitCost}));
                 }} style={{fontSize:12, padding:"5px 8px", background:"#1a1a1a", border:"1px solid var(--border)", color:"#fff", borderRadius:2, width:"100%"}}>
-                  <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Pick shop product —</option>
-                  {(data.shop||[]).map(p => (
-                    <option key={p.id} value={p.id} style={{background:"#1a1a1a",color:"#fff"}}>
-                      {p.name}{p.supplierCode ? " [" + p.supplierCode + "]" : ""}{p.variants?.length > 0 ? " (" + p.variants.length + " variants)" : (p.stock < 5 ? " (stock: " + p.stock + ")" : "")}
-                    </option>
-                  ))}
+                  <option value="">— Pick shop product —</option>
+                  {(data.shop||[]).map(p => <option key={p.id} value={p.id}>{p.name}{p.variants?.length > 0 ? ` (${p.variants.length} variants)` : ""}</option>)}
                 </select>
                 {editNewItem.productId && (data.shop||[]).find(p => p.id === editNewItem.productId)?.variants?.length > 0 && (
                   <select value={editNewItem.variantId} onChange={e => {
@@ -8738,17 +8726,12 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
                     const v = prod?.variants?.find(v => v.id === e.target.value);
                     setEditNewItem(n => ({...n, variantId: e.target.value, unitCost: v?.costPrice ? String(v.costPrice) : (v?.price ? String(v.price) : n.unitCost)}));
                   }} style={{fontSize:12, padding:"5px 8px", background:"#1a1a1a", border:"1px solid var(--accent)", color:"#fff", borderRadius:2, width:"100%", marginTop:6}}>
-                    <option value="" style={{background:"#1a1a1a",color:"#fff"}}>— Select variant —</option>
-                    {(data.shop||[]).find(p => p.id === editNewItem.productId)?.variants?.map(v => (
-                      <option key={v.id} value={v.id} style={{background:"#1a1a1a",color:"#fff"}}>
-                        {v.name}{v.supplierCode ? " [" + v.supplierCode + "]" : ""}{Number(v.stock) < 5 ? " (stock: " + v.stock + ")" : ""}
-                      </option>
-                    ))}
+                    <option value="">— Select variant —</option>
+                    {(data.shop||[]).find(p => p.id === editNewItem.productId)?.variants?.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </select>
                 )}
-                <div style={{fontSize:10, color:"var(--muted)", marginTop:3}}>or enter free text:</div>
-                <input value={editNewItem.productName} onChange={e => setEditNewItem(n => ({...n, productName: e.target.value, productId: "", variantId: ""}))}
-                  placeholder="Product name" style={{fontSize:12, marginTop:4}} />
+                <div style={{fontSize:10, color:"var(--muted)", marginTop:3}}>or free text:</div>
+                <input value={editNewItem.productName} onChange={e => setEditNewItem(n => ({...n, productName: e.target.value, productId: "", variantId: ""}))} placeholder="Product name" style={{fontSize:12, marginTop:4}} />
               </div>
               <div style={{flex:"0 0 80px"}}>
                 <div style={{fontSize:11, color:"var(--muted)", marginBottom:4}}>QTY</div>
