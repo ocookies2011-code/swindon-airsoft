@@ -470,7 +470,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const isCardBanned = cu && (cu.cardStatus === "red" || cu.cardStatus === "black");
   
   const isAdmin = cu?.role === "admin";
-    const bookingBlocked = !cu || isAdmin || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
+    const isEventPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
+    const bookingBlocked = isEventPast || !cu || isAdmin || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
 
     return (
       <div className="page-content">
@@ -587,7 +588,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               </div>
               <div style={{ position:"relative", zIndex:1, padding:"16px 18px" }}>
 
-              {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
+              {isEventPast && <div className="alert alert-red mb-2" style={{ textAlign:"center", letterSpacing:".08em", fontWeight:700 }}>✕ This event has ended — booking is closed.</div>}
+              {!isEventPast && !cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
               {ev.vipOnly && cu?.vipStatus !== "active" && (
                 <div className="alert alert-gold mb-2" style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -1171,24 +1173,28 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         {publishedEvents.length === 0 && data.events.length > 0 && (
           <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>NO OPERATIONS SCHEDULED — CHECK BACK SOON</div>
         )}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
-          {publishedEvents.map((ev, idx) => {
+        {(() => {
+          const now = new Date();
+          const upcomingEvents = publishedEvents.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") > now);
+          const pastEvents    = publishedEvents.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= now);
+          const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
+
+          const renderCard = (ev, idx, isPast) => {
             const booked = ev.bookings.reduce((s,b) => s + b.qty, 0);
             const total  = ev.walkOnSlots + ev.rentalSlots;
             const fillPct = total > 0 ? booked / total : 0;
             const isFull = fillPct >= 1;
             const isAlmostFull = fillPct >= 0.8;
-            const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
             const opCode = operationCodes[idx % operationCodes.length];
             return (
               <div key={ev.id}
-                onClick={() => { setDetail(ev.id); setTab("info"); resetCart(); }}
+                onClick={() => { if (!isPast) { setDetail(ev.id); setTab("info"); resetCart(); } }}
                 style={{
                   background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden",
                   cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}
+                onMouseEnter={e => { if (!isPast) { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; } }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor= isPast ? "#111" : "#1a2808"; e.currentTarget.style.transform=""; }}
               >
                 {/* Scanlines */}
                 <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px)", pointerEvents:"none", zIndex:5 }} />
@@ -1271,7 +1277,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
                     </div>
                   </div>
-                  {isFull ? (
+                  {isPast ? (
+                    <button disabled style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(60,60,60,.2)", border:"1px solid rgba(100,100,100,.3)", color:"#555", cursor:"not-allowed" }}>
+                      ✕ EVENT FINISHED
+                    </button>
+                  ) : isFull ? (
                     <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.5)", color:"var(--gold)" }}>
                       🔔 WAITLIST
                     </button>
@@ -1295,8 +1305,30 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               </div>
             );
-          })}
-        </div>
+          };
+
+          return (
+            <>
+              {/* Upcoming events grid */}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
+                {upcomingEvents.map((ev, idx) => renderCard(ev, idx, false))}
+              </div>
+
+              {/* Past events section */}
+              {pastEvents.length > 0 && (
+                <div style={{ marginTop:48 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".25em", color:"#3a4020", textTransform:"uppercase" }}>Past Operations</div>
+                    <div style={{ flex:1, height:1, background:"linear-gradient(to right,#1a2808,transparent)" }} />
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, opacity:0.5, filter:"grayscale(0.4)" }}>
+                    {pastEvents.map((ev, idx) => renderCard(ev, idx, true))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
