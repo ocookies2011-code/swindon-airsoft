@@ -1463,46 +1463,71 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           <thead><tr><th>Event</th><th>Date / Time</th><th>Slots</th><th>Booked</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             {data.events.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No events yet</td></tr>}
-            {data.events.map(ev => {
-              const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
+            {(() => {
+              const now = new Date();
+              const upcoming = data.events.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") > now);
+              const past     = data.events.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= now);
+              const renderRow = (ev, isPast) => {
+                const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
+                return (
+                  <tr key={ev.id} style={{ opacity: isPast ? 0.55 : 1 }}>
+                    <td>
+                      <button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }}
+                        onClick={() => setViewId(ev.id)}>{ev.title}</button>
+                    </td>
+                    <td className="mono" style={{ fontSize: 12 }}>{fmtDate(ev.date)} {ev.time}</td>
+                    <td>{ev.walkOnSlots + ev.rentalSlots}</td>
+                    <td>{booked}</td>
+                    <td>
+                      {isPast
+                        ? <span className="tag" style={{ background: "rgba(80,80,80,.2)", color: "#666", border: "1px solid #333" }}>Ended</span>
+                        : ev.published
+                          ? <span className="tag tag-green">Live</span>
+                          : <span className="tag tag-red">Draft</span>
+                      }
+                    </td>
+                    <td>
+                      <div className="gap-2">
+                        <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...ev }); setModal(ev.id); }}>Edit</button>
+                        <button className="btn btn-sm btn-ghost" onClick={() => clone(ev)}>Clone</button>
+                        {!isPast && ev.published && ev.bookings.length > 0 && (
+                          <button className="btn btn-sm btn-ghost" style={{ color: "var(--accent)", borderColor: "rgba(200,255,0,.3)" }}
+                            onClick={async () => {
+                              showToast("Sending reminders…", "gold");
+                              try {
+                                const bookedUsers = ev.bookings.map(b => {
+                                  const u = data.users.find(u => u.id === b.userId);
+                                  return u ? { ...u, bookingType: b.type } : null;
+                                }).filter(Boolean);
+                                const r = await sendEventReminderEmail({ ev, bookedUsers });
+                                showToast(`📧 Reminders: ${r.sent} sent${r.failed > 0 ? `, ${r.failed} failed` : ""}`, r.failed > 0 ? "gold" : "");
+                              } catch(e) { showToast("Failed: " + e.message, "red"); }
+                            }}>📧 Remind</button>
+                        )}
+                        <button className="btn btn-sm btn-ghost" style={{ fontSize:10 }}
+                          onClick={() => openWaitlist(ev)} disabled={waitlistLoading} title="View waitlist">
+                          🔔{ev.waitlistCount > 0 ? ` ${ev.waitlistCount}` : ""}
+                        </button>
+                        <button className="btn btn-sm btn-danger" onClick={() => setDelEventConfirm(ev)}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              };
               return (
-                <tr key={ev.id}>
-                  <td>
-                    <button style={{ background: "none", border: "none", color: "var(--blue)", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 13 }}
-                      onClick={() => setViewId(ev.id)}>{ev.title}</button>
-                  </td>
-                  <td className="mono" style={{ fontSize: 12 }}>{fmtDate(ev.date)} {ev.time}</td>
-                  <td>{ev.walkOnSlots + ev.rentalSlots}</td>
-                  <td>{booked}</td>
-                  <td>{ev.published ? <span className="tag tag-green">Live</span> : <span className="tag tag-red">Draft</span>}</td>
-                  <td>
-                    <div className="gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...ev }); setModal(ev.id); }}>Edit</button>
-                      <button className="btn btn-sm btn-ghost" onClick={() => clone(ev)}>Clone</button>
-                      {ev.published && new Date(ev.date) >= new Date() && ev.bookings.length > 0 && (
-                        <button className="btn btn-sm btn-ghost" style={{ color: "var(--accent)", borderColor: "rgba(200,255,0,.3)" }}
-                          onClick={async () => {
-                            showToast("Sending reminders…", "gold");
-                            try {
-                              const bookedUsers = ev.bookings.map(b => {
-                                const u = data.users.find(u => u.id === b.userId);
-                                return u ? { ...u, bookingType: b.type } : null;
-                              }).filter(Boolean);
-                              const r = await sendEventReminderEmail({ ev, bookedUsers });
-                              showToast(`📧 Reminders: ${r.sent} sent${r.failed > 0 ? `, ${r.failed} failed` : ""}`, r.failed > 0 ? "gold" : "");
-                            } catch(e) { showToast("Failed: " + e.message, "red"); }
-                          }}>📧 Remind</button>
-                      )}
-                      <button className="btn btn-sm btn-ghost" style={{ fontSize:10 }}
-                        onClick={() => openWaitlist(ev)} disabled={waitlistLoading} title="View waitlist">
-                        🔔{ev.waitlistCount > 0 ? ` ${ev.waitlistCount}` : ""}
-                      </button>
-                      <button className="btn btn-sm btn-danger" onClick={() => setDelEventConfirm(ev)}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
+                <>
+                  {upcoming.map(ev => renderRow(ev, false))}
+                  {past.length > 0 && upcoming.length > 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: "10px 12px 6px", borderTop: "1px solid var(--border)", background: "rgba(0,0,0,.2)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", color: "var(--muted)", textTransform: "uppercase" }}>Past Events</span>
+                      </td>
+                    </tr>
+                  )}
+                  {past.map(ev => renderRow(ev, true))}
+                </>
               );
-            })}
+            })()}
           </tbody>
         </table></div>
       )}
