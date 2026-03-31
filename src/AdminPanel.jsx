@@ -8259,7 +8259,6 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
       const newItems = editForm.items.map(i => ({
         purchase_order_id: editModal.id,
         product_id:        i.productId || null,
-        variant_id:        i.variantId || null,
         product_name:      i.productName,
         supplier_code:     i.supplierCode || null,
         qty_ordered:       Number(i.qtyOrdered) || 1,
