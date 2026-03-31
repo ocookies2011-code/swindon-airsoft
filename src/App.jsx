@@ -1189,7 +1189,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             const fillPct = total > 0 ? booked / total : 0;
             const isFull = fillPct >= 1;
             const isAlmostFull = fillPct >= 0.8;
-            const isPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
             const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
             const opCode = operationCodes[idx % operationCodes.length];
             return (
@@ -1283,11 +1282,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
                     </div>
                   </div>
-                  {isPast ? (
-                    <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(80,80,80,.15)", border:"1px solid rgba(120,120,120,.4)", color:"#666", cursor:"not-allowed" }} disabled>
-                      ✕ OPERATION ENDED
-                    </button>
-                  ) : isFull ? (
+                  {isFull ? (
                     <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.5)", color:"var(--gold)" }}>
                       🔔 WAITLIST
                     </button>
