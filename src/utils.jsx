@@ -2164,9 +2164,11 @@ function HomePage({ data, setPage }) {
     .filter(e => e.published && new Date(e.date + "T" + e.time) > new Date())
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
+  const now           = new Date();
+  const upcomingEvents = data.events.filter(e => e.published && new Date(e.date + "T" + (e.time || "23:59")) > now);
   const totalPlayers  = data.users.filter(u => u.role === "player").length;
-  const totalEvents   = data.events.filter(e => e.published).length;
-  const totalBookings = data.events.flatMap(e => e.bookings).reduce((s, b) => s + (b.qty || 1), 0);
+  const totalEvents   = upcomingEvents.length;
+  const totalBookings = upcomingEvents.flatMap(e => e.bookings).reduce((s, b) => s + (b.qty || 1), 0);
 
   return (
     <div>
