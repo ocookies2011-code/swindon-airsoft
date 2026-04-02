@@ -2502,7 +2502,7 @@ function HomePage({ data, setPage }) {
         )}
 
         {/* TACTICAL GEAR — only shown when shop is open */}
-        {!data.shopClosed && data.shop.filter(p => p.published !== false).length > 0 && (
+        {!data.shopClosed && data.shop.filter(p => p.published !== false && !p.hiddenFromShop).length > 0 && (
           <div style={{ marginBottom:48 }}>
             <div className="section-header">
               <div>
@@ -2512,7 +2512,7 @@ function HomePage({ data, setPage }) {
               <button className="section-link" onClick={() => setPage("shop")}>SHOP ALL →</button>
             </div>
             <div className="grid-4">
-              {data.shop.filter(p => p.published !== false).slice(0, 4).map(prod => {
+              {data.shop.filter(p => p.published !== false && !p.hiddenFromShop).slice(0, 4).map(prod => {
                 const hasV = prod.variants?.length > 0;
                 const lowestVariant = hasV ? Math.min(...prod.variants.map(v => Number(v.price))) : null;
                 const displayPrice = hasV
