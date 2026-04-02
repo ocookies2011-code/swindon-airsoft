@@ -6707,9 +6707,26 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const months = Object.entries(byMonth).sort((a, b) => new Date("01 " + b[0]) - new Date("01 " + a[0]));
 
   // Format items array into a short readable string for table rows
+  // Resolve full product name from shop catalogue using stored id
+  // id format is either "productId" or "productId::variantId"
+  const resolveItemName = (i) => {
+    if (!i?.id) return i?.name || '—';
+    const [productId, variantId] = String(i.id).includes('::') ? String(i.id).split('::') : [i.id, null];
+    const product = (data.shop || []).find(p => p.id === productId);
+    if (!product) return i.name || '—';
+    if (variantId) {
+      const variant = (product.variants || []).find(v => v.id === variantId);
+      return variant ? `${product.name} — ${variant.name}` : (i.name || product.name);
+    }
+    return product.name || i.name;
+  };
+
   const fmtItems = (items) => {
     if (!items?.length) return 'No items recorded';
-    const parts = items.map(i => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ''}`);
+    const parts = items.map(i => {
+      const name = resolveItemName(i);
+      return `${name}${i.qty > 1 ? ` ×${i.qty}` : ''}`;
+    });
     if (parts.length <= 2) return parts.join(', ');
     return parts.slice(0, 2).join(', ') + ` +${parts.length - 2} more`;
   };
@@ -6717,9 +6734,9 @@ function AdminRevenue({ data, save, showToast, cu }) {
   // Build detail lines for a transaction
   const getLines = (t) => {
     if (t.source === "cash") {
-      return t.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, line: i.price * i.qty }));
+      return t.items.map(i => ({ name: resolveItemName(i), qty: i.qty, price: i.price, line: i.price * i.qty }));
     } else if (t.source === "shop" || t.source === "terminal") {
-      return t.items.map(i => ({ name: i.name, qty: i.qty, price: Number(i.price), line: Number(i.price) * i.qty }));
+      return t.items.map(i => ({ name: resolveItemName(i), qty: i.qty, price: Number(i.price), line: Number(i.price) * i.qty }));
     } else {
       // Ticket line — work out ticket unit price from event
       const ev = t.eventObj || data.events.find(e => e.title === t.eventTitle);
@@ -6877,7 +6894,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                     <td style={{ fontWeight: 600 }}>{t.userName}</td>
                     <td style={{ maxWidth: 260 }}>
                       {t.source === "cash" || t.source === "terminal" || t.source === "shop"
-                        ? <span title={t.items?.map(i => `${i.name} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
+                        ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
                         : (() => {
                             const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
                             return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
@@ -7096,7 +7113,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                     <td>{t.userName}</td>
                     <td style={{ maxWidth: 240 }}>
                       {t.source === "cash" || t.source === "terminal" || t.source === "shop"
-                        ? <span title={t.items?.map(i => `${i.name} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
+                        ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
                         : (() => {
                             const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
                             return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
