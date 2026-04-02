@@ -6493,8 +6493,39 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const [monthDetail, setMonthDetail] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null); // { t: transaction, busy: false }
   const [delBusy, setDelBusy] = useState(false);
+  const [notes, setNotes] = useState(''); // admin notes for selected transaction
+  const [notesSaving, setNotesSaving] = useState(false);
 
   const reloadCash = () => api.cashSales.getAll().then(setCashSales).catch(console.error);
+
+  const openTransaction = (t) => {
+    setSelected(t);
+    setNotes(t.adminNotes || '');
+  };
+
+  const saveNotes = async () => {
+    if (!selected) return;
+    setNotesSaving(true);
+    try {
+      const table = selected.source === 'cash' ? 'cash_sales'
+                  : selected.source === 'booking' ? 'bookings'
+                  : 'shop_orders';
+      const { error } = await supabase.from(table).update({ admin_notes: notes }).eq('id', selected.id);
+      if (error) throw new Error(error.message);
+      // Update local state so notes persist without re-fetch
+      setSelected(s => ({ ...s, adminNotes: notes }));
+      if (selected.source === 'cash') {
+        setCashSales(cs => cs.map(s => s.id === selected.id ? { ...s, admin_notes: notes } : s));
+      } else if (selected.source === 'shop' || selected.source === 'terminal') {
+        setShopOrders(os => os.map(o => o.id === selected.id ? { ...o, admin_notes: notes } : o));
+      }
+      showToast('Notes saved.', 'success');
+    } catch (e) {
+      showToast('Save failed: ' + e.message, 'error');
+    } finally {
+      setNotesSaving(false);
+    }
+  };
 
   useEffect(() => {
     reloadCash();
@@ -6552,6 +6583,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
     date: b.date || b.created_at,
     checkedIn: b.checkedIn,
     squareOrderId: b.squareOrderId || null,
+    adminNotes: b.adminNotes || '',
   })));
 
   const shopRevenue = shopOrders
@@ -6570,6 +6602,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
       discountSaving: o.discount_saving ? Number(o.discount_saving) : null,
       date: o.created_at,
       status: o.status,
+      adminNotes: o.admin_notes || '',
     }));
 
   const cashRevenue = cashSales.map(s => ({
@@ -6581,6 +6614,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
     items: Array.isArray(s.items) ? s.items : [],
     total: Number(s.total),
     date: s.created_at,
+    adminNotes: s.admin_notes || '',
   }));
 
   const all = [...bookingRevenue, ...shopRevenue, ...cashRevenue]
@@ -6682,7 +6716,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
           </thead>
           <tbody>
             {all.map(t => (
-              <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => setSelected(t)}>
+              <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => openTransaction(t)}>
                 <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
                 <td style={{ fontWeight: 600 }}>{t.userName}</td>
                 <td>
@@ -6703,7 +6737,10 @@ function AdminRevenue({ data, save, showToast, cu }) {
                 </td>
                 <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
                 <td onClick={e => e.stopPropagation()} style={{ display:"flex", gap:6, alignItems:"center" }}>
-                  <button className="btn btn-sm btn-ghost" onClick={() => setSelected(t)}>Detail →</button>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    {t.adminNotes && <span title={t.adminNotes} style={{ fontSize:10, background:"rgba(200,255,0,.15)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00", padding:"1px 6px", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".05em", whiteSpace:"nowrap" }}>📝 NOTE</span>}
+                    <button className="btn btn-sm btn-ghost" onClick={() => openTransaction(t)}>Detail →</button>
+                  </div>
                   <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>
                 </td>
               </tr>
@@ -6755,6 +6792,23 @@ function AdminRevenue({ data, save, showToast, cu }) {
               </tbody>
             </table></div>
 
+            {/* Admin notes */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 13, letterSpacing: ".05em", color: "var(--muted)" }}>ADMIN NOTES</div>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Add internal notes about this transaction (not visible to the customer)…"
+                rows={3}
+                style={{ width: "100%", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "10px 12px", fontSize: 13, fontFamily: "inherit", resize: "vertical", borderRadius: 4, outline: "none", boxSizing: "border-box" }}
+                onFocus={e => e.target.style.borderColor = "var(--accent)"}
+                onBlur={e => e.target.style.borderColor = "var(--border)"}
+              />
+              <button className="btn btn-sm btn-primary" onClick={saveNotes} disabled={notesSaving} style={{ marginTop: 8 }}>
+                {notesSaving ? "Saving…" : "Save Notes"}
+              </button>
+            </div>
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <button className="btn btn-danger btn-sm" onClick={() => { setDelConfirm(selected); }}>🗑 Delete Transaction</button>
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
@@ -6805,7 +6859,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
               <thead><tr><th>Date &amp; Time (GMT)</th><th>Customer</th><th>Description</th><th>Source</th><th>Total</th></tr></thead>
               <tbody>
                 {monthDetail.bookings.map(t => (
-                  <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => { setMonthDetail(null); setSelected(t); }}>
+                  <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => { setMonthDetail(null); openTransaction(t); }}>
                     <td style={{ fontSize: 12, color: "var(--muted)" }}>{gmtFull(t.date)}</td>
                     <td>{t.userName}</td>
                     <td>

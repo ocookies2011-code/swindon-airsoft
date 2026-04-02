@@ -611,6 +611,7 @@ function normaliseEvent(ev) {
       checkedIn:     b.checked_in,
       date:          b.created_at,
       squareOrderId: b.square_order_id || null,
+      adminNotes:   b.admin_notes || '',
     }))
   }
 }
