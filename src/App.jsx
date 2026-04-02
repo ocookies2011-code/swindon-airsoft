@@ -2219,7 +2219,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             <button onClick={() => { setShopSearch(""); setShopCatFilter(""); }} style={{ marginTop:16, background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"6px 18px", cursor:"pointer" }}>CLEAR FILTERS</button>
           </div>
         )}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,280px))", gap:12, justifyContent:"start" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
           {paginatedShop.map((item, idx) => {
             const hasV = item.variants?.length > 0;
             const displayPrice = hasV
@@ -2229,7 +2229,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             const sl = stockLabel(hasV ? item.variants.reduce((s,v)=>s+Number(v.stock),0) : item.stock);
             return (
               <div key={item.id}
-                style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s" }}
+                style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s", display:"flex", flexDirection:"column" }}
                 onClick={() => onProductClick(item)}
                 onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}
@@ -2277,7 +2277,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 </div>
 
                 {/* Body */}
-                <div style={{ padding:"12px 12px 0", position:"relative", zIndex:6 }}>
+                <div style={{ padding:"12px 12px 0", position:"relative", zIndex:6, flex:1 }}>
                   <div className="gap-2 mb-1" style={{ flexWrap:"wrap" }}>
                     {item.noPost && <span className="tag tag-gold" style={{ fontSize:9 }}>COLLECT ONLY</span>}
                     {hasV && <span className="tag tag-blue" style={{ fontSize:9 }}>{item.variants.length} VARIANTS</span>}
