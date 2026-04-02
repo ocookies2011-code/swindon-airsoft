@@ -6711,6 +6711,8 @@ function AdminRevenue({ data, save, showToast, cu }) {
   // id format is either "productId" or "productId::variantId"
   const resolveItemName = (i) => {
     if (!i?.id) return i?.name || '—';
+    // If variant is stored directly on the item, use it
+    if (i.variant) return `${i.name} — ${i.variant}`;
     const [productId, variantId] = String(i.id).includes('::') ? String(i.id).split('::') : [i.id, null];
     const product = (data.shop || []).find(p => p.id === productId);
     if (!product) return i.name || '—';
@@ -10033,7 +10035,7 @@ function AdminCash({ data, cu, showToast }) {
     const customerName  = player ? player.name : (manual.name || "Walk-in");
     const customerEmail = player ? (player.email || "") : (manual.email || "");
     const userId        = player?.id ?? null;
-    const saleItems     = items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }));
+    const saleItems     = items.map(i => ({ id: i.id, name: i.name, variant: i.variant || null, price: i.price, qty: i.qty }));
 
     if (isTerminal) {
       // Terminal sales → shop_orders so they appear on the customer's account
@@ -10285,7 +10287,7 @@ function AdminCash({ data, cu, showToast }) {
                       <div className="gap-2">
                         <span className="text-green" style={{ fontSize: 12 }}>£{Number(v.price).toFixed(2)}</span>
                         <span style={{ fontSize: 11, color: "var(--muted)" }}>({v.stock})</span>
-                        <button className="btn btn-sm btn-primary" onClick={() => add({ id: `${item.id}::${v.id}`, name: `${item.name} — ${v.name}`, price: Number(v.price) })}>+</button>
+                        <button className="btn btn-sm btn-primary" onClick={() => add({ id: `${item.id}::${v.id}`, name: item.name, variant: v.name, price: Number(v.price) })}>+</button>
                       </div>
                     </div>
                   ))}
@@ -10330,7 +10332,7 @@ function AdminCash({ data, cu, showToast }) {
             {items.length === 0 ? <p className="text-muted" style={{ fontSize: 13 }}>No items added yet</p> : (
               items.map(item => (
                 <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
-                  <span>{item.name} ×{item.qty}</span>
+                  <span>{item.name}{item.variant ? ` — ${item.variant}` : ""} ×{item.qty}</span>
                   <div className="gap-2">
                     <span className="text-green">£{(item.price * item.qty).toFixed(2)}</span>
                     <button style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }} onClick={() => setItems(c => c.filter(x => x.id !== item.id))}>✕</button>
