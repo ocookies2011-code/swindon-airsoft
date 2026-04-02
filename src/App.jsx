@@ -1462,7 +1462,9 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
       setDone({ code: voucher.code, amount: finalAmount, recipientEmail: recipientEmailFinal });
       showToast('🎟️ Gift voucher purchased!');
     } catch (e) {
-      const errMsg = 'Payment succeeded but voucher creation failed — please contact us with your Square ref: ' + squarePayment.id;
+      console.error('Gift voucher creation error:', e?.message || e);
+      const actualError = e?.message || String(e) || 'Unknown error';
+      const errMsg = 'Payment succeeded but voucher creation failed — please contact us with your Square ref: ' + squarePayment.id + ' | Error: ' + actualError;
       setVoucherError(errMsg);
       supabase.from('failed_payments').insert({
         customer_name:     cu?.name || 'Unknown',
@@ -1471,7 +1473,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
         items:             [{ name: 'Gift Voucher', price: finalAmount, qty: 1 }],
         total:             finalAmount,
         payment_method:    'square_gift_voucher',
-        error_message:     errMsg,
+        error_message:     actualError,
         square_payment_id: squarePayment?.id || null,
         recorded_by:       null,
       }).then(({ error }) => { if (error) console.warn('Failed to log payment error:', error.message); });
