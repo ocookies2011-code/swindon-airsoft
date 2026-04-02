@@ -1859,7 +1859,7 @@ function ShopClosedPage({ setPage }) {
 }
 
 // ── Shop ──────────────────────────────────────────────────
-function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen, recentlyViewed = [] }) {
+function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen, recentlyViewed = [], setPage }) {
   const [placing, setPlacing] = useState(false);
   const shopSafetyRef = useRef(null);
   const [shopSquareError, setShopSquareError] = useState(null);
@@ -2142,6 +2142,22 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         {data.shop.length === 0 && !shopSearch && !shopCatFilter && (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12, marginBottom:40 }}>
             {Array.from({length:8}).map((_,i) => <SkeletonCard key={i} height={260} />)}
+          </div>
+        )}
+
+        {/* Gift voucher banner */}
+        {setPage && (
+          <div onClick={() => setPage("gift-vouchers")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, background:"linear-gradient(90deg,#0c1009 0%,#111a06 100%)", border:"1px solid #2a4010", borderLeft:"3px solid #c8a000", padding:"14px 20px", marginBottom:16, cursor:"pointer", transition:"border-color .15s" }}
+            onMouseEnter={e => e.currentTarget.style.borderLeftColor="#e8c000"}
+            onMouseLeave={e => e.currentTarget.style.borderLeftColor="#c8a000"}>
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <span style={{ fontSize:24, flexShrink:0 }}>🎟️</span>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".1em", textTransform:"uppercase", color:"#c8a000" }}>Gift Vouchers</div>
+                <div style={{ fontSize:12, color:"#5a7a30", marginTop:1 }}>The perfect gift — redeemable on events &amp; shop orders</div>
+              </div>
+            </div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".1em", color:"#c8a000", whiteSpace:"nowrap", flexShrink:0 }}>BUY ONE →</div>
           </div>
         )}
 
@@ -6503,6 +6519,7 @@ function AppInner() {
             cart={shopCart} setCart={setShopCart}
             cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
             onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); }}
+            setPage={setPage}
           />
         )}
         {page === "shop" && !data.shopClosed && selectedProduct && (
