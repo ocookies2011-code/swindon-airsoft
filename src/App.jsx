@@ -2029,7 +2029,8 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const [shopPage, setShopPage] = useState(1);
   const SHOP_PAGE_SIZE = 12;
   const allShopCategories = useMemo(() => {
-    const cats = [...new Set((data.shop || []).map(p => p.category).filter(Boolean))].sort();
+    const visibleProducts = (data.shop || []).filter(p => !p.hiddenFromShop);
+    const cats = [...new Set(visibleProducts.map(p => p.category).filter(Boolean))].sort();
     return cats;
   }, [data.shop]);
   const filteredShop = useMemo(() => {
@@ -6507,7 +6508,7 @@ function AppInner() {
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} />
 
       <div className="pub-page-wrap">
-        {page === "home"        && <HomePage data={data} setPage={setPage} />}
+        {page === "home"        && <HomePage data={data} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; }} />}
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />

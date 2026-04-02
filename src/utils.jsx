@@ -2167,7 +2167,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
 }
 
 // ── Home Page ─────────────────────────────────────────────
-function HomePage({ data, setPage }) {
+function HomePage({ data, setPage, onProductClick }) {
   const isMobile = useMobile(700);
   const nextEvent = data.events
     .filter(e => e.published && new Date(e.date + "T" + e.time) > new Date())
@@ -2520,7 +2520,7 @@ function HomePage({ data, setPage }) {
                   : (prod.onSale && prod.salePrice ? prod.salePrice : prod.price);
                 const priceLabel = hasV ? `From £${displayPrice}` : `£${Number(displayPrice).toFixed(2)}`;
                 return (
-                <div key={prod.id} className="shop-card" onClick={() => setPage("shop")} style={{ cursor:"pointer" }}>
+                <div key={prod.id} className="shop-card" onClick={() => onProductClick ? onProductClick(prod) : setPage("shop")} style={{ cursor:"pointer" }}>
                   <div className="shop-img">
                     {prod.image ? <img src={prod.image} alt={prod.name} /> : <span style={{ fontSize:32, opacity:.3 }}>📦</span>}
                   </div>
