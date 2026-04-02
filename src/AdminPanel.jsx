@@ -5661,6 +5661,7 @@ function AdminFailedPayments({ showToast, cu }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [delConfirm, setDelConfirm] = useState(null);
+  const delConfirmRef = useRef(null);
   const [delBusy, setDelBusy]   = useState(false);
   const [filter, setFilter]     = useState("all");
 
@@ -5770,7 +5771,7 @@ function AdminFailedPayments({ showToast, cu }) {
                     {p.square_payment_id && <span style={{ fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#4fc3f7", display:"block", marginTop:2 }}>Ref: {p.square_payment_id.slice(0,16)}…</span>}
                   </td>
                   <td style={{ padding:"10px 12px" }}>
-                    <button onClick={() => setDelConfirm(p.id)} style={{ background:"transparent", border:"1px solid rgba(255,60,60,.3)", color:"var(--red)", fontSize:10, padding:"3px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em" }}>DELETE</button>
+                    <button onClick={() => { delConfirmRef.current = p.id; setDelConfirm(p.id); }} style={{ background:"transparent", border:"1px solid rgba(255,60,60,.3)", color:"var(--red)", fontSize:10, padding:"3px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".1em" }}>DELETE</button>
                   </td>
                 </tr>
               ))}
@@ -5786,7 +5787,7 @@ function AdminFailedPayments({ showToast, cu }) {
             <div style={{ fontSize:13, color:"var(--muted)", marginBottom:20 }}>This will permanently remove the failed payment record. This cannot be undone.</div>
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
               <button className="btn btn-ghost" onClick={() => setDelConfirm(null)} disabled={delBusy}>Cancel</button>
-              <button className="btn btn-primary" style={{ background:"rgba(255,60,60,.15)", borderColor:"var(--red)", color:"var(--red)" }} onClick={() => deleteEntry(delConfirm)} disabled={delBusy}>
+              <button className="btn btn-primary" style={{ background:"rgba(255,60,60,.15)", borderColor:"var(--red)", color:"var(--red)" }} onClick={() => deleteEntry(delConfirmRef.current)} disabled={delBusy}>
                 {delBusy ? "Deleting…" : "Delete"}
               </button>
             </div>
