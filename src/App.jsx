@@ -2219,7 +2219,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             <button onClick={() => { setShopSearch(""); setShopCatFilter(""); }} style={{ marginTop:16, background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"6px 18px", cursor:"pointer" }}>CLEAR FILTERS</button>
           </div>
         )}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,280px))", gap:12, justifyContent:"start" }}>
           {paginatedShop.map((item, idx) => {
             const hasV = item.variants?.length > 0;
             const displayPrice = hasV
