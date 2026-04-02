@@ -6062,7 +6062,7 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","leaderboard","profile","about","staff","contact","terms","player"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","staff","contact","terms","player"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
