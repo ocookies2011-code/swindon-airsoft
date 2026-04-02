@@ -1137,7 +1137,18 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           </div>
         )}
 
-        {waiverModal && <WaiverModal cu={cu} updateUser={updateUser} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} addPlayerMode={waiverModal === "addPlayer"} />}
+        {waiverModal && <WaiverModal cu={cu} updateUser={(id, patch) => {
+          const waiver = patch.waiverData || (patch.extraWaivers && patch.extraWaivers[patch.extraWaivers.length - 1]);
+          if (waiver && waiver.emergencyName) {
+            const playerName = (waiver.name || cu?.waiverData?.name || "").trim().toLowerCase();
+            const emergencyName = waiver.emergencyName.trim().toLowerCase();
+            if (playerName && emergencyName === playerName) {
+              showToast("Emergency contact must be a different person — not the player themselves.", "red");
+              return Promise.resolve();
+            }
+          }
+          return updateUser(id, patch);
+        }} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} addPlayerMode={waiverModal === "addPlayer"} />}
       </div>
     );
   }
@@ -5259,7 +5270,18 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               </div>
             );
           })()}
-          {waiverModal && <WaiverModal cu={cu} updateUser={updateUser} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} />}
+          {waiverModal && <WaiverModal cu={cu} updateUser={(id, patch) => {
+            const waiver = patch.waiverData || (patch.extraWaivers && patch.extraWaivers[patch.extraWaivers.length - 1]);
+            if (waiver && waiver.emergencyName) {
+              const playerName = (waiver.name || cu?.waiverData?.name || "").trim().toLowerCase();
+              const emergencyName = waiver.emergencyName.trim().toLowerCase();
+              if (playerName && emergencyName === playerName) {
+                showToast("Emergency contact must be a different person — not the player themselves.", "red");
+                return Promise.resolve();
+              }
+            }
+            return updateUser(id, patch);
+          }} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} />}
         </div>
       )}
 
