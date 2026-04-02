@@ -1387,6 +1387,87 @@ export const discountCodes = wrapWithTimeout({
   },
 })
 
+// ── Gift Vouchers ─────────────────────────────────────────
+function generateVoucherCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no 0/O/1/I to avoid confusion
+  const seg = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return `GV-${seg()}-${seg()}-${seg()}`
+}
+
+export const giftVouchers = wrapWithTimeout({
+  async purchase({ amount, purchaserId, purchaserName, purchaserEmail, recipientEmail, recipientName, message, squarePaymentId }) {
+    const code = generateVoucherCode()
+    const { data, error } = await supabase
+      .from('gift_vouchers')
+      .insert({
+        code,
+        amount,
+        balance: amount,
+        purchaser_id:    purchaserId,
+        purchaser_name:  purchaserName,
+        purchaser_email: purchaserEmail,
+        recipient_email: recipientEmail.toLowerCase().trim(),
+        recipient_name:  recipientName || null,
+        message:         message || null,
+        square_payment_id: squarePaymentId,
+      })
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return data
+  },
+
+  // Validate a voucher code at checkout — returns { code, balance, amount, type, value } or throws
+  async validate(code) {
+    const { data, error } = await supabase
+      .from('gift_vouchers')
+      .select('id, code, balance, amount, is_disabled')
+      .eq('is_disabled', false)
+      .gt('balance', 0)
+      .ilike('code', code.trim())
+      .single()
+    if (error || !data) throw new Error('Voucher not found or has no remaining balance.')
+    return {
+      code:    data.code,
+      balance: Number(data.balance),
+      amount:  Number(data.amount),
+      type:    'fixed',
+      value:   data.balance, // matches discountCodes shape so checkout maths works unchanged
+    }
+  },
+
+  // Deduct from balance after a successful payment — uses a DB RPC for safety
+  async redeem(code, amount, userId, userName, context) {
+    const { data, error } = await supabase.rpc('redeem_gift_voucher', {
+      p_code:      code,
+      p_amount:    amount,
+      p_user_id:   userId,
+      p_user_name: userName,
+      p_context:   context,
+    })
+    if (error) throw new Error(error.message)
+    if (!data.ok) throw new Error(data.error)
+    return data
+  },
+
+  async listAll() {
+    const { data, error } = await supabase
+      .from('gift_vouchers')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return data || []
+  },
+
+  async disable(id) {
+    const { error } = await supabase
+      .from('gift_vouchers')
+      .update({ is_disabled: true })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+})
+
 // ── Event Waitlist ────────────────────────────────────────
 export const waitlistApi = {
   join: async ({ eventId, userId, userName, userEmail, ticketType }) => {
