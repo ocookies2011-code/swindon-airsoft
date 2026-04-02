@@ -1974,14 +1974,14 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
 // ── Public Nav ────────────────────────────────────────────
 function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef = useRef(null);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false);
+        setOpenDropdown(null);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -1990,7 +1990,12 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
   const allLinks = [
     { id: "home", label: "Home", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg> },
     { id: "events", label: "Events", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
-    { id: "shop", label: "Shop", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
+    { id: "shop", label: "Shop", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+      children: [
+        { id: "shop",          label: "Shop",          icon: <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="#c8ff00" strokeWidth="1.4"><path d="M3 5h14l-1.5 9H4.5L3 5z"/><circle cx="8" cy="17" r="1" fill="#c8ff00" stroke="none"/><circle cx="14" cy="17" r="1" fill="#c8ff00" stroke="none"/><path d="M1 2h3l1 3" strokeLinecap="round"/></svg> },
+        { id: "gift-vouchers", label: "Gift Vouchers", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8a000" strokeWidth="2"><rect x="2" y="9" width="20" height="13" rx="1"/><path d="M12 9V22M2 14h20M7 9c0-2.8 2.2-5 5-5s5 2.2 5 5" strokeLinecap="round"/></svg> },
+      ]
+    },
     { id: "leaderboard", label: "Leaderboard", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg> },
     { id: "gallery", label: "Gallery", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
     {
@@ -2006,6 +2011,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
   ];
   const links = allLinks;
   const aboutPages = ["about","qa","staff","contact","terms"];
+  const shopPages = ["shop","gift-vouchers"];
   const go = (id) => {
     // Guard: admin page requires admin role — never navigate there otherwise
     if (id === "admin" && cu?.role !== "admin") return;
@@ -2030,24 +2036,22 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
             <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:56, width:"auto", objectFit:"contain", flexShrink:0 }} />
           </div>
           {/* Desktop links */}
-          <div className="pub-nav-links">
+          <div className="pub-nav-links" ref={dropdownRef}>
             {links.map(l => (
               l.children ? (
-                <div key={l.id} className="pub-nav-link-wrap" ref={dropdownRef}>
-                  <button className={`pub-nav-link ${aboutPages.includes(page) ? "active" : ""}`}
-                    onClick={() => setDropdownOpen(v => !v)}>
-                    {l.label} <span style={{ fontSize:9, opacity:.6, marginLeft:2 }}>{dropdownOpen ? "▴" : "▾"}</span>
+                <div key={l.id} className="pub-nav-link-wrap">
+                  <button className={`pub-nav-link ${(l.id === "about" ? aboutPages : shopPages).includes(page) ? "active" : ""}`}
+                    onClick={() => setOpenDropdown(v => v === l.id ? null : l.id)}>
+                    {l.label} <span style={{ fontSize:9, opacity:.6, marginLeft:2 }}>{openDropdown === l.id ? "▴" : "▾"}</span>
                   </button>
-                  {dropdownOpen && (
-                    <div className="pub-nav-dropdown">
-                      {l.children.map(c => (
-                        <button key={c.id} className={`pub-nav-dropdown-item ${page === c.id ? "active" : ""}`}
-                          onClick={() => { go(c.id); setDropdownOpen(false); }}>
-                          {c.icon} {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="pub-nav-dropdown" style={openDropdown === l.id ? { display:'block' } : {}}>
+                    {l.children.map(c => (
+                      <button key={c.id} className={`pub-nav-dropdown-item ${page === c.id ? "active" : ""}`}
+                        onClick={() => { go(c.id); setOpenDropdown(null); }}>
+                        {c.icon} {c.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <button key={l.id} className={`pub-nav-link ${page === l.id ? "active" : ""}`} onClick={() => go(l.id)}>
@@ -2090,7 +2094,12 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
           {links.map(l => (
             l.children ? (
               <div key={l.id}>
-                <div style={{ padding:"10px 20px 4px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#3a4a20" strokeWidth="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 8v.5" strokeLinecap="round"/></svg> ABOUT</div>
+                <div style={{ padding:"10px 20px 4px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
+                  {l.id === "about"
+                    ? <><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#3a4a20" strokeWidth="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 8v.5" strokeLinecap="round"/></svg> ABOUT</>
+                    : <><svg width="9" height="9" viewBox="0 0 20 20" fill="none" stroke="#3a4a20" strokeWidth="2"><path d="M3 5h14l-1.5 9H4.5L3 5z"/></svg> SHOP</>
+                  }
+                </div>
                 {l.children.map(c => (
                   <button key={c.id} className={`pub-nav-drawer-link ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)} style={{ paddingLeft:32 }}>
                     <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"#3a5010", width:20, display:"inline-block" }}>{c.icon}</span> {c.label}
