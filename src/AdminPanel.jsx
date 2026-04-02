@@ -6498,6 +6498,9 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const [descEdit, setDescEdit] = useState(false);      // editing description/items on terminal
   const [descItems, setDescItems] = useState([]);        // editable items array for terminal
   const [descSaving, setDescSaving] = useState(false);
+  const [nameEdit, setNameEdit] = useState(false);       // editing customer name
+  const [nameValue, setNameValue] = useState('');        // editable name
+  const [nameSaving, setNameSaving] = useState(false);
 
   // Transaction filter state
   const today = new Date().toISOString().slice(0, 10);
@@ -6515,7 +6518,36 @@ function AdminRevenue({ data, save, showToast, cu }) {
     setSelected(t);
     setNotes(t.adminNotes || '');
     setDescEdit(false);
+    setNameEdit(false);
+    setNameValue(t.userName || '');
     setDescItems(t.items?.length ? t.items.map(i => ({ name: i.name || '', qty: i.qty || 1, price: i.price || 0 })) : [{ name: '', qty: 1, price: 0 }]);
+  };
+
+  const saveName = async () => {
+    if (!selected || !nameValue.trim()) return;
+    setNameSaving(true);
+    try {
+      const table = selected.source === 'cash' ? 'cash_sales'
+                  : selected.source === 'booking' ? 'bookings'
+                  : 'shop_orders';
+      const field = selected.source === 'booking' ? 'user_name' : 'customer_name';
+      const { error } = await supabase.from(table).update({ [field]: nameValue.trim() }).eq('id', selected.id);
+      if (error) throw new Error(error.message);
+      const trimmed = nameValue.trim();
+      setSelected(s => ({ ...s, userName: trimmed }));
+      if (selected.source === 'cash') {
+        setCashSales(cs => cs.map(s => s.id === selected.id ? { ...s, customer_name: trimmed } : s));
+      } else if (selected.source === 'terminal' || selected.source === 'shop') {
+        setShopOrders(os => os.map(o => o.id === selected.id ? { ...o, customer_name: trimmed } : o));
+      }
+      setNameEdit(false);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: 'Transaction customer name updated', detail: `ID: ${selected.id} | Name: ${trimmed}` });
+      showToast('Name updated.', 'success');
+    } catch (e) {
+      showToast('Save failed: ' + e.message, 'error');
+    } finally {
+      setNameSaving(false);
+    }
   };
 
   const saveDescription = async () => {
@@ -6673,6 +6705,14 @@ function AdminRevenue({ data, save, showToast, cu }) {
     byMonth[monthKey] = (byMonth[monthKey] || 0) + b.total;
   });
   const months = Object.entries(byMonth).sort((a, b) => new Date("01 " + b[0]) - new Date("01 " + a[0]));
+
+  // Format items array into a short readable string for table rows
+  const fmtItems = (items) => {
+    if (!items?.length) return 'No items recorded';
+    const parts = items.map(i => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ''}`);
+    if (parts.length <= 2) return parts.join(', ');
+    return parts.slice(0, 2).join(', ') + ` +${parts.length - 2} more`;
+  };
 
   // Build detail lines for a transaction
   const getLines = (t) => {
@@ -6835,13 +6875,9 @@ function AdminRevenue({ data, save, showToast, cu }) {
                   <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => openTransaction(t)}>
                     <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
                     <td style={{ fontWeight: 600 }}>{t.userName}</td>
-                    <td>
-                      {t.source === "cash"
-                        ? `Cash Sale (${t.items?.length || 0} items)`
-                        : t.source === "shop"
-                        ? `Shop Order (${t.items?.length || 0} item${t.items?.length !== 1 ? "s" : ""})`
-                        : t.source === "terminal"
-                        ? `Terminal Sale (${t.items?.length || 0} items)`
+                    <td style={{ maxWidth: 260 }}>
+                      {t.source === "cash" || t.source === "terminal" || t.source === "shop"
+                        ? <span title={t.items?.map(i => `${i.name} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
                         : (() => {
                             const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
                             return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
@@ -6900,8 +6936,27 @@ function AdminRevenue({ data, save, showToast, cu }) {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,180px),1fr))", gap: 8, marginBottom: 16 }}>
+              {/* Customer chip — editable for terminal/cash/shop */}
+              <div style={{ background: "var(--bg3)", borderRadius: 6, padding: "8px 12px" }}>
+                <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: ".08em", marginBottom: 4 }}>CUSTOMER</div>
+                {nameEdit ? (
+                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                    <input className="input" value={nameValue} onChange={e => setNameValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setNameEdit(false); }}
+                      style={{ flex:1, fontSize:13, padding:"4px 8px" }} autoFocus />
+                    <button className="btn btn-sm btn-primary" onClick={saveName} disabled={nameSaving || !nameValue.trim()} style={{ padding:"4px 10px", fontSize:11 }}>{nameSaving ? "…" : "✓"}</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => setNameEdit(false)} style={{ padding:"4px 10px", fontSize:11 }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{selected.userName || "—"}</span>
+                    {selected.source !== "booking" && (
+                      <button onClick={() => setNameEdit(true)} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:11, padding:0, lineHeight:1 }} title="Edit name">✏</button>
+                    )}
+                  </div>
+                )}
+              </div>
               {[
-                ["Customer", selected.userName],
                 ["Date & Time (GMT)", gmtFull(selected.date)],
                 ["Source", selected.source === "cash" ? "Cash Sale" : selected.source === "shop" ? "Shop Order" : selected.source === "terminal" ? "Terminal Sale" : "Online Booking"],
                 selected.source === "booking" ? ["Event", selected.eventTitle] : ["Customer Email", selected.customerEmail || "—"],
@@ -7039,17 +7094,15 @@ function AdminRevenue({ data, save, showToast, cu }) {
                   <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => { setMonthDetail(null); openTransaction(t); }}>
                     <td style={{ fontSize: 12, color: "var(--muted)" }}>{gmtFull(t.date)}</td>
                     <td>{t.userName}</td>
-                    <td>
-                  {t.source === "cash"
-                    ? `Cash Sale (${t.items?.length || 0} items)`
-                    : t.source === "shop"
-                    ? `Shop Order (${t.items?.length || 0} item${t.items?.length !== 1 ? "s" : ""})`
-                    : (() => {
-                        const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
-                        return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
-                      })()
-                  }
-                </td>
+                    <td style={{ maxWidth: 240 }}>
+                      {t.source === "cash" || t.source === "terminal" || t.source === "shop"
+                        ? <span title={t.items?.map(i => `${i.name} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
+                        : (() => {
+                            const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
+                            return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
+                          })()
+                      }
+                    </td>
                     <td>
                       <span className={`tag ${t.source === "cash" ? "tag-gold" : t.source === "shop" ? "tag-teal" : "tag-blue"}`}>
                         {t.source === "cash" ? "💵 Cash" : t.source === "shop" ? "🛒 Shop" : "🌐 Online"}
