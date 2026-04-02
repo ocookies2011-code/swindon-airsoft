@@ -1391,6 +1391,11 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
     setBusy(true);
     setVoucherError(null);
     try {
+      // Ensure the Supabase session is still alive after the Square payment flow —
+      // the payment iframe can take long enough that the JWT needs a refresh,
+      // which would cause the RLS insert policy (auth.uid() IS NOT NULL) to fail.
+      await supabase.auth.refreshSession().catch(() => {});
+
       const voucher = await api.giftVouchers.purchase({
         amount:         finalAmount,
         purchaserId:    cu.id,
@@ -6062,7 +6067,7 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","staff","contact","terms","player"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","leaderboard","profile","about","staff","contact","terms","player"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
