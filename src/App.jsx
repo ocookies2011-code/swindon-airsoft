@@ -1356,6 +1356,27 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
   const [voucherError, setVoucherError]     = useState(null);
   const [done, setDone]                     = useState(null);
 
+  // Balance checker
+  const [balanceInput, setBalanceInput]     = useState('');
+  const [balanceResult, setBalanceResult]   = useState(null); // { balance, amount } | null
+  const [balanceError, setBalanceError]     = useState('');
+  const [balanceChecking, setBalanceChecking] = useState(false);
+
+  const checkBalance = async () => {
+    if (!balanceInput.trim()) return;
+    setBalanceChecking(true);
+    setBalanceError('');
+    setBalanceResult(null);
+    try {
+      const result = await api.giftVouchers.validate(balanceInput.trim());
+      setBalanceResult(result);
+    } catch (e) {
+      setBalanceError(e.message);
+    } finally {
+      setBalanceChecking(false);
+    }
+  };
+
   const finalAmount = useCustom
     ? Math.round(Math.max(1, Math.min(500, Number(customAmount) || 0)) * 100) / 100
     : amount;
@@ -1654,7 +1675,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
         </div>
 
         {/* How it works */}
-        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '24px' }}>
+        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '24px', marginBottom: 20 }}>
           <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>How it works</div>
           {[
             ['🎟️', 'Purchase a voucher', 'Choose a value and pay by card. The code is generated and emailed instantly.'],
@@ -1669,6 +1690,43 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Balance checker */}
+        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '24px' }}>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>Check voucher balance</div>
+          <div style={{ display: 'flex', gap: 0, marginBottom: 10 }}>
+            <input
+              value={balanceInput}
+              onChange={e => { setBalanceInput(e.target.value.toUpperCase()); setBalanceError(''); setBalanceResult(null); }}
+              onKeyDown={e => e.key === 'Enter' && checkBalance()}
+              placeholder="GV-XXXX-XXXX-XXXX"
+              style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', borderRight: 'none', color: '#c8e878', fontFamily: "'Share Tech Mono',monospace", fontSize: 13, letterSpacing: '.1em', padding: '9px 12px', outline: 'none', textTransform: 'uppercase' }}
+              onFocus={e => e.target.style.borderColor = '#4a6820'}
+              onBlur={e => e.target.style.borderColor = '#2a3a10'}
+            />
+            <button
+              onClick={checkBalance}
+              disabled={balanceChecking || !balanceInput.trim()}
+              style={{ background: balanceInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: balanceInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: '.1em', padding: '9px 16px', cursor: balanceInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
+              {balanceChecking ? '⏳' : 'CHECK'}
+            </button>
+          </div>
+          {balanceError && (
+            <div style={{ fontSize: 12, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 4 }}>⚠ {balanceError}</div>
+          )}
+          {balanceResult && (
+            <div style={{ background: '#0d0d0d', border: '1px solid #2a3a10', borderLeft: '3px solid #c8ff00', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 13, color: '#c8ff00', letterSpacing: '.1em', marginBottom: 4 }}>{balanceResult.code}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Original value: £{Number(balanceResult.amount).toFixed(2)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 2 }}>Remaining balance</div>
+                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, color: '#c8ff00', lineHeight: 1 }}>£{Number(balanceResult.balance).toFixed(2)}</div>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
