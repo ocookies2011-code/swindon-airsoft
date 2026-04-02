@@ -6496,6 +6496,16 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const [notes, setNotes] = useState(''); // admin notes for selected transaction
   const [notesSaving, setNotesSaving] = useState(false);
 
+  // Transaction filter state
+  const today = new Date().toISOString().slice(0, 10);
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  const [txDateFrom, setTxDateFrom] = useState(firstOfMonth);
+  const [txDateTo,   setTxDateTo]   = useState(today);
+  const [txSource,   setTxSource]   = useState('all'); // all | booking | shop | terminal | cash
+  const [txSearch,   setTxSearch]   = useState('');
+  const [txPage,     setTxPage]     = useState(1);
+  const TX_PER_PAGE = 50;
+
   const reloadCash = () => api.cashSales.getAll().then(setCashSales).catch(console.error);
 
   const openTransaction = (t) => {
@@ -6700,55 +6710,154 @@ function AdminRevenue({ data, save, showToast, cu }) {
         )}
       </div>
 
-      {/* All transactions */}
-      <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 14 }}>All Transactions <span className="text-muted" style={{ fontSize: 12, fontWeight: 400 }}>— click any row for full detail</span></div>
-        <div className="table-wrap"><table className="data-table">
-          <thead>
-            <tr>
-              <th>Date &amp; Time (GMT)</th>
-              <th>Customer</th>
-              <th>Description</th>
-              <th>Source</th>
-              <th>Total</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {all.map(t => (
-              <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => openTransaction(t)}>
-                <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
-                <td style={{ fontWeight: 600 }}>{t.userName}</td>
-                <td>
-                  {t.source === "cash"
-                    ? `Cash Sale (${t.items?.length || 0} items)`
-                    : t.source === "shop"
-                    ? `Shop Order (${t.items?.length || 0} item${t.items?.length !== 1 ? "s" : ""})`
-                    : (() => {
-                        const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
-                        return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
-                      })()
-                  }
-                </td>
-                <td>
-                  <span className={`tag ${t.source === "cash" ? "tag-gold" : t.source === "shop" ? "tag-teal" : "tag-blue"}`}>
-                    {t.source === "cash" ? "💵 Cash" : t.source === "shop" ? "🛒 Shop" : "🌐 Online"}
-                  </span>
-                </td>
-                <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
-                <td onClick={e => e.stopPropagation()} style={{ display:"flex", gap:6, alignItems:"center" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    {t.adminNotes && <span title={t.adminNotes} style={{ fontSize:10, background:"rgba(200,255,0,.15)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00", padding:"1px 6px", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".05em", whiteSpace:"nowrap" }}>📝 NOTE</span>}
-                    <button className="btn btn-sm btn-ghost" onClick={() => openTransaction(t)}>Detail →</button>
-                  </div>
-                  <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>
-                </td>
-              </tr>
-            ))}
-            {all.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>No transactions yet</td></tr>}
-          </tbody>
-        </table></div>
-      </div>
+      {/* All transactions — filtered */}
+      {(() => {
+        const fromMs = txDateFrom ? new Date(txDateFrom).getTime() : 0;
+        const toMs   = txDateTo   ? new Date(txDateTo + 'T23:59:59').getTime() : Infinity;
+        const q = txSearch.trim().toLowerCase();
+        const filtered = all.filter(t => {
+          const tMs = new Date(t.date).getTime();
+          if (tMs < fromMs || tMs > toMs) return false;
+          if (txSource !== 'all' && t.source !== txSource) return false;
+          if (q && !(
+            t.userName?.toLowerCase().includes(q) ||
+            t.eventTitle?.toLowerCase().includes(q) ||
+            t.customerEmail?.toLowerCase().includes(q) ||
+            t.id?.toLowerCase().includes(q)
+          )) return false;
+          return true;
+        });
+        const totalPages = Math.max(1, Math.ceil(filtered.length / TX_PER_PAGE));
+        const safePage   = Math.min(txPage, totalPages);
+        const pageRows   = filtered.slice((safePage - 1) * TX_PER_PAGE, safePage * TX_PER_PAGE);
+        const filteredTotal = filtered.reduce((s, t) => s + t.total, 0);
+        return (
+          <div className="card">
+            <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>Transactions</div>
+
+            {/* Filters */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12, alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <label style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>From</label>
+                <input type="date" value={txDateFrom} onChange={e => { setTxDateFrom(e.target.value); setTxPage(1); }}
+                  style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontSize: 12, borderRadius: 3, outline: "none" }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <label style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>To</label>
+                <input type="date" value={txDateTo} onChange={e => { setTxDateTo(e.target.value); setTxPage(1); }}
+                  style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontSize: 12, borderRadius: 3, outline: "none" }} />
+              </div>
+              <select value={txSource} onChange={e => { setTxSource(e.target.value); setTxPage(1); }}
+                style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontSize: 12, borderRadius: 3, outline: "none", cursor: "pointer" }}>
+                <option value="all">All sources</option>
+                <option value="booking">🌐 Online Bookings</option>
+                <option value="shop">🛒 Shop Orders</option>
+                <option value="terminal">🖥 Terminal</option>
+                <option value="cash">💵 Cash Sales</option>
+              </select>
+              <input value={txSearch} onChange={e => { setTxSearch(e.target.value); setTxPage(1); }}
+                placeholder="Search name, event, email…"
+                style={{ flex: 1, minWidth: 160, background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontSize: 12, borderRadius: 3, outline: "none" }} />
+              <button className="btn btn-sm btn-ghost" onClick={() => { setTxDateFrom(firstOfMonth); setTxDateTo(today); setTxSource('all'); setTxSearch(''); setTxPage(1); }}>Reset</button>
+            </div>
+
+            {/* Quick date presets */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              {[
+                { label: "Today",      from: today, to: today },
+                { label: "This week",  from: new Date(Date.now() - 6*86400000).toISOString().slice(0,10), to: today },
+                { label: "This month", from: firstOfMonth, to: today },
+                { label: "Last month", from: (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,10); })(),
+                                        to:   (() => { const d = new Date(); d.setDate(0); return d.toISOString().slice(0,10); })() },
+                { label: "This year",  from: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10), to: today },
+                { label: "All time",   from: '', to: '' },
+              ].map(p => (
+                <button key={p.label} className="btn btn-sm btn-ghost"
+                  style={{ fontSize: 11, padding: "3px 10px", background: txDateFrom === p.from && txDateTo === p.to ? "var(--accent)" : undefined, color: txDateFrom === p.from && txDateTo === p.to ? "#000" : undefined }}
+                  onClick={() => { setTxDateFrom(p.from); setTxDateTo(p.to); setTxPage(1); }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Summary for current filter */}
+            <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>{filtered.length} transaction{filtered.length !== 1 ? "s" : ""}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>£{filteredTotal.toFixed(2)} total</span>
+              {totalPages > 1 && <span style={{ fontSize: 12, color: "var(--muted)" }}>Page {safePage} of {totalPages}</span>}
+            </div>
+
+            <div className="table-wrap"><table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date &amp; Time (GMT)</th>
+                  <th>Customer</th>
+                  <th>Description</th>
+                  <th>Source</th>
+                  <th>Total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map(t => (
+                  <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => openTransaction(t)}>
+                    <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
+                    <td style={{ fontWeight: 600 }}>{t.userName}</td>
+                    <td>
+                      {t.source === "cash"
+                        ? `Cash Sale (${t.items?.length || 0} items)`
+                        : t.source === "shop"
+                        ? `Shop Order (${t.items?.length || 0} item${t.items?.length !== 1 ? "s" : ""})`
+                        : t.source === "terminal"
+                        ? `Terminal Sale (${t.items?.length || 0} items)`
+                        : (() => {
+                            const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
+                            return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
+                          })()
+                      }
+                    </td>
+                    <td>
+                      <span className={`tag ${t.source === "cash" ? "tag-gold" : t.source === "shop" || t.source === "terminal" ? "tag-teal" : "tag-blue"}`}>
+                        {t.source === "cash" ? "💵 Cash" : t.source === "shop" ? "🛒 Shop" : t.source === "terminal" ? "🖥 Terminal" : "🌐 Online"}
+                      </span>
+                    </td>
+                    <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
+                    <td onClick={e => e.stopPropagation()} style={{ display:"flex", gap:6, alignItems:"center" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        {t.adminNotes && <span title={t.adminNotes} style={{ fontSize:10, background:"rgba(200,255,0,.15)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00", padding:"1px 6px", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".05em", whiteSpace:"nowrap" }}>📝 NOTE</span>}
+                        <button className="btn btn-sm btn-ghost" onClick={() => openTransaction(t)}>Detail →</button>
+                      </div>
+                      <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(t)} title="Delete transaction">✕</button>
+                    </td>
+                  </tr>
+                ))}
+                {pageRows.length === 0 && (
+                  <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>
+                    {all.length === 0 ? "No transactions yet" : "No transactions match the current filters"}
+                  </td></tr>
+                )}
+              </tbody>
+            </table></div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 14, flexWrap: "wrap" }}>
+                <button className="btn btn-sm btn-ghost" disabled={safePage === 1} onClick={() => setTxPage(1)}>«</button>
+                <button className="btn btn-sm btn-ghost" disabled={safePage === 1} onClick={() => setTxPage(p => Math.max(1, p - 1))}>‹ Prev</button>
+                {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                  const start = Math.max(1, Math.min(safePage - 3, totalPages - 6));
+                  const p = start + i;
+                  return p <= totalPages ? (
+                    <button key={p} className={`btn btn-sm ${p === safePage ? "btn-primary" : "btn-ghost"}`} onClick={() => setTxPage(p)}>{p}</button>
+                  ) : null;
+                })}
+                <button className="btn btn-sm btn-ghost" disabled={safePage === totalPages} onClick={() => setTxPage(p => Math.min(totalPages, p + 1))}>Next ›</button>
+                <button className="btn btn-sm btn-ghost" disabled={safePage === totalPages} onClick={() => setTxPage(totalPages)}>»</button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Transaction detail modal */}
       {selected && (
