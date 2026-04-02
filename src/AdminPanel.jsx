@@ -6507,8 +6507,9 @@ function AdminRevenue({ data, save, showToast, cu }) {
       if (t.source === "cash") {
         await api.cashSales.delete(t.id);
         await reloadCash();
-      } else if (t.source === "shop") {
-        await supabase.from('shop_orders').delete().eq('id', t.id);
+      } else if (t.source === "shop" || t.source === "terminal") {
+        const { error } = await supabase.from('shop_orders').delete().eq('id', t.id);
+        if (error) throw new Error(error.message);
         const freshOrders = await api.shopOrders.getAll();
         setShopOrders(freshOrders);
       } else {
