@@ -6495,6 +6495,9 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const [delBusy, setDelBusy] = useState(false);
   const [notes, setNotes] = useState(''); // admin notes for selected transaction
   const [notesSaving, setNotesSaving] = useState(false);
+  const [descEdit, setDescEdit] = useState(false);      // editing description/items on terminal
+  const [descItems, setDescItems] = useState([]);        // editable items array for terminal
+  const [descSaving, setDescSaving] = useState(false);
 
   // Transaction filter state
   const today = new Date().toISOString().slice(0, 10);
@@ -6511,6 +6514,35 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const openTransaction = (t) => {
     setSelected(t);
     setNotes(t.adminNotes || '');
+    setDescEdit(false);
+    setDescItems(t.items?.length ? t.items.map(i => ({ name: i.name || '', qty: i.qty || 1, price: i.price || 0 })) : [{ name: '', qty: 1, price: 0 }]);
+  };
+
+  const saveDescription = async () => {
+    if (!selected) return;
+    const validItems = descItems.filter(i => i.name.trim());
+    if (validItems.length === 0) return;
+    setDescSaving(true);
+    try {
+      const table = selected.source === 'terminal' || selected.source === 'shop' ? 'shop_orders' : 'cash_sales';
+      const normalised = validItems.map(i => ({ name: i.name.trim(), qty: Number(i.qty) || 1, price: Number(i.price) || 0 }));
+      const { error } = await supabase.from(table).update({ items: normalised }).eq('id', selected.id);
+      if (error) throw new Error(error.message);
+      const updatedT = { ...selected, items: normalised };
+      setSelected(updatedT);
+      if (selected.source === 'terminal' || selected.source === 'shop') {
+        setShopOrders(os => os.map(o => o.id === selected.id ? { ...o, items: normalised } : o));
+      } else {
+        setCashSales(cs => cs.map(s => s.id === selected.id ? { ...s, items: normalised } : s));
+      }
+      setDescEdit(false);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: 'Transaction items updated', detail: `ID: ${selected.id} | Items: ${normalised.map(i => i.name + ' ×' + i.qty).join(', ')}` });
+      showToast('Items updated.', 'success');
+    } catch (e) {
+      showToast('Save failed: ' + e.message, 'error');
+    } finally {
+      setDescSaving(false);
+    }
   };
 
   const saveNotes = async () => {
@@ -6646,7 +6678,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const getLines = (t) => {
     if (t.source === "cash") {
       return t.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, line: i.price * i.qty }));
-    } else if (t.source === "shop") {
+    } else if (t.source === "shop" || t.source === "terminal") {
       return t.items.map(i => ({ name: i.name, qty: i.qty, price: Number(i.price), line: Number(i.price) * i.qty }));
     } else {
       // Ticket line — work out ticket unit price from event
@@ -6864,14 +6896,14 @@ function AdminRevenue({ data, save, showToast, cu }) {
         <div className="overlay" onClick={() => setSelected(null)}>
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div className="modal-title">
-              {selected.source === "cash" ? "💵 Cash Sale" : selected.source === "shop" ? "🛒 Shop Order" : "🌐 Online Booking"} — Detail
+              {selected.source === "cash" ? "💵 Cash Sale" : selected.source === "shop" ? "🛒 Shop Order" : selected.source === "terminal" ? "🖥 Terminal Sale" : "🌐 Online Booking"} — Detail
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,180px),1fr))", gap: 8, marginBottom: 16 }}>
               {[
                 ["Customer", selected.userName],
                 ["Date & Time (GMT)", gmtFull(selected.date)],
-                ["Source", selected.source === "cash" ? "Cash Sale" : selected.source === "shop" ? "Shop Order" : "Online Booking"],
+                ["Source", selected.source === "cash" ? "Cash Sale" : selected.source === "shop" ? "Shop Order" : selected.source === "terminal" ? "Terminal Sale" : "Online Booking"],
                 selected.source === "booking" ? ["Event", selected.eventTitle] : ["Customer Email", selected.customerEmail || "—"],
                 selected.source === "booking" ? ["Ticket Type", selected.ticketType] : null,
                 selected.source === "booking" ? ["Qty", selected.qty] : null,
@@ -6886,20 +6918,56 @@ function AdminRevenue({ data, save, showToast, cu }) {
               ))}
             </div>
 
-            <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13, letterSpacing: ".05em", color: "var(--muted)" }}>ITEMS</div>
-            <div className="table-wrap"><table className="data-table" style={{ marginBottom: 16 }}>
-              <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
-              <tbody>
-                {getLines(selected).map((line, i) => (
-                  <tr key={i}>
-                    <td>{line.name}</td>
-                    <td>{line.qty}</td>
-                    <td>{line.price != null ? `£${Number(line.price).toFixed(2)}` : "—"}</td>
-                    <td className="text-green">{line.line != null ? `£${line.line.toFixed(2)}` : `£${Number(selected.total).toFixed(2)}`}</td>
-                  </tr>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".05em", color: "var(--muted)" }}>ITEMS</div>
+              {(selected.source === "terminal" || selected.source === "cash" || selected.source === "shop") && !descEdit && (
+                <button className="btn btn-sm btn-ghost" onClick={() => setDescEdit(true)} style={{ fontSize: 11 }}>✏ Edit Items</button>
+              )}
+            </div>
+
+            {descEdit ? (
+              <div style={{ marginBottom: 16 }}>
+                {descItems.map((item, i) => (
+                  <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                    <input className="input" placeholder="Item name" value={item.name}
+                      onChange={e => setDescItems(di => di.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                      style={{ fontSize: 13 }} />
+                    <input className="input" type="number" placeholder="Qty" min="1" value={item.qty}
+                      onChange={e => setDescItems(di => di.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))}
+                      style={{ fontSize: 13 }} />
+                    <input className="input" type="number" placeholder="Price £" min="0" step="0.01" value={item.price}
+                      onChange={e => setDescItems(di => di.map((x, j) => j === i ? { ...x, price: e.target.value } : x))}
+                      style={{ fontSize: 13 }} />
+                    <button onClick={() => setDescItems(di => di.filter((_, j) => j !== i))}
+                      style={{ background:"none", border:"1px solid var(--border)", color:"var(--red)", cursor:"pointer", borderRadius:3, fontSize:14, lineHeight:1 }}>✕</button>
+                  </div>
                 ))}
-              </tbody>
-            </table></div>
+                <div style={{ display:"flex", gap:8, marginTop:8 }}>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setDescItems(di => [...di, { name:'', qty:1, price:0 }])}>+ Add Item</button>
+                  <button className="btn btn-sm btn-primary" onClick={saveDescription} disabled={descSaving}>{descSaving ? "Saving…" : "Save Items"}</button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setDescEdit(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="table-wrap"><table className="data-table" style={{ marginBottom: 16 }}>
+                <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
+                <tbody>
+                  {getLines(selected).map((line, i) => (
+                    <tr key={i}>
+                      <td>{line.name}</td>
+                      <td>{line.qty}</td>
+                      <td>{line.price != null ? `£${Number(line.price).toFixed(2)}` : "—"}</td>
+                      <td className="text-green">{line.line != null ? `£${line.line.toFixed(2)}` : `£${Number(selected.total).toFixed(2)}`}</td>
+                    </tr>
+                  ))}
+                  {getLines(selected).length === 0 && (
+                    <tr><td colSpan={4} style={{ color:"var(--muted)", textAlign:"center", padding:16, fontSize:12 }}>
+                      No item details recorded — click Edit Items to add them.
+                    </td></tr>
+                  )}
+                </tbody>
+              </table></div>
+            )}
 
             {/* Admin notes */}
             <div style={{ marginBottom: 16 }}>
