@@ -6124,6 +6124,7 @@ function AppInner() {
 
   // setPage writes the hash AND updates state
   const setPage = (p) => {
+    window.scrollTo(0, 0);
     setPageState(p);
     // Preserve admin sub-hash when returning; otherwise just set the page
     if (p !== "admin") window.location.hash = p;
