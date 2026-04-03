@@ -372,6 +372,36 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         resetCart();
         showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
 
+        // Fire-and-forget Xero sales receipt — never blocks or breaks the booking flow
+        try {
+          const xeroAccountCode = await api.settings.get("xero_account_code").catch(() => "200");
+          const xeroBookings = [];
+          if (bCart.walkOn > 0) xeroBookings.push({ type: "walkOn", qty: bCart.walkOn, total: Math.round(walkOnPaid * 100) / 100 });
+          if (bCart.rental > 0) xeroBookings.push({ type: "rental", qty: bCart.rental, total: Math.round(rentalPaid * 100) / 100 });
+          if (xeroBookings.length > 0 && squarePayment.id && !squarePayment.mock) {
+            fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-sale`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({
+                userId:        cu.id,
+                userName:      cu.name,
+                userEmail:     cu.email,
+                eventTitle:    ev.title,
+                eventDate:     ev.date,
+                bookings:      xeroBookings,
+                squareOrderId: squarePayment.id,
+                accountCode:   xeroAccountCode || "200",
+              }),
+            }).catch(e => console.warn("Xero fire-and-forget error:", e.message));
+          }
+        } catch (xeroErr) {
+          console.warn("Xero setup error (non-fatal):", xeroErr.message);
+        }
+
         // Send ticket email with real booking IDs
         // Retry up to 3 times with 600ms delays — DB write may not be immediately readable
         try {
@@ -452,7 +482,71 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
     return (
       <div className="page-content">
-        <button className="btn btn-ghost btn-sm mb-2" onClick={() => { setDetail(null); setTab("info"); resetCart(); }}>← Back to Events</button>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:12 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setDetail(null); setTab("info"); resetCart(); }}>← Back to Events</button>
+          <div style={{ display:"flex", gap:8 }}>
+            {/* Add to Calendar */}
+            <button
+              style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".15em", padding:"5px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"border-color .15s, color .15s" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
+              onClick={() => {
+                const dateStr = ev.date.replace(/-/g,"");
+                const startTime = (ev.time || "09:00").replace(":","") + "00";
+                const endTime   = (ev.endTime || "17:00").replace(":","") + "00";
+                const dtStart   = `${dateStr}T${startTime}`;
+                const dtEnd     = `${dateStr}T${endTime}`;
+                const desc = (ev.description || "").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").slice(0,200);
+                const ics = [
+                  "BEGIN:VCALENDAR",
+                  "VERSION:2.0",
+                  "PRODID:-//Swindon Airsoft//EN",
+                  "BEGIN:VEVENT",
+                  `DTSTART:${dtStart}`,
+                  `DTEND:${dtEnd}`,
+                  `SUMMARY:${ev.title} — Swindon Airsoft`,
+                  `DESCRIPTION:${desc}`,
+                  `LOCATION:${ev.location || "Swindon, Wiltshire"}`,
+                  `URL:${window.location.origin}${window.location.pathname}#events/${ev.id}`,
+                  "END:VEVENT",
+                  "END:VCALENDAR",
+                ].join("\r\n");
+                const blob = new Blob([ics], { type:"text/calendar;charset=utf-8" });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement("a");
+                a.href = url; a.download = `${ev.title.replace(/[^a-z0-9]/gi,"-")}.ics`; a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="1" stroke="currentColor" strokeWidth="1.5"/><path d="M5 1v4M11 1v4M1 7h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              ADD TO CALENDAR
+            </button>
+            {/* Share / Copy Link */}
+            <button
+              style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".15em", padding:"5px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"border-color .15s, color .15s" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
+              onClick={async (e) => {
+                const shareUrl = `${window.location.origin}${window.location.pathname}#events/${ev.id}`;
+                const shareData = { title: `${ev.title} — Swindon Airsoft`, text: `Check out this event: ${ev.title} on ${fmtDate(ev.date)}`, url: shareUrl };
+                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                  try { await navigator.share(shareData); return; } catch {}
+                }
+                try {
+                  await navigator.clipboard.writeText(shareUrl);
+                  const btn = e.currentTarget;
+                  const orig = btn.innerHTML;
+                  btn.innerHTML = "✓ LINK COPIED";
+                  btn.style.color = "#c8ff00"; btn.style.borderColor = "#c8ff00";
+                  setTimeout(() => { btn.innerHTML = orig; btn.style.color = ""; btn.style.borderColor = ""; }, 2000);
+                } catch {}
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M10 2h4v4M14 2l-6 6M7 4H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              SHARE EVENT
+            </button>
+          </div>
+        </div>
 
         {/* Banner */}
         <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, overflow:"hidden", marginBottom:20 }}>
@@ -2282,6 +2376,14 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                       £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
                       {cu?.vipStatus === "active" && <span style={{ fontSize:9, color:"#c8a000", marginLeft:5, fontFamily:"'Share Tech Mono',monospace" }}>VIP</span>}
                     </div>
+                    {(() => {
+                      const soldCount = (data.shopOrders || []).reduce((total, order) => {
+                        return total + (order.items || []).filter(i => i.id === item.id || i.productId === item.id).reduce((s, i) => s + (i.qty || 1), 0);
+                      }, 0);
+                      return soldCount > 0 ? (
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a5010", letterSpacing:".08em", marginTop:2 }}>{soldCount} SOLD</div>
+                      ) : null;
+                    })()}
                   </div>
                   <button className="btn btn-primary" style={{ padding:"7px 16px", fontSize:10, letterSpacing:".15em", borderRadius:0 }} disabled={!inStock && !hasV}>
                     {!inStock && !hasV ? "OUT OF STOCK" : "▸ ACQUIRE"}
@@ -2472,6 +2574,191 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Product Reviews ────────────────────────────────────────
+function ProductReviews({ item, cu }) {
+  const [reviews, setReviews]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [myReview, setMyReview]     = useState(null);
+  const [editing, setEditing]       = useState(false);
+  const [draftRating, setDraftRating] = useState(5);
+  const [draftBody, setDraftBody]   = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [deleting, setDeleting]     = useState(false);
+  const [error, setError]           = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("product_reviews")
+        .select("*")
+        .eq("product_id", item.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setReviews(data || []);
+      if (cu) {
+        const mine = (data || []).find(r => r.user_id === cu.id);
+        setMyReview(mine || null);
+        if (mine) { setDraftRating(mine.rating); setDraftBody(mine.body); }
+      }
+    } catch {}
+    finally { setLoading(false); }
+  }, [item.id, cu]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const avg = reviews.length ? (reviews.reduce((s,r) => s + r.rating, 0) / reviews.length) : 0;
+
+  const Stars = ({ rating, size = 14, interactive = false, onSet }) => (
+    <div style={{ display:"flex", gap:2 }}>
+      {[1,2,3,4,5].map(n => (
+        <span key={n}
+          style={{ fontSize:size, color: n <= rating ? "#c8a000" : "#2a3a10", cursor: interactive ? "pointer" : "default", lineHeight:1 }}
+          onClick={() => interactive && onSet && onSet(n)}
+        >★</span>
+      ))}
+    </div>
+  );
+
+  const saveReview = async () => {
+    if (!cu) return;
+    if (!draftBody.trim()) { setError("Please write something before submitting."); return; }
+    setSaving(true); setError("");
+    try {
+      if (myReview) {
+        const { error } = await supabase.from("product_reviews")
+          .update({ rating: draftRating, body: draftBody.trim() })
+          .eq("id", myReview.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("product_reviews").insert({
+          product_id: item.id,
+          user_id:    cu.id,
+          user_name:  cu.name || "Operative",
+          rating:     draftRating,
+          body:       draftBody.trim(),
+        });
+        if (error) throw error;
+      }
+      setEditing(false);
+      await load();
+    } catch (e) { setError(e.message || "Save failed."); }
+    finally { setSaving(false); }
+  };
+
+  const deleteReview = async () => {
+    if (!myReview) return;
+    setDeleting(true);
+    try {
+      await supabase.from("product_reviews").delete().eq("id", myReview.id);
+      setMyReview(null); setDraftBody(""); setDraftRating(5);
+      await load();
+    } catch {}
+    finally { setDeleting(false); }
+  };
+
+  const SectionHead = () => (
+    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>◈ —</div>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>
+        FIELD <span style={{ color:"#c8ff00" }}>REPORTS</span>
+      </div>
+      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>— ◈</div>
+      {reviews.length > 0 && (
+        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8 }}>
+          <Stars rating={Math.round(avg)} />
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8a000" }}>{avg.toFixed(1)}</span>
+          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".1em" }}>({reviews.length})</span>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 16px 60px" }}>
+      <div style={{ borderTop:"1px solid #1a2808", paddingTop:32 }}>
+        <SectionHead />
+
+        {/* Write / edit review */}
+        {cu && !myReview && !editing && (
+          <button
+            onClick={() => setEditing(true)}
+            style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"8px 18px", cursor:"pointer", marginBottom:24, transition:"border-color .15s, color .15s" }}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
+          >◈ SUBMIT FIELD REPORT</button>
+        )}
+        {cu && myReview && !editing && (
+          <div style={{ background:"#0c1009", border:"1px solid #2a3a10", borderLeft:"3px solid #c8a000", padding:"12px 16px", marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#5a7a30", letterSpacing:".1em" }}>YOU ALREADY SUBMITTED A REPORT</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setEditing(true)} style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>EDIT</button>
+              <button onClick={deleteReview} disabled={deleting} style={{ background:"transparent", border:"1px solid #3a1a1a", color:"#6b3333", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>{deleting ? "…" : "DELETE"}</button>
+            </div>
+          </div>
+        )}
+        {(editing) && (
+          <div style={{ background:"#0c1009", border:"1px solid #2a3a10", padding:"18px", marginBottom:24 }}>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".22em", color:"#c8ff00", marginBottom:14 }}>⬡ {myReview ? "EDIT" : "SUBMIT"} FIELD REPORT</div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".15em", marginBottom:6 }}>RATING</div>
+              <Stars rating={draftRating} size={22} interactive onSet={setDraftRating} />
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".15em", marginBottom:6 }}>REPORT</div>
+              <textarea
+                value={draftBody}
+                onChange={e => setDraftBody(e.target.value)}
+                maxLength={600}
+                rows={4}
+                placeholder="Share your experience with this item..."
+                style={{ width:"100%", background:"#080a06", border:"1px solid #2a3a10", color:"#8aaa50", fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"10px 12px", resize:"vertical", outline:"none", letterSpacing:".05em", lineHeight:1.6 }}
+              />
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em", marginTop:3, textAlign:"right" }}>{draftBody.length}/600</div>
+            </div>
+            {error && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#ef4444", letterSpacing:".1em", marginBottom:10 }}>⚠ {error}</div>}
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={saveReview} disabled={saving}
+                style={{ background:"#c8ff00", color:"#000", border:"none", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", padding:"8px 20px", cursor:"pointer" }}>
+                {saving ? "SAVING…" : "SUBMIT REPORT"}
+              </button>
+              <button onClick={() => { setEditing(false); setError(""); if (myReview) { setDraftRating(myReview.rating); setDraftBody(myReview.body); } }}
+                style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", padding:"8px 14px", cursor:"pointer" }}>
+                CANCEL
+              </button>
+            </div>
+          </div>
+        )}
+
+        {loading && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#2a3a10", letterSpacing:".2em", padding:"20px 0" }}>RETRIEVING FIELD REPORTS…</div>}
+
+        {!loading && reviews.length === 0 && (
+          <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"32px 24px", textAlign:"center" }}>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".2em", color:"#2a3a10", textTransform:"uppercase", marginBottom:6 }}>NO FIELD REPORTS YET</div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#1a2808", letterSpacing:".12em" }}>Be the first to submit a report on this item.</div>
+          </div>
+        )}
+
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {reviews.map(r => (
+            <div key={r.id} style={{ background:"#0c1009", border:`1px solid ${r.user_id === cu?.id ? "#2a3a10" : "#1a2808"}`, padding:"14px 16px", position:"relative" }}>
+              {r.user_id === cu?.id && <div style={{ position:"absolute", top:10, right:12, fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#c8a000", letterSpacing:".12em" }}>YOUR REPORT</div>}
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+                <Stars rating={r.rating} size={13} />
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".1em", color:"#8aaa50", textTransform:"uppercase" }}>{r.user_name}</span>
+                <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em", marginLeft:"auto" }}>
+                  {new Date(r.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
+                </span>
+              </div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#5a7a30", lineHeight:1.7, letterSpacing:".04em" }}>{r.body}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2716,6 +3003,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           })()}
       </div>
     )}
+
+    {/* Reviews */}
+    <ProductReviews item={item} cu={cu} />
 
     {/* Related Products */}
     {(() => {
@@ -6308,7 +6598,43 @@ function AppInner() {
       setCu(prev => prev ? { ...prev, ...patch } : prev);
       refreshCu().catch(() => {});
     }
-  }, [updateUser, cu, refreshCu]);
+    // Fire VIP activation email when admin sets a player to active
+    if (patch.vipStatus === "active" || patch.vip_status === "active") {
+      try {
+        const target = data.users?.find(u => u.id === id);
+        if (target?.email) {
+          sendEmail({
+            toEmail: target.email,
+            toName:  target.name || "Operative",
+            subject: "⭐ Your Swindon Airsoft VIP Membership is Active!",
+            htmlContent: `
+              <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px;border:1px solid #2a2a2a">
+                <div style="text-align:center;margin-bottom:28px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">
+                    SWINDON <span style="color:#c8ff00">AIRSOFT</span>
+                  </div>
+                  <div style="font-size:11px;letter-spacing:.2em;color:#c8a000;margin-top:4px;text-transform:uppercase">⭐ Elite Operative Status</div>
+                </div>
+                <div style="background:linear-gradient(135deg,#0c1009,#111a06);border:1px solid #2a3a10;border-left:3px solid #c8a000;border-radius:6px;padding:24px;text-align:center;margin-bottom:24px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:36px;letter-spacing:.15em;color:#c8a000;text-transform:uppercase;margin-bottom:8px">VIP ACTIVATED</div>
+                  <div style="font-size:13px;color:#aaa;line-height:1.7">Welcome to the elite, <strong style="color:#fff">${target.name || "Operative"}</strong>. Your VIP membership is now live.</div>
+                </div>
+                <div style="margin-bottom:20px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.15em;color:#c8ff00;text-transform:uppercase;margin-bottom:12px">YOUR BENEFITS</div>
+                  ${["10% discount on all game day bookings","10% discount at Airsoft Armoury UK","Free game day on your birthday","Access to VIP-only events","Priority booking for special events","VIP badge on your player profile"].map(b =>
+                    `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #1a2808;font-size:13px;color:#8aaa50"><span style="color:#c8a000;font-size:10px">★</span>${b}</div>`
+                  ).join("")}
+                </div>
+                <div style="text-align:center;margin-top:24px">
+                  <a href="${window.location.origin}${window.location.pathname}#profile/vip" style="display:inline-block;background:#c8a000;color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.2em;text-transform:uppercase;padding:12px 28px;text-decoration:none">VIEW MY VIP STATUS →</a>
+                </div>
+              </div>
+            `,
+          }).catch(() => {});
+        }
+      } catch {}
+    }
+  }, [updateUser, cu, refreshCu, data.users]);
 
   const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
 
@@ -6605,12 +6931,13 @@ function AppInner() {
             <div>
               <div className="pub-footer-col-title">INFORMATION</div>
               {[
-                ["Site Rules & FAQ", "qa"],
+                ["Sign Waiver", "profile"],
+                ["Site Rules", "qa"],
+                ["FAQ", "qa"],
                 ["Terms & Privacy", "terms"],
               ].map(([label, pg]) => (
                 <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
               ))}
-              <button className="pub-footer-link" onClick={() => { setPage("profile"); setTimeout(() => { window.location.hash = "profile/waiver"; }, 50); }}>Sign Waiver</button>
             </div>
             {/* Contact */}
             <div>
