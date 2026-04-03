@@ -2098,6 +2098,26 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
+  // Review summaries: Map<product_id, { avg: number, count: number }>
+  const [reviewSummary, setReviewSummary] = useState(new Map());
+  useEffect(() => {
+    supabase
+      .from("product_reviews")
+      .select("product_id, rating")
+      .then(({ data: rows }) => {
+        if (!rows) return;
+        const map = new Map();
+        rows.forEach(r => {
+          const s = map.get(r.product_id) || { total: 0, count: 0 };
+          s.total += r.rating; s.count += 1;
+          map.set(r.product_id, s);
+        });
+        const summary = new Map();
+        map.forEach((s, id) => summary.set(id, { avg: s.total / s.count, count: s.count }));
+        setReviewSummary(summary);
+      });
+  }, []);
+
   const [shopCatFilter, setShopCatFilter] = useState("");
   const [shopSearch, setShopSearch] = useState("");
   const [shopSort, setShopSort] = useState("default");
@@ -2376,6 +2396,18 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                       £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
                       {cu?.vipStatus === "active" && <span style={{ fontSize:9, color:"#c8a000", marginLeft:5, fontFamily:"'Share Tech Mono',monospace" }}>VIP</span>}
                     </div>
+                    {(() => {
+                      const rev = reviewSummary.get(item.id);
+                      if (rev) return (
+                        <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:4 }}>
+                          {[1,2,3,4,5].map(n => (
+                            <span key={n} style={{ fontSize:10, color: n <= Math.round(rev.avg) ? "#c8a000" : "#2a3a10", lineHeight:1 }}>★</span>
+                          ))}
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a5010", letterSpacing:".06em" }}>({rev.count})</span>
+                        </div>
+                      );
+                      return null;
+                    })()}
                     {(() => {
                       const soldCount = (data.shopOrders || []).reduce((total, order) => {
                         return total + (order.items || []).filter(i => i.id === item.id || i.productId === item.id).reduce((s, i) => s + (i.qty || 1), 0);
@@ -2782,6 +2814,16 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
   const stockAvail = selectedVariant ? Number(selectedVariant.stock) : hasVariants ? 0 : item.stock;
   const canAdd = (!hasVariants || selectedVariant) && stockAvail > 0;
 
+  const [prodRevSummary, setProdRevSummary] = useState(null);
+  useEffect(() => {
+    supabase.from("product_reviews").select("rating").eq("product_id", item.id)
+      .then(({ data: rows }) => {
+        if (!rows || rows.length === 0) return;
+        const avg = rows.reduce((s, r) => s + r.rating, 0) / rows.length;
+        setProdRevSummary({ avg, count: rows.length });
+      });
+  }, [item.id]);
+
   const handleAdd = () => {
     if (!canAdd) return;
     onAddToCart(item, hasVariants ? selectedVariant : null, qty);
@@ -2880,7 +2922,18 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           </div>
 
           {/* Name */}
-          <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
+          <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:8 }}>{item.name}</h1>
+
+          {/* Rating summary */}
+          {prodRevSummary && (
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:12 }}>
+              {[1,2,3,4,5].map(n => (
+                <span key={n} style={{ fontSize:14, color: n <= Math.round(prodRevSummary.avg) ? "#c8a000" : "#2a3a10", lineHeight:1 }}>★</span>
+              ))}
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"#c8a000" }}>{prodRevSummary.avg.toFixed(1)}</span>
+              <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".08em" }}>({prodRevSummary.count} {prodRevSummary.count === 1 ? "report" : "reports"})</span>
+            </div>
+          )}
 
           {/* Description */}
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}
