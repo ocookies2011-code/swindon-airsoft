@@ -3237,7 +3237,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
 
-  const board = data.users
+  const board = (data.users || [])
     .filter(u => !u.leaderboardOptOut && u.role === "player")
     .sort((a, b) => b.gamesAttended - a.gamesAttended);
 
@@ -6741,6 +6741,8 @@ function AppInner() {
       </div>
     );
   }
+
+  if (!data) return null;
 
   // ── Geo-block screens ─────────────────────────────────────
   if (geoStatus === "checking") {
