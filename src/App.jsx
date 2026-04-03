@@ -372,36 +372,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         resetCart();
         showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
 
-        // Fire-and-forget Xero sales receipt — never blocks or breaks the booking flow
-        try {
-          const xeroAccountCode = await api.settings.get("xero_account_code").catch(() => "200");
-          const xeroBookings = [];
-          if (bCart.walkOn > 0) xeroBookings.push({ type: "walkOn", qty: bCart.walkOn, total: Math.round(walkOnPaid * 100) / 100 });
-          if (bCart.rental > 0) xeroBookings.push({ type: "rental", qty: bCart.rental, total: Math.round(rentalPaid * 100) / 100 });
-          if (xeroBookings.length > 0 && squarePayment.id && !squarePayment.mock) {
-            fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-sale`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-                "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify({
-                userId:        cu.id,
-                userName:      cu.name,
-                userEmail:     cu.email,
-                eventTitle:    ev.title,
-                eventDate:     ev.date,
-                bookings:      xeroBookings,
-                squareOrderId: squarePayment.id,
-                accountCode:   xeroAccountCode || "200",
-              }),
-            }).catch(e => console.warn("Xero fire-and-forget error:", e.message));
-          }
-        } catch (xeroErr) {
-          console.warn("Xero setup error (non-fatal):", xeroErr.message);
-        }
-
         // Send ticket email with real booking IDs
         // Retry up to 3 times with 600ms delays — DB write may not be immediately readable
         try {
@@ -6124,7 +6094,6 @@ function AppInner() {
 
   // setPage writes the hash AND updates state
   const setPage = (p) => {
-    window.scrollTo(0, 0);
     setPageState(p);
     // Preserve admin sub-hash when returning; otherwise just set the page
     if (p !== "admin") window.location.hash = p;
@@ -6636,13 +6605,12 @@ function AppInner() {
             <div>
               <div className="pub-footer-col-title">INFORMATION</div>
               {[
-                ["Sign Waiver", "profile"],
-                ["Site Rules", "qa"],
-                ["FAQ", "qa"],
+                ["Site Rules & FAQ", "qa"],
                 ["Terms & Privacy", "terms"],
               ].map(([label, pg]) => (
                 <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
               ))}
+              <button className="pub-footer-link" onClick={() => { setPage("profile"); setTimeout(() => { window.location.hash = "profile/waiver"; }, 50); }}>Sign Waiver</button>
             </div>
             {/* Contact */}
             <div>
