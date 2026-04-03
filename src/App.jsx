@@ -6601,7 +6601,7 @@ function AppInner() {
     // Fire VIP activation email when admin sets a player to active
     if (patch.vipStatus === "active" || patch.vip_status === "active") {
       try {
-        const target = data.users?.find(u => u.id === id);
+        const target = data?.users?.find(u => u.id === id);
         if (target?.email) {
           sendEmail({
             toEmail: target.email,
@@ -6634,7 +6634,7 @@ function AppInner() {
         }
       } catch {}
     }
-  }, [updateUser, cu, refreshCu, data.users]);
+  }, [updateUser, cu, refreshCu, data]);
 
   const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
 
