@@ -1034,12 +1034,12 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         </div>
         <div className="admin-content">
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} isSuperAdmin={isSuperAdmin} />}
-          {section === "events" && <AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} />}
+          <div style={{ display: section === "events" ? "block" : "none" }}><AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} /></div>
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
           {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
-          {section === "players" && <AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} cu={cu} />}
+          <div style={{ display: section === "players" ? "block" : "none" }}><AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} cu={cu} /></div>
           {section === "cheat-reports" && <AdminCheatReports data={data} showToast={showToast} cu={cu} />}
-          {section === "shop" && <AdminShop data={data} save={save} showToast={showToast} cu={cu} />}
+          <div style={{ display: section === "shop" ? "block" : "none" }}><AdminShop data={data} save={save} showToast={showToast} cu={cu} /></div>
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "visitor-stats" && <AdminVisitorStats />}
