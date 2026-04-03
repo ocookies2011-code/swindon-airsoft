@@ -940,8 +940,10 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   }, []);
 
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
-  const upcomingEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
-  const totalBookings = data.events.filter(e => e.published && new Date(e.date) >= new Date()).flatMap(e => e.bookings).length;
+  const _now = new Date();
+  const _activeEvts = data.events.filter(e => e.published && new Date(e.date + "T" + (e.endTime || e.time || "23:59") + ":00") > _now);
+  const upcomingEvents = _activeEvts.length;
+  const totalBookings  = _activeEvts.flatMap(e => e.bookings).length;
   const checkins = data.events.flatMap(e => e.bookings).filter(b => b.checkedIn).length;
 
   const NAV = [
