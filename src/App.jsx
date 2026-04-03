@@ -372,36 +372,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         resetCart();
         showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
 
-        // Fire-and-forget Xero sales receipt — never blocks or breaks the booking flow
-        try {
-          const xeroAccountCode = await api.settings.get("xero_account_code").catch(() => "200");
-          const xeroBookings = [];
-          if (bCart.walkOn > 0) xeroBookings.push({ type: "walkOn", qty: bCart.walkOn, total: Math.round(walkOnPaid * 100) / 100 });
-          if (bCart.rental > 0) xeroBookings.push({ type: "rental", qty: bCart.rental, total: Math.round(rentalPaid * 100) / 100 });
-          if (xeroBookings.length > 0 && squarePayment.id && !squarePayment.mock) {
-            fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-sale`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-                "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify({
-                userId:        cu.id,
-                userName:      cu.name,
-                userEmail:     cu.email,
-                eventTitle:    ev.title,
-                eventDate:     ev.date,
-                bookings:      xeroBookings,
-                squareOrderId: squarePayment.id,
-                accountCode:   xeroAccountCode || "200",
-              }),
-            }).catch(e => console.warn("Xero fire-and-forget error:", e.message));
-          }
-        } catch (xeroErr) {
-          console.warn("Xero setup error (non-fatal):", xeroErr.message);
-        }
-
         // Send ticket email with real booking IDs
         // Retry up to 3 times with 600ms delays — DB write may not be immediately readable
         try {
@@ -2615,6 +2585,7 @@ function ProductReviews({ item, cu }) {
   const [reviews, setReviews]       = useState([]);
   const [loading, setLoading]       = useState(true);
   const [myReview, setMyReview]     = useState(null);
+  const [hasPurchased, setHasPurchased] = useState(false);
   const [editing, setEditing]       = useState(false);
   const [draftRating, setDraftRating] = useState(5);
   const [draftBody, setDraftBody]   = useState("");
@@ -2636,6 +2607,17 @@ function ProductReviews({ item, cu }) {
         const mine = (data || []).find(r => r.user_id === cu.id);
         setMyReview(mine || null);
         if (mine) { setDraftRating(mine.rating); setDraftBody(mine.body); }
+
+        // Check if this user has a confirmed (dispatched/completed) order containing this product
+        const { data: orders } = await supabase
+          .from("shop_orders")
+          .select("items, status")
+          .eq("user_id", cu.id)
+          .in("status", ["dispatched", "completed", "processing"]);
+        const purchased = (orders || []).some(order =>
+          (order.items || []).some(i => i.id === item.id || i.productId === item.id)
+        );
+        setHasPurchased(purchased);
       }
     } catch {}
     finally { setLoading(false); }
@@ -2716,13 +2698,18 @@ function ProductReviews({ item, cu }) {
         <SectionHead />
 
         {/* Write / edit review */}
-        {cu && !myReview && !editing && (
+        {cu && !myReview && !editing && hasPurchased && (
           <button
             onClick={() => setEditing(true)}
             style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"8px 18px", cursor:"pointer", marginBottom:24, transition:"border-color .15s, color .15s" }}
             onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
           >◈ SUBMIT FIELD REPORT</button>
+        )}
+        {cu && !myReview && !editing && !hasPurchased && (
+          <div style={{ background:"#0c1009", border:"1px solid #1a2808", borderLeft:"3px solid #2a3a10", padding:"10px 16px", marginBottom:20, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", letterSpacing:".1em" }}>
+            ◈ PURCHASE REQUIRED — Only players who have ordered this item can submit a field report.
+          </div>
         )}
         {cu && myReview && !editing && (
           <div style={{ background:"#0c1009", border:"1px solid #2a3a10", borderLeft:"3px solid #c8a000", padding:"12px 16px", marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
@@ -2782,6 +2769,7 @@ function ProductReviews({ item, cu }) {
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
                 <Stars rating={r.rating} size={13} />
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".1em", color:"#8aaa50", textTransform:"uppercase" }}>{r.user_name}</span>
+                <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", background:"rgba(200,255,0,.06)", border:"1px solid #1a2808", padding:"1px 6px", letterSpacing:".1em" }}>✓ VERIFIED PURCHASE</span>
                 <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em", marginLeft:"auto" }}>
                   {new Date(r.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
                 </span>
@@ -6617,12 +6605,17 @@ function AppInner() {
             // Profile may not exist yet (new signup before confirmation) — try creating it
             try {
               const meta = session.user.user_metadata || {};
+              const newName = meta.name || session.user.email?.split('@')[0] || 'Player';
               await supabase.from('profiles').insert({
-                id: session.user.id, name: meta.name || session.user.email?.split('@')[0] || 'Player',
+                id: session.user.id, name: newName,
                 phone: meta.phone || '', role: 'player', games_attended: 0,
               }).select().single();
               const profile2 = await api.profiles.getById(session.user.id);
-              if (profile2) setCu(normaliseProfile(profile2));
+              if (profile2) {
+                setCu(normaliseProfile(profile2));
+                // Send welcome email to new players
+                sendWelcomeEmail({ toEmail: session.user.email, toName: newName }).catch(() => {});
+              }
             } catch { /* profile creation failed — keep existing cu state */ }
           }
         } catch { /* profile fetch failed — keep existing cu state, don't log out */ }
