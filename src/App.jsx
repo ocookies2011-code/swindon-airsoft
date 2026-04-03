@@ -6614,7 +6614,7 @@ function AppInner() {
               if (profile2) {
                 setCu(normaliseProfile(profile2));
                 // Send welcome email to new players
-                sendWelcomeEmail({ toEmail: session.user.email, toName: newName }).catch(() => {});
+                sendWelcomeEmail({ name: newName, email: session.user.email }).catch(() => {});
               }
             } catch { /* profile creation failed — keep existing cu state */ }
           }
