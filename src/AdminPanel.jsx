@@ -1480,10 +1480,14 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       if (b.extras) Object.entries(b.extras).forEach(([k, v]) => {
         if (!v) return;
         const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
-        const exDef = ev.extras?.find(e => e.id === xId);
-        const shopP = exDef ? (data?.shop || []).find(p => p.id === exDef.productId) : null;
+        let exDef = ev.extras?.find(e => e.id === xId);
+        let shopP = exDef ? (data?.shop || []).find(p => p.id === exDef.productId) : (data?.shop || []).find(p => p.id === xId);
+        if (!shopP && vId) shopP = (data?.shop || []).find(p => (p.variants||[]).some(vv => vv.id === vId));
         const varDef = vId && shopP ? (shopP.variants || []).find(vv => vv.id === vId) : null;
-        const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : xId;
+        let label;
+        if (exDef) { label = varDef ? `${exDef.name} — ${varDef.name}` : exDef.name; }
+        else if (shopP) { label = varDef ? `${shopP.name} — ${varDef.name}` : shopP.name; }
+        else { const fallbackEx = ev.extras?.find(e => e.productId === xId); label = fallbackEx ? fallbackEx.name : xId; }
         extraCounts[label] = (extraCounts[label] || 0) + (typeof v === 'number' ? v : 1);
       });
     });
@@ -1491,10 +1495,14 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       const extrasText = b.extras
         ? Object.entries(b.extras).filter(([,v]) => v > 0).map(([k, v]) => {
             const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
-            const exDef = ev.extras?.find(e => e.id === xId);
-            const shopP = exDef ? (data?.shop || []).find(p => p.id === exDef.productId) : null;
+            let exDef = ev.extras?.find(e => e.id === xId);
+            let shopP = exDef ? (data?.shop || []).find(p => p.id === exDef.productId) : (data?.shop || []).find(p => p.id === xId);
+            if (!shopP && vId) shopP = (data?.shop || []).find(p => (p.variants||[]).some(vv => vv.id === vId));
             const varDef = vId && shopP ? (shopP.variants || []).find(vv => vv.id === vId) : null;
-            const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : xId;
+            let label;
+            if (exDef) { label = varDef ? `${exDef.name} — ${varDef.name}` : exDef.name; }
+            else if (shopP) { label = varDef ? `${shopP.name} — ${varDef.name}` : shopP.name; }
+            else { const fallbackEx = ev.extras?.find(e => e.productId === xId); label = fallbackEx ? fallbackEx.name : xId; }
             return `${label} ×${v}`;
           }).join(", ")
         : "—";
@@ -2195,10 +2203,24 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         if (!entries.length) return <span style={{color:"var(--muted)"}}>—</span>;
                         return entries.map(([k,v]) => {
                           const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
-                          const exDef = viewEv.extras?.find(e => e.id === xId);
-                          const shopP = exDef ? (data.shop||[]).find(p => p.id === exDef.productId) : null;
+                          // Primary: match by extra ID on the current event
+                          let exDef = viewEv.extras?.find(e => e.id === xId);
+                          // Fallback: if ID not found (e.g. event extras were re-saved with new IDs),
+                          // try matching via productId from shop using xId as productId
+                          let shopP = exDef ? (data.shop||[]).find(p => p.id === exDef.productId) : (data.shop||[]).find(p => p.id === xId);
+                          // Also try matching via variantId if no product found yet
+                          if (!shopP && vId) shopP = (data.shop||[]).find(p => (p.variants||[]).some(vv => vv.id === vId));
                           const varDef = vId && shopP ? (shopP.variants||[]).find(vv => vv.id === vId) : null;
-                          const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : k;
+                          let label;
+                          if (exDef) {
+                            label = varDef ? `${exDef.name} — ${varDef.name}` : exDef.name;
+                          } else if (shopP) {
+                            label = varDef ? `${shopP.name} — ${varDef.name}` : shopP.name;
+                          } else {
+                            // Last resort: find any event extra whose productId matches xId
+                            const fallbackEx = viewEv.extras?.find(e => e.productId === xId);
+                            label = fallbackEx ? fallbackEx.name : xId;
+                          }
                           return <div key={k} style={{color:"var(--accent)",whiteSpace:"nowrap"}}>{label} ×{v}</div>;
                         });
                       })()}
