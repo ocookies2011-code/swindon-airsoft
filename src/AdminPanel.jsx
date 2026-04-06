@@ -6772,10 +6772,19 @@ function AdminRevenue({ data, save, showToast, cu }) {
       // Extras — keys are "extraId" or "extraId:variantId"
       Object.entries(t.extras || {}).filter(([,v]) => v > 0).forEach(([key, qty]) => {
         const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-        const ex = t.eventExtras?.find(e => e.id === extraId);
-        const lp = (data.shop || []).find(p => p.id === ex?.productId);
+        // Primary: match by current event_extras ID
+        let ex = t.eventExtras?.find(e => e.id === extraId);
+        // Fallback 1: try extraId as a productId in shop (handles stale IDs)
+        let lp = ex ? (data.shop || []).find(p => p.id === ex.productId) : (data.shop || []).find(p => p.id === extraId);
+        // Fallback 2: try matching via variantId
+        if (!lp && variantId) lp = (data.shop || []).find(p => (p.variants || []).some(vv => vv.id === variantId));
         const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-        const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
+        // Fallback 3: match event extra by productId
+        if (!ex && lp) ex = t.eventExtras?.find(e => e.productId === lp.id);
+        let label;
+        if (ex) { label = selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name; }
+        else if (lp) { label = selectedVariant ? `${lp.name} — ${selectedVariant.name}` : lp.name; }
+        else { label = extraId; }
         const unitP = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : (ex ? Number(ex.price) : 0));
         lines.push({ name: label, qty, price: unitP, line: unitP * qty });
       });
