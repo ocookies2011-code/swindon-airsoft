@@ -213,10 +213,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       setDiscountError('');
       setAppliedDiscount(null);
       try {
-        const isVoucher = discountInput.trim().toUpperCase().startsWith('GV-');
-        const result = isVoucher
-          ? await api.giftVouchers.validate(discountInput.trim())
-          : await api.discountCodes.validate(discountInput, cu?.id, 'events');
+        const result = await api.discountCodes.validate(discountInput, cu?.id, 'events');
         setAppliedDiscount(result);
         setDiscountError('');
       } catch (e) {
@@ -357,20 +354,46 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           updateUser(cu.id, { credits: newCredits });
         }
 
-        // Record discount code / gift voucher redemption
+        // Record discount code redemption
         if (appliedDiscount) {
           try {
-            if (appliedDiscount.code?.toUpperCase().startsWith('GV-')) {
-              await api.giftVouchers.redeem(appliedDiscount.code, discountSaving, cu.id, cu.name, 'events');
-            } else {
-              await api.discountCodes.redeem(appliedDiscount.code, cu.id, cu.name, 'events', discountSaving);
-            }
+            await api.discountCodes.redeem(appliedDiscount.code, cu.id, cu.name, 'events', discountSaving);
           } catch { /* non-fatal */ }
         }
 
         // Show success immediately — stock deduction and refresh happen in background
         resetCart();
         showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
+
+        // Fire-and-forget Xero sales receipt — never blocks or breaks the booking flow
+        try {
+          const xeroAccountCode = await api.settings.get("xero_account_code").catch(() => "200");
+          const xeroBookings = [];
+          if (bCart.walkOn > 0) xeroBookings.push({ type: "walkOn", qty: bCart.walkOn, total: Math.round(walkOnPaid * 100) / 100 });
+          if (bCart.rental > 0) xeroBookings.push({ type: "rental", qty: bCart.rental, total: Math.round(rentalPaid * 100) / 100 });
+          if (xeroBookings.length > 0 && squarePayment.id && !squarePayment.mock) {
+            fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-sale`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({
+                userId:        cu.id,
+                userName:      cu.name,
+                userEmail:     cu.email,
+                eventTitle:    ev.title,
+                eventDate:     ev.date,
+                bookings:      xeroBookings,
+                squareOrderId: squarePayment.id,
+                accountCode:   xeroAccountCode || "200",
+              }),
+            }).catch(e => console.warn("Xero fire-and-forget error:", e.message));
+          }
+        } catch (xeroErr) {
+          console.warn("Xero setup error (non-fatal):", xeroErr.message);
+        }
 
         // Send ticket email with real booking IDs
         // Retry up to 3 times with 600ms delays — DB write may not be immediately readable
@@ -447,76 +470,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const isCardBanned = cu && (cu.cardStatus === "red" || cu.cardStatus === "black");
   
   const isAdmin = cu?.role === "admin";
-    const isEventPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
-    const bookingBlocked = isEventPast || !cu || isAdmin || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
+    const bookingBlocked = !cu || isAdmin || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
 
     return (
       <div className="page-content">
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:12 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => { setDetail(null); setTab("info"); resetCart(); }}>← Back to Events</button>
-          <div style={{ display:"flex", gap:8 }}>
-            {/* Add to Calendar */}
-            <button
-              style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".15em", padding:"5px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"border-color .15s, color .15s" }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
-              onClick={() => {
-                const dateStr = ev.date.replace(/-/g,"");
-                const startTime = (ev.time || "09:00").replace(":","") + "00";
-                const endTime   = (ev.endTime || "17:00").replace(":","") + "00";
-                const dtStart   = `${dateStr}T${startTime}`;
-                const dtEnd     = `${dateStr}T${endTime}`;
-                const desc = (ev.description || "").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").slice(0,200);
-                const ics = [
-                  "BEGIN:VCALENDAR",
-                  "VERSION:2.0",
-                  "PRODID:-//Swindon Airsoft//EN",
-                  "BEGIN:VEVENT",
-                  `DTSTART:${dtStart}`,
-                  `DTEND:${dtEnd}`,
-                  `SUMMARY:${ev.title} — Swindon Airsoft`,
-                  `DESCRIPTION:${desc}`,
-                  `LOCATION:${ev.location || "Swindon, Wiltshire"}`,
-                  `URL:${window.location.origin}${window.location.pathname}#events/${ev.id}`,
-                  "END:VEVENT",
-                  "END:VCALENDAR",
-                ].join("\r\n");
-                const blob = new Blob([ics], { type:"text/calendar;charset=utf-8" });
-                const url  = URL.createObjectURL(blob);
-                const a    = document.createElement("a");
-                a.href = url; a.download = `${ev.title.replace(/[^a-z0-9]/gi,"-")}.ics`; a.click();
-                URL.revokeObjectURL(url);
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="1" stroke="currentColor" strokeWidth="1.5"/><path d="M5 1v4M11 1v4M1 7h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-              ADD TO CALENDAR
-            </button>
-            {/* Share / Copy Link */}
-            <button
-              style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".15em", padding:"5px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"border-color .15s, color .15s" }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
-              onClick={async (e) => {
-                const shareUrl = `${window.location.origin}${window.location.pathname}#events/${ev.id}`;
-                const shareData = { title: `${ev.title} — Swindon Airsoft`, text: `Check out this event: ${ev.title} on ${fmtDate(ev.date)}`, url: shareUrl };
-                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-                  try { await navigator.share(shareData); return; } catch {}
-                }
-                try {
-                  await navigator.clipboard.writeText(shareUrl);
-                  const btn = e.currentTarget;
-                  const orig = btn.innerHTML;
-                  btn.innerHTML = "✓ LINK COPIED";
-                  btn.style.color = "#c8ff00"; btn.style.borderColor = "#c8ff00";
-                  setTimeout(() => { btn.innerHTML = orig; btn.style.color = ""; btn.style.borderColor = ""; }, 2000);
-                } catch {}
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M10 2h4v4M14 2l-6 6M7 4H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              SHARE EVENT
-            </button>
-          </div>
-        </div>
+        <button className="btn btn-ghost btn-sm mb-2" onClick={() => { setDetail(null); setTab("info"); resetCart(); }}>← Back to Events</button>
 
         {/* Banner */}
         <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, overflow:"hidden", marginBottom:20 }}>
@@ -629,8 +587,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               </div>
               <div style={{ position:"relative", zIndex:1, padding:"16px 18px" }}>
 
-              {isEventPast && <div className="alert alert-red mb-2" style={{ textAlign:"center", letterSpacing:".08em", fontWeight:700 }}>✕ This event has ended — booking is closed.</div>}
-              {!isEventPast && !cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
+              {!cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
               {ev.vipOnly && cu?.vipStatus !== "active" && (
                 <div className="alert alert-gold mb-2" style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -715,6 +672,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               )}
 
               {/* ── TICKET BUILDER ── */}
+              {new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date() ? (
+                <div style={{ border:"1px solid #1a2808", marginBottom:16, background:"rgba(4,8,1,.5)", padding:"32px 16px", textAlign:"center" }}>
+                  <div style={{ fontSize:32, marginBottom:10 }}>🏁</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".12em", color:"#666", textTransform:"uppercase", marginBottom:6 }}>OPERATION CONCLUDED</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#3a3a3a", letterSpacing:".1em" }}>This event has already taken place. Booking is no longer available.</div>
+                </div>
+              ) : (
+              <>
               <div style={{ border:"1px solid #2a3a10", marginBottom:16, background:"rgba(4,8,1,.5)" }}>
                 <div style={{ background:"linear-gradient(90deg,rgba(8,18,2,.98) 0%,rgba(12,22,3,.95) 100%)", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, borderBottom:"1px solid #2a3a10", display:"flex", alignItems:"center", gap:8 }}>
                   <span>◈ ADD TICKETS TO ORDER</span>
@@ -983,7 +948,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   {/* Discount code input */}
                   {cu && !cartEmpty && !isAdmin && (
                     <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--muted)', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount / Voucher Code</div>
+                      <div style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--muted)', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount Code</div>
                       {!appliedDiscount ? (
                         <div style={{ display: 'flex', gap: 0 }}>
                           <input
@@ -1105,8 +1070,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   {bookingBusy ? "⏳ Confirming…" : "✓ CONFIRM — FULLY COVERED BY CREDITS"}
                 </button>
               )}
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
 
@@ -1171,24 +1136,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           </div>
         )}
 
-        {waiverModal && <WaiverModal cu={cu} updateUser={(id, patch) => {
-          const waiver = patch.waiverData || (patch.extraWaivers && patch.extraWaivers[patch.extraWaivers.length - 1]);
-          if (waiver && waiver.emergencyName) {
-            const playerName = (waiver.name || cu?.waiverData?.name || "").trim().toLowerCase();
-            const emergencyName = waiver.emergencyName.trim().toLowerCase();
-            if (playerName && emergencyName === playerName) {
-              showToast("Emergency contact must be a different person — not the player themselves.", "red");
-              return Promise.resolve();
-            }
-          }
-          return updateUser(id, patch);
-        }} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} addPlayerMode={waiverModal === "addPlayer"} />}
+        {waiverModal && <WaiverModal cu={cu} updateUser={updateUser} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} addPlayerMode={waiverModal === "addPlayer"} />}
       </div>
     );
   }
 
   // ── Event list ──
-  const publishedEvents = data.events.filter(e => e.published);
+  const now = new Date();
+  const publishedEvents = data.events.filter(e =>
+    e.published && new Date(e.date + "T" + (e.endTime || e.time || "23:59") + ":00") > now
+  );
   return (
     <div style={{ background:"#080a06", minHeight:"100vh" }}>
       {/* Header */}
@@ -1225,28 +1182,25 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         {publishedEvents.length === 0 && data.events.length > 0 && (
           <div style={{ textAlign:"center", padding:80, fontFamily:"'Share Tech Mono',monospace", color:"#2a3a10", fontSize:11, letterSpacing:".2em" }}>NO OPERATIONS SCHEDULED — CHECK BACK SOON</div>
         )}
-        {(() => {
-          const now = new Date();
-          const upcomingEvents = publishedEvents.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") > now);
-          const pastEvents    = publishedEvents.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= now);
-          const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
-
-          const renderCard = (ev, idx, isPast) => {
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
+          {publishedEvents.map((ev, idx) => {
             const booked = ev.bookings.reduce((s,b) => s + b.qty, 0);
             const total  = ev.walkOnSlots + ev.rentalSlots;
             const fillPct = total > 0 ? booked / total : 0;
             const isFull = fillPct >= 1;
             const isAlmostFull = fillPct >= 0.8;
+            const isPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
+            const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
             const opCode = operationCodes[idx % operationCodes.length];
             return (
               <div key={ev.id}
-                onClick={() => { if (!isPast) { setDetail(ev.id); setTab("info"); resetCart(); } }}
+                onClick={() => { setDetail(ev.id); setTab("info"); resetCart(); }}
                 style={{
                   background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden",
                   cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s",
                 }}
-                onMouseEnter={e => { if (!isPast) { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; } }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor= isPast ? "#111" : "#1a2808"; e.currentTarget.style.transform=""; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}
               >
                 {/* Scanlines */}
                 <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px)", pointerEvents:"none", zIndex:5 }} />
@@ -1330,8 +1284,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     </div>
                   </div>
                   {isPast ? (
-                    <button disabled style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(60,60,60,.2)", border:"1px solid rgba(100,100,100,.3)", color:"#555", cursor:"not-allowed" }}>
-                      ✕ EVENT FINISHED
+                    <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(80,80,80,.15)", border:"1px solid rgba(120,120,120,.4)", color:"#666", cursor:"not-allowed" }} disabled>
+                      ✕ OPERATION ENDED
                     </button>
                   ) : isFull ? (
                     <button className="btn btn-primary" style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(200,150,0,.15)", border:"1px solid rgba(200,150,0,.5)", color:"var(--gold)" }}>
@@ -1357,430 +1311,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               </div>
             );
-          };
-
-          return (
-            <>
-              {/* Upcoming events grid */}
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
-                {upcomingEvents.map((ev, idx) => renderCard(ev, idx, false))}
-              </div>
-
-              {/* Past events section */}
-              {pastEvents.length > 0 && (
-                <div style={{ marginTop:48 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".25em", color:"#3a4020", textTransform:"uppercase" }}>Past Operations</div>
-                    <div style={{ flex:1, height:1, background:"linear-gradient(to right,#1a2808,transparent)" }} />
-                  </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, opacity:0.5, filter:"grayscale(0.4)" }}>
-                    {pastEvents.map((ev, idx) => renderCard(ev, idx, true))}
-                  </div>
-                </div>
-              )}
-            </>
-          );
-        })()}
-      </div>
-    </div>
-  );
-}
-
-// ── Gift Voucher Page ─────────────────────────────────────────
-function GiftVoucherPage({ cu, showToast, setAuthModal }) {
-  const PRESET_AMOUNTS = [10, 20, 25, 50];
-
-  const [forSelf, setForSelf]               = useState(true);
-  const [amount, setAmount]                 = useState(25);
-  const [customAmount, setCustomAmount]     = useState('');
-  const [useCustom, setUseCustom]           = useState(false);
-  const [recipientEmail, setRecipientEmail] = useState('');
-  const [recipientName, setRecipientName]   = useState('');
-  const [message, setMessage]               = useState('');
-  const [busy, setBusy]                     = useState(false);
-  const [voucherError, setVoucherError]     = useState(null);
-  const [done, setDone]                     = useState(null);
-
-  // Balance checker
-  const [balanceInput, setBalanceInput]     = useState('');
-  const [balanceResult, setBalanceResult]   = useState(null); // { balance, amount } | null
-  const [balanceError, setBalanceError]     = useState('');
-  const [balanceChecking, setBalanceChecking] = useState(false);
-
-  const checkBalance = async () => {
-    if (!balanceInput.trim()) return;
-    setBalanceChecking(true);
-    setBalanceError('');
-    setBalanceResult(null);
-    try {
-      const result = await api.giftVouchers.validate(balanceInput.trim());
-      setBalanceResult(result);
-    } catch (e) {
-      setBalanceError(e.message);
-    } finally {
-      setBalanceChecking(false);
-    }
-  };
-
-  const finalAmount = useCustom
-    ? Math.round(Math.max(1, Math.min(500, Number(customAmount) || 0)) * 100) / 100
-    : amount;
-
-  const recipientEmailFinal = forSelf ? (cu?.email || '') : recipientEmail.trim().toLowerCase();
-  const recipientNameFinal  = forSelf ? (cu?.name  || '') : recipientName.trim();
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmailFinal);
-  const canPay = cu && finalAmount >= 1 && emailValid;
-
-  const handleSuccess = async (squarePayment) => {
-    if (!cu) return;
-    setBusy(true);
-    setVoucherError(null);
-    try {
-      // Ensure the Supabase session is still alive after the Square payment flow —
-      // the payment iframe can take long enough that the JWT needs a refresh,
-      // which would cause the RLS insert policy (auth.uid() IS NOT NULL) to fail.
-      await supabase.auth.refreshSession().catch(() => {});
-
-      const voucher = await api.giftVouchers.purchase({
-        amount:         finalAmount,
-        purchaserId:    cu.id,
-        purchaserName:  cu.name,
-        purchaserEmail: cu.email,
-        recipientEmail: recipientEmailFinal,
-        recipientName:  recipientNameFinal || null,
-        message:        message.trim() || null,
-        squarePaymentId: squarePayment.id,
-      });
-
-      const isForSelf = forSelf || recipientEmailFinal === (cu.email || '').toLowerCase();
-
-      // Email to recipient
-      sendEmail({
-        toEmail:     recipientEmailFinal,
-        toName:      recipientNameFinal || recipientEmailFinal,
-        subject:     isForSelf
-          ? `🎟️ Your Swindon Airsoft Gift Voucher — £${finalAmount.toFixed(2)}`
-          : `🎁 You've received a £${finalAmount.toFixed(2)} Swindon Airsoft Gift Voucher!`,
-        htmlContent: `
-          <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px;border:1px solid #2a2a2a">
-            <div style="text-align:center;margin-bottom:28px">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">
-                SWINDON <span style="color:#c8ff00">AIRSOFT</span>
-              </div>
-              <div style="font-size:11px;letter-spacing:.2em;color:#3a5010;margin-top:4px;text-transform:uppercase">Gift Voucher</div>
-            </div>
-            ${!isForSelf ? `<p style="font-size:14px;color:#aaa;margin-bottom:20px"><strong style="color:#fff">${cu.name}</strong> has sent you a gift voucher!</p>` : ''}
-            ${message.trim() ? `<div style="background:#1a1a1a;border-left:3px solid #c8ff00;padding:14px 16px;margin-bottom:20px;font-style:italic;color:#bbb;font-size:14px">"${message.trim()}"</div>` : ''}
-            <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;padding:24px;text-align:center;margin-bottom:20px">
-              <div style="font-size:11px;letter-spacing:.15em;color:#555;text-transform:uppercase;margin-bottom:8px">Voucher Value</div>
-              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:60px;color:#c8ff00;line-height:1">£${finalAmount.toFixed(2)}</div>
-              <div style="font-size:11px;color:#555;margin-top:8px">Valid on events &amp; shop orders · Unused balance carries forward</div>
-            </div>
-            <div style="background:#0d0d0d;border:1px solid #2a3a10;border-radius:6px;padding:20px;text-align:center;margin-bottom:24px">
-              <div style="font-size:11px;letter-spacing:.15em;color:#3a5010;text-transform:uppercase;margin-bottom:10px">Your Voucher Code</div>
-              <div style="font-family:'Share Tech Mono',monospace;font-size:22px;color:#c8ff00;letter-spacing:.18em;word-break:break-all">${voucher.code}</div>
-            </div>
-            <div style="font-size:13px;color:#888;line-height:1.7">
-              <strong style="color:#aaa">How to use:</strong> Enter this code in the discount / voucher field at checkout when booking an event or placing a shop order. Any unused balance carries forward automatically.
-            </div>
-          </div>
-        `,
-      }).catch(() => {});
-
-      // Confirmation email to buyer if gifting to someone else
-      if (!isForSelf) {
-        sendEmail({
-          toEmail:     cu.email,
-          toName:      cu.name,
-          subject:     `✅ Gift voucher sent to ${recipientNameFinal || recipientEmailFinal} — £${finalAmount.toFixed(2)}`,
-          htmlContent: `
-            <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:24px;color:#e8f0d8;margin-bottom:16px">Voucher Sent!</div>
-              <p style="font-size:14px;color:#aaa;margin-bottom:16px">Your <strong style="color:#c8ff00">£${finalAmount.toFixed(2)}</strong> gift voucher has been sent to <strong style="color:#fff">${recipientEmailFinal}</strong>.</p>
-              <p style="font-size:13px;color:#666">Voucher code: <span style="font-family:monospace;color:#c8ff00">${voucher.code}</span></p>
-              <p style="font-size:12px;color:#555;margin-top:12px">If the recipient has any trouble redeeming it, they can contact us and quote the code above.</p>
-            </div>
-          `,
-        }).catch(() => {});
-      }
-
-      setDone({ code: voucher.code, amount: finalAmount, recipientEmail: recipientEmailFinal });
-      showToast('🎟️ Gift voucher purchased!');
-    } catch (e) {
-      console.error('Gift voucher creation error:', e?.message || e);
-      const actualError = e?.message || String(e) || 'Unknown error';
-      const errMsg = 'Payment succeeded but voucher creation failed — please contact us with your Square ref: ' + squarePayment.id + ' | Error: ' + actualError;
-      setVoucherError(errMsg);
-      supabase.from('failed_payments').insert({
-        customer_name:     cu?.name || 'Unknown',
-        customer_email:    cu?.email || '',
-        user_id:           cu?.id || null,
-        items:             [{ name: 'Gift Voucher', price: finalAmount, qty: 1 }],
-        total:             finalAmount,
-        payment_method:    'square_gift_voucher',
-        error_message:     actualError,
-        square_payment_id: squarePayment?.id || null,
-        recorded_by:       null,
-      }).then(({ error }) => { if (error) console.warn('Failed to log payment error:', error.message); });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // ── Success screen ─────────────────────────────────────────
-  if (done) {
-    return (
-      <div className="page-content" style={{ maxWidth: 520, textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: 52, marginBottom: 16 }}>🎟️</div>
-        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: '.1em', textTransform: 'uppercase', color: '#e8f0d8', marginBottom: 8 }}>Voucher Sent!</div>
-        <p style={{ color: '#aaa', fontSize: 14, marginBottom: 24 }}>
-          A <strong style={{ color: '#c8ff00' }}>£{done.amount.toFixed(2)}</strong> gift voucher has been emailed to <strong style={{ color: '#fff' }}>{done.recipientEmail}</strong>.
-        </p>
-        <div style={{ background: '#0d0d0d', border: '1px solid #2a3a10', borderRadius: 6, padding: '20px 24px', marginBottom: 32 }}>
-          <div style={{ fontSize: 11, letterSpacing: '.15em', color: '#3a5010', textTransform: 'uppercase', marginBottom: 8 }}>Voucher Code</div>
-          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 20, color: '#c8ff00', letterSpacing: '.15em' }}>{done.code}</div>
+          })}
         </div>
-        <button className="btn btn-primary" onClick={() => { setDone(null); setRecipientEmail(''); setRecipientName(''); setMessage(''); setCustomAmount(''); setUseCustom(false); setAmount(25); setForSelf(true); }}>
-          Buy Another
-        </button>
-      </div>
-    );
-  }
-
-  // ── Main form ──────────────────────────────────────────────
-  return (
-    <div>
-      {/* Hero */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg,#0c1009 0%,#080a06 100%)', borderBottom: '2px solid #2a3a10', padding: '52px 24px 44px' }}>
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px)', pointerEvents: 'none' }} />
-        {[['top','left'],['top','right'],['bottom','left'],['bottom','right']].map(([v,h]) => (
-          <div key={v+h} style={{ position: 'absolute', width: 28, height: 28, zIndex: 2,
-            top: v==='top' ? 14 : 'auto', bottom: v==='bottom' ? 14 : 'auto',
-            left: h==='left' ? 14 : 'auto', right: h==='right' ? 14 : 'auto',
-            borderTop: v==='top' ? '2px solid #c8a000' : 'none', borderBottom: v==='bottom' ? '2px solid #c8a000' : 'none',
-            borderLeft: h==='left' ? '2px solid #c8a000' : 'none', borderRight: h==='right' ? '2px solid #c8a000' : 'none',
-          }} />
-        ))}
-        <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: '.35em', color: '#3a5010', marginBottom: 14, textTransform: 'uppercase' }}>◈ — SWINDON AIRSOFT — ◈</div>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 'clamp(30px,6vw,52px)', letterSpacing: '.18em', textTransform: 'uppercase', color: '#e8f0d8', lineHeight: 1, marginBottom: 6 }}>
-            GIFT <span style={{ color: '#c8a000' }}>VOUCHERS</span>
-          </div>
-          <div style={{ fontSize: 14, color: '#aaa', marginTop: 14, maxWidth: 420, margin: '14px auto 0' }}>
-            The perfect gift for any airsofter — redeemable on game day bookings and shop orders.
-          </div>
-        </div>
-      </div>
-
-      <div className="page-content" style={{ maxWidth: 640 }}>
-
-        {!cu && (
-          <div className="alert alert-blue mb-3" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 14 }}>Log in to purchase a gift voucher.</span>
-            <button className="btn btn-sm btn-primary" onClick={() => setAuthModal(true)}>Log In</button>
-          </div>
-        )}
-
-        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '28px 24px', marginBottom: 20 }}>
-
-          {/* Who is this for? */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>Who is this for?</div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {[['For myself', true], ['For someone else', false]].map(([label, val]) => (
-                <button key={label} onClick={() => setForSelf(val)} style={{
-                  flex: 1, padding: '10px 0',
-                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.08em', textTransform: 'uppercase',
-                  cursor: 'pointer', transition: 'all .15s',
-                  background: forSelf === val ? 'rgba(200,255,0,.12)' : 'transparent',
-                  border:     forSelf === val ? '1px solid var(--accent)' : '1px solid #2a2a2a',
-                  color:      forSelf === val ? 'var(--accent)' : 'var(--muted)',
-                }}>
-                  {forSelf === val ? '◉' : '○'} {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Recipient details — only when gifting to someone else */}
-          {!forSelf && (
-            <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: -2 }}>Recipient details</div>
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Their email address *</label>
-                <input
-                  type="email"
-                  className="input"
-                  placeholder="their@email.com"
-                  value={recipientEmail}
-                  onChange={e => setRecipientEmail(e.target.value)}
-                  style={{ width: '100%' }}
-                />
-                {recipientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail) && (
-                  <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>⚠ Please enter a valid email address</div>
-                )}
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>The voucher code will be emailed directly to this address.</div>
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Their name (optional)</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Their name"
-                  value={recipientName}
-                  onChange={e => setRecipientName(e.target.value)}
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Personal message (optional)</label>
-                <textarea
-                  className="input"
-                  placeholder="Add a message to include in the email…"
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  rows={3}
-                  style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', fontSize: 13 }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Amount selector */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>Choose amount</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
-              {PRESET_AMOUNTS.map(v => (
-                <button key={v} onClick={() => { setAmount(v); setUseCustom(false); }} style={{
-                  padding: '14px 0',
-                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22,
-                  cursor: 'pointer', transition: 'all .15s',
-                  background: !useCustom && amount === v ? 'rgba(200,255,0,.12)' : 'transparent',
-                  border:     !useCustom && amount === v ? '1px solid var(--accent)' : '1px solid #2a2a2a',
-                  color:      !useCustom && amount === v ? 'var(--accent)' : '#ccc',
-                }}>
-                  £{v}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setUseCustom(true)} style={{
-              width: '100%', padding: '10px 0',
-              fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.08em', textTransform: 'uppercase',
-              cursor: 'pointer', transition: 'all .15s',
-              background: useCustom ? 'rgba(200,255,0,.12)' : 'transparent',
-              border:     useCustom ? '1px solid var(--accent)' : '1px solid #2a2a2a',
-              color:      useCustom ? 'var(--accent)' : 'var(--muted)',
-              marginBottom: useCustom ? 10 : 0,
-            }}>
-              ◉ Custom amount
-            </button>
-            {useCustom && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: 'var(--muted)', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 24 }}>£</span>
-                <input
-                  type="number"
-                  min="1" max="500" step="1"
-                  className="input"
-                  placeholder="Enter amount (£1–£500)"
-                  value={customAmount}
-                  onChange={e => setCustomAmount(e.target.value)}
-                  style={{ flex: 1, fontSize: 18, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}
-                  autoFocus
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Summary + pay */}
-          <div style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', padding: '16px 20px', marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: !forSelf && recipientEmailFinal && emailValid ? 8 : 0 }}>
-              <span style={{ fontSize: 13, color: 'var(--muted)' }}>Gift voucher value</span>
-              <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 24, color: finalAmount >= 1 ? '#c8ff00' : 'var(--muted)' }}>
-                {finalAmount >= 1 ? `£${finalAmount.toFixed(2)}` : '—'}
-              </span>
-            </div>
-            {!forSelf && recipientEmailFinal && emailValid && (
-              <div style={{ fontSize: 12, color: 'var(--muted)', borderTop: '1px solid #2a2a2a', paddingTop: 8 }}>
-                Will be emailed to: <span style={{ color: '#aaa' }}>{recipientEmailFinal}</span>
-              </div>
-            )}
-          </div>
-
-          {voucherError && (
-            <div className="alert alert-red mb-2" style={{ fontSize: 13 }}>⚠ {voucherError}</div>
-          )}
-
-          {cu && canPay && (
-            <SquareCheckoutButton
-              amount={finalAmount}
-              label={`Pay £${finalAmount.toFixed(2)}`}
-              onSuccess={handleSuccess}
-              disabled={busy}
-            />
-          )}
-
-          {cu && !canPay && (
-            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--muted)', padding: '10px 0' }}>
-              {!forSelf && !emailValid ? 'Enter a valid recipient email to continue.' : finalAmount < 1 ? 'Enter an amount of at least £1 to continue.' : ''}
-            </div>
-          )}
-        </div>
-
-        {/* How it works */}
-        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '24px', marginBottom: 20 }}>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>How it works</div>
-          {[
-            ['🎟️', 'Purchase a voucher', 'Choose a value and pay by card. The code is generated and emailed instantly.'],
-            ['📧', 'Code sent by email', forSelf ? 'The voucher code is sent to your email address.' : "The code is sent directly to the recipient's email address, along with your personal message."],
-            ['✅', 'Redeem at checkout', 'Enter the code in the discount / voucher field at any event booking or shop order. Any unused balance carries forward automatically.'],
-          ].map(([icon, title, desc]) => (
-            <div key={title} style={{ display: 'flex', gap: 14, padding: '10px 0', borderBottom: '1px solid #1a1a1a' }}>
-              <span style={{ fontSize: 18, flexShrink: 0, width: 26 }}>{icon}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#ccc', marginBottom: 2 }}>{title}</div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>{desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Balance checker */}
-        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '24px' }}>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>Check voucher balance</div>
-          <div style={{ display: 'flex', gap: 0, marginBottom: 10 }}>
-            <input
-              value={balanceInput}
-              onChange={e => { setBalanceInput(e.target.value.toUpperCase()); setBalanceError(''); setBalanceResult(null); }}
-              onKeyDown={e => e.key === 'Enter' && checkBalance()}
-              placeholder="GV-XXXX-XXXX-XXXX"
-              style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', borderRight: 'none', color: '#c8e878', fontFamily: "'Share Tech Mono',monospace", fontSize: 13, letterSpacing: '.1em', padding: '9px 12px', outline: 'none', textTransform: 'uppercase' }}
-              onFocus={e => e.target.style.borderColor = '#4a6820'}
-              onBlur={e => e.target.style.borderColor = '#2a3a10'}
-            />
-            <button
-              onClick={checkBalance}
-              disabled={balanceChecking || !balanceInput.trim()}
-              style={{ background: balanceInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: balanceInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: '.1em', padding: '9px 16px', cursor: balanceInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
-              {balanceChecking ? '⏳' : 'CHECK'}
-            </button>
-          </div>
-          {balanceError && (
-            <div style={{ fontSize: 12, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 4 }}>⚠ {balanceError}</div>
-          )}
-          {balanceResult && (
-            <div style={{ background: '#0d0d0d', border: '1px solid #2a3a10', borderLeft: '3px solid #c8ff00', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 13, color: '#c8ff00', letterSpacing: '.1em', marginBottom: 4 }}>{balanceResult.code}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Original value: £{Number(balanceResult.amount).toFixed(2)}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 2 }}>Remaining balance</div>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, color: '#c8ff00', lineHeight: 1 }}>£{Number(balanceResult.balance).toFixed(2)}</div>
-              </div>
-            </div>
-          )}
-        </div>
-
       </div>
     </div>
   );
@@ -1904,7 +1436,7 @@ function ShopClosedPage({ setPage }) {
 }
 
 // ── Shop ──────────────────────────────────────────────────
-function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen, recentlyViewed = [], setPage }) {
+function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, cartOpen, setCartOpen, recentlyViewed = [] }) {
   const [placing, setPlacing] = useState(false);
   const shopSafetyRef = useRef(null);
   const [shopSquareError, setShopSquareError] = useState(null);
@@ -1979,10 +1511,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
     setShopDiscountError('');
     setShopAppliedDiscount(null);
     try {
-      const isVoucher = shopDiscountInput.trim().toUpperCase().startsWith('GV-');
-      const result = isVoucher
-        ? await api.giftVouchers.validate(shopDiscountInput.trim())
-        : await api.discountCodes.validate(shopDiscountInput, cu?.id, 'shop');
+      const result = await api.discountCodes.validate(shopDiscountInput, cu?.id, 'shop');
       setShopAppliedDiscount(result);
     } catch (e) {
       setShopDiscountError(e.message);
@@ -2024,14 +1553,10 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           items: cartSnapshot.map(i => ({ name: i.name, variant: i.variantName || "", price: i.price, qty: i.qty })),
         }).catch(() => {});
       } catch (emailErr) { console.warn("Order email failed:", emailErr); }
-      // Record discount / gift voucher redemption
+      // Record discount redemption
       if (shopAppliedDiscount) {
         try {
-          if (shopAppliedDiscount.code?.toUpperCase().startsWith('GV-')) {
-            await api.giftVouchers.redeem(shopAppliedDiscount.code, shopDiscountSaving, cu.id, cu.name, 'shop');
-          } else {
-            await api.discountCodes.redeem(shopAppliedDiscount.code, cu.id, cu.name, 'shop', shopDiscountSaving);
-          }
+          await api.discountCodes.redeem(shopAppliedDiscount.code, cu.id, cu.name, 'shop', shopDiscountSaving);
         } catch { /* non-fatal */ }
       }
       setCart([]); setCartOpen(false); setShopAppliedDiscount(null); setShopDiscountInput('');
@@ -2068,34 +1593,13 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
-  // Review summaries: Map<product_id, { avg: number, count: number }>
-  const [reviewSummary, setReviewSummary] = useState(new Map());
-  useEffect(() => {
-    supabase
-      .from("product_reviews")
-      .select("product_id, rating")
-      .then(({ data: rows }) => {
-        if (!rows) return;
-        const map = new Map();
-        rows.forEach(r => {
-          const s = map.get(r.product_id) || { total: 0, count: 0 };
-          s.total += r.rating; s.count += 1;
-          map.set(r.product_id, s);
-        });
-        const summary = new Map();
-        map.forEach((s, id) => summary.set(id, { avg: s.total / s.count, count: s.count }));
-        setReviewSummary(summary);
-      });
-  }, []);
-
   const [shopCatFilter, setShopCatFilter] = useState("");
   const [shopSearch, setShopSearch] = useState("");
   const [shopSort, setShopSort] = useState("default");
   const [shopPage, setShopPage] = useState(1);
   const SHOP_PAGE_SIZE = 12;
   const allShopCategories = useMemo(() => {
-    const visibleProducts = (data.shop || []).filter(p => !p.hiddenFromShop);
-    const cats = [...new Set(visibleProducts.map(p => p.category).filter(Boolean))].sort();
+    const cats = [...new Set((data.shop || []).map(p => p.category).filter(Boolean))].sort();
     return cats;
   }, [data.shop]);
   const filteredShop = useMemo(() => {
@@ -2211,22 +1715,6 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           </div>
         )}
 
-        {/* Gift voucher banner */}
-        {setPage && (
-          <div onClick={() => setPage("gift-vouchers")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, background:"linear-gradient(90deg,#0c1009 0%,#111a06 100%)", border:"1px solid #2a4010", borderLeft:"3px solid #c8a000", padding:"14px 20px", marginBottom:16, cursor:"pointer", transition:"border-color .15s" }}
-            onMouseEnter={e => e.currentTarget.style.borderLeftColor="#e8c000"}
-            onMouseLeave={e => e.currentTarget.style.borderLeftColor="#c8a000"}>
-            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-              <span style={{ fontSize:24, flexShrink:0 }}>🎟️</span>
-              <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".1em", textTransform:"uppercase", color:"#c8a000" }}>Gift Vouchers</div>
-                <div style={{ fontSize:12, color:"#5a7a30", marginTop:1 }}>The perfect gift — redeemable on events &amp; shop orders</div>
-              </div>
-            </div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".1em", color:"#c8a000", whiteSpace:"nowrap", flexShrink:0 }}>BUY ONE →</div>
-          </div>
-        )}
-
         {/* Search + Sort row */}
         <div style={{ display:"flex", gap:8, marginBottom:16, alignItems:"stretch" }}>
           <div style={{ flex:1, position:"relative" }}>
@@ -2295,7 +1783,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             const sl = stockLabel(hasV ? item.variants.reduce((s,v)=>s+Number(v.stock),0) : item.stock);
             return (
               <div key={item.id}
-                style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s", display:"flex", flexDirection:"column" }}
+                style={{ background:"#0c1009", border:"1px solid #1a2808", overflow:"hidden", cursor:"pointer", position:"relative", transition:"border-color .15s, transform .15s" }}
                 onClick={() => onProductClick(item)}
                 onMouseEnter={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.transform="translateY(-3px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor="#1a2808"; e.currentTarget.style.transform=""; }}
@@ -2343,7 +1831,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 </div>
 
                 {/* Body */}
-                <div style={{ padding:"12px 12px 0", position:"relative", zIndex:6, flex:1 }}>
+                <div style={{ padding:"12px 12px 0", position:"relative", zIndex:6 }}>
                   <div className="gap-2 mb-1" style={{ flexWrap:"wrap" }}>
                     {item.noPost && <span className="tag tag-gold" style={{ fontSize:9 }}>COLLECT ONLY</span>}
                     {hasV && <span className="tag tag-blue" style={{ fontSize:9 }}>{item.variants.length} VARIANTS</span>}
@@ -2366,26 +1854,6 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                       £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
                       {cu?.vipStatus === "active" && <span style={{ fontSize:9, color:"#c8a000", marginLeft:5, fontFamily:"'Share Tech Mono',monospace" }}>VIP</span>}
                     </div>
-                    {(() => {
-                      const rev = reviewSummary.get(item.id);
-                      if (rev) return (
-                        <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:4 }}>
-                          {[1,2,3,4,5].map(n => (
-                            <span key={n} style={{ fontSize:10, color: n <= Math.round(rev.avg) ? "#c8a000" : "#2a3a10", lineHeight:1 }}>★</span>
-                          ))}
-                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a5010", letterSpacing:".06em" }}>({rev.count})</span>
-                        </div>
-                      );
-                      return null;
-                    })()}
-                    {(() => {
-                      const soldCount = (data.shopOrders || []).reduce((total, order) => {
-                        return total + (order.items || []).filter(i => i.id === item.id || i.productId === item.id).reduce((s, i) => s + (i.qty || 1), 0);
-                      }, 0);
-                      return soldCount > 0 ? (
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#3a5010", letterSpacing:".08em", marginTop:2 }}>{soldCount} SOLD</div>
-                      ) : null;
-                    })()}
                   </div>
                   <button className="btn btn-primary" style={{ padding:"7px 16px", fontSize:10, letterSpacing:".15em", borderRadius:0 }} disabled={!inStock && !hasV}>
                     {!inStock && !hasV ? "OUT OF STOCK" : "▸ ACQUIRE"}
@@ -2477,7 +1945,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {/* ── Discount Code ── */}
                 {cu && (
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 9, letterSpacing: '.2em', color: '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount / Voucher Code</div>
+                    <div style={{ fontSize: 9, letterSpacing: '.2em', color: '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount Code</div>
                     {!shopAppliedDiscount ? (
                       <div style={{ display: 'flex', gap: 0 }}>
                         <input
@@ -2580,209 +2048,6 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   );
 }
 
-// ── Product Reviews ────────────────────────────────────────
-function ProductReviews({ item, cu }) {
-  const [reviews, setReviews]       = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [myReview, setMyReview]     = useState(null);
-  const [hasPurchased, setHasPurchased] = useState(false);
-  const [editing, setEditing]       = useState(false);
-  const [draftRating, setDraftRating] = useState(5);
-  const [draftBody, setDraftBody]   = useState("");
-  const [saving, setSaving]         = useState(false);
-  const [deleting, setDeleting]     = useState(false);
-  const [error, setError]           = useState("");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("product_reviews")
-        .select("*")
-        .eq("product_id", item.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setReviews(data || []);
-      if (cu) {
-        const mine = (data || []).find(r => r.user_id === cu.id);
-        setMyReview(mine || null);
-        if (mine) { setDraftRating(mine.rating); setDraftBody(mine.body); }
-
-        // Check if this user has a confirmed (dispatched/completed) order containing this product
-        const { data: orders } = await supabase
-          .from("shop_orders")
-          .select("items, status")
-          .eq("user_id", cu.id)
-          .in("status", ["dispatched", "completed", "processing"]);
-        const purchased = (orders || []).some(order =>
-          (order.items || []).some(i => i.id === item.id || i.productId === item.id)
-        );
-        setHasPurchased(purchased);
-      }
-    } catch {}
-    finally { setLoading(false); }
-  }, [item.id, cu]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const avg = reviews.length ? (reviews.reduce((s,r) => s + r.rating, 0) / reviews.length) : 0;
-
-  const Stars = ({ rating, size = 14, interactive = false, onSet }) => (
-    <div style={{ display:"flex", gap:2 }}>
-      {[1,2,3,4,5].map(n => (
-        <span key={n}
-          style={{ fontSize:size, color: n <= rating ? "#c8a000" : "#2a3a10", cursor: interactive ? "pointer" : "default", lineHeight:1 }}
-          onClick={() => interactive && onSet && onSet(n)}
-        >★</span>
-      ))}
-    </div>
-  );
-
-  const saveReview = async () => {
-    if (!cu) return;
-    if (!draftBody.trim()) { setError("Please write something before submitting."); return; }
-    setSaving(true); setError("");
-    try {
-      if (myReview) {
-        const { error } = await supabase.from("product_reviews")
-          .update({ rating: draftRating, body: draftBody.trim() })
-          .eq("id", myReview.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("product_reviews").insert({
-          product_id: item.id,
-          user_id:    cu.id,
-          user_name:  cu.name || "Operative",
-          rating:     draftRating,
-          body:       draftBody.trim(),
-        });
-        if (error) throw error;
-      }
-      setEditing(false);
-      await load();
-    } catch (e) { setError(e.message || "Save failed."); }
-    finally { setSaving(false); }
-  };
-
-  const deleteReview = async () => {
-    if (!myReview) return;
-    setDeleting(true);
-    try {
-      await supabase.from("product_reviews").delete().eq("id", myReview.id);
-      setMyReview(null); setDraftBody(""); setDraftRating(5);
-      await load();
-    } catch {}
-    finally { setDeleting(false); }
-  };
-
-  const SectionHead = () => (
-    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
-      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>◈ —</div>
-      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>
-        FIELD <span style={{ color:"#c8ff00" }}>REPORTS</span>
-      </div>
-      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>— ◈</div>
-      {reviews.length > 0 && (
-        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8 }}>
-          <Stars rating={Math.round(avg)} />
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8a000" }}>{avg.toFixed(1)}</span>
-          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".1em" }}>({reviews.length})</span>
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 16px 60px" }}>
-      <div style={{ borderTop:"1px solid #1a2808", paddingTop:32 }}>
-        <SectionHead />
-
-        {/* Write / edit review */}
-        {cu && !myReview && !editing && hasPurchased && (
-          <button
-            onClick={() => setEditing(true)}
-            style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"8px 18px", cursor:"pointer", marginBottom:24, transition:"border-color .15s, color .15s" }}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
-          >◈ SUBMIT FIELD REPORT</button>
-        )}
-        {cu && !myReview && !editing && !hasPurchased && (
-          <div style={{ background:"#0c1009", border:"1px solid #1a2808", borderLeft:"3px solid #2a3a10", padding:"10px 16px", marginBottom:20, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", letterSpacing:".1em" }}>
-            ◈ PURCHASE REQUIRED — Only players who have ordered this item can submit a field report.
-          </div>
-        )}
-        {cu && myReview && !editing && (
-          <div style={{ background:"#0c1009", border:"1px solid #2a3a10", borderLeft:"3px solid #c8a000", padding:"12px 16px", marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#5a7a30", letterSpacing:".1em" }}>YOU ALREADY SUBMITTED A REPORT</div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => setEditing(true)} style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>EDIT</button>
-              <button onClick={deleteReview} disabled={deleting} style={{ background:"transparent", border:"1px solid #3a1a1a", color:"#6b3333", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>{deleting ? "…" : "DELETE"}</button>
-            </div>
-          </div>
-        )}
-        {(editing) && (
-          <div style={{ background:"#0c1009", border:"1px solid #2a3a10", padding:"18px", marginBottom:24 }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".22em", color:"#c8ff00", marginBottom:14 }}>⬡ {myReview ? "EDIT" : "SUBMIT"} FIELD REPORT</div>
-            <div style={{ marginBottom:12 }}>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".15em", marginBottom:6 }}>RATING</div>
-              <Stars rating={draftRating} size={22} interactive onSet={setDraftRating} />
-            </div>
-            <div style={{ marginBottom:12 }}>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".15em", marginBottom:6 }}>REPORT</div>
-              <textarea
-                value={draftBody}
-                onChange={e => setDraftBody(e.target.value)}
-                maxLength={600}
-                rows={4}
-                placeholder="Share your experience with this item..."
-                style={{ width:"100%", background:"#080a06", border:"1px solid #2a3a10", color:"#8aaa50", fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"10px 12px", resize:"vertical", outline:"none", letterSpacing:".05em", lineHeight:1.6 }}
-              />
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em", marginTop:3, textAlign:"right" }}>{draftBody.length}/600</div>
-            </div>
-            {error && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#ef4444", letterSpacing:".1em", marginBottom:10 }}>⚠ {error}</div>}
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={saveReview} disabled={saving}
-                style={{ background:"#c8ff00", color:"#000", border:"none", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", padding:"8px 20px", cursor:"pointer" }}>
-                {saving ? "SAVING…" : "SUBMIT REPORT"}
-              </button>
-              <button onClick={() => { setEditing(false); setError(""); if (myReview) { setDraftRating(myReview.rating); setDraftBody(myReview.body); } }}
-                style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", padding:"8px 14px", cursor:"pointer" }}>
-                CANCEL
-              </button>
-            </div>
-          </div>
-        )}
-
-        {loading && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#2a3a10", letterSpacing:".2em", padding:"20px 0" }}>RETRIEVING FIELD REPORTS…</div>}
-
-        {!loading && reviews.length === 0 && (
-          <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"32px 24px", textAlign:"center" }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".2em", color:"#2a3a10", textTransform:"uppercase", marginBottom:6 }}>NO FIELD REPORTS YET</div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#1a2808", letterSpacing:".12em" }}>Be the first to submit a report on this item.</div>
-          </div>
-        )}
-
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {reviews.map(r => (
-            <div key={r.id} style={{ background:"#0c1009", border:`1px solid ${r.user_id === cu?.id ? "#2a3a10" : "#1a2808"}`, padding:"14px 16px", position:"relative" }}>
-              {r.user_id === cu?.id && <div style={{ position:"absolute", top:10, right:12, fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#c8a000", letterSpacing:".12em" }}>YOUR REPORT</div>}
-              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
-                <Stars rating={r.rating} size={13} />
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".1em", color:"#8aaa50", textTransform:"uppercase" }}>{r.user_name}</span>
-                <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", background:"rgba(200,255,0,.06)", border:"1px solid #1a2808", padding:"1px 6px", letterSpacing:".1em" }}>✓ VERIFIED PURCHASE</span>
-                <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em", marginLeft:"auto" }}>
-                  {new Date(r.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
-                </span>
-              </div>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#5a7a30", lineHeight:1.7, letterSpacing:".04em" }}>{r.body}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Product Page ──────────────────────────────────────────
 function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, shopItems = [] }) {
   const isMobile = useMobile(700);
@@ -2801,16 +2066,6 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
   const displayPrice = vipPrice || (effectivePrice !== null ? Number(effectivePrice).toFixed(2) : null);
   const stockAvail = selectedVariant ? Number(selectedVariant.stock) : hasVariants ? 0 : item.stock;
   const canAdd = (!hasVariants || selectedVariant) && stockAvail > 0;
-
-  const [prodRevSummary, setProdRevSummary] = useState(null);
-  useEffect(() => {
-    supabase.from("product_reviews").select("rating").eq("product_id", item.id)
-      .then(({ data: rows }) => {
-        if (!rows || rows.length === 0) return;
-        const avg = rows.reduce((s, r) => s + r.rating, 0) / rows.length;
-        setProdRevSummary({ avg, count: rows.length });
-      });
-  }, [item.id]);
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -2910,18 +2165,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           </div>
 
           {/* Name */}
-          <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:8 }}>{item.name}</h1>
-
-          {/* Rating summary */}
-          {prodRevSummary && (
-            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:12 }}>
-              {[1,2,3,4,5].map(n => (
-                <span key={n} style={{ fontSize:14, color: n <= Math.round(prodRevSummary.avg) ? "#c8a000" : "#2a3a10", lineHeight:1 }}>★</span>
-              ))}
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"#c8a000" }}>{prodRevSummary.avg.toFixed(1)}</span>
-              <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".08em" }}>({prodRevSummary.count} {prodRevSummary.count === 1 ? "report" : "reports"})</span>
-            </div>
-          )}
+          <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:12 }}>{item.name}</h1>
 
           {/* Description */}
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"var(--muted)", lineHeight:1.8, marginBottom:20, borderLeft:"3px solid var(--accent)", paddingLeft:12 }}
@@ -3044,9 +2288,6 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           })()}
       </div>
     )}
-
-    {/* Reviews */}
-    <ProductReviews item={item} cu={cu} />
 
     {/* Related Products */}
     {(() => {
@@ -3278,7 +2519,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
 
-  const board = (data.users || [])
+  const board = data.users
     .filter(u => !u.leaderboardOptOut && u.role === "player")
     .sort((a, b) => b.gamesAttended - a.gamesAttended);
 
@@ -5571,18 +4812,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               </div>
             );
           })()}
-          {waiverModal && <WaiverModal cu={cu} updateUser={(id, patch) => {
-            const waiver = patch.waiverData || (patch.extraWaivers && patch.extraWaivers[patch.extraWaivers.length - 1]);
-            if (waiver && waiver.emergencyName) {
-              const playerName = (waiver.name || cu?.waiverData?.name || "").trim().toLowerCase();
-              const emergencyName = waiver.emergencyName.trim().toLowerCase();
-              if (playerName && emergencyName === playerName) {
-                showToast("Emergency contact must be a different person — not the player themselves.", "red");
-                return Promise.resolve();
-              }
-            }
-            return updateUser(id, patch);
-          }} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} />}
+          {waiverModal && <WaiverModal cu={cu} updateUser={updateUser} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} />}
         </div>
       )}
 
@@ -6394,6 +5624,335 @@ const ALLOWED_COUNTRY_CODES = new Set([
   "PL","PT","RO","SK","SI","ES","SE",
 ]);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// UKARA PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
+  const isMobile = useMobile(640);
+
+  const [form, setForm] = useState({
+    name: cu?.name || "",
+    email: cu?.email || "",
+    phone: cu?.phone || "",
+    dob: "",
+    address: cu?.address || "",
+    games_attended: "",
+    proof_description: "",
+    declaration: false,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [existingApp, setExistingApp] = useState(null);
+  const [checkingExisting, setCheckingExisting] = useState(!!cu);
+
+  // Pre-fill and check for existing application when user logs in
+  useEffect(() => {
+    if (cu) {
+      setForm(f => ({
+        ...f,
+        name: cu.name || f.name,
+        email: cu.email || f.email,
+        phone: cu.phone || f.phone,
+        address: cu.address || f.address,
+      }));
+      // Check if user already has a pending/approved application
+      supabase
+        .from("ukara_applications")
+        .select("id, status, created_at")
+        .eq("user_id", cu.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .then(({ data: rows }) => {
+          if (rows && rows.length > 0) setExistingApp(rows[0]);
+          setCheckingExisting(false);
+        });
+    } else {
+      setCheckingExisting(false);
+    }
+  }, [cu]);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = async () => {
+    if (!cu) { setAuthModal("login"); return; }
+    if (!form.name.trim() || !form.email.trim() || !form.dob || !form.address.trim()) {
+      showToast("Please fill in all required fields.", "red"); return;
+    }
+    if (!form.games_attended || isNaN(Number(form.games_attended)) || Number(form.games_attended) < 0) {
+      showToast("Please enter a valid number of games attended.", "red"); return;
+    }
+    if (!form.declaration) {
+      showToast("You must sign the declaration to submit.", "red"); return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("ukara_applications").insert({
+        user_id: cu.id,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        dob: form.dob,
+        address: form.address.trim(),
+        games_attended: Number(form.games_attended),
+        proof_description: form.proof_description.trim(),
+        declaration_signed: true,
+        status: "pending",
+      });
+      if (error) throw error;
+      setSubmitted(true);
+      showToast("✅ UKARA application submitted! We'll be in touch.");
+    } catch (e) {
+      showToast("Submission failed: " + (e.message || String(e)), "red");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const cornerStyle = (v, h) => ({
+    position: "absolute", [v]: 0, [h]: 0, width: 24, height: 24,
+    borderTop: v === "top" ? "2px solid #c8ff00" : "none",
+    borderBottom: v === "bottom" ? "2px solid #c8ff00" : "none",
+    borderLeft: h === "left" ? "2px solid #c8ff00" : "none",
+    borderRight: h === "right" ? "2px solid #c8ff00" : "none",
+  });
+
+  const inputStyle = {
+    width: "100%", background: "#0a0d07", border: "1px solid #2a3a10",
+    color: "#e8f0d0", padding: "10px 14px", borderRadius: 6,
+    fontFamily: "inherit", fontSize: 14, outline: "none", boxSizing: "border-box",
+    transition: "border-color .2s",
+  };
+
+  const labelStyle = {
+    display: "block", fontSize: 11, fontFamily: "'Share Tech Mono', monospace",
+    letterSpacing: ".12em", color: "#7a9a50", marginBottom: 6, textTransform: "uppercase",
+  };
+
+  const steps = [
+    { num: "01", title: "Attend Games", desc: "You must have attended a minimum of 3 game days at a recognised airsoft site within the last 2 years." },
+    { num: "02", title: "Submit Application", desc: "Fill out the UKARA application form below with your details and proof of game attendance." },
+    { num: "03", title: "Admin Review", desc: "Our team reviews your application and verifies your game attendance records." },
+    { num: "04", title: "Receive Your UKARA ID", desc: "Once approved, your UKARA ID is issued and added to your player profile for RIF purchases." },
+  ];
+
+  const faqs = [
+    { q: "What is UKARA?", a: "UKARA (United Kingdom Airsoft Retailers Association) is a registration scheme that provides a defence for purchasing Realistic Imitation Firearms (RIFs) in the UK. Without a valid defence, buying a RIF in the UK is illegal." },
+    { q: "Do I need UKARA to play airsoft?", a: "No — you do not need UKARA to play airsoft. You only need UKARA (or another valid defence) if you wish to purchase a RIF. Two-tone airsoft guns can be bought by anyone." },
+    { q: "How many games do I need to attend?", a: "You must have attended at least 3 game days at a recognised airsoft site within the last 2 years. At Swindon Airsoft, we track your attendance automatically when you check in." },
+    { q: "How long does UKARA registration last?", a: "UKARA registration is valid for 12 months. You must renew annually to maintain your defence. Renewing requires proof of continued participation (at least 3 games in the past 2 years)." },
+    { q: "Is UKARA registration free for VIP members?", a: "Yes — VIP members receive UKARA registration support as part of their membership. Non-VIP players can still apply through this form." },
+  ];
+
+  return (
+    <div>
+      {/* ── Hero ── */}
+      <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#0a0e07 0%,#060806 100%)", borderBottom: "2px solid #2a3a10", padding: "52px 24px 44px", textAlign: "center" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.12) 3px,rgba(0,0,0,.12) 4px)", pointerEvents: "none" }} />
+        <div style={{ position: "relative", maxWidth: 700, margin: "0 auto" }}>
+          <div style={{ display: "inline-block", background: "rgba(200,255,0,.08)", border: "1px solid rgba(200,255,0,.25)", borderRadius: 4, padding: "4px 14px", fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: ".25em", color: "#c8ff00", marginBottom: 20 }}>
+            UK AIRSOFT RETAILERS ASSOCIATION
+          </div>
+          <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 36 : 54, fontWeight: 800, letterSpacing: ".04em", color: "#e8f0d0", margin: "0 0 14px", textTransform: "uppercase", lineHeight: 1 }}>
+            UKARA <span style={{ color: "#c8ff00" }}>Registration</span>
+          </h1>
+          <p style={{ color: "#8aaa60", fontSize: 15, lineHeight: 1.7, maxWidth: 520, margin: "0 auto 28px" }}>
+            Your legal defence for purchasing Realistic Imitation Firearms in the UK. Apply through Swindon Airsoft and we'll handle your UKARA registration.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <a href="#ukara-form" style={{ background: "#c8ff00", color: "#0a0e07", padding: "11px 28px", borderRadius: 6, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: ".1em", textDecoration: "none", textTransform: "uppercase" }}>
+              Apply Now
+            </a>
+            <button onClick={() => setPage("vip")} style={{ background: "transparent", border: "1px solid #2a3a10", color: "#a0c060", padding: "11px 28px", borderRadius: 6, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 600, letterSpacing: ".08em", cursor: "pointer", textTransform: "uppercase" }}>
+              VIP Members →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="page-content" style={{ maxWidth: 860 }}>
+
+        {/* ── What is UKARA ── */}
+        <div style={{ marginBottom: 48 }}>
+          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: ".2em", color: "#c8ff00", marginBottom: 10, textTransform: "uppercase" }}>// WHAT IS UKARA?</div>
+          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 700, color: "#e8f0d0", margin: "0 0 16px", letterSpacing: ".03em" }}>Your Legal Defence for RIF Purchases</h2>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+            <div style={{ background: "#0a0d07", border: "1px solid #1e2a10", borderRadius: 8, padding: "20px 22px" }}>
+              <div style={{ fontSize: 22, marginBottom: 10 }}>🔫</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#c8ff00", marginBottom: 8, letterSpacing: ".06em" }}>WHY YOU NEED IT</div>
+              <p style={{ color: "#8aaa60", fontSize: 13, lineHeight: 1.7, margin: 0 }}>The Violent Crime Reduction Act 2006 made it illegal to purchase a Realistic Imitation Firearm (RIF) without a valid defence. UKARA registration is the most widely recognised defence for airsoft players.</p>
+            </div>
+            <div style={{ background: "#0a0d07", border: "1px solid #1e2a10", borderRadius: 8, padding: "20px 22px" }}>
+              <div style={{ fontSize: 22, marginBottom: 10 }}>✅</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#c8ff00", marginBottom: 8, letterSpacing: ".06em" }}>WHO QUALIFIES</div>
+              <p style={{ color: "#8aaa60", fontSize: 13, lineHeight: 1.7, margin: 0 }}>Any player aged 18+ who has attended at least 3 game days at a recognised airsoft site within the past 2 years. Swindon Airsoft is a fully registered UKARA site.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── How it works ── */}
+        <div style={{ marginBottom: 48 }}>
+          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: ".2em", color: "#c8ff00", marginBottom: 10 }}>// HOW IT WORKS</div>
+          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 700, color: "#e8f0d0", margin: "0 0 24px", letterSpacing: ".03em" }}>Application Process</h2>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12 }}>
+            {steps.map(({ num, title, desc }) => (
+              <div key={num} style={{ background: "#0a0d07", border: "1px solid #1e2a10", borderRadius: 8, padding: "20px 18px", position: "relative" }}>
+                <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 28, fontWeight: 700, color: "rgba(200,255,0,.15)", lineHeight: 1, marginBottom: 8 }}>{num}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#e8f0d0", marginBottom: 8, letterSpacing: ".06em", textTransform: "uppercase" }}>{title}</div>
+                <p style={{ color: "#6a8a45", fontSize: 12, lineHeight: 1.6, margin: 0 }}>{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── FAQ ── */}
+        <div style={{ marginBottom: 52 }}>
+          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: ".2em", color: "#c8ff00", marginBottom: 10 }}>// FAQ</div>
+          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 700, color: "#e8f0d0", margin: "0 0 20px", letterSpacing: ".03em" }}>Common Questions</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {faqs.map(({ q, a }) => (
+              <details key={q} style={{ background: "#0a0d07", border: "1px solid #1e2a10", borderRadius: 8, padding: "16px 20px" }}>
+                <summary style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 600, color: "#c8d8a0", cursor: "pointer", letterSpacing: ".03em", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  {q}
+                  <span style={{ color: "#c8ff00", fontSize: 20, lineHeight: 1 }}>+</span>
+                </summary>
+                <p style={{ color: "#8aaa60", fontSize: 13, lineHeight: 1.7, margin: "12px 0 0", paddingTop: 12, borderTop: "1px solid #1a2a0a" }}>{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Application Form ── */}
+        <div id="ukara-form" style={{ scrollMarginTop: 80 }}>
+          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: ".2em", color: "#c8ff00", marginBottom: 10 }}>// APPLICATION</div>
+          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 700, color: "#e8f0d0", margin: "0 0 6px", letterSpacing: ".03em" }}>Apply for UKARA Registration</h2>
+          <p style={{ color: "#6a8a45", fontSize: 13, marginBottom: 28 }}>Complete the form below. All fields marked * are required. We'll review your application within 3–5 working days.</p>
+
+          {/* Status states */}
+          {checkingExisting && (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#4a6a28", fontFamily: "'Share Tech Mono', monospace", fontSize: 12, letterSpacing: ".1em" }}>CHECKING YOUR APPLICATION STATUS…</div>
+          )}
+
+          {!checkingExisting && existingApp && !submitted && (
+            <div style={{ background: existingApp.status === "approved" ? "rgba(200,255,0,.06)" : "rgba(255,200,0,.05)", border: `1px solid ${existingApp.status === "approved" ? "#2a4a10" : "#3a3010"}`, borderRadius: 10, padding: "28px 32px", textAlign: "center" }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>
+                {existingApp.status === "approved" ? "🎉" : existingApp.status === "rejected" ? "❌" : "⏳"}
+              </div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: existingApp.status === "approved" ? "#c8ff00" : existingApp.status === "rejected" ? "#ff6060" : "#c8c060", letterSpacing: ".08em", marginBottom: 8 }}>
+                {existingApp.status === "approved" ? "APPLICATION APPROVED" : existingApp.status === "rejected" ? "APPLICATION DECLINED" : "APPLICATION PENDING"}
+              </div>
+              <p style={{ color: "#8aaa60", fontSize: 13, margin: 0 }}>
+                {existingApp.status === "approved"
+                  ? "Your UKARA ID has been assigned. Check your player profile to view it."
+                  : existingApp.status === "rejected"
+                  ? "Your application was not approved. Please contact us for more information."
+                  : "Your application is under review. We'll contact you within 3–5 working days."}
+              </p>
+              {existingApp.status === "approved" && (
+                <button onClick={() => setPage("profile")} className="btn btn-primary" style={{ marginTop: 18 }}>View Profile & UKARA ID →</button>
+              )}
+            </div>
+          )}
+
+          {!checkingExisting && cu?.ukara && (
+            <div style={{ background: "rgba(200,255,0,.06)", border: "1px solid #2a4a10", borderRadius: 10, padding: "28px 32px", textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>🎖️</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: "#c8ff00", letterSpacing: ".08em", marginBottom: 6 }}>YOU ALREADY HAVE A UKARA ID</div>
+              <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 13, color: "#e8f0d0", marginBottom: 10, letterSpacing: ".08em" }}>{cu.ukara}</div>
+              <p style={{ color: "#8aaa60", fontSize: 13, margin: 0 }}>Your UKARA ID is active. If you need to renew, please contact us directly.</p>
+            </div>
+          )}
+
+          {!checkingExisting && !existingApp && !cu?.ukara && (submitted ? (
+            <div style={{ background: "rgba(200,255,0,.06)", border: "1px solid #2a4a10", borderRadius: 10, padding: "40px 32px", textAlign: "center" }}>
+              <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 700, color: "#c8ff00", letterSpacing: ".08em", marginBottom: 10 }}>APPLICATION SUBMITTED</div>
+              <p style={{ color: "#8aaa60", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                Thank you! We'll review your application and get back to you at <strong style={{ color: "#c8d8a0" }}>{form.email}</strong> within 3–5 working days.
+              </p>
+              <button onClick={() => setPage("home")} className="btn btn-ghost">← Back to Home</button>
+            </div>
+          ) : (
+            <div style={{ background: "#0a0d07", border: "1px solid #1e2a10", borderRadius: 10, padding: isMobile ? "24px 18px" : "32px 36px", position: "relative" }}>
+              {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+                <div key={v+h} style={cornerStyle(v,h)} />
+              ))}
+
+              {!cu && (
+                <div style={{ background: "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.2)", borderRadius: 8, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <span style={{ color: "#c8d8a0", fontSize: 13 }}>⚠️ You must be logged in to submit an application.</span>
+                  <button onClick={() => setAuthModal("login")} style={{ background: "#c8ff00", color: "#0a0e07", border: "none", padding: "7px 18px", borderRadius: 5, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: ".06em" }}>LOG IN / REGISTER</button>
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 18 }}>
+                <div>
+                  <label style={labelStyle}>Full Name *</label>
+                  <input style={inputStyle} value={form.name} onChange={e => set("name", e.target.value)} placeholder="Your full legal name" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Email Address *</label>
+                  <input style={inputStyle} type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="your@email.com" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Phone Number</label>
+                  <input style={inputStyle} type="tel" value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+44 7xxx xxxxxx" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Date of Birth * (Must be 18+)</label>
+                  <input style={inputStyle} type="date" value={form.dob} onChange={e => set("dob", e.target.value)} onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                </div>
+                <div style={{ gridColumn: isMobile ? undefined : "1 / -1" }}>
+                  <label style={labelStyle}>Home Address *</label>
+                  <textarea style={{ ...inputStyle, resize: "vertical", minHeight: 72 }} value={form.address} onChange={e => set("address", e.target.value)} placeholder="Full home address including postcode" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Games Attended (last 2 years) *</label>
+                  <input style={inputStyle} type="number" min="0" value={form.games_attended} onChange={e => set("games_attended", e.target.value)} placeholder="e.g. 5" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                  <div style={{ fontSize: 11, color: "#4a6a28", marginTop: 5 }}>Minimum 3 games required. We'll verify this against our records.</div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Proof / Additional Notes</label>
+                  <input style={inputStyle} value={form.proof_description} onChange={e => set("proof_description", e.target.value)} placeholder="e.g. Game day receipts, booking refs, other sites..." onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                </div>
+              </div>
+
+              {/* Declaration */}
+              <div style={{ marginTop: 24, background: "#080b06", border: "1px solid #1a2a0a", borderRadius: 8, padding: "18px 20px" }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#c8d8a0", marginBottom: 10, letterSpacing: ".06em" }}>DECLARATION</div>
+                <p style={{ color: "#6a8a45", fontSize: 12, lineHeight: 1.7, marginBottom: 14 }}>
+                  By submitting this application I confirm that: (1) I am 18 years of age or older; (2) I have attended at least 3 airsoft game days within the last 2 years; (3) the information I have provided is truthful and accurate; (4) I understand that providing false information may result in my application being rejected and may constitute a criminal offence under the Violent Crime Reduction Act 2006.
+                </p>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
+                  <input type="checkbox" checked={form.declaration} onChange={e => set("declaration", e.target.checked)} style={{ marginTop: 2, accentColor: "#c8ff00", width: 16, height: 16, flexShrink: 0 }} />
+                  <span style={{ color: "#c8d8a0", fontSize: 13, lineHeight: 1.5 }}>I confirm the above declaration and consent to Swindon Airsoft submitting my details for UKARA registration on my behalf. *</span>
+                </label>
+              </div>
+
+              <div style={{ marginTop: 24, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || !cu}
+                  style={{ background: (!cu || submitting) ? "#1a2a0a" : "#c8ff00", color: (!cu || submitting) ? "#3a5020" : "#0a0e07", border: "none", padding: "12px 32px", borderRadius: 6, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: ".1em", cursor: (!cu || submitting) ? "not-allowed" : "pointer", textTransform: "uppercase", transition: "all .2s" }}
+                >
+                  {submitting ? "SUBMITTING…" : "SUBMIT APPLICATION"}
+                </button>
+                <span style={{ color: "#4a6a28", fontSize: 12 }}>We'll reply within 3–5 working days</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid #1a2a0a" }}>
+          <p style={{ color: "#4a6a28", fontSize: 12, lineHeight: 1.7, textAlign: "center" }}>
+            Questions about UKARA? <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#c8d8a0", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 }}>Contact us</button> or visit <a href="https://www.ukara.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: "#c8d8a0", fontSize: 12 }}>ukara.org.uk</a> for more information.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 function AppInner() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
   // ── Offline detection ─────────────────────────────────────
@@ -6409,7 +5968,7 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","staff","contact","terms","player"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","leaderboard","profile","about","ukara","staff","contact","terms","player"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
@@ -6605,17 +6164,12 @@ function AppInner() {
             // Profile may not exist yet (new signup before confirmation) — try creating it
             try {
               const meta = session.user.user_metadata || {};
-              const newName = meta.name || session.user.email?.split('@')[0] || 'Player';
               await supabase.from('profiles').insert({
-                id: session.user.id, name: newName,
+                id: session.user.id, name: meta.name || session.user.email?.split('@')[0] || 'Player',
                 phone: meta.phone || '', role: 'player', games_attended: 0,
               }).select().single();
               const profile2 = await api.profiles.getById(session.user.id);
-              if (profile2) {
-                setCu(normaliseProfile(profile2));
-                // Send welcome email to new players
-                sendWelcomeEmail({ name: newName, email: session.user.email }).catch(() => {});
-              }
+              if (profile2) setCu(normaliseProfile(profile2));
             } catch { /* profile creation failed — keep existing cu state */ }
           }
         } catch { /* profile fetch failed — keep existing cu state, don't log out */ }
@@ -6644,43 +6198,7 @@ function AppInner() {
       setCu(prev => prev ? { ...prev, ...patch } : prev);
       refreshCu().catch(() => {});
     }
-    // Fire VIP activation email when admin sets a player to active
-    if (patch.vipStatus === "active" || patch.vip_status === "active") {
-      try {
-        const target = data?.users?.find(u => u.id === id);
-        if (target?.email) {
-          sendEmail({
-            toEmail: target.email,
-            toName:  target.name || "Operative",
-            subject: "⭐ Your Swindon Airsoft VIP Membership is Active!",
-            htmlContent: `
-              <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px;border:1px solid #2a2a2a">
-                <div style="text-align:center;margin-bottom:28px">
-                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">
-                    SWINDON <span style="color:#c8ff00">AIRSOFT</span>
-                  </div>
-                  <div style="font-size:11px;letter-spacing:.2em;color:#c8a000;margin-top:4px;text-transform:uppercase">⭐ Elite Operative Status</div>
-                </div>
-                <div style="background:linear-gradient(135deg,#0c1009,#111a06);border:1px solid #2a3a10;border-left:3px solid #c8a000;border-radius:6px;padding:24px;text-align:center;margin-bottom:24px">
-                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:36px;letter-spacing:.15em;color:#c8a000;text-transform:uppercase;margin-bottom:8px">VIP ACTIVATED</div>
-                  <div style="font-size:13px;color:#aaa;line-height:1.7">Welcome to the elite, <strong style="color:#fff">${target.name || "Operative"}</strong>. Your VIP membership is now live.</div>
-                </div>
-                <div style="margin-bottom:20px">
-                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.15em;color:#c8ff00;text-transform:uppercase;margin-bottom:12px">YOUR BENEFITS</div>
-                  ${["10% discount on all game day bookings","10% discount at Airsoft Armoury UK","Free game day on your birthday","Access to VIP-only events","Priority booking for special events","VIP badge on your player profile"].map(b =>
-                    `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #1a2808;font-size:13px;color:#8aaa50"><span style="color:#c8a000;font-size:10px">★</span>${b}</div>`
-                  ).join("")}
-                </div>
-                <div style="text-align:center;margin-top:24px">
-                  <a href="${window.location.origin}${window.location.pathname}#profile/vip" style="display:inline-block;background:#c8a000;color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.2em;text-transform:uppercase;padding:12px 28px;text-decoration:none">VIEW MY VIP STATUS →</a>
-                </div>
-              </div>
-            `,
-          }).catch(() => {});
-        }
-      } catch {}
-    }
-  }, [updateUser, cu, refreshCu, data]);
+  }, [updateUser, cu, refreshCu]);
 
   const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
 
@@ -6788,8 +6306,6 @@ function AppInner() {
     );
   }
 
-  if (!data) return null;
-
   // ── Geo-block screens ─────────────────────────────────────
   if (geoStatus === "checking") {
     return (
@@ -6874,7 +6390,7 @@ function AppInner() {
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} />
 
       <div className="pub-page-wrap">
-        {page === "home"        && <HomePage data={data} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; }} />}
+        {page === "home"        && <HomePage data={data} setPage={setPage} />}
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />
@@ -6886,7 +6402,6 @@ function AppInner() {
             cart={shopCart} setCart={setShopCart}
             cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
             onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); }}
-            setPage={setPage}
           />
         )}
         {page === "shop" && !data.shopClosed && selectedProduct && (
@@ -6919,12 +6434,12 @@ function AppInner() {
         {page === "marshal"     && !cu?.canMarshal && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Access denied.</div>}
         {page === "gallery"     && <GalleryPage data={data} />}
         {page === "qa"          && <QAPage data={data} />}
-        {page === "gift-vouchers" && <GiftVoucherPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
         {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
         {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
         {page === "about"       && <AboutPage setPage={setPage} />}
+        {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "staff"       && <StaffPage staff={data.staff || []} />}
         {page === "contact"     && <ContactPage data={data} cu={cu} showToast={showToast} />}
         {page === "terms"       && <TermsPage setPage={setPage} />}
@@ -6966,7 +6481,6 @@ function AppInner() {
               {[
                 ["Upcoming Events", "events"],
                 ["Shop", "shop"],
-                ["Gift Vouchers", "gift-vouchers"],
                 ["VIP Membership", "vip"],
                 ["Gallery", "gallery"],
                 ["Meet the Staff", "staff"],
@@ -6982,6 +6496,7 @@ function AppInner() {
                 ["Sign Waiver", "profile"],
                 ["Site Rules", "qa"],
                 ["FAQ", "qa"],
+                ["UKARA Registration", "ukara"],
                 ["Terms & Privacy", "terms"],
               ].map(([label, pg]) => (
                 <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
