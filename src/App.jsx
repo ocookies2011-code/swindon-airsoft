@@ -1072,6 +1072,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               )}
               </>
             )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1106,32 +1108,29 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>📍 {ev.location}</div>
                 <div style={{ fontSize:12, color:"var(--muted)" }}>{fmtDate(ev.date)} · {ev.time}{ev.endTime ? `–${ev.endTime}` : ""} GMT</div>
               </div>
-              <a href={(() => {
-  // Extract exact coordinates from the map embed (most precise)
-  if (ev.mapEmbed) {
-    const srcMatch = ev.mapEmbed.match(/src="([^"]+)"/);
-    if (srcMatch) {
-      const embedUrl = decodeURIComponent(srcMatch[1]);
-      // Google Maps embed pb= format: !2d<longitude>!3d<latitude>
-      const coordMatch = embedUrl.match(/!2d(-?\d+\.\d+)!3d(-?\d+\.\d+)/);
-      if (coordMatch) {
-        return `https://www.google.com/maps/dir/?api=1&destination=${coordMatch[2]},${coordMatch[1]}`;
-      }
-      // q= param (place name or coords)
-      const qMatch = embedUrl.match(/[?&]q=([^&]+)/);
-      if (qMatch) {
-        return `https://www.google.com/maps/dir/?api=1&destination=${qMatch[1]}`;
-      }
-    }
-  }
-  // Fall back to location text field
-  if (ev.location && ev.location.trim()) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location.trim())}`;
-  }
-  return `https://www.google.com/maps/search/Swindon+Airsoft+Field`;
-})()} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
-  <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
-</a>
+              {(() => {
+                let directionsHref = `https://www.google.com/maps/search/Swindon+Airsoft+Field`;
+                if (ev.mapEmbed) {
+                  const srcMatch = ev.mapEmbed.match(/src="([^"]+)"/);
+                  if (srcMatch) {
+                    const embedUrl = decodeURIComponent(srcMatch[1]);
+                    const coordMatch = embedUrl.match(/!2d(-?\d+\.\d+)!3d(-?\d+\.\d+)/);
+                    if (coordMatch) {
+                      directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${coordMatch[2]},${coordMatch[1]}`;
+                    } else {
+                      const qMatch = embedUrl.match(/[?&]q=([^&]+)/);
+                      if (qMatch) directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${qMatch[1]}`;
+                    }
+                  }
+                } else if (ev.location && ev.location.trim()) {
+                  directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ev.location.trim())}`;
+                }
+                return (
+                  <a href={directionsHref} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+                    <button className="btn btn-primary" style={{ padding:"9px 20px", fontSize:13 }}>🗺️ Get Directions</button>
+                  </a>
+                );
+              })()}
             </div>
           </div>
         )}
