@@ -1600,3 +1600,117 @@ export const holdApi = {
       .eq('ticket_type', ticketType);
   },
 };
+
+// ── UKARA Applications ─────────────────────────────────────────
+export const ukaraApplications = wrapWithTimeout({
+  async getAll() {
+    const { data, error } = await supabase
+      .from('ukara_applications')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getByUser(userId) {
+    const { data, error } = await supabase
+      .from('ukara_applications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  async insert(app) {
+    const { data, error } = await supabase
+      .from('ukara_applications')
+      .insert(app)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id, patch) {
+    const { error } = await supabase
+      .from('ukara_applications')
+      .update(patch)
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async approve(id, ukaraId) {
+    const now = new Date();
+    const expiresAt = new Date(now);
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    const { data, error } = await supabase
+      .from('ukara_applications')
+      .update({
+        status: 'approved',
+        ukara_id: ukaraId,
+        approved_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        renewal_requested: false,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async decline(id, adminNotes) {
+    const { error } = await supabase
+      .from('ukara_applications')
+      .update({ status: 'declined', admin_notes: adminNotes || '' })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async requestRenewal(id) {
+    const { error } = await supabase
+      .from('ukara_applications')
+      .update({ renewal_requested: true })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async processRenewal(id, squarePaymentId) {
+    const now = new Date();
+    const expiresAt = new Date(now);
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    const { error } = await supabase
+      .from('ukara_applications')
+      .update({
+        renewal_requested: false,
+        renewal_paid_at: now.toISOString(),
+        approved_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        status: 'approved',
+        renewal_square_payment_id: squarePaymentId || null,
+      })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async uploadGovId(userId, appId, file) {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `ukara/${appId}/gov_id_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('images').upload(path, file, { upsert: false });
+    if (error) throw new Error(error.message);
+    const { data } = supabase.storage.from('images').getPublicUrl(path);
+    return data.publicUrl;
+  },
+
+  async uploadFacePhoto(userId, appId, file) {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `ukara/${appId}/face_photo_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('images').upload(path, file, { upsert: false });
+    if (error) throw new Error(error.message);
+    const { data } = supabase.storage.from('images').getPublicUrl(path);
+    return data.publicUrl;
+  },
+});

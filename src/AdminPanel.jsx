@@ -899,7 +899,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","cash","purchase-orders","discount-codes","gift-vouchers","settings","audit-log","cheat-reports"];
+      "contact-admin","messages","cash","purchase-orders","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -939,6 +939,15 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
+  const [pendingUkara, setPendingUkara] = React.useState(0);
+  React.useEffect(() => {
+    const fetch = () => supabase.from("ukara_applications").select("id", { count: "exact", head: true }).eq("status", "pending")
+      .then(({ count }) => setPendingUkara(count || 0)).catch(() => {});
+    fetch();
+    const iv = setInterval(fetch, 120000);
+    return () => clearInterval(iv);
+  }, []);
+
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
   const _now = new Date();
   const _activeEvts = data.events.filter(e => e.published && new Date(e.date + "T" + (e.endTime || e.time || "23:59") + ":00") > _now);
@@ -954,6 +963,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "events",            label: "Events & Bookings", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "players",           label: "Players",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>, badge: pendingVip > 0 ? pendingVip : (deleteReqs > 0 ? deleteReqs : null), badgeColor: pendingVip > 0 ? "gold" : "", group: "OPERATIONS" },
     { id: "cheat-reports",     label: "Cheat Reports",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, badge: pendingReports || null, badgeColor: "red", group: "OPERATIONS" },
+    { id: "ukara-admin",       label: "UKARA",             icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, badge: pendingUkara || null, badgeColor: "purple", group: "OPERATIONS" },
     { id: "staff-admin",       label: "Staff",             icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, group: "OPERATIONS" },
 
     // ── COMMERCE ─────────────────────────────────────────
@@ -1055,6 +1065,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "gift-vouchers" && <AdminGiftVouchers showToast={showToast} cu={cu} />}
           {section === "settings" && <AdminSettings showToast={showToast} cu={cu} />}
           {section === "audit-log" && isSuperAdmin && <AdminAuditLog />}
+          {section === "ukara-admin" && <AdminUkaraApplications showToast={showToast} cu={cu} />}
         </div>
       </div>
     </div>
@@ -1067,6 +1078,15 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
   const revenue = allBookings.filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
   const checkins = allBookings.filter(b => b.checkedIn).length;
   const players = data.users.filter(u => u.role === "player").length;
+  const [pendingUkara, setPendingUkara] = React.useState(0);
+  React.useEffect(() => {
+    const fetch = () => supabase.from("ukara_applications").select("id", { count: "exact", head: true }).eq("status", "pending")
+      .then(({ count }) => setPendingUkara(count || 0)).catch(() => {});
+    fetch();
+    const iv = setInterval(fetch, 120000);
+    return () => clearInterval(iv);
+  }, []);
+
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
   const activeEvents = data.events.filter(e => e.published && new Date(e.date) >= new Date()).length;
   const pendingWaivers = data.users.filter(u => u.waiverPending).length;
@@ -10870,6 +10890,333 @@ function TermsPage({ setPage }) {
 // ─────────────────────────────────────────────────────────────
 // Exports
 // ─────────────────────────────────────────────────────────────
+
+// ── Admin UKARA Applications ───────────────────────────────────
+function AdminUkaraApplications({ showToast, cu }) {
+  const [apps, setApps] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [tab, setTab] = React.useState("pending"); // "pending" | "approved"
+  const [search, setSearch] = React.useState("");
+  const [selected, setSelected] = React.useState(null);
+  const [approveModal, setApproveModal] = React.useState(null);
+  const [ukaraIdInput, setUkaraIdInput] = React.useState("");
+  const [declineModal, setDeclineModal] = React.useState(null);
+  const [declineReason, setDeclineReason] = React.useState("");
+  const [actioning, setActioning] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const all = await api.ukaraApplications.getAll();
+      setApps(all);
+    } catch (e) {
+      showToast("Failed to load applications: " + e.message, "red");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const genUkaraId = () =>
+    `UKARA-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+
+  const openApprove = (app) => {
+    setApproveModal(app);
+    setUkaraIdInput(genUkaraId());
+  };
+
+  const handleApprove = async () => {
+    if (!ukaraIdInput.trim()) { showToast("Enter a UKARA ID", "red"); return; }
+    setActioning(true);
+    try {
+      const updated = await api.ukaraApplications.approve(approveModal.id, ukaraIdInput.trim());
+      // Write UKARA ID to player profile too
+      if (approveModal.user_id) {
+        await api.profiles.update(approveModal.user_id, { ukara: ukaraIdInput.trim() });
+      }
+      // Send decision email
+      try {
+        const { sendUkaraDecisionEmail } = await import("./utils");
+        const adminEmail = await api.settings.get("contact_email").catch(() => null);
+        await sendUkaraDecisionEmail({ toEmail: approveModal.email, toName: approveModal.name, approved: true, ukaraId: ukaraIdInput.trim() });
+      } catch {}
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "UKARA approved", detail: `${approveModal.name} — ID: ${ukaraIdInput.trim()}` });
+      showToast(`✅ UKARA approved for ${approveModal.name} — ID: ${ukaraIdInput.trim()}`);
+      setApproveModal(null);
+      setSelected(null);
+      load();
+    } catch (e) {
+      showToast("Approval failed: " + e.message, "red");
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setActioning(true);
+    try {
+      await api.ukaraApplications.decline(declineModal.id, declineReason.trim());
+      try {
+        const { sendUkaraDecisionEmail } = await import("./utils");
+        await sendUkaraDecisionEmail({ toEmail: declineModal.email, toName: declineModal.name, approved: false, declineReason: declineReason.trim() });
+      } catch {}
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "UKARA declined", detail: `${declineModal.name} — Reason: ${declineReason}` });
+      showToast(`Application declined for ${declineModal.name}`);
+      setDeclineModal(null);
+      setDeclineReason("");
+      setSelected(null);
+      load();
+    } catch (e) {
+      showToast("Decline failed: " + e.message, "red");
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const filtered = apps.filter(a => {
+    const inTab = tab === "pending"
+      ? (a.status === "pending" || a.status === "declined")
+      : a.status === "approved";
+    if (!inTab) return false;
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (a.name || "").toLowerCase().includes(q) ||
+      (a.email || "").toLowerCase().includes(q) ||
+      (a.address || "").toLowerCase().includes(q) ||
+      (a.ukara_id || "").toLowerCase().includes(q)
+    );
+  });
+
+  const fmtDate = d => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
+
+  const statusChip = (s) => {
+    const map = {
+      pending:  { label: "PENDING",  bg: "rgba(255,183,77,.15)", color: "#ffb74d", border: "#3a2800" },
+      approved: { label: "APPROVED", bg: "rgba(200,255,0,.1)",   color: "#c8ff00", border: "#2a4a10" },
+      declined: { label: "DECLINED", bg: "rgba(220,50,50,.12)",  color: "#ff6060", border: "#5a1a1a" },
+    };
+    const c = map[s] || map.pending;
+    return (
+      <span style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}`, borderRadius: 4, padding: "2px 10px", fontSize: 10, fontWeight: 900, letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif" }}>
+        {c.label}
+      </span>
+    );
+  };
+
+  const tdS = { padding: "10px 14px", borderBottom: "1px solid #1a2808", fontSize: 13, color: "#ccc", verticalAlign: "middle" };
+  const thS = { ...tdS, color: "#3a5010", fontSize: 10, fontWeight: 700, letterSpacing: ".18em", textTransform: "uppercase", background: "#0a0f06" };
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 900, color: "#e8f0d0", letterSpacing: ".04em" }}>UKARA APPLICATIONS</div>
+          <div style={{ fontSize: 12, color: "#4a6a28" }}>Manage player UKARA registration applications</div>
+        </div>
+        <button className="btn btn-sm" onClick={load} style={{ fontSize: 12 }}>↻ Refresh</button>
+      </div>
+
+      {/* Tabs */}
+      <div className="nav-tabs" style={{ marginBottom: 16 }}>
+        <button className={`nav-tab ${tab === "pending" ? "active" : ""}`} onClick={() => setTab("pending")}>
+          ⏳ Pending {apps.filter(a => a.status === "pending").length > 0 && <span style={{ background: "#ffb74d", color: "#0a0e07", borderRadius: 10, padding: "1px 7px", fontSize: 10, fontWeight: 900, marginLeft: 6 }}>{apps.filter(a => a.status === "pending").length}</span>}
+        </button>
+        <button className={`nav-tab ${tab === "approved" ? "active" : ""}`} onClick={() => setTab("approved")}>
+          ✅ Approved ({apps.filter(a => a.status === "approved").length})
+        </button>
+      </div>
+
+      {/* Search (approved tab only) */}
+      {tab === "approved" && (
+        <div style={{ marginBottom: 16 }}>
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, postcode or UKARA ID…"
+            style={{ width: "100%", maxWidth: 420, background: "#0a0d07", border: "1px solid #2a3a10", color: "#e8f0d0", padding: "9px 14px", borderRadius: 6, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ padding: 40, textAlign: "center", color: "#3a5010" }}>Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ padding: 40, textAlign: "center", color: "#3a5010", fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>
+          {tab === "pending" ? "// NO PENDING APPLICATIONS" : "// NO APPROVED APPLICATIONS"}
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "#0a0d07", border: "1px solid #1a2808" }}>
+            <thead>
+              <tr>
+                <th style={thS}>Name</th>
+                <th style={thS}>Email</th>
+                <th style={{ ...thS, display: tab === "approved" ? "table-cell" : "none" }}>UKARA ID</th>
+                <th style={thS}>Address</th>
+                <th style={thS}>Games</th>
+                <th style={thS}>Submitted</th>
+                <th style={{ ...thS, display: tab === "approved" ? "table-cell" : "none" }}>Expires</th>
+                <th style={thS}>Status</th>
+                <th style={thS}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(app => (
+                <tr key={app.id} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background="#0d1209"} onMouseLeave={e => e.currentTarget.style.background=""}>
+                  <td style={tdS}><strong style={{ color: "#e8f0d0" }}>{app.name}</strong></td>
+                  <td style={tdS}>{app.email}</td>
+                  <td style={{ ...tdS, display: tab === "approved" ? "table-cell" : "none", fontFamily: "monospace", color: "#c8ff00", fontWeight: 700 }}>{app.ukara_id || "—"}</td>
+                  <td style={{ ...tdS, fontSize: 12, color: "#7a9a60", maxWidth: 180 }}>{app.address || "—"}</td>
+                  <td style={{ ...tdS, textAlign: "center", color: (app.games_attended || 0) >= 3 ? "#c8ff00" : "#ff6060", fontWeight: 700 }}>{app.games_attended ?? "—"}</td>
+                  <td style={{ ...tdS, fontSize: 12 }}>{fmtDate(app.created_at)}</td>
+                  <td style={{ ...tdS, display: tab === "approved" ? "table-cell" : "none", fontSize: 12, color: app.expires_at && new Date(app.expires_at) < new Date() ? "#ff6060" : "#8aaa60" }}>{fmtDate(app.expires_at)}</td>
+                  <td style={tdS}>{statusChip(app.status)}</td>
+                  <td style={tdS}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setSelected(app)}>👁 View</button>
+                      {app.status === "pending" && (
+                        <>
+                          <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "#c8ff00" }} onClick={() => openApprove(app)}>✓ Approve</button>
+                          <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060" }} onClick={() => { setDeclineModal(app); setDeclineReason(""); }}>✗ Decline</button>
+                        </>
+                      )}
+                      {app.renewal_requested && app.status === "approved" && (
+                        <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selected && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSelected(null)}>
+          <div style={{ background: "#0d1209", border: "1px solid #2a3a10", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 680, width: "100%", maxHeight: "90vh", overflowY: "auto", position: "relative" }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelected(null)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#4a6a28", fontSize: 18, cursor: "pointer" }}>✕</button>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 22, fontWeight: 900, color: "#e8f0d0", marginBottom: 4 }}>{selected.name}</div>
+            <div style={{ marginBottom: 20 }}>{statusChip(selected.status)}</div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+              {[
+                ["Full Name", selected.name],
+                ["Email", selected.email],
+                ["Phone", selected.phone || "—"],
+                ["Date of Birth", selected.dob || "—"],
+                ["Address", selected.address || "—"],
+                ["Games at Swindon", selected.games_attended ?? "—"],
+                ["Submitted", fmtDate(selected.created_at)],
+                ["UKARA ID", selected.ukara_id || "—"],
+                ["Approved", fmtDate(selected.approved_at)],
+                ["Expires", fmtDate(selected.expires_at)],
+              ].map(([label, val]) => (
+                <div key={label} style={{ background: "#0a0d07", border: "1px solid #1a2808", borderRadius: 6, padding: "10px 14px" }}>
+                  <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 3 }}>{label.toUpperCase()}</div>
+                  <div style={{ fontSize: 13, color: "#c8d8a0", wordBreak: "break-word" }}>{val}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Government ID */}
+            {selected.gov_id_url && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 8 }}>GOVERNMENT ID</div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {selected.gov_id_url.toLowerCase().endsWith(".pdf") ? (
+                    <a href={selected.gov_id_url} target="_blank" rel="noopener noreferrer" style={{ background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#c8ff00", padding: "8px 16px", borderRadius: 6, fontSize: 12, textDecoration: "none" }}>📄 View PDF</a>
+                  ) : (
+                    <a href={selected.gov_id_url} target="_blank" rel="noopener noreferrer">
+                      <img src={selected.gov_id_url} alt="Government ID" style={{ maxHeight: 180, maxWidth: "100%", borderRadius: 6, border: "1px solid #2a3a10", cursor: "pointer" }} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Face Photo */}
+            {selected.face_photo_url && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 8 }}>FACE PHOTO</div>
+                <a href={selected.face_photo_url} target="_blank" rel="noopener noreferrer">
+                  <img src={selected.face_photo_url} alt="Face photo" style={{ maxHeight: 200, maxWidth: "100%", borderRadius: 6, border: "1px solid #2a3a10", cursor: "pointer" }} />
+                </a>
+              </div>
+            )}
+
+            {selected.admin_notes && (
+              <div style={{ background: "rgba(220,50,50,.06)", border: "1px solid #5a1a1a", borderRadius: 6, padding: "12px 14px", marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: "#8a4040", letterSpacing: ".12em", marginBottom: 4 }}>DECLINE REASON</div>
+                <div style={{ fontSize: 13, color: "#ff8080" }}>{selected.admin_notes}</div>
+              </div>
+            )}
+
+            {selected.status === "pending" && (
+              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <button className="btn" style={{ background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "#c8ff00", flex: 1 }} onClick={() => { setSelected(null); openApprove(selected); }}>✓ Approve</button>
+                <button className="btn" style={{ background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060", flex: 1 }} onClick={() => { setSelected(null); setDeclineModal(selected); setDeclineReason(""); }}>✗ Decline</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Approve Modal */}
+      {approveModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setApproveModal(null)}>
+          <div style={{ background: "#0d1209", border: "1px solid #2a4a10", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 440, width: "100%" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#c8ff00", marginBottom: 4 }}>APPROVE APPLICATION</div>
+            <div style={{ color: "#6a8a50", fontSize: 13, marginBottom: 20 }}>{approveModal.name} · {approveModal.email}</div>
+            <label style={{ display: "block", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#4a6a28", marginBottom: 6 }}>UKARA ID</label>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              <input
+                value={ukaraIdInput}
+                onChange={e => setUkaraIdInput(e.target.value)}
+                style={{ flex: 1, background: "#0a0d07", border: "1px solid #2a3a10", color: "#c8ff00", padding: "10px 14px", borderRadius: 6, fontSize: 14, fontFamily: "monospace", outline: "none", letterSpacing: ".08em" }}
+              />
+              <button onClick={() => setUkaraIdInput(genUkaraId())} style={{ background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#4a6a28", padding: "8px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>↻</button>
+            </div>
+            <div style={{ fontSize: 12, color: "#3a5010", marginBottom: 20, lineHeight: 1.6 }}>
+              This ID will be saved to the player's profile. They'll receive an email with their UKARA ID and the £5 fee will be charged on their next renewal.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={handleApprove} disabled={actioning} className="btn btn-primary" style={{ flex: 1 }}>{actioning ? "⏳ Approving…" : "✓ Confirm Approval"}</button>
+              <button onClick={() => setApproveModal(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Modal */}
+      {declineModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setDeclineModal(null)}>
+          <div style={{ background: "#0d0909", border: "1px solid #5a1a1a", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 440, width: "100%" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#ff6060", marginBottom: 4 }}>DECLINE APPLICATION</div>
+            <div style={{ color: "#7a5050", fontSize: 13, marginBottom: 20 }}>{declineModal.name} · {declineModal.email}</div>
+            <label style={{ display: "block", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#8a4040", marginBottom: 6 }}>REASON (shown to player)</label>
+            <textarea
+              value={declineReason}
+              onChange={e => setDeclineReason(e.target.value)}
+              placeholder="e.g. Insufficient games attended, ID could not be verified…"
+              rows={3}
+              style={{ width: "100%", background: "#0a0505", border: "1px solid #5a1a1a", color: "#ff8080", padding: "10px 14px", borderRadius: 6, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+            />
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button onClick={handleDecline} disabled={actioning} style={{ flex: 1, background: "rgba(220,50,50,.18)", border: "1px solid rgba(220,50,50,.4)", color: "#ff6060", padding: "10px", borderRadius: 6, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                {actioning ? "⏳ Declining…" : "✗ Confirm Decline"}
+              </button>
+              <button onClick={() => setDeclineModal(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export {
   AdminPanel,
   AboutPage,
