@@ -18,7 +18,7 @@ import {
   sendEmail, sendTicketEmail, sendEventReminderEmail,
   sendAdminBookingNotification,
   sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
-  sendReturnDecisionEmail,
+  sendReturnDecisionEmail, sendUkaraDecisionEmail, sendAdminUkaraNotification,
   WaiverModal,
   RankInsignia, DesignationInsignia, resetSquareConfig,
 } from "./utils";

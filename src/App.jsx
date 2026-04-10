@@ -7048,12 +7048,6 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const [renewalPaying, setRenewalPaying] = useState(false);
   const [renewalRequesting, setRenewalRequesting] = useState(false);
 
-  const adminEmailRef = useRef(null);
-
-  useEffect(() => {
-    api.settings.get("contact_email").then(e => { adminEmailRef.current = e; }).catch(() => {});
-  }, []);
-
   useEffect(() => {
     if (cu) {
       setForm(f => ({
@@ -7132,11 +7126,11 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
       await api.ukaraApplications.update(app.id, { gov_id_url: govIdUrl, face_photo_url: faceUrl });
 
       // Notify admin
-      if (adminEmailRef.current) {
-        import("./utils").then(({ sendAdminUkaraNotification }) => {
-          sendAdminUkaraNotification({ adminEmail: adminEmailRef.current, app: { ...app, gov_id_url: govIdUrl, face_photo_url: faceUrl } }).catch(() => {});
-        }).catch(() => {});
-      }
+      api.settings.get("contact_email").then(adminEmail => {
+        if (adminEmail) {
+          sendAdminUkaraNotification({ adminEmail, app: { ...app, gov_id_url: govIdUrl, face_photo_url: faceUrl } }).catch(() => {});
+        }
+      }).catch(() => {});
 
       setExistingApp({ ...app, gov_id_url: govIdUrl, face_photo_url: faceUrl });
       setSubmitted(true);
@@ -7167,11 +7161,11 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
     try {
       await api.ukaraApplications.processRenewal(existingApp.id, squarePayment.id);
       // Notify admin
-      if (adminEmailRef.current) {
-        import("./utils").then(({ sendAdminUkaraNotification }) => {
-          sendAdminUkaraNotification({ adminEmail: adminEmailRef.current, app: existingApp, isRenewal: true }).catch(() => {});
-        }).catch(() => {});
-      }
+      api.settings.get("contact_email").then(adminEmail => {
+        if (adminEmail) {
+          sendAdminUkaraNotification({ adminEmail, app: existingApp, isRenewal: true }).catch(() => {});
+        }
+      }).catch(() => {});
       const updated = await api.ukaraApplications.getByUser(cu.id);
       setExistingApp(updated);
       showToast("✅ Renewal payment received! Your UKARA is now active for another year.");
