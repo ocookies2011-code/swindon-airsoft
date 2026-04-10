@@ -3526,11 +3526,11 @@ async function sendUkaraDecisionEmail({ toEmail, toName, approved, rejectionReas
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
       <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">&#128737; UKARA REGISTRATION</div>
     </div>
-    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:24px 24px;">
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:24px;">
       <div style="background:#0d1f0a;border:1px solid #c8ff00;padding:20px 24px;margin-bottom:20px;text-align:center;">
         <div style="font-size:32px;margin-bottom:8px;">&#10003;</div>
         <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.08em;text-transform:uppercase;">UKARA Application Approved</div>
-        <div style="font-size:13px;color:#8aaa60;margin-top:8px;letter-spacing:.04em;">Your registration has been confirmed</div>
+        <div style="font-size:13px;color:#8aaa60;margin-top:8px;">Your registration has been confirmed</div>
       </div>
       <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin:0 0 20px;">Hi ${toName || "Operative"},</p>
       <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin:0 0 20px;">
@@ -3550,7 +3550,7 @@ async function sendUkaraDecisionEmail({ toEmail, toName, approved, rejectionReas
           &#9654; Questions? Reply to this email or contact us through the website.
         </p>
       </div>
-      <div style="text-align:center;margin-top:8px;">
+      <div style="text-align:center;">
         <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK YOUR NEXT GAME &rarr;</a>
       </div>
     </div>
@@ -3566,7 +3566,7 @@ async function sendUkaraDecisionEmail({ toEmail, toName, approved, rejectionReas
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
       <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">&#128737; UKARA UPDATE</div>
     </div>
-    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:24px 24px;">
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:24px;">
       <div style="background:#1a0808;border:1px solid #3a1010;padding:20px 24px;margin-bottom:20px;text-align:center;">
         <div style="font-size:32px;margin-bottom:8px;">&#10007;</div>
         <div style="font-size:22px;font-weight:900;color:#ff6b6b;letter-spacing:.08em;text-transform:uppercase;">Application Not Approved</div>
@@ -3604,11 +3604,11 @@ async function sendUkaraRevokedEmail({ toEmail, toName, reason }) {
       <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="180" style="display:block;margin:0 auto 10px;height:auto;" />
       <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">&#128737; UKARA REGISTRATION</div>
     </div>
-    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:24px 24px;">
+    <div style="background:#0a1005;border:1px solid #1a2808;border-top:none;padding:24px;">
       <div style="background:#1a0808;border:1px solid #3a1010;padding:20px 24px;margin-bottom:20px;text-align:center;">
         <div style="font-size:32px;margin-bottom:8px;">&#9888;</div>
         <div style="font-size:22px;font-weight:900;color:#ff6b6b;letter-spacing:.08em;text-transform:uppercase;">UKARA Registration Revoked</div>
-        <div style="font-size:13px;color:#8a6060;margin-top:8px;letter-spacing:.04em;">Your UKARA registration has been removed from your account</div>
+        <div style="font-size:13px;color:#8a6060;margin-top:8px;">Your UKARA registration has been removed from your account</div>
       </div>
       <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin:0 0 20px;">Hi ${toName || "Operative"},</p>
       <p style="font-size:14px;color:#8aaa60;line-height:1.8;margin:0 0 20px;">
@@ -3631,7 +3631,7 @@ async function sendUkaraRevokedEmail({ toEmail, toName, reason }) {
         If you have any questions or would like to re-apply once you meet the eligibility criteria,
         please reply to this email or <a href="https://swindon-airsoft.com/#contact" style="color:#c8ff00;">contact us through the website</a>.
       </div>
-      <div style="text-align:center;margin-top:8px;">
+      <div style="text-align:center;">
         <a href="https://swindon-airsoft.com/#events" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:13px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:14px 36px;text-decoration:none;">BOOK A GAME DAY &rarr;</a>
       </div>
     </div>

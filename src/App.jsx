@@ -6980,10 +6980,11 @@ function AppInner() {
             <div>
               <div className="pub-footer-col-title">INFORMATION</div>
               {[
-                ["Sign Waiver", "profile"],
-                ["Site Rules", "qa"],
-                ["FAQ", "qa"],
-                ["Terms & Privacy", "terms"],
+                ["Sign Waiver",        "profile"],
+                ["UKARA Registration", "ukara"],
+                ["Site Rules",         "qa"],
+                ["FAQ",                "qa"],
+                ["Terms & Privacy",    "terms"],
               ].map(([label, pg]) => (
                 <button key={label} className="pub-footer-link" onClick={() => setPage(pg)}>{label}</button>
               ))}
@@ -7029,12 +7030,20 @@ export default function App() {
 function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const isMobile = useMobile(640);
 
+  // Build full address string from waiverData if available
+  const waiverAddress = (() => {
+    const w = cu?.waiverData;
+    if (!w) return "";
+    return [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country]
+      .filter(Boolean).join("\n");
+  })();
+
   const [form, setForm] = useState({
-    name: cu?.name || "",
-    email: cu?.email || "",
-    phone: cu?.phone || "",
-    dob: "",
-    address: "",
+    name:        cu?.waiverData?.name  || cu?.name  || "",
+    email:       cu?.email             || "",
+    phone:       cu?.waiverData?.phone || cu?.phone || "",
+    dob:         cu?.waiverData?.dob   || "",
+    address:     waiverAddress,
     declaration: false,
   });
   const [govIdFile, setGovIdFile]         = useState(null);
@@ -7046,17 +7055,23 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const [existingApp, setExistingApp]     = useState(null);
   const [checkingExisting, setCheckingExisting] = useState(!!cu);
   const [renewalPaying, setRenewalPaying] = useState(false);
+  const [useSubscription, setUseSubscription] = useState(false);
   // "idle" | "details" | "payment"  — steps in the application flow
   const [appStep, setAppStep]             = useState("details");
   const [squarePayment, setSquarePayment] = useState(null);
 
   useEffect(() => {
     if (cu) {
+      // Re-fill from waiver if user logs in after page load
+      const w = cu.waiverData;
+      const addr = w ? [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country].filter(Boolean).join("\n") : "";
       setForm(f => ({
         ...f,
-        name:  cu.name  || f.name,
-        email: cu.email || f.email,
-        phone: cu.phone || f.phone,
+        name:    w?.name  || cu.name  || f.name,
+        email:   cu.email || f.email,
+        phone:   w?.phone || cu.phone || f.phone,
+        dob:     w?.dob   || f.dob,
+        address: addr      || f.address,
       }));
       api.ukaraApplications.getByUser(cu.id)
         .then(app => { setExistingApp(app); setCheckingExisting(false); })
@@ -7175,7 +7190,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const expiresSoon  = countdown && !countdown.expired && countdown.days <= 60;
 
   const steps = [
-    { num: "01", title: "Attend 3 Games",   desc: "At least 3 game days at Swindon Airsoft within the last 2 years." },
+    { num: "01", title: "Attend 3 Games",   desc: "At least 3 game days at Swindon Airsoft within the past year." },
     { num: "02", title: "Fill in Details",  desc: "Your personal details, Government ID and a full face photo." },
     { num: "03", title: "Pay £5",           desc: "Annual registration fee paid upfront via card." },
     { num: "04", title: "Admin Approval",   desc: "We verify your details. Your UKARA ID is issued within 3–5 working days." },
@@ -7184,7 +7199,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const faqs = [
     { q: "What is UKARA?", a: "UKARA (United Kingdom Airsoft Retailers Association) is a registration scheme that provides a legal defence for purchasing Realistic Imitation Firearms (RIFs) in the UK." },
     { q: "Do I need UKARA to play airsoft?", a: "No — you only need UKARA if you wish to purchase a RIF. Two-tone airsoft guns can be bought by anyone." },
-    { q: "How many games do I need?", a: "At least 3 game days at Swindon Airsoft within the last 2 years. We verify this automatically from your booking history." },
+    { q: "How many games do I need?", a: "You must have attended at least 3 game days at Swindon Airsoft within the past year. We verify this automatically from your booking history." },
     { q: "How long does UKARA last?", a: "UKARA is valid for 12 months. You must renew annually (£5/year) to maintain your defence." },
   ];
 
@@ -7290,13 +7305,41 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                     <p style={{ color: "#7a6040", fontSize: 13, margin: "0 0 14px", lineHeight: 1.6 }}>
                       Renew now to keep your legal defence for purchasing RIFs. Annual fee: <strong style={{ color: "#c8ff00" }}>£5</strong>.
                     </p>
+
+                    {/* Subscription toggle */}
+                    <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.12)", borderRadius: 6, padding: "12px 14px", marginBottom: 14 }}>
+                      <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={useSubscription}
+                          onChange={e => setUseSubscription(e.target.checked)}
+                          style={{ marginTop: 2, accentColor: "#c8ff00", width: 15, height: 15, flexShrink: 0 }}
+                        />
+                        <div>
+                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#c8d8a0", letterSpacing: ".06em" }}>
+                            AUTO-RENEW — £5/YEAR
+                          </div>
+                          <div style={{ fontSize: 11, color: "#5a7a40", marginTop: 2, lineHeight: 1.5 }}>
+                            We'll remind you before your UKARA expires each year. You can cancel at any time by contacting us — no commitment.
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+
                     <SquareCheckoutButton
                       amount={5}
-                      description="UKARA Annual Renewal — Swindon Airsoft"
+                      description={`UKARA Annual Renewal${useSubscription ? " (Auto-renew opted in)" : ""} — Swindon Airsoft`}
                       onSuccess={handleRenewalPaid}
                       disabled={renewalPaying}
                     />
                     {renewalPaying && <div style={{ marginTop: 10, color: "#8aaa50", fontSize: 13 }}>⏳ Processing renewal…</div>}
+
+                    {useSubscription && (
+                      <p style={{ fontSize: 11, color: "#3a5010", marginTop: 10, lineHeight: 1.6 }}>
+                        By opting in you agree to be contacted annually for renewal. To cancel auto-renew at any time,{" "}
+                        <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#6a9a40", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 11 }}>contact us</button>.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -7376,9 +7419,29 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                   ))}
                 </div>
 
-                <div style={{ background: "#0d1a08", border: "1px solid #2a4a10", borderRadius: 8, padding: "16px 18px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ background: "#0d1a08", border: "1px solid #2a4a10", borderRadius: 8, padding: "16px 18px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, color: "#e8f0d0", fontWeight: 700 }}>UKARA Registration — 1 year</div>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 900, color: "#c8ff00" }}>£5.00</div>
+                </div>
+
+                {/* Subscription opt-in */}
+                <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.12)", borderRadius: 6, padding: "12px 14px", marginBottom: 20 }}>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={useSubscription}
+                      onChange={e => setUseSubscription(e.target.checked)}
+                      style={{ marginTop: 2, accentColor: "#c8ff00", width: 15, height: 15, flexShrink: 0 }}
+                    />
+                    <div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#c8d8a0", letterSpacing: ".06em" }}>
+                        AUTO-RENEW — £5/YEAR
+                      </div>
+                      <div style={{ fontSize: 11, color: "#5a7a40", marginTop: 2, lineHeight: 1.5 }}>
+                        We'll remind you before your UKARA expires each year. Cancel any time by contacting us — no commitment.
+                      </div>
+                    </div>
+                  </label>
                 </div>
 
                 {submitting ? (
@@ -7386,7 +7449,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                 ) : (
                   <SquareCheckoutButton
                     amount={5}
-                    description="UKARA Registration — Swindon Airsoft"
+                    description={`UKARA Registration${useSubscription ? " (Auto-renew opted in)" : ""} — Swindon Airsoft`}
                     onSuccess={handlePaymentSuccess}
                     disabled={submitting}
                   />
@@ -7403,6 +7466,12 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                 ))}
 
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#4a6a28", letterSpacing: ".08em", marginBottom: 20 }}>STEP 1 OF 2 — YOUR DETAILS & DOCUMENTS</div>
+
+                {cu?.waiverData && (
+                  <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", borderLeft: "3px solid #c8ff00", borderRadius: 6, padding: "10px 14px", marginBottom: 20, fontSize: 12, color: "#6a8a40", display: "flex", alignItems: "center", gap: 8 }}>
+                    ✓ Details pre-filled from your signed waiver — check and amend if needed.
+                  </div>
+                )}
 
                 {!cu && (
                   <div style={{ background: "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.2)", borderRadius: 8, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -7499,7 +7568,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                 <div style={{ marginBottom: 24, background: "#080b06", border: "1px solid #1a2a0a", borderRadius: 8, padding: "18px 20px" }}>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#c8d8a0", marginBottom: 10, letterSpacing: ".06em" }}>DECLARATION</div>
                   <p style={{ color: "#6a8a45", fontSize: 12, lineHeight: 1.7, marginBottom: 14 }}>
-                    By proceeding I confirm that: (1) I am 18 years or older; (2) I have attended at least 3 airsoft game days at Swindon Airsoft within the last 2 years; (3) the information and documents I have provided are truthful and accurate; (4) I understand that providing false information may constitute a criminal offence under the Violent Crime Reduction Act 2006.
+                    By proceeding I confirm that: (1) I am 18 years or older; (2) I have attended at least 3 airsoft game days at Swindon Airsoft within the past year; (3) the information and documents I have provided are truthful and accurate; (4) I understand that providing false information may constitute a criminal offence under the Violent Crime Reduction Act 2006.
                   </p>
                   <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
                     <input type="checkbox" checked={form.declaration} onChange={e => set("declaration", e.target.checked)} style={{ marginTop: 2, accentColor: "#c8ff00", width: 16, height: 16, flexShrink: 0 }} />

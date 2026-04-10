@@ -2954,7 +2954,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
   };
   const [edit, setEdit] = useState(null);
-  const [revokeUkaraModal, setRevokeUkaraModal] = useState(null); // player being revoked
+  const [revokeUkaraModal, setRevokeUkaraModal] = useState(null);
   const [revokeUkaraReason, setRevokeUkaraReason] = useState("");
   const [revokeUkaraBusy, setRevokeUkaraBusy] = useState(false);
   const [viewPlayer, setViewPlayer] = useState(null);
@@ -3063,7 +3063,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
     } catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setDeletingAccount(false); }
   };
-
 
   const handleRevokeUkara = async () => {
     if (!revokeUkaraModal) return;
@@ -3685,14 +3684,14 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   {edit.ukara && (
                     <button
                       type="button"
-                      onClick={() => setRevokeUkaraModal(edit)}
+                      onClick={() => { setRevokeUkaraModal(edit); setRevokeUkaraReason(""); }}
                       style={{ flexShrink: 0, background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.35)", color: "#ff6060", padding: "8px 12px", fontSize: 11, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}
                     >
                       ✕ Revoke
                     </button>
                   )}
                 </div>
-                {edit.ukara_status === "revoked" && !edit.ukara && (
+                {(edit.ukara_status === "revoked" && !edit.ukara) && (
                   <div style={{ fontSize: 11, color: "#ff6060", marginTop: 4 }}>⚠ UKARA previously revoked for this player.</div>
                 )}
               </div>
@@ -11072,15 +11071,11 @@ function AdminUkaraApplications({ showToast, cu }) {
     if (!revokeModal) return;
     setActioning(true);
     try {
-      // Mark the application as revoked
       await supabase.from("ukara_applications").update({ status: "revoked" }).eq("id", revokeModal.id);
-      // Clear UKARA from profile and set revoked status
       if (revokeModal.user_id) {
         await supabase.from("profiles").update({ ukara: null, ukara_status: "revoked" }).eq("id", revokeModal.user_id);
       }
-      // Notify the player
       try {
-        const { sendUkaraRevokedEmail } = await import("./utils");
         await sendUkaraRevokedEmail({
           toEmail: revokeModal.email,
           toName:  revokeModal.name,
@@ -11143,6 +11138,9 @@ function AdminUkaraApplications({ showToast, cu }) {
         <div>
           <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 900, color: "#e8f0d0", letterSpacing: ".04em" }}>UKARA APPLICATIONS</div>
           <div style={{ fontSize: 12, color: "#4a6a28" }}>Manage player UKARA registration applications</div>
+          <div style={{ fontSize: 11, color: "#ff9940", marginTop: 4, background: "rgba(255,150,0,.08)", border: "1px solid rgba(255,150,0,.2)", padding: "6px 12px", borderLeft: "3px solid #ff9940" }}>
+            ⚠ Eligibility: player must have attended <strong>at least 3 game days at Swindon Airsoft within the past year</strong>
+          </div>
         </div>
         <button className="btn btn-sm" onClick={load} style={{ fontSize: 12 }}>↻ Refresh</button>
       </div>
@@ -11365,7 +11363,7 @@ function AdminUkaraApplications({ showToast, cu }) {
               style={{ width: "100%", background: "#0a0505", border: "1px solid #5a1a1a", color: "#ff8080", padding: "10px 14px", borderRadius: 6, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
             />
             <div style={{ fontSize: 12, color: "#4a2020", marginTop: 10, marginBottom: 20, lineHeight: 1.6 }}>
-              This will mark the application as <strong style={{ color: "#ff6060" }}>revoked</strong>, clear the player's UKARA ID from their profile, and send them a notification email.
+              This will mark the application as <strong style={{ color: "#ff6060" }}>revoked</strong>, clear the player's UKARA ID, and send them a notification email.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={handleRevoke} disabled={actioning} style={{ flex: 1, background: "rgba(220,50,50,.18)", border: "1px solid rgba(220,50,50,.4)", color: "#ff6060", padding: "10px", borderRadius: 6, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
