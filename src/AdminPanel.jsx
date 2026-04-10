@@ -10907,41 +10907,44 @@ function AdminUkaraApplications({ showToast, cu }) {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
+      // Fetch real applications
       const all = await api.ukaraApplications.getAll();
 
-      // Also surface profiles that have a UKARA ID set directly (e.g. pre-existing
-      // records or admin-assigned IDs) but have no matching ukara_applications row.
+      // Also fetch profiles that have a UKARA ID set directly on their record
+      // (e.g. admin-assigned, VIP approval) with no matching ukara_applications row.
       let synthetic = [];
       try {
-        const { data: profilesWithUkara } = await supabase
+        const { data: profilesWithUkara, error: profileErr } = await supabase
           .from("profiles")
-          .select("id, name, email, phone, ukara, games_attended, ukara_status")
+          .select("id, name, email, phone, ukara, games_attended")
           .not("ukara", "is", null)
           .neq("ukara", "");
 
-        if (profilesWithUkara?.length) {
-          // IDs already covered by a real application row
+        if (!profileErr && profilesWithUkara?.length) {
           const coveredUserIds = new Set(all.map(a => a.user_id).filter(Boolean));
           synthetic = profilesWithUkara
             .filter(p => !coveredUserIds.has(p.id))
             .map(p => ({
-              id:              `synthetic-${p.id}`,   // virtual — no real ukara_applications row
-              user_id:         p.id,
-              name:            p.name || "—",
-              email:           p.email || "—",
-              phone:           p.phone || "",
-              ukara_id:        p.ukara,
-              games_attended:  p.games_attended ?? null,
-              status:          p.ukara_status === "revoked" ? "revoked" : "approved",
-              created_at:      null,
-              approved_at:     null,
-              expires_at:      null,
-              address:         "",
-              _synthetic:      true,  // flag so we can hide inapplicable actions
+              id:             "synthetic-" + p.id,
+              user_id:        p.id,
+              name:           p.name  || "—",
+              email:          p.email || "—",
+              phone:          p.phone || "",
+              ukara_id:       p.ukara,
+              games_attended: p.games_attended ?? null,
+              status:         "approved",
+              created_at:     null,
+              approved_at:    null,
+              expires_at:     null,
+              address:        "",
+              dob:            "",
+              admin_notes:    "",
+              renewal_requested: false,
+              _synthetic:     true,
             }));
         }
-      } catch {
-        // Non-fatal — existing applications still load fine
+      } catch (_) {
+        // Non-fatal — real applications still load
       }
 
       setApps([...all, ...synthetic]);
@@ -11072,9 +11075,9 @@ function AdminUkaraApplications({ showToast, cu }) {
             placeholder="Search by name, postcode or UKARA ID…"
             style={{ width: "100%", maxWidth: 420, background: "#0a0d07", border: "1px solid #2a3a10", color: "#e8f0d0", padding: "9px 14px", borderRadius: 6, fontSize: 13, outline: "none", boxSizing: "border-box" }}
           />
-          {apps.filter(a => a._synthetic && a.status === "approved").length > 0 && (
+          {apps.filter(a => a._synthetic).length > 0 && (
             <div style={{ fontSize: 12, color: "#4fc3f7", background: "rgba(79,195,247,.05)", border: "1px solid rgba(79,195,247,.15)", borderLeft: "3px solid #4fc3f7", padding: "8px 12px", borderRadius: 4, lineHeight: 1.6 }}>
-              🗄 <strong>{apps.filter(a => a._synthetic && a.status === "approved").length} DB record{apps.filter(a => a._synthetic && a.status === "approved").length > 1 ? "s" : ""}</strong> — players with a UKARA ID already set in the database (no portal application). Shown with a <strong style={{ color: "#4fc3f7" }}>DB RECORD</strong> badge.
+              🗄 <strong>{apps.filter(a => a._synthetic).length} existing DB record{apps.filter(a => a._synthetic).length !== 1 ? "s" : ""}</strong> — players whose UKARA ID was set directly on their profile (no portal application). Shown with a <strong>DB RECORD</strong> badge.
             </div>
           )}
         </div>
@@ -11113,23 +11116,23 @@ function AdminUkaraApplications({ showToast, cu }) {
                   <td style={{ ...tdS, fontSize: 12 }}>{fmtDate(app.created_at)}</td>
                   <td style={{ ...tdS, display: tab === "approved" ? "table-cell" : "none", fontSize: 12, color: app.expires_at && new Date(app.expires_at) < new Date() ? "#ff6060" : "#8aaa60" }}>{fmtDate(app.expires_at)}</td>
                   <td style={tdS}>{statusChip(app.status)}</td>
-                   <td style={tdS}>
-                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                       <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setSelected(app)}>👁 View</button>
-                       {app._synthetic && (
-                         <span style={{ fontSize: 10, color: "#4fc3f7", border: "1px solid #1a3a4a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🗄 DB RECORD</span>
-                       )}
-                       {!app._synthetic && app.status === "pending" && (
-                         <>
-                           <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "#c8ff00" }} onClick={() => openApprove(app)}>✓ Approve</button>
-                           <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060" }} onClick={() => { setDeclineModal(app); setDeclineReason(""); }}>✗ Decline</button>
-                         </>
-                       )}
-                       {app.renewal_requested && app.status === "approved" && (
-                         <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
-                       )}
-                     </div>
-                   </td>
+                  <td style={tdS}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setSelected(app)}>👁 View</button>
+                      {app._synthetic && (
+                        <span style={{ fontSize: 10, color: "#4fc3f7", border: "1px solid #1a3a4a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🗄 DB RECORD</span>
+                      )}
+                      {!app._synthetic && app.status === "pending" && (
+                        <>
+                          <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "#c8ff00" }} onClick={() => openApprove(app)}>✓ Approve</button>
+                          <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060" }} onClick={() => { setDeclineModal(app); setDeclineReason(""); }}>✗ Decline</button>
+                        </>
+                      )}
+                      {app.renewal_requested && app.status === "approved" && (
+                        <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -11200,7 +11203,7 @@ function AdminUkaraApplications({ showToast, cu }) {
 
             {selected._synthetic && (
               <div style={{ background: "rgba(79,195,247,.06)", border: "1px solid rgba(79,195,247,.2)", borderRadius: 6, padding: "10px 14px", marginTop: 8, fontSize: 12, color: "#4fc3f7", lineHeight: 1.6 }}>
-                🗄 This record was migrated from the player's profile — no application form or documents were submitted through the UKARA portal.
+                🗄 This UKARA ID was set directly on the player's profile — no application form or documents were submitted through the portal.
               </div>
             )}
             {!selected._synthetic && selected.status === "pending" && (
