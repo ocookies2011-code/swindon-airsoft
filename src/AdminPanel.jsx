@@ -10903,6 +10903,9 @@ function AdminUkaraApplications({ showToast, cu }) {
   const [declineModal, setDeclineModal] = React.useState(null);
   const [declineReason, setDeclineReason] = React.useState("");
   const [actioning, setActioning] = React.useState(false);
+  const [expiryModal, setExpiryModal] = React.useState(null);  // app being given an expiry date
+  const [expiryDate, setExpiryDate] = React.useState("");
+  const [expiryBusy, setExpiryBusy] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -10916,7 +10919,7 @@ function AdminUkaraApplications({ showToast, cu }) {
       try {
         const { data: profilesWithUkara, error: profileErr } = await supabase
           .from("profiles")
-          .select("id, name, email, phone, ukara, games_attended")
+          .select("id, name, email, phone, ukara, games_attended, waiver_data, ukara_expires_at")
           .not("ukara", "is", null)
           .neq("ukara", "");
 
@@ -10924,24 +10927,30 @@ function AdminUkaraApplications({ showToast, cu }) {
           const coveredUserIds = new Set(all.map(a => a.user_id).filter(Boolean));
           synthetic = profilesWithUkara
             .filter(p => !coveredUserIds.has(p.id))
-            .map(p => ({
-              id:             "synthetic-" + p.id,
-              user_id:        p.id,
-              name:           p.name  || "—",
-              email:          p.email || "—",
-              phone:          p.phone || "",
-              ukara_id:       p.ukara,
-              games_attended: p.games_attended ?? null,
-              status:         "approved",
-              created_at:     null,
-              approved_at:    null,
-              expires_at:     null,
-              address:        "",
-              dob:            "",
-              admin_notes:    "",
-              renewal_requested: false,
-              _synthetic:     true,
-            }));
+            .map(p => {
+              const w = p.waiver_data || {};
+              // Build address from waiver fields
+              const addr = [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country]
+                .filter(Boolean).join(", ");
+              return {
+                id:             "synthetic-" + p.id,
+                user_id:        p.id,
+                name:           w.name  || p.name  || "—",
+                email:          p.email || "—",
+                phone:          w.phone || p.phone || "",
+                dob:            w.dob   || "",
+                address:        addr,
+                ukara_id:       p.ukara,
+                games_attended: p.games_attended ?? null,
+                status:         "approved",
+                created_at:     null,
+                approved_at:    null,
+                expires_at:     p.ukara_expires_at || null,
+                admin_notes:    "",
+                renewal_requested: false,
+                _synthetic:     true,
+              };
+            });
         }
       } catch (_) {
         // Non-fatal — real applications still load
@@ -11010,6 +11019,38 @@ function AdminUkaraApplications({ showToast, cu }) {
       showToast("Decline failed: " + e.message, "red");
     } finally {
       setActioning(false);
+    }
+  };
+
+  const handleSetExpiry = async () => {
+    if (!expiryModal || !expiryDate) return;
+    setExpiryBusy(true);
+    try {
+      const isoExpiry = new Date(expiryDate).toISOString();
+      if (expiryModal._synthetic) {
+        // Synthetic record — save directly to the profiles table
+        const { error } = await supabase
+          .from("profiles")
+          .update({ ukara_expires_at: isoExpiry })
+          .eq("id", expiryModal.user_id);
+        if (error) throw new Error(error.message);
+      } else {
+        // Real application row
+        const { error } = await supabase
+          .from("ukara_applications")
+          .update({ expires_at: isoExpiry })
+          .eq("id", expiryModal.id);
+        if (error) throw new Error(error.message);
+      }
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "UKARA expiry set", detail: `${expiryModal.name} — Expires: ${expiryDate}` });
+      showToast(`Expiry date set for ${expiryModal.name}`);
+      setExpiryModal(null);
+      setExpiryDate("");
+      load();
+    } catch (e) {
+      showToast("Failed to set expiry: " + e.message, "red");
+    } finally {
+      setExpiryBusy(false);
     }
   };
 
@@ -11131,6 +11172,9 @@ function AdminUkaraApplications({ showToast, cu }) {
                       {app.renewal_requested && app.status === "approved" && (
                         <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
                       )}
+                      {app.status === "approved" && (
+                        <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => { setExpiryModal(app); setExpiryDate(app.expires_at ? app.expires_at.slice(0, 10) : ""); }}>📅 Expiry</button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -11159,7 +11203,7 @@ function AdminUkaraApplications({ showToast, cu }) {
                 ["Submitted", fmtDate(selected.created_at)],
                 ["UKARA ID", selected.ukara_id || "—"],
                 ["Approved", fmtDate(selected.approved_at)],
-                ["Expires", fmtDate(selected.expires_at)],
+                ["Expires", selected.expires_at ? fmtDate(selected.expires_at) : "—"],
               ].map(([label, val]) => (
                 <div key={label} style={{ background: "#0a0d07", border: "1px solid #1a2808", borderRadius: 6, padding: "10px 14px" }}>
                   <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 3 }}>{label.toUpperCase()}</div>
@@ -11167,6 +11211,43 @@ function AdminUkaraApplications({ showToast, cu }) {
                 </div>
               ))}
             </div>
+
+            {/* Expiry setter — available for all approved records */}
+            {selected.status === "approved" && (
+              <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", borderRadius: 6, padding: "12px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#4a6a28", flexShrink: 0 }}>SET EXPIRY DATE</div>
+                <input
+                  type="date"
+                  defaultValue={selected.expires_at ? selected.expires_at.slice(0, 10) : ""}
+                  id="detail-expiry-input"
+                  style={{ background: "#0a0d07", border: "1px solid #2a3a10", color: "#c8d8a0", padding: "6px 10px", fontSize: 13, borderRadius: 4, outline: "none", flex: 1, minWidth: 140 }}
+                />
+                <button
+                  className="btn btn-sm btn-primary"
+                  style={{ fontSize: 12, padding: "6px 16px" }}
+                  onClick={async () => {
+                    const val = document.getElementById("detail-expiry-input")?.value;
+                    if (!val) { showToast("Pick a date first", "red"); return; }
+                    const isoExpiry = new Date(val).toISOString();
+                    try {
+                      if (selected._synthetic) {
+                        const { error } = await supabase.from("profiles").update({ ukara_expires_at: isoExpiry }).eq("id", selected.user_id);
+                        if (error) throw new Error(error.message);
+                      } else {
+                        const { error } = await supabase.from("ukara_applications").update({ expires_at: isoExpiry }).eq("id", selected.id);
+                        if (error) throw new Error(error.message);
+                      }
+                      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "UKARA expiry set", detail: `${selected.name} — Expires: ${val}` });
+                      showToast(`Expiry set for ${selected.name}`);
+                      setSelected(null);
+                      load();
+                    } catch (e) { showToast("Failed: " + e.message, "red"); }
+                  }}
+                >
+                  💾 Save Expiry
+                </button>
+              </div>
+            )}
 
             {/* Government ID */}
             {selected.gov_id_url && (
@@ -11212,6 +11293,38 @@ function AdminUkaraApplications({ showToast, cu }) {
                 <button className="btn" style={{ background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060", flex: 1 }} onClick={() => { setSelected(null); setDeclineModal(selected); setDeclineReason(""); }}>✗ Decline</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Set Expiry Modal */}
+      {expiryModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => !expiryBusy && setExpiryModal(null)}>
+          <div style={{ background: "#0d1209", border: "1px solid #2a4a10", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 400, width: "100%" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#c8ff00", marginBottom: 4 }}>📅 SET EXPIRY DATE</div>
+            <div style={{ color: "#6a8a50", fontSize: 13, marginBottom: 4 }}>{expiryModal.name}</div>
+            <div style={{ fontFamily: "monospace", fontSize: 12, color: "#c8ff00", marginBottom: 20 }}>{expiryModal.ukara_id}</div>
+            {expiryModal.expires_at && (
+              <div style={{ fontSize: 12, color: "#ffb74d", marginBottom: 12 }}>Current expiry: {fmtDate(expiryModal.expires_at)}</div>
+            )}
+            <label style={{ display: "block", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#4a6a28", marginBottom: 6 }}>NEW EXPIRY DATE</label>
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={e => setExpiryDate(e.target.value)}
+              style={{ width: "100%", background: "#0a0d07", border: "1px solid #2a3a10", color: "#c8d8a0", padding: "10px 14px", fontSize: 14, borderRadius: 6, outline: "none", boxSizing: "border-box", marginBottom: 20 }}
+            />
+            <div style={{ fontSize: 12, color: "#3a5010", marginBottom: 20, lineHeight: 1.6 }}>
+              {expiryModal._synthetic
+                ? "Saves directly to the player's profile (ukara_expires_at)."
+                : "Updates the expiry date on the UKARA application record."}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={handleSetExpiry} disabled={expiryBusy || !expiryDate} className="btn btn-primary" style={{ flex: 1 }}>
+                {expiryBusy ? "⏳ Saving…" : "💾 Save Expiry"}
+              </button>
+              <button onClick={() => setExpiryModal(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
