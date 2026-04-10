@@ -18,7 +18,7 @@ import {
   sendEmail, sendTicketEmail, sendEventReminderEmail,
   sendAdminBookingNotification,
   sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
-  sendReturnDecisionEmail, sendUkaraDecisionEmail, sendAdminUkaraNotification, sendUkaraRevokedEmail,
+  sendReturnDecisionEmail, sendUkaraDecisionEmail, sendAdminUkaraNotification,
   WaiverModal,
   RankInsignia, DesignationInsignia, resetSquareConfig,
 } from "./utils";
@@ -2954,9 +2954,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
   };
   const [edit, setEdit] = useState(null);
-  const [revokeUkaraModal, setRevokeUkaraModal] = useState(null);
-  const [revokeUkaraReason, setRevokeUkaraReason] = useState("");
-  const [revokeUkaraBusy, setRevokeUkaraBusy] = useState(false);
   const [viewPlayer, setViewPlayer] = useState(null);
   const [waiverViewPlayer, setWaiverViewPlayer] = useState(null); // inline waiver panel
   const [contactPlayer, setContactPlayer] = useState(null);
@@ -3062,38 +3059,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player account deleted", detail: `${deletedName} (${deletedEmail}) — ID: ${deletedId}` });
     } catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setDeletingAccount(false); }
-  };
-
-  const handleRevokeUkara = async () => {
-    if (!revokeUkaraModal) return;
-    setRevokeUkaraBusy(true);
-    try {
-      const { error } = await supabase.from("profiles").update({
-        ukara:        null,
-        ukara_status: "revoked",
-      }).eq("id", revokeUkaraModal.id);
-      if (error) throw new Error(error.message);
-      try {
-        await sendUkaraRevokedEmail({
-          toEmail: revokeUkaraModal.email,
-          toName:  revokeUkaraModal.name,
-          reason:  revokeUkaraReason.trim() || undefined,
-        });
-      } catch {}
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "UKARA revoked", detail: `${revokeUkaraModal.name}${revokeUkaraReason.trim() ? ` — ${revokeUkaraReason.trim()}` : ""}` });
-      showToast(`UKARA revoked for ${revokeUkaraModal.name}`);
-      setEdit(p => p ? { ...p, ukara: "", ukara_status: "revoked" } : p);
-      setRevokeUkaraModal(null);
-      setRevokeUkaraReason("");
-      const allProfiles = await api.profiles.getAll();
-      const updated = allProfiles.map(normaliseProfile);
-      setLocalUsers(updated);
-      save({ users: updated });
-    } catch (e) {
-      showToast("Revoke failed: " + e.message, "red");
-    } finally {
-      setRevokeUkaraBusy(false);
-    }
   };
 
   const saveEdit = async () => {
@@ -3673,28 +3638,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   </div>
                 )}
               </div>
-              <div className="form-group">
-                <label>UKARA ID</label>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    value={edit.ukara || ""}
-                    onChange={e => setEdit(p => ({ ...p, ukara: e.target.value }))}
-                    style={{ flex: 1 }}
-                  />
-                  {edit.ukara && (
-                    <button
-                      type="button"
-                      onClick={() => { setRevokeUkaraModal(edit); setRevokeUkaraReason(""); }}
-                      style={{ flexShrink: 0, background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.35)", color: "#ff6060", padding: "8px 12px", fontSize: 11, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}
-                    >
-                      ✕ Revoke
-                    </button>
-                  )}
-                </div>
-                {(edit.ukara_status === "revoked" && !edit.ukara) && (
-                  <div style={{ fontSize: 11, color: "#ff6060", marginTop: 4 }}>⚠ UKARA previously revoked for this player.</div>
-                )}
-              </div>
+              <div className="form-group"><label>UKARA ID</label><input value={edit.ukara || ""} onChange={e => setEdit(p => ({ ...p, ukara: e.target.value }))} /></div>
             </div>
             <div className="form-row">
               <div className="form-group"><label>Credits (£)</label><input type="number" value={edit.credits || 0} onChange={e => setEdit(p => ({ ...p, credits: +e.target.value }))} /></div>
@@ -3863,41 +3807,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save Changes"}</button>
               <button className="btn btn-ghost" onClick={() => setEdit(null)} disabled={savingEdit}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Revoke UKARA Modal */}
-      {revokeUkaraModal && (
-        <div className="overlay" onClick={() => !revokeUkaraBusy && setRevokeUkaraModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-title" style={{ color: "#ff6060" }}>✕ Revoke UKARA</div>
-            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
-              <strong style={{ color: "var(--text)" }}>{revokeUkaraModal.name}</strong>
-              {" "}— current ID:{" "}
-              <span style={{ fontFamily: "'Share Tech Mono',monospace", color: "var(--accent)" }}>{revokeUkaraModal.ukara}</span>
-            </div>
-            <div className="form-group">
-              <label>Reason <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10 }}>(shown to player in email — optional)</span></label>
-              <textarea
-                value={revokeUkaraReason}
-                onChange={e => setRevokeUkaraReason(e.target.value)}
-                placeholder="e.g. Insufficient game days attended in the past 12 months…"
-                rows={3}
-                style={{ width: "100%", resize: "vertical", background: "var(--bg4)", border: "1px solid rgba(220,50,50,.3)", color: "var(--text)", padding: "8px 10px", fontSize: 13, fontFamily: "inherit", boxSizing: "border-box" }}
-              />
-            </div>
-            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6 }}>
-              This will clear the player's UKARA ID and set their status to{" "}
-              <strong style={{ color: "#ff6060" }}>revoked</strong> — distinguishable from never having had UKARA.
-              A notification email will be sent to the player.
-            </div>
-            <div className="gap-2">
-              <button className="btn btn-danger" disabled={revokeUkaraBusy} onClick={handleRevokeUkara}>
-                {revokeUkaraBusy ? "⏳ Revoking…" : "✕ Confirm Revoke"}
-              </button>
-              <button className="btn btn-ghost" disabled={revokeUkaraBusy} onClick={() => setRevokeUkaraModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -10994,14 +10903,48 @@ function AdminUkaraApplications({ showToast, cu }) {
   const [declineModal, setDeclineModal] = React.useState(null);
   const [declineReason, setDeclineReason] = React.useState("");
   const [actioning, setActioning] = React.useState(false);
-  const [revokeModal, setRevokeModal] = React.useState(null);
-  const [revokeReason, setRevokeReason] = React.useState("");
 
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
       const all = await api.ukaraApplications.getAll();
-      setApps(all);
+
+      // Also surface profiles that have a UKARA ID set directly (e.g. pre-existing
+      // records or admin-assigned IDs) but have no matching ukara_applications row.
+      let synthetic = [];
+      try {
+        const { data: profilesWithUkara } = await supabase
+          .from("profiles")
+          .select("id, name, email, phone, ukara, games_attended, ukara_status")
+          .not("ukara", "is", null)
+          .neq("ukara", "");
+
+        if (profilesWithUkara?.length) {
+          // IDs already covered by a real application row
+          const coveredUserIds = new Set(all.map(a => a.user_id).filter(Boolean));
+          synthetic = profilesWithUkara
+            .filter(p => !coveredUserIds.has(p.id))
+            .map(p => ({
+              id:              `synthetic-${p.id}`,   // virtual — no real ukara_applications row
+              user_id:         p.id,
+              name:            p.name || "—",
+              email:           p.email || "—",
+              phone:           p.phone || "",
+              ukara_id:        p.ukara,
+              games_attended:  p.games_attended ?? null,
+              status:          p.ukara_status === "revoked" ? "revoked" : "approved",
+              created_at:      null,
+              approved_at:     null,
+              expires_at:      null,
+              address:         "",
+              _synthetic:      true,  // flag so we can hide inapplicable actions
+            }));
+        }
+      } catch {
+        // Non-fatal — existing applications still load fine
+      }
+
+      setApps([...all, ...synthetic]);
     } catch (e) {
       showToast("Failed to load applications: " + e.message, "red");
     } finally {
@@ -11067,40 +11010,10 @@ function AdminUkaraApplications({ showToast, cu }) {
     }
   };
 
-  const handleRevoke = async () => {
-    if (!revokeModal) return;
-    setActioning(true);
-    try {
-      await supabase.from("ukara_applications").update({ status: "revoked" }).eq("id", revokeModal.id);
-      if (revokeModal.user_id) {
-        await supabase.from("profiles").update({ ukara: null, ukara_status: "revoked" }).eq("id", revokeModal.user_id);
-      }
-      try {
-        await sendUkaraRevokedEmail({
-          toEmail: revokeModal.email,
-          toName:  revokeModal.name,
-          reason:  revokeReason.trim() || undefined,
-        });
-      } catch {}
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "UKARA revoked", detail: `${revokeModal.name} — ID: ${revokeModal.ukara_id}${revokeReason.trim() ? ` — ${revokeReason.trim()}` : ""}` });
-      showToast(`UKARA revoked for ${revokeModal.name}`);
-      setRevokeModal(null);
-      setRevokeReason("");
-      setSelected(null);
-      load();
-    } catch (e) {
-      showToast("Revoke failed: " + e.message, "red");
-    } finally {
-      setActioning(false);
-    }
-  };
-
   const filtered = apps.filter(a => {
     const inTab = tab === "pending"
       ? (a.status === "pending" || a.status === "declined")
-      : tab === "approved"
-      ? a.status === "approved"
-      : a.status === "revoked";
+      : a.status === "approved";
     if (!inTab) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -11119,7 +11032,6 @@ function AdminUkaraApplications({ showToast, cu }) {
       pending:  { label: "PENDING",  bg: "rgba(255,183,77,.15)", color: "#ffb74d", border: "#3a2800" },
       approved: { label: "APPROVED", bg: "rgba(200,255,0,.1)",   color: "#c8ff00", border: "#2a4a10" },
       declined: { label: "DECLINED", bg: "rgba(220,50,50,.12)",  color: "#ff6060", border: "#5a1a1a" },
-      revoked:  { label: "REVOKED",  bg: "rgba(180,30,30,.15)",  color: "#ff4040", border: "#6a0a0a" },
     };
     const c = map[s] || map.pending;
     return (
@@ -11138,9 +11050,6 @@ function AdminUkaraApplications({ showToast, cu }) {
         <div>
           <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 900, color: "#e8f0d0", letterSpacing: ".04em" }}>UKARA APPLICATIONS</div>
           <div style={{ fontSize: 12, color: "#4a6a28" }}>Manage player UKARA registration applications</div>
-          <div style={{ fontSize: 11, color: "#ff9940", marginTop: 4, background: "rgba(255,150,0,.08)", border: "1px solid rgba(255,150,0,.2)", padding: "6px 12px", borderLeft: "3px solid #ff9940" }}>
-            ⚠ Eligibility: player must have attended <strong>at least 3 game days at Swindon Airsoft within the past year</strong>
-          </div>
         </div>
         <button className="btn btn-sm" onClick={load} style={{ fontSize: 12 }}>↻ Refresh</button>
       </div>
@@ -11153,19 +11062,21 @@ function AdminUkaraApplications({ showToast, cu }) {
         <button className={`nav-tab ${tab === "approved" ? "active" : ""}`} onClick={() => setTab("approved")}>
           ✅ Approved ({apps.filter(a => a.status === "approved").length})
         </button>
-        <button className={`nav-tab ${tab === "revoked" ? "active" : ""}`} onClick={() => setTab("revoked")}>
-          ✕ Revoked ({apps.filter(a => a.status === "revoked").length})
-        </button>
       </div>
 
       {/* Search (approved tab only) */}
       {tab === "approved" && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name, postcode or UKARA ID…"
             style={{ width: "100%", maxWidth: 420, background: "#0a0d07", border: "1px solid #2a3a10", color: "#e8f0d0", padding: "9px 14px", borderRadius: 6, fontSize: 13, outline: "none", boxSizing: "border-box" }}
           />
+          {apps.filter(a => a._synthetic && a.status === "approved").length > 0 && (
+            <div style={{ fontSize: 12, color: "#4fc3f7", background: "rgba(79,195,247,.05)", border: "1px solid rgba(79,195,247,.15)", borderLeft: "3px solid #4fc3f7", padding: "8px 12px", borderRadius: 4, lineHeight: 1.6 }}>
+              🗄 <strong>{apps.filter(a => a._synthetic && a.status === "approved").length} DB record{apps.filter(a => a._synthetic && a.status === "approved").length > 1 ? "s" : ""}</strong> — players with a UKARA ID already set in the database (no portal application). Shown with a <strong style={{ color: "#4fc3f7" }}>DB RECORD</strong> badge.
+            </div>
+          )}
         </div>
       )}
 
@@ -11173,7 +11084,7 @@ function AdminUkaraApplications({ showToast, cu }) {
         <div style={{ padding: 40, textAlign: "center", color: "#3a5010" }}>Loading…</div>
       ) : filtered.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "#3a5010", fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>
-          {tab === "pending" ? "// NO PENDING APPLICATIONS" : tab === "approved" ? "// NO APPROVED APPLICATIONS" : "// NO REVOKED APPLICATIONS"}
+          {tab === "pending" ? "// NO PENDING APPLICATIONS" : "// NO APPROVED APPLICATIONS"}
         </div>
       ) : (
         <div style={{ overflowX: "auto" }}>
@@ -11202,23 +11113,23 @@ function AdminUkaraApplications({ showToast, cu }) {
                   <td style={{ ...tdS, fontSize: 12 }}>{fmtDate(app.created_at)}</td>
                   <td style={{ ...tdS, display: tab === "approved" ? "table-cell" : "none", fontSize: 12, color: app.expires_at && new Date(app.expires_at) < new Date() ? "#ff6060" : "#8aaa60" }}>{fmtDate(app.expires_at)}</td>
                   <td style={tdS}>{statusChip(app.status)}</td>
-                  <td style={tdS}>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setSelected(app)}>👁 View</button>
-                      {app.status === "pending" && (
-                        <>
-                          <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "#c8ff00" }} onClick={() => openApprove(app)}>✓ Approve</button>
-                          <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060" }} onClick={() => { setDeclineModal(app); setDeclineReason(""); }}>✗ Decline</button>
-                        </>
-                      )}
-                      {app.renewal_requested && app.status === "approved" && (
-                        <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
-                      )}
-                      {app.status === "approved" && (
-                        <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060" }} onClick={() => { setRevokeModal(app); setRevokeReason(""); }}>✕ Revoke</button>
-                      )}
-                    </div>
-                  </td>
+                   <td style={tdS}>
+                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                       <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setSelected(app)}>👁 View</button>
+                       {app._synthetic && (
+                         <span style={{ fontSize: 10, color: "#4fc3f7", border: "1px solid #1a3a4a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🗄 DB RECORD</span>
+                       )}
+                       {!app._synthetic && app.status === "pending" && (
+                         <>
+                           <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "#c8ff00" }} onClick={() => openApprove(app)}>✓ Approve</button>
+                           <button className="btn btn-sm" style={{ fontSize: 11, padding: "4px 10px", background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060" }} onClick={() => { setDeclineModal(app); setDeclineReason(""); }}>✗ Decline</button>
+                         </>
+                       )}
+                       {app.renewal_requested && app.status === "approved" && (
+                         <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
+                       )}
+                     </div>
+                   </td>
                 </tr>
               ))}
             </tbody>
@@ -11287,7 +11198,12 @@ function AdminUkaraApplications({ showToast, cu }) {
               </div>
             )}
 
-            {selected.status === "pending" && (
+            {selected._synthetic && (
+              <div style={{ background: "rgba(79,195,247,.06)", border: "1px solid rgba(79,195,247,.2)", borderRadius: 6, padding: "10px 14px", marginTop: 8, fontSize: 12, color: "#4fc3f7", lineHeight: 1.6 }}>
+                🗄 This record was migrated from the player's profile — no application form or documents were submitted through the UKARA portal.
+              </div>
+            )}
+            {!selected._synthetic && selected.status === "pending" && (
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                 <button className="btn" style={{ background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "#c8ff00", flex: 1 }} onClick={() => { setSelected(null); openApprove(selected); }}>✓ Approve</button>
                 <button className="btn" style={{ background: "rgba(220,50,50,.12)", border: "1px solid rgba(220,50,50,.3)", color: "#ff6060", flex: 1 }} onClick={() => { setSelected(null); setDeclineModal(selected); setDeclineReason(""); }}>✗ Decline</button>
@@ -11342,34 +11258,6 @@ function AdminUkaraApplications({ showToast, cu }) {
                 {actioning ? "⏳ Declining…" : "✗ Confirm Decline"}
               </button>
               <button onClick={() => setDeclineModal(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Revoke Modal */}
-      {revokeModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => !actioning && setRevokeModal(null)}>
-          <div style={{ background: "#0d0909", border: "1px solid #5a1a1a", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 440, width: "100%" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#ff6060", marginBottom: 4 }}>REVOKE UKARA</div>
-            <div style={{ color: "#7a5050", fontSize: 13, marginBottom: 4 }}>{revokeModal.name} · {revokeModal.email}</div>
-            <div style={{ fontFamily: "monospace", fontSize: 12, color: "#c8ff00", marginBottom: 20 }}>{revokeModal.ukara_id}</div>
-            <label style={{ display: "block", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#8a4040", marginBottom: 6 }}>REASON (shown to player in email — optional)</label>
-            <textarea
-              value={revokeReason}
-              onChange={e => setRevokeReason(e.target.value)}
-              placeholder="e.g. Insufficient game days attended in the past 12 months…"
-              rows={3}
-              style={{ width: "100%", background: "#0a0505", border: "1px solid #5a1a1a", color: "#ff8080", padding: "10px 14px", borderRadius: 6, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
-            />
-            <div style={{ fontSize: 12, color: "#4a2020", marginTop: 10, marginBottom: 20, lineHeight: 1.6 }}>
-              This will mark the application as <strong style={{ color: "#ff6060" }}>revoked</strong>, clear the player's UKARA ID, and send them a notification email.
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={handleRevoke} disabled={actioning} style={{ flex: 1, background: "rgba(220,50,50,.18)", border: "1px solid rgba(220,50,50,.4)", color: "#ff6060", padding: "10px", borderRadius: 6, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-                {actioning ? "⏳ Revoking…" : "✕ Confirm Revoke"}
-              </button>
-              <button onClick={() => setRevokeModal(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
             </div>
           </div>
         </div>
