@@ -3486,6 +3486,93 @@ async function sendReturnDecisionEmail({ toEmail, toName, order, approved, rejec
 
 
 
+// ── Admin: UKARA Application Notification ────────────────────
+async function sendAdminUkaraNotification({ adminEmail, user }) {
+  if (!adminEmail) return;
+  const htmlContent = `<div style="background:#0a0a0a;font-family:'Arial',sans-serif;">
+    <div style="max-width:520px;margin:0 auto;background:#0d1300;border:1px solid #1a2808;border-radius:4px;overflow:hidden;">
+      <div style="background:#0a0f06;padding:16px 24px;border-bottom:1px solid #1a2808;">
+        <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
+        <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">Swindon Airsoft · Admin Alert</div>
+        <div style="font-size:22px;font-weight:900;color:#ce93d8;letter-spacing:.04em;">&#128737; UKARA APPLICATION</div>
+      </div>
+      <div style="padding:20px 24px;">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;width:30%;">Name</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#fff;font-size:13px;">${user.name || user.full_name || "—"}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Email</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#4fc3f7;font-size:13px;">${user.email || "—"}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">User ID</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-family:monospace;">${(user.id || "").slice(0,8).toUpperCase()}</td></tr>
+          <tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Game Days</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#c8ff00;font-size:13px;font-weight:900;">${user.game_days ?? user.gameDays ?? "—"}</td></tr>
+          ${user.ukara_notes ? `<tr><td style="padding:7px 12px;border:1px solid #1a2808;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Notes</td><td style="padding:7px 12px;border:1px solid #1a2808;color:#ccc;font-size:13px;">${user.ukara_notes}</td></tr>` : ""}
+        </table>
+        <div style="background:#1a1500;border:1px solid #332800;border-radius:4px;padding:12px 16px;font-size:12px;color:#8a7040;line-height:1.6;">
+          Log in to the admin panel &#8594; Members to approve or reject this UKARA application.
+        </div>
+      </div>
+      <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:12px 24px;text-align:center;">
+        <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+        <div style="font-size:9px;color:#3a5010;letter-spacing:.15em;text-transform:uppercase;margin-top:3px;">Admin · Auto-generated notification</div>
+      </div>
+    </div>
+  </div>`;
+  await sendEmail({ toEmail: adminEmail, toName: "Swindon Airsoft Admin", subject: `UKARA Application: ${user.name || user.full_name || user.email}`, htmlContent });
+}
+
+// ── Customer: UKARA Decision Email ───────────────────────────
+async function sendUkaraDecisionEmail({ toEmail, toName, approved, rejectionReason }) {
+  const htmlContent = approved ? `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#fff;line-height:1;">
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -16px 24px;"></div>
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">&#128737; UKARA REGISTRATION</div>
+    </div>
+    <div style="background:#0d1f0a;border:1px solid #1a3a10;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">&#10003;</div>
+      <div style="font-size:22px;font-weight:900;color:#c8ff00;letter-spacing:.08em;text-transform:uppercase;">UKARA Application Approved</div>
+      <div style="font-size:13px;color:#8aaa60;margin-top:8px;">Your registration has been confirmed</div>
+    </div>
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.8;">
+      Congratulations — your UKARA registration is now <strong style="color:#c8ff00;">active</strong>. This allows you to purchase Realistic Imitation Firearms (RIFs) as a skirmisher. Your registration details have been updated on your account.
+    </div>
+    <div style="background:#111;border:1px solid #333;border-left:3px solid #c8ff00;border-radius:4px;padding:14px 20px;margin-bottom:20px;font-size:12px;color:#888;line-height:1.7;">
+      UKARA registration is valid for sites you are registered with. Please ensure you continue to skirmish regularly to maintain eligibility. If you have any questions, contact us through the website.
+    </div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:14px 24px;text-align:center;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
+  </div>` : `
+  <div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#fff;line-height:1;">
+    <div style="height:3px;background:linear-gradient(90deg,#c8ff00,#8aaa60);margin:-32px -16px 24px;"></div>
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1a2808;">
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="160" style="display:block;margin:0 auto 10px;height:auto;" />
+      <div style="font-size:9px;letter-spacing:.35em;color:#3a5010;text-transform:uppercase;font-weight:700;">&#128737; UKARA UPDATE</div>
+    </div>
+    <div style="background:#1a0808;border:1px solid #3a1010;border-radius:8px;padding:20px 24px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">&#10007;</div>
+      <div style="font-size:22px;font-weight:900;color:#ff6b6b;letter-spacing:.08em;text-transform:uppercase;">Application Not Approved</div>
+      <div style="font-size:13px;color:#8a6060;margin-top:8px;">Your UKARA application could not be processed at this time</div>
+    </div>
+    ${rejectionReason ? `<div style="background:#111;border:1px solid #333;border-left:3px solid #ff6b6b;border-radius:4px;padding:14px 20px;margin-bottom:20px;">
+      <div style="font-size:10px;letter-spacing:.15em;color:#ff6b6b;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Reason</div>
+      <div style="font-size:13px;color:#ddd;line-height:1.6;">${rejectionReason}</div>
+    </div>` : ""}
+    <div style="background:#111;border:1px solid #222;border-radius:8px;padding:16px 20px;margin-bottom:20px;font-size:13px;color:#aaa;line-height:1.7;">
+      If you believe this is an error or would like to discuss your application, please reply to this email or contact us through the website — we are happy to help.
+    </div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:14px 24px;text-align:center;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#3a5010;margin-top:4px;letter-spacing:.1em;">© 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
+  </div>`;
+  await sendEmail({
+    toEmail,
+    toName: toName || "Customer",
+    subject: approved ? "UKARA Application Approved — Swindon Airsoft" : "UKARA Application Update — Swindon Airsoft",
+    htmlContent,
+  });
+}
+
 // ─────────────────────────────────────────────────────────────
 // Rank & Designation insignia — shared by App.jsx + AdminPanel
 // ─────────────────────────────────────────────────────────────
@@ -3613,6 +3700,7 @@ export {
   sendOrderEmail, sendDispatchEmail, sendNewEventEmail,
   sendAdminBookingNotification, sendAdminOrderNotification,
   sendAdminReturnNotification, sendReturnDecisionEmail,
+  sendAdminUkaraNotification, sendUkaraDecisionEmail,
   // Home
   HomePage, CountdownPanel,
   // Player insignia
