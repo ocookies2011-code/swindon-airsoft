@@ -1894,18 +1894,34 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: 30 }}>No bookings for this event</td></tr>
                   )}
                   {[...ev.bookings].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => {
-                    const bookedExtras = b.extras && typeof b.extras === "object"
-                      ? ev.extras.filter(ex => {
-                          // Check both plain ID and variant key format "extraId:variantId"
-                          const directMatch = (b.extras[ex.id] || 0) > 0;
-                          const variantMatch = Object.keys(b.extras).some(k => k.startsWith(ex.id + ":") && (b.extras[k] || 0) > 0);
-                          return directMatch || variantMatch;
-                        })
-                      : [];
+                    // Build a resolved extras list regardless of key format stored in b.extras
+                    // Keys may be: eventExtraId, eventExtraId:variantId, or raw productId/variantId
+                    const resolvedExtras = [];
+                    if (b.extras && typeof b.extras === "object") {
+                      Object.entries(b.extras).filter(([, v]) => v > 0).forEach(([key, qty]) => {
+                        const [baseId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+                        // Try matching against event extras by their id
+                        let exDef = ev.extras?.find(e => e.id === baseId);
+                        let shopProd = exDef ? (data.shop || []).find(p => p.id === exDef.productId) : null;
+                        let varDef = variantId && shopProd ? (shopProd.variants || []).find(vv => vv.id === variantId) : null;
+                        if (!exDef) {
+                          // Fall back: key might be a raw productId — search shop directly
+                          shopProd = (data.shop || []).find(p => p.id === baseId);
+                          varDef   = variantId && shopProd ? (shopProd.variants || []).find(vv => vv.id === variantId) : null;
+                          // Also try matching event extra by productId
+                          exDef = ev.extras?.find(e => e.productId === baseId);
+                          if (exDef && !shopProd) shopProd = (data.shop || []).find(p => p.id === exDef.productId);
+                        }
+                        const name = exDef?.name || shopProd?.name || baseId;
+                        const label = varDef ? `${name} — ${varDef.name}` : name;
+                        resolvedExtras.push({ key, label, qty });
+                      });
+                    }
+                    const bookedExtras = resolvedExtras; // keep name for compat below
 
                     const downloadTicket = () => {
-                      const extrasHtml = bookedExtras.length > 0
-                        ? `<tr><td style="padding:8px 14px;color:#555;font-weight:600;border-bottom:1px solid #eee;width:140px">Extras</td><td style="padding:8px 14px;border-bottom:1px solid #eee">${bookedExtras.map(ex => `${ex.name} ×${b.extras[ex.id]}`).join(", ")}</td></tr>`
+                      const extrasHtml = resolvedExtras.length > 0
+                        ? `<tr><td style="padding:8px 14px;color:#555;font-weight:600;border-bottom:1px solid #eee;width:140px">Extras</td><td style="padding:8px 14px;border-bottom:1px solid #eee">${resolvedExtras.map(({ label, qty }) => `${label} ×${qty}`).join(", ")}</td></tr>`
                         : "";
                       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
                         <title>Ticket — ${b.userName}</title>
@@ -1963,27 +1979,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                         <td>{b.qty}</td>
                         <td style={{ fontSize: 11 }}>
-                          {bookedExtras.length === 0
+                          {resolvedExtras.length === 0
                             ? <span style={{ color: "var(--muted)" }}>—</span>
-                            : bookedExtras.map(ex => {
-                                // Collect all keys for this extra (plain or variant)
-                                const keys = Object.keys(b.extras || {}).filter(k =>
-                                  k === ex.id || k.startsWith(ex.id + ":")
-                                );
-                                return keys.map(key => {
-                                  const qty = b.extras[key] || 0;
-                                  if (!qty) return null;
-                                  const variantId = key.includes(":") ? key.split(":")[1] : null;
-                                  const shopP = (data.shop || []).find(p => p.id === ex.productId);
-                                  const varDef = variantId && shopP ? (shopP.variants || []).find(vv => vv.id === variantId) : null;
-                                  const label = varDef ? `${ex.name} — ${varDef.name}` : ex.name;
-                                  return (
-                                    <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
-                                      {label} ×{qty}
-                                    </div>
-                                  );
-                                });
-                              })
+                            : resolvedExtras.map(({ key, label, qty }) => (
+                                <div key={key} style={{ fontFamily: "'Share Tech Mono',monospace", whiteSpace: "nowrap", color: "var(--accent)" }}>
+                                  {label} ×{qty}
+                                </div>
+                              ))
                           }
                         </td>
                         <td className="text-green">£{b.total.toFixed(2)}</td>
@@ -2119,11 +2121,21 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       </div>
                       {extras.map(([key, qty]) => {
                         const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-                        const ex = evObj?.extras?.find(e => e.id === extraId);
-                        const lp = (data?.shop || []).find(p => p.id === ex?.productId);
-                        const selectedVariant = variantId ? lp?.variants?.find(vv => vv.id === variantId) : null;
-                        const label = ex ? (selectedVariant ? `${ex.name} — ${selectedVariant.name}` : ex.name) : key;
-                        const unitPrice = selectedVariant ? Number(selectedVariant.price) : (lp ? Number(lp.price) : 0);
+                        // Try event extras lookup first
+                        let exDef      = evObj?.extras?.find(e => e.id === extraId);
+                        let shopProd   = (data?.shop || []).find(p => p.id === (exDef?.productId ?? extraId));
+                        let varDef     = variantId ? (shopProd?.variants || []).find(vv => vv.id === variantId) : null;
+                        // If event extra not found, the key might be a raw productId
+                        if (!exDef) {
+                          shopProd = (data?.shop || []).find(p => p.id === extraId);
+                          varDef   = variantId && shopProd ? (shopProd.variants || []).find(vv => vv.id === variantId) : null;
+                          // Also try matching by productId on event extras
+                          if (!shopProd) exDef = evObj?.extras?.find(e => e.productId === extraId);
+                          if (exDef)    shopProd = (data?.shop || []).find(p => p.id === exDef.productId);
+                        }
+                        const name      = exDef?.name || shopProd?.name || extraId;
+                        const label     = varDef ? `${name} — ${varDef.name}` : name;
+                        const unitPrice = varDef ? Number(varDef.price) : (shopProd ? Number(shopProd.price) : 0);
                         return (
                           <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                             <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
@@ -10895,7 +10907,12 @@ function TermsPage({ setPage }) {
 function AdminUkaraApplications({ showToast, cu }) {
   const [apps, setApps] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [tab, setTab] = React.useState("pending"); // "pending" | "approved"
+  const getInitTab = () => {
+    const p = window.location.hash.replace("#", "").split("/");
+    return p[0] === "admin" && p[1] === "ukara" && ["pending", "approved"].includes(p[2]) ? p[2] : "pending";
+  };
+  const [tab, setTabState] = React.useState(getInitTab);
+  const setTab = (t) => { setTabState(t); window.location.hash = "admin/ukara/" + t; };
   const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState(null);
   const [approveModal, setApproveModal] = React.useState(null);
@@ -11067,6 +11084,14 @@ function AdminUkaraApplications({ showToast, cu }) {
       (a.address || "").toLowerCase().includes(q) ||
       (a.ukara_id || "").toLowerCase().includes(q)
     );
+  }).sort((a, b) => {
+    // Sort by UKARA ID alphanumerically — records without an ID go to the end
+    const ua = (a.ukara_id || "").toUpperCase();
+    const ub = (b.ukara_id || "").toUpperCase();
+    if (!ua && !ub) return 0;
+    if (!ua) return 1;
+    if (!ub) return -1;
+    return ua.localeCompare(ub, undefined, { numeric: true, sensitivity: "base" });
   });
 
   const fmtDate = d => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
