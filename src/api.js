@@ -662,6 +662,7 @@ export function normaliseProfile(p) {
     vipApplied:         p.vip_applied,
     vipExpiresAt:       p.vip_expires_at || null,
     ukara:              p.ukara,
+    ukaraExpiresAt:     p.ukara_expires_at || null,
     credits:            Number(p.credits),
     leaderboardOptOut:  p.leaderboard_opt_out,
     profilePic:         p.profile_pic,
