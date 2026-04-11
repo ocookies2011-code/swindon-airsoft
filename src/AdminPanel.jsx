@@ -1336,7 +1336,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   const f = setField;
 
   // ── Check-in state ──
-  const [evId, setEvId] = useState(data.events[0]?.id || "");
+  const [evId, setEvId] = useState(() => {
+    const now = new Date();
+    const upcoming = data.events
+      .filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") > now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    return (upcoming[0] || data.events[0])?.id || "";
+  });
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
 
@@ -1857,7 +1863,17 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             <div className="form-group" style={{ margin: 0 }}>
               <label>Select Event</label>
               <select value={evId} onChange={e => setEvId(e.target.value)}>
-                {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)}</option>)}
+                {(() => {
+                  const now = new Date();
+                  const upcoming = data.events
+                    .filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") > now)
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                  if (upcoming.length === 0)
+                    return <option value="">— No upcoming events —</option>;
+                  return upcoming.map(ev => (
+                    <option key={ev.id} value={ev.id}>{ev.title} — {fmtDate(ev.date)}</option>
+                  ));
+                })()}
               </select>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
