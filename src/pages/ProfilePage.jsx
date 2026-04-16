@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { supabase } from "./supabaseClient";
-import * as api from "./api";
-import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "./api";
+import { supabase } from "../supabaseClient";
+import * as api from "../api";
+import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "../api";
 import {
   renderMd, stockLabel, fmtErr,
   gmtNow, gmtDate, gmtShort, fmtDate, uid,
@@ -18,7 +18,7 @@ import {
   sendWelcomeEmail, sendTicketEmail, sendCancellationEmail,
   sendWaitlistNotifyEmail, sendAdminReturnNotification, sendAdminUkaraNotification, sendUkaraDecisionEmail,
   HomePage, CountdownPanel,
-} from "./utils";
+} from "../utils";
 import { AdminPanel, AboutPage, StaffPage, ContactPage, PlayerWaitlist, TermsPage } from "../index";
 
 export default function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
