@@ -1,45 +1,29 @@
 {
   "headers": [
     {
-      "source": "/(.*)\\.jpg",
+      "source": "/assets/(.*)",
       "headers": [
-        { "key": "Content-Type", "value": "image/jpeg" },
-        { "key": "Cache-Control", "value": "public, max-age=31536000" }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "source": "/(.*)\\.jpeg",
+      "source": "/(.*).js",
       "headers": [
-        { "key": "Content-Type", "value": "image/jpeg" },
-        { "key": "Cache-Control", "value": "public, max-age=31536000" }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "source": "/(.*)\\.png",
+      "source": "/(.*).css",
       "headers": [
-        { "key": "Content-Type", "value": "image/png" },
-        { "key": "Cache-Control", "value": "public, max-age=31536000" }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "source": "/(.*)\\.webp",
+      "source": "/",
       "headers": [
-        { "key": "Content-Type", "value": "image/webp" },
-        { "key": "Cache-Control", "value": "public, max-age=31536000" }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
-    },
-    {
-      "source": "/(.*)\\.svg",
-      "headers": [
-        { "key": "Content-Type", "value": "image/svg+xml" },
-        { "key": "Cache-Control", "value": "public, max-age=31536000" }
-      ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/((?!.*\\.[a-zA-Z0-9]{1,5}$).*)",
-      "destination": "/index.html"
     }
   ]
 }
