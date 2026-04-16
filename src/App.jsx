@@ -43,6 +43,7 @@ import LoadoutTab from "./components/LoadoutTab";
 import { RankInsignia, DesignationInsignia } from "./components/Insignia";
 import ReportCheatTab from "./components/ReportCheatTab";
 import ErrorBoundary from "./components/ErrorBoundary";
+import SA_LOGO_SRC from "./saLogo.js";
 
 function AppInner() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
