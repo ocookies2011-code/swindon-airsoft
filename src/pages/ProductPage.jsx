@@ -21,7 +21,7 @@ import {
 } from "../utils";
 import { AdminPanel, AboutPage, StaffPage, ContactPage, PlayerWaitlist, TermsPage } from "../index";
 
-import { ProductReviews } from "./ProductReviews";
+import { ProductReviews } from "../components/ProductReviews";
 export default function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, shopItems = [] }) {
   const isMobile = useMobile(700);
   const [selectedVariant, setSelectedVariant] = useState(null);
