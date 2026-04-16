@@ -1,7 +1,24 @@
-import React from "react";
-import { fmtDate } from "./utils";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { supabase } from "./supabaseClient";
+import * as api from "./api";
+import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "./api";
+import {
+  renderMd, stockLabel, fmtErr,
+  gmtShort, fmtDate, uid,
+  EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
+  detectCourier, trackKeyCache,
+  AdminTrackStatusCell, TrackingBlock,
+  useMobile, GmtClock, QRScanner,
+  sendEmail, sendTicketEmail, sendEventReminderEmail,
+  sendAdminBookingNotification,
+  sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
+  sendReturnDecisionEmail, sendUkaraDecisionEmail, sendAdminUkaraNotification,
+  WaiverModal,
+  RankInsignia, DesignationInsignia, resetSquareConfig,
+} from "./utils";
+import { SUPERADMIN_EMAIL } from "./adminShared";
 
-function AdminDash({ data, setSection, isSuperAdmin }) {
+export default function AdminDash({ data, setSection, isSuperAdmin }) {
   const allBookings = data.events.flatMap(e => e.bookings);
   const revenue = allBookings.filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
   const checkins = allBookings.filter(b => b.checkedIn).length;
@@ -191,5 +208,3 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
 
 // ── Admin Check-In ────────────────────────────────────────
 // ── Admin Bookings & Check-In (merged) ────────────────────
-
-export default AdminDash;

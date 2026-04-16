@@ -1,9 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { supabase } from "./supabaseClient";
 import * as api from "./api";
-import { fmtErr } from "./utils";
-import { diffFields, logAction } from "./adminShared";
+import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "./api";
+import {
+  renderMd, stockLabel, fmtErr,
+  gmtShort, fmtDate, uid,
+  EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
+  detectCourier, trackKeyCache,
+  AdminTrackStatusCell, TrackingBlock,
+  useMobile, GmtClock, QRScanner,
+  sendEmail, sendTicketEmail, sendEventReminderEmail,
+  sendAdminBookingNotification,
+  sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
+  sendReturnDecisionEmail, sendUkaraDecisionEmail, sendAdminUkaraNotification,
+  WaiverModal,
+  RankInsignia, DesignationInsignia, resetSquareConfig,
+} from "./utils";
+import { SUPERADMIN_EMAIL } from "./adminShared";
 
-function AdminDiscountCodes({ data, showToast, cu }) {
+export default function AdminDiscountCodes({ data, showToast, cu }) {
   const EMPTY = { code: '', type: 'percent', value: '', maxUses: '', maxUsesPerUser: '', expiresAt: '', assignedUserIds: [], scope: 'all', active: true };
   const [codes, setCodes] = useState([]);
   const [redemptions, setRedemptions] = useState([]);
@@ -398,4 +413,38 @@ function AdminDiscountCodes({ data, showToast, cu }) {
   );
 }
 
-export default AdminDiscountCodes;
+// ── Audit log ────────────────────────────────────────────────
+const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
+
+// Build a human-readable "field: before → after" diff string
+function diffFields(before = {}, after = {}, labels = {}) {
+  const changes = [];
+  const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const key of allKeys) {
+    const bVal = before[key] ?? "";
+    const aVal = after[key] ?? "";
+    // Normalise to strings for comparison, skip identical
+    const bStr = bVal === null || bVal === undefined ? "" : String(bVal).trim();
+    const aStr = aVal === null || aVal === undefined ? "" : String(aVal).trim();
+    if (bStr === aStr) continue;
+    const label = labels[key] || key;
+    changes.push(`${label}: "${bStr}" → "${aStr}"`);
+  }
+  return changes.length ? changes.join(" | ") : null;
+}
+
+async function logAction({ adminEmail, adminName, action, detail = null }) {
+  try {
+    await supabase.from("admin_audit_log").insert({
+      admin_email: adminEmail,
+      admin_name:  adminName || adminEmail,
+      action,
+      detail,
+      created_at:  new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn("Audit log failed:", e.message);
+  }
+}
+
+// ── Admin Gift Vouchers ───────────────────────────────────

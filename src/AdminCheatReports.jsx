@@ -1,9 +1,24 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
-import { fmtErr, fmtDate, RankInsignia } from "./utils";
-import { logAction } from "./adminShared";
+import * as api from "./api";
+import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "./api";
+import {
+  renderMd, stockLabel, fmtErr,
+  gmtShort, fmtDate, uid,
+  EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
+  detectCourier, trackKeyCache,
+  AdminTrackStatusCell, TrackingBlock,
+  useMobile, GmtClock, QRScanner,
+  sendEmail, sendTicketEmail, sendEventReminderEmail,
+  sendAdminBookingNotification,
+  sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
+  sendReturnDecisionEmail, sendUkaraDecisionEmail, sendAdminUkaraNotification,
+  WaiverModal,
+  RankInsignia, DesignationInsignia, resetSquareConfig,
+} from "./utils";
+import { SUPERADMIN_EMAIL } from "./adminShared";
 
-function AdminCheatReports({ data, showToast, cu }) {
+export default function AdminCheatReports({ data, showToast, cu }) {
   const [reports, setReports]         = useState([]);
   const [loading, setLoading]         = useState(true);
   const [selected, setSelected]       = useState(null);
@@ -302,5 +317,3 @@ function AdminCheatReports({ data, showToast, cu }) {
 }
 
 // ── Admin Players ─────────────────────────────────────────
-
-export default AdminCheatReports;

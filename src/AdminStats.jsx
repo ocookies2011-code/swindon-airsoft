@@ -1,8 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "./supabaseClient";
-import { fmtErr, fmtDate } from "./utils";
+import * as api from "./api";
+import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "./api";
+import {
+  renderMd, stockLabel, fmtErr,
+  gmtShort, fmtDate, uid,
+  EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
+  detectCourier, trackKeyCache,
+  AdminTrackStatusCell, TrackingBlock,
+  useMobile, GmtClock, QRScanner,
+  sendEmail, sendTicketEmail, sendEventReminderEmail,
+  sendAdminBookingNotification,
+  sendWaitlistNotifyEmail, sendDispatchEmail, sendNewEventEmail,
+  sendReturnDecisionEmail, sendUkaraDecisionEmail, sendAdminUkaraNotification,
+  WaiverModal,
+  RankInsignia, DesignationInsignia, resetSquareConfig,
+} from "./utils";
+import { SUPERADMIN_EMAIL } from "./adminShared";
 
-function AdminFailedPayments({ showToast, cu }) {
+export function AdminFailedPayments({ showToast, cu }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [delConfirm, setDelConfirm] = useState(null);
@@ -407,7 +423,7 @@ function UKVisitorMap({ visitData }) {
 
 
 // ── Admin Visitor Stats ───────────────────────────────────
-function AdminVisitorStats() {
+export default function AdminVisitorStats() {
   const [visitData, setVisitData]         = useState([]);
   const [allTimeCounts, setAllTimeCounts] = useState(null);
   const [loading, setLoading]             = useState(true);
@@ -831,6 +847,3 @@ function AdminVisitorStats() {
 }
 
 // ── Admin Revenue ─────────────────────────────────────────
-
-export { AdminFailedPayments, UKVisitorMap };
-export default AdminVisitorStats;
