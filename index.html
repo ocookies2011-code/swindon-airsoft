@@ -39,36 +39,13 @@
     <meta name="author"  content="Swindon Airsoft" />
     <meta name="keywords" content="airsoft, swindon, airsoft field, book airsoft, wiltshire airsoft, airsoft events, airsoft gear" />
 
-    <!-- ── Preconnects ───────────────────────────────────────── -->
+    <!-- ── Fonts ────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://images.unsplash.com" />
-    <link rel="preconnect" href="https://res.cloudinary.com" />
-    <link rel="dns-prefetch" href="https://supabase.co" />
-
-    <!-- ── Hero image preload (LCP element) ─────────────────── -->
-    <link rel="preload" as="image" href="/hero.jpg" fetchpriority="high" />
-
-    <!-- ── Fonts (non-blocking) ──────────────────────────────── -->
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,800;0,900;1,700&family=Share+Tech+Mono&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,800;0,900;1,700&family=Share+Tech+Mono&display=swap" rel="stylesheet" /></noscript>
-
-    <!-- ── Font fallback (prevents FOUT flash) ───────────────── -->
-    <style>
-      body { font-family: 'Arial Narrow', Arial, sans-serif; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,800;0,900;1,700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <!-- ── Instant above-fold skeleton (visible before JS loads) -->
-    <div id="root">
-      <div style="min-height:100vh;background:#080a06;display:flex;align-items:center;justify-content:center;">
-        <div style="text-align:center;padding:40px 20px;">
-          <div style="width:60px;height:60px;border:3px solid #4a7c20;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px;"></div>
-          <div style="color:#4a7c20;font-family:Arial Narrow,Arial,sans-serif;font-size:13px;letter-spacing:.3em;text-transform:uppercase;">Loading</div>
-        </div>
-      </div>
-      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
