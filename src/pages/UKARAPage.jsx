@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { supabase } from "./supabaseClient";
-import * as api from "./api";
-import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "./api";
+import { supabase } from "../supabaseClient";
+import * as api from "../api";
+import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "../api";
 import {
   renderMd, stockLabel, fmtErr,
   gmtNow, gmtDate, gmtShort, fmtDate, uid,
@@ -18,7 +18,7 @@ import {
   sendWelcomeEmail, sendTicketEmail, sendCancellationEmail,
   sendWaitlistNotifyEmail, sendAdminReturnNotification, sendAdminUkaraNotification, sendUkaraDecisionEmail,
   HomePage, CountdownPanel,
-} from "./utils";
+} from "../utils";
 import { AdminPanel, AboutPage, StaffPage, ContactPage, PlayerWaitlist, TermsPage } from "../index";
 
 export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
@@ -29,8 +29,7 @@ export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
     const w = cu?.waiverData;
     if (!w) return "";
     return [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country]
-      .filter(Boolean).join("
-");
+      .filter(Boolean).join("\n");
   })();
 
   const [form, setForm] = useState({
@@ -59,8 +58,7 @@ export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
     if (cu) {
       // Re-fill from waiver if user logs in after page load
       const w = cu.waiverData;
-      const addr = w ? [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country].filter(Boolean).join("
-") : "";
+      const addr = w ? [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country].filter(Boolean).join("\n") : "";
       setForm(f => ({
         ...f,
         name:    w?.name  || cu.name  || f.name,
