@@ -16,7 +16,7 @@ import {
   WaiverModal,
   RankInsignia, DesignationInsignia, resetSquareConfig,
 } from "./utils";
-import { SUPERADMIN_EMAIL } from "./adminShared";
+import { SUPERADMIN_EMAIL, logAction } from "./adminShared";
 
 export default function AdminMessages({ data, save, showToast, cu }) {
   const [banners, setBanners] = useState(() => Array.isArray(data.homeMsg) && data.homeMsg.length > 0 ? data.homeMsg.map(b => ({ ...emptyBanner(), ...b })) : []);

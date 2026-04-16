@@ -16,7 +16,7 @@ import {
   WaiverModal,
   RankInsignia, DesignationInsignia, resetSquareConfig,
 } from "./utils";
-import { SUPERADMIN_EMAIL } from "./adminShared";
+import { SUPERADMIN_EMAIL, logAction } from "./adminShared";
 
 export default function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }

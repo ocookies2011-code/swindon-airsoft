@@ -16,7 +16,7 @@ import {
   WaiverModal,
   RankInsignia, DesignationInsignia, resetSquareConfig,
 } from "./utils";
-import { SUPERADMIN_EMAIL } from "./adminShared";
+import { SUPERADMIN_EMAIL, logAction } from "./adminShared";
 
 export default function AdminDiscountCodes({ data, showToast, cu }) {
   const EMPTY = { code: '', type: 'percent', value: '', maxUses: '', maxUsesPerUser: '', expiresAt: '', assignedUserIds: [], scope: 'all', active: true };

@@ -16,7 +16,7 @@ import {
   WaiverModal,
   RankInsignia, DesignationInsignia, resetSquareConfig,
 } from "./utils";
-import { SUPERADMIN_EMAIL } from "./adminShared";
+import { SUPERADMIN_EMAIL, logAction } from "./adminShared";
 
 export function AdminGallery({ data, save, showToast }) {
   const [urlInput, setUrlInput]     = useState({});
