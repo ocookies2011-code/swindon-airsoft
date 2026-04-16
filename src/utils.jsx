@@ -2201,15 +2201,7 @@ function HomePage({ data, setPage, onProductClick }) {
 
       {/* HERO */}
       <div className="hero-bg">
-       <img
-  src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1200&q=75&auto=format&fit=crop"
-  alt=""
-  fetchpriority="high"
-  decoding="async"
-  loading="eager"
-  aria-hidden="true"
-  style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", opacity:.35, zIndex:0 }}
-/>
+        <div className="hero-bg-img" style={{ backgroundImage:"url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&q=80&auto=format&fit=crop')" }} />
         <div className="hero-bg-grad" />
         <div style={{ maxWidth:1280, margin:"0 auto", width:"100%", position:"relative", zIndex:1, padding:"0 24px" }}>
           <div className="hero-content">
