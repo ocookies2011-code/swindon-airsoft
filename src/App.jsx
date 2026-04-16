@@ -42,6 +42,7 @@ import { PlayerOrders, ReturnRequestBlock, CustomerOrderDetail } from "./compone
 import LoadoutTab from "./components/LoadoutTab";
 import { RankInsignia, DesignationInsignia } from "./components/Insignia";
 import ReportCheatTab from "./components/ReportCheatTab";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function AppInner() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
