@@ -21,7 +21,6 @@ import {
 } from "./utils";
 import { AdminPanel, AboutPage, StaffPage, ContactPage, PlayerWaitlist, TermsPage } from "../index";
 
-
 export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const isMobile = useMobile(640);
 
@@ -30,7 +29,8 @@ export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
     const w = cu?.waiverData;
     if (!w) return "";
     return [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country]
-      .filter(Boolean).join("\n");
+      .filter(Boolean).join("
+");
   })();
 
   const [form, setForm] = useState({
@@ -59,7 +59,8 @@ export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
     if (cu) {
       // Re-fill from waiver if user logs in after page load
       const w = cu.waiverData;
-      const addr = w ? [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country].filter(Boolean).join("\n") : "";
+      const addr = w ? [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country].filter(Boolean).join("
+") : "";
       setForm(f => ({
         ...f,
         name:    w?.name  || cu.name  || f.name,
@@ -233,38 +234,14 @@ export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         </div>
 
         {/* ── ALREADY HAS UKARA (set via VIP / admin directly on profile) ── */}
-        {!checkingExisting && cu?.ukara && !existingApp && (() => {
-          const ukaraExpiry     = cu.ukaraExpiresAt ? new Date(cu.ukaraExpiresAt) : null;
-          const ukaraIsExpired  = ukaraExpiry && ukaraExpiry < new Date();
-          const ukaraExpiresSoon = ukaraExpiry && !ukaraIsExpired && (ukaraExpiry - new Date()) < 1000 * 60 * 60 * 24 * 60;
-          return (
-            <div style={{ background: ukaraIsExpired ? "rgba(220,50,50,.06)" : "rgba(200,255,0,.06)", border: `1px solid ${ukaraIsExpired ? "#5a1a1a" : "#2a4a10"}`, borderRadius: 10, padding: "28px 32px", textAlign: "center", marginBottom: 32 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🎖️</div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: ukaraIsExpired ? "#ff6060" : "#c8ff00", letterSpacing: ".08em", marginBottom: 8 }}>
-                {ukaraIsExpired ? "UKARA ID EXPIRED" : "YOU ALREADY HAVE A UKARA ID"}
-              </div>
-              <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 16, color: "#e8f0d0", marginBottom: 10, letterSpacing: ".1em" }}>{cu.ukara}</div>
-              {ukaraExpiry && (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,.2)", borderRadius: 6, padding: "6px 14px", marginBottom: 12 }}>
-                  <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, color: ukaraIsExpired ? "#8a3030" : "#4a6a30", letterSpacing: ".1em" }}>
-                    {ukaraIsExpired ? "EXPIRED" : "EXPIRES"}
-                  </span>
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: ukaraIsExpired ? "#ff6060" : ukaraExpiresSoon ? "#ffb74d" : "#e8f0d0" }}>
-                    {ukaraExpiry.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
-                </div>
-              )}
-              <p style={{ color: ukaraIsExpired ? "#8a4040" : "#6a8a50", fontSize: 13, margin: 0 }}>
-                {ukaraIsExpired
-                  ? <>Your UKARA has expired. Please <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#c8d8a0", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 13 }}>contact us</button> to renew.</>
-                  : ukaraExpiresSoon
-                  ? <>Your UKARA expires soon. Please <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#c8d8a0", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 13 }}>contact us</button> to arrange renewal.</>
-                  : <>Your UKARA ID is active. If you need to renew or have any issues, please <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#c8d8a0", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 13 }}>contact us</button>.</>
-                }
-              </p>
-            </div>
-          );
-        })()}
+        {!checkingExisting && cu?.ukara && !existingApp && (
+          <div style={{ background: "rgba(200,255,0,.06)", border: "1px solid #2a4a10", borderRadius: 10, padding: "28px 32px", textAlign: "center", marginBottom: 32 }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🎖️</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#c8ff00", letterSpacing: ".08em", marginBottom: 8 }}>YOU ALREADY HAVE A UKARA ID</div>
+            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 16, color: "#e8f0d0", marginBottom: 10, letterSpacing: ".1em" }}>{cu.ukara}</div>
+            <p style={{ color: "#6a8a50", fontSize: 13, margin: 0 }}>Your UKARA ID is active. If you need to renew or have any issues, please <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#c8d8a0", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 13 }}>contact us</button>.</p>
+          </div>
+        )}
 
         {/* ── APPROVED application card ── */}
         {!checkingExisting && existingApp?.status === "approved" && (
@@ -632,4 +609,3 @@ export default function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
     </div>
   );
 }
-
