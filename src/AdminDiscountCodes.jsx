@@ -414,7 +414,6 @@ export default function AdminDiscountCodes({ data, showToast, cu }) {
 }
 
 // ── Audit log ────────────────────────────────────────────────
-const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
 
 // Build a human-readable "field: before → after" diff string
 function diffFields(before = {}, after = {}, labels = {}) {
