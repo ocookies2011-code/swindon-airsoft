@@ -275,5 +275,4 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
   );
 }
 
-export { loadSquareConfig, resetSquareConfig, SquareCheckoutButton,
-  _squareAppId, _squareLocationId, _squareEnv };
+export { loadSquareConfig, resetSquareConfig, SquareCheckoutButton };

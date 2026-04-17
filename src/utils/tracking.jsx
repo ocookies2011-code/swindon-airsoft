@@ -1,4 +1,4 @@
-// utils/tracking.js — parcel tracking constants, fetch helpers, UI components
+// utils/tracking.jsx — parcel tracking constants, fetch helpers, UI components
 import React, { useState, useEffect } from "react";
 
 // ── Parcel tracking status ───────────────────────────────────
