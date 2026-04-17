@@ -5,6 +5,8 @@ import { supabase } from "../supabaseClient";
 import { GmtClock } from "../utils";
 import { SA_LOGO_SRC } from "../assets/logoImage";
 
+const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
+
 import { AdminDash }               from "./AdminDash";
 import { AdminEventsBookings }     from "./AdminEventsBookings";
 import { AdminPlayers }            from "./AdminPlayers";
