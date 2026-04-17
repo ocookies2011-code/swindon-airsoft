@@ -35,7 +35,7 @@ export const trackKeyCache = { value: undefined };
 async function getTrackingKey() {
   if (trackKeyCache.value !== undefined) return trackKeyCache.value;
   try {
-    const { supabase } = await import('./supabaseClient');
+    const { supabase } = await import('../supabaseClient');
     const { data } = await supabase
       .from('site_settings')
       .select('value')
