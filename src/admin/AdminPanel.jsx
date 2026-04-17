@@ -2,10 +2,9 @@
 // Imports all admin sub-panels and re-exports public-facing pages
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import * as api from "../api";
 import { GmtClock } from "../utils";
 import { SA_LOGO_SRC } from "../assets/logoImage";
-
-const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
 
 import { AdminDash }               from "./AdminDash";
 import { AdminEventsBookings }     from "./AdminEventsBookings";
@@ -38,6 +37,8 @@ import { StaffPage }       from "../pages/StaffPage";
 import { ContactPage }     from "../pages/ContactPage";
 import { PlayerWaitlist }  from "../pages/PlayerWaitlist";
 import { TermsPage }       from "../pages/TermsPage";
+
+const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
 
 function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
   const getInitialSection = () => {
