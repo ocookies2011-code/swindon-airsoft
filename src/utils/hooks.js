@@ -1,5 +1,5 @@
+import { useEffect, useState } from "react";
 // utils/hooks.js — useMobile, useToast
-import { useState, useEffect } from "react";
 
 function useMobile(bp = 640) {
   const [mobile, setMobile] = useState(() => window.innerWidth <= bp);
