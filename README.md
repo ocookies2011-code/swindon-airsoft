@@ -143,4 +143,3 @@ Vercel automatically redeploys within ~60 seconds — no manual steps needed.
 - ✅ Image storage via Supabase Storage (profile pics, banners, shop images, gallery)
 - ✅ Auto-deploy on every git push via Vercel
 - ✅ All previous features: events, bookings, waivers, shop, QR check-in, leaderboard, etc.
-
