@@ -1,6 +1,16 @@
 // pages/AboutPage.jsx
 import React, { useState } from "react";
 
+function Divider() {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:16, margin:"40px 0" }}>
+      <div style={{ flex:1, height:1, background:"linear-gradient(to right,transparent,#2a3a10)" }} />
+      <div style={{ color:"#c8ff00", fontSize:14, opacity:.5 }}>✦</div>
+      <div style={{ flex:1, height:1, background:"linear-gradient(to left,transparent,#2a3a10)" }} />
+    </div>
+  );
+}
+
 function AboutPage({ setPage }) {
 
   const InfoRow = ({ icon, children }) => (

@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
+import { SA_LOGO_SRC } from "../assets/logoImage";
 
 function GalleryPage({ data }) {
   const [openAlbum, setOpenAlbum] = useState(null);

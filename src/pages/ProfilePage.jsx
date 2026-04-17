@@ -6,6 +6,7 @@ import { DesignationInsignia, QRCode, RankInsignia, SquareCheckoutButton, Waiver
 import { LoadoutTab } from "./LoadoutTab";
 import { ReportCheatTab } from "./ReportCheatTab";
 import { PlayerOrders } from "./PlayerOrders";
+import { PlayerWaitlist } from "./PlayerWaitlist";
 
 function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const getInitTab = () => {
