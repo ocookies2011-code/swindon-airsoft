@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { fmtErr, renderMd, stockLabel, uid, useMobile } from "../utils";
 import { diffFields, logAction } from "./adminHelpers";
+import { AdminOrdersInline } from "./AdminOrders";
 
 function AdminShop({ data, save, showToast, cu }) {
   const getInitTab = () => {

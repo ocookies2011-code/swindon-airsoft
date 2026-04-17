@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { fmtErr, resetSquareConfig } from "../utils";
 import { logAction } from "./adminHelpers";
+import { EmailTestCard } from "./EmailTestCard";
 
 function AdminSettings({ showToast, cu }) {
   const S = (key, def = "") => {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { GmtClock } from "../utils";
+import { SA_LOGO_SRC } from "../assets/logoImage";
 
 import { AdminDash }               from "./AdminDash";
 import { AdminEventsBookings }     from "./AdminEventsBookings";
