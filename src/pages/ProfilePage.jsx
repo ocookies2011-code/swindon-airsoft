@@ -445,63 +445,145 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
         </div>
       )}
 
-      {tab === "bookings" && (
-        <div className="card">
-          {myBookings.length === 0 ? (
-            <div style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>No bookings yet.</div>
-          ) : (
-            <>
-              <div style={{ marginBottom:16, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>
-                {myBookings.length} booking{myBookings.length !== 1 ? "s" : ""}
-              </div>
-              <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                {myBookings
-                  .sort((a,b) => new Date(b.eventDate) - new Date(a.eventDate))
-                  .map(b => {
-                    const isPast = new Date(b.eventDate) < new Date();
-                    const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
-                    const canCancel = !isPast && !b.checkedIn && hoursUntil > 24;
-                    return (
-                      <div key={b.id} style={{
-                        display:"flex", alignItems:"center", justifyContent:"space-between",
-                        padding:"10px 14px", background:"var(--surface)", borderLeft:`3px solid ${b.checkedIn ? "#c8ff00" : isPast ? "#2a2a2a" : "#4fc3f7"}`,
-                        gap:12, flexWrap:"wrap",
-                      }}>
-                        <div style={{ display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:0 }}>
-                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".04em", color: isPast ? "var(--muted)" : "#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                            {b.eventTitle}
+      {tab === "bookings" && (() => {
+        const openTicket = (b) => {
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(b.id)}&bgcolor=0d0d0d&color=c8ff00&qzone=1`;
+          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>FIELD PASS — ${b.eventTitle || "EVENT"}</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+@media print { .noprint{display:none!important} body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important} }
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800;900&family=Share+Tech+Mono&display=swap');
+body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+.ticket { width:520px; max-width:100%; background:#111; border:1px solid #2a2a2a; position:relative; overflow:hidden; }
+.ticket::before { content:''; position:absolute; inset:0; background-image:radial-gradient(ellipse at 20% 30%,rgba(30,50,10,.25) 0%,transparent 50%),radial-gradient(ellipse at 70% 70%,rgba(20,40,5,.2) 0%,transparent 40%); pointer-events:none; z-index:0; }
+.ticket > * { position:relative; z-index:1; }
+.corner { position:absolute; width:18px; height:18px; z-index:2; }
+.corner.tl { top:7px; left:7px; border-top:2px solid #c8ff00; border-left:2px solid #c8ff00; }
+.corner.tr { top:7px; right:7px; border-top:2px solid #c8ff00; border-right:2px solid #c8ff00; }
+.corner.bl { bottom:7px; left:7px; border-bottom:2px solid #c8ff00; border-left:2px solid #c8ff00; }
+.corner.br { bottom:7px; right:7px; border-bottom:2px solid #c8ff00; border-right:2px solid #c8ff00; }
+.hdr { background:linear-gradient(135deg,#0d1400,#111 60%,#0a1000); padding:18px 22px 14px; border-bottom:1px solid #1e1e1e; }
+.brand { font-size:9px; letter-spacing:.2em; color:#7aaa30; font-weight:800; text-transform:uppercase; margin-bottom:8px; }
+.evname { font-size:26px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; line-height:1; margin-bottom:5px; }
+.evdate { font-family:'Share Tech Mono',monospace; font-size:11px; color:#4a6820; letter-spacing:.1em; }
+.tear { display:flex; align-items:center; height:24px; }
+.notch { width:14px; height:28px; background:#0a0a0a; flex-shrink:0; }
+.notch.l { border-radius:0 14px 14px 0; margin-left:-1px; }
+.notch.r { border-radius:14px 0 0 14px; margin-right:-1px; }
+.tearline { flex:1; border-top:1px dashed #283810; }
+.body { padding:14px 22px 18px; display:flex; gap:16px; align-items:center; }
+.fields { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+.lbl { font-size:8px; letter-spacing:.22em; color:#4a6820; font-weight:800; text-transform:uppercase; margin-bottom:3px; }
+.val { font-size:17px; font-weight:800; letter-spacing:.04em; color:#c8e878; }
+.val.status-ok { color:#c8ff00; }
+.val.status-pending { color:#4fc3f7; }
+.qrside { text-align:center; flex-shrink:0; }
+.qrwrap { background:#07100304; border:2px solid #2a3a10; padding:8px; display:inline-block; }
+.qrlbl { font-size:8px; color:#3a5818; margin-top:5px; letter-spacing:.18em; text-transform:uppercase; }
+.footer { background:rgba(4,8,1,.85); border-top:1px solid #1a2808; padding:6px 22px; display:flex; justify-content:space-between; align-items:center; }
+.foottxt { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:.15em; color:#283810; }
+.bars { display:flex; gap:2px; align-items:center; }
+.bar { background:#1e2c08; width:2px; border-radius:1px; }
+.printbtn { margin-top:20px; background:#c8ff00; color:#000; border:none; padding:12px 32px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
+</style></head><body>
+<div class="ticket">
+  <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+  <div class="hdr">
+    <div class="brand">⬡ SWINDON AIRSOFT &nbsp;◆&nbsp; FIELD PASS // ${new Date().getFullYear()}</div>
+    <div class="evname">${b.eventTitle || "EVENT"}</div>
+    <div class="evdate">📅 ${b.eventDate ? new Date(b.eventDate).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : ""}</div>
+  </div>
+  <div class="tear"><div class="notch l"></div><div class="tearline"></div><div class="notch r"></div></div>
+  <div class="body">
+    <div class="fields">
+      <div><div class="lbl">Kit Type</div><div class="val">${b.type === "walkOn" ? "Walk-On" : "Rental"}</div></div>
+      <div><div class="lbl">Units</div><div class="val">${b.qty}</div></div>
+      <div><div class="lbl">Levy</div><div class="val">${b.total > 0 ? "£" + Number(b.total).toFixed(2) : "N/A"}</div></div>
+      <div><div class="lbl">Ref</div><div class="val">${b.id.slice(0,8).toUpperCase()}</div></div>
+      <div><div class="lbl">Status</div><div class="val ${b.checkedIn ? "status-ok" : "status-pending"}">${b.checkedIn ? "CLEARED" : "PENDING"}</div></div>
+      <div><div class="lbl">Player</div><div class="val" style="font-size:13px">${cu.name || ""}</div></div>
+    </div>
+    <div class="qrside">
+      <div class="qrwrap"><img src="${qrUrl}" width="120" height="120" alt="QR"></div>
+      <div class="qrlbl">Scan on arrival</div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="foottxt">MISSION ID: ${b.id.toUpperCase()}</div>
+    <div class="bars">${Array.from({length:28},(_,i)=>`<div class="bar" style="height:${8+Math.sin(i*1.3)*6}px"></div>`).join("")}</div>
+  </div>
+</div>
+<button class="printbtn noprint" onclick="window.print()">🖨 PRINT / SAVE AS PDF</button>
+</body></html>`;
+          const w = window.open("","_blank");
+          if (w) { w.document.write(html); w.document.close(); }
+        };
+
+        return (
+          <div className="card">
+            {myBookings.length === 0 ? (
+              <div style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>No bookings yet.</div>
+            ) : (
+              <>
+                <div style={{ marginBottom:16, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>
+                  {myBookings.length} booking{myBookings.length !== 1 ? "s" : ""}
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                  {myBookings
+                    .sort((a,b) => new Date(b.eventDate) - new Date(a.eventDate))
+                    .map(b => {
+                      const isPast = new Date(b.eventDate) < new Date();
+                      const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
+                      const canCancel = !isPast && !b.checkedIn && hoursUntil > 24;
+                      return (
+                        <div key={b.id} style={{
+                          display:"flex", alignItems:"center", justifyContent:"space-between",
+                          padding:"10px 14px", background:"var(--surface)",
+                          borderLeft:`3px solid ${b.checkedIn ? "#c8ff00" : isPast ? "#2a2a2a" : "#4fc3f7"}`,
+                          gap:12, flexWrap:"wrap",
+                        }}>
+                          <div style={{ display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:0 }}>
+                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".04em", color: isPast ? "var(--muted)" : "#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                              {b.eventTitle}
+                            </div>
+                            <div style={{ fontSize:11, color:"var(--muted)", display:"flex", gap:10, flexWrap:"wrap" }}>
+                              <span>📅 {fmtDate(b.eventDate)}</span>
+                              <span>{b.type === "walkOn" ? "Walk-On" : "Rental"} × {b.qty}</span>
+                              {b.total > 0 && <span>£{Number(b.total).toFixed(2)}</span>}
+                            </div>
                           </div>
-                          <div style={{ fontSize:11, color:"var(--muted)", display:"flex", gap:10, flexWrap:"wrap" }}>
-                            <span>📅 {fmtDate(b.eventDate)}</span>
-                            <span>{b.type === "walkOn" ? "Walk-On" : "Rental"} × {b.qty}</span>
-                            {b.total > 0 && <span>£{Number(b.total).toFixed(2)}</span>}
-                          </div>
-                        </div>
-                        <div style={{ display:"flex", gap:8, alignItems:"center", flexShrink:0 }}>
-                          <span style={{
-                            fontSize:10, fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif",
-                            letterSpacing:".12em", padding:"2px 8px", textTransform:"uppercase",
-                            background: b.checkedIn ? "rgba(200,255,0,.1)" : isPast ? "rgba(255,255,255,.04)" : "rgba(79,195,247,.1)",
-                            color: b.checkedIn ? "#c8ff00" : isPast ? "#555" : "#4fc3f7",
-                            border: `1px solid ${b.checkedIn ? "rgba(200,255,0,.2)" : isPast ? "#2a2a2a" : "rgba(79,195,247,.2)"}`,
-                          }}>
-                            {b.checkedIn ? "✓ Attended" : isPast ? "Missed" : "Booked"}
-                          </span>
-                          {canCancel && (
-                            <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
-                              ✕ Cancel
+                          <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0 }}>
+                            <span style={{
+                              fontSize:10, fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif",
+                              letterSpacing:".12em", padding:"2px 8px", textTransform:"uppercase",
+                              background: b.checkedIn ? "rgba(200,255,0,.1)" : isPast ? "rgba(255,255,255,.04)" : "rgba(79,195,247,.1)",
+                              color: b.checkedIn ? "#c8ff00" : isPast ? "#555" : "#4fc3f7",
+                              border: `1px solid ${b.checkedIn ? "rgba(200,255,0,.2)" : isPast ? "#2a2a2a" : "rgba(79,195,247,.2)"}`,
+                            }}>
+                              {b.checkedIn ? "✓ Attended" : isPast ? "Missed" : "Booked"}
+                            </span>
+                            <button
+                              onClick={() => openTicket(b)}
+                              title="View / Print Ticket"
+                              style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
+                              🎟 Ticket
                             </button>
-                          )}
+                            {canCancel && (
+                              <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
+                                ✕ Cancel
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                }
-              </div>
-            </>
-          )}
-        </div>
-      )}
+                      );
+                    })
+                  }
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
       {/* Cancel booking modal */}
       {cancelModal && (() => {
         const b = cancelModal;
