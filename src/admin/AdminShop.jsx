@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { stockLabel, fmtErr, uid, useMobile } from "../utils";
-import { logAction } from "./adminHelpers";
+import { fmtErr, renderMd, stockLabel, uid, useMobile } from "../utils";
+import { diffFields, logAction } from "./adminHelpers";
 
 function AdminShop({ data, save, showToast, cu }) {
   const getInitTab = () => {

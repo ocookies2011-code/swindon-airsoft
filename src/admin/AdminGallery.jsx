@@ -1,5 +1,5 @@
 // admin/AdminGallery.jsx — gallery photo management
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { uid } from "../utils";

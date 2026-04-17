@@ -1,6 +1,6 @@
 // pages/ContactPage.jsx
-import React, { useState } from "react";
-import { useMobile } from "../utils";
+import React, { useRef, useState } from "react";
+import { sendEmail, useMobile } from "../utils";
 
 function ContactPage({ data, cu, showToast }) {
   const isMobile = useMobile(640);

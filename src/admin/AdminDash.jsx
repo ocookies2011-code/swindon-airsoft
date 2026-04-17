@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtDate, GmtClock } from "../utils";
+import { GmtClock, fmtDate, sendEventReminderEmail } from "../utils";
 
 function AdminDash({ data, setSection, isSuperAdmin }) {
   const allBookings = data.events.flatMap(e => e.bookings);

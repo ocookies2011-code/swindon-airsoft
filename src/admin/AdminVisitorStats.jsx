@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtDate } from "../utils";
+import { CSS, fmtDate } from "../utils";
 
 function UKVisitorMap({ visitData }) {
   const mapRef       = useRef(null);   // DOM node

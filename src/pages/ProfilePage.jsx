@@ -2,14 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import {
-  fmtErr, fmtDate, gmtShort, uid,
-  SquareCheckoutButton, loadSquareConfig,
-  QRCode, useMobile,
-  WaiverModal,
-  RankInsignia, DesignationInsignia,
-  sendWelcomeEmail,
-} from "../utils";
+import { DesignationInsignia, QRCode, RankInsignia, SquareCheckoutButton, WaiverModal, fmtDate, fmtErr, gmtShort, loadSquareConfig, sendCancellationEmail, sendWaitlistNotifyEmail, sendWelcomeEmail, uid, useMobile } from "../utils";
 import { LoadoutTab } from "./LoadoutTab";
 import { ReportCheatTab } from "./ReportCheatTab";
 import { PlayerOrders } from "./PlayerOrders";

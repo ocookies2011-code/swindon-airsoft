@@ -1,5 +1,5 @@
 // utils/nav.jsx — PublicNav (top nav, mobile drawer, bottom nav)
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { SA_LOGO_SRC } from "../assets/logoImage";
 

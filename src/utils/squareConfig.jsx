@@ -1,5 +1,5 @@
 // utils/squareConfig.jsx — Square Web Payments SDK config + SquareCheckoutButton
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 

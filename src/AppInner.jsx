@@ -1,16 +1,9 @@
 // AppInner.jsx — routing, auth state, cart state, toast, footer
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
 import { normaliseProfile } from "./api";
-import {
-  CSS,
-  useData, useMobile, useToast,
-  SkeletonCard, Toast,
-  SupabaseAuthModal, PublicNav,
-  sendAdminBookingNotification,
-  HomePage, CountdownPanel,
-} from "./utils";
+import { CSS, HomePage, CountdownPanel, PublicNav, SkeletonCard, SupabaseAuthModal, Toast, sendAdminBookingNotification, sendEmail, sendWelcomeEmail, useData, useMobile, useToast } from "./utils";
 import { SA_LOGO_SRC } from "./assets/logoImage";
 import { AdminPanel, AboutPage, StaffPage, ContactPage, PlayerWaitlist, TermsPage } from "./admin/AdminPanel";
 import { EventsPage }         from "./pages/EventsPage";

@@ -2,12 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import {
-  renderMd, stockLabel, fmtErr, fmtDate, uid,
-  SquareCheckoutButton, loadSquareConfig,
-  useMobile,
-  sendOrderEmail, sendAdminOrderNotification,
-} from "../utils";
+import { SkeletonCard, SquareCheckoutButton, fmtDate, fmtErr, loadSquareConfig, renderMd, sendAdminOrderNotification, sendOrderEmail, stockLabel, uid, useMobile } from "../utils";
 
 function ShopClosedPage({ setPage }) {
   const categories = [

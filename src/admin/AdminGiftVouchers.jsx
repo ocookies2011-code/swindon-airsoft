@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtErr, fmtDate, useMobile } from "../utils";
+import { fmtDate, fmtErr, sendEmail, useMobile } from "../utils";
 import { logAction } from "./adminHelpers";
 
 function AdminGiftVouchers({ showToast, cu }) {

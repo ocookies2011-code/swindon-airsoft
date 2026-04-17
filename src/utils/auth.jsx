@@ -1,5 +1,5 @@
 // utils/auth.jsx — SupabaseAuthModal, WaiverModal
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { normaliseProfile } from "../api";

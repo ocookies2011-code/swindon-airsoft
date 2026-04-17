@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { SquareCheckoutButton, loadSquareConfig, useMobile, fmtDate } from "../utils";
+import { SquareCheckoutButton, fmtDate, loadSquareConfig, sendEmail, useMobile } from "../utils";
 
 function GiftVoucherPage({ cu, showToast, setAuthModal }) {
   const PRESET_AMOUNTS = [10, 20, 25, 50];

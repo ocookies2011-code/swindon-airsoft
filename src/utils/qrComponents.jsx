@@ -1,5 +1,5 @@
 // utils/qrComponents.jsx — QRCode (display) + QRScanner (camera)
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 function QRCode({ value, size = 120 }) {
   const ref = useRef(null);

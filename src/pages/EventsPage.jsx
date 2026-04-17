@@ -3,16 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "../api";
-import {
-  renderMd, fmtErr, gmtDate, gmtShort, fmtDate, uid,
-  loadSquareConfig, SquareCheckoutButton,
-  TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS,
-  detectCourier, TrackingBlock,
-  SkeletonCard, useMobile,
-  WaiverModal,
-  sendEmail, sendOrderEmail, sendTicketEmail, sendCancellationEmail,
-  sendWaitlistNotifyEmail, sendAdminBookingNotification,
-} from "../utils";
+import { QRCode, SkeletonCard, SquareCheckoutButton, TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtDate, gmtShort, loadSquareConfig, renderMd, sendAdminBookingNotification, sendCancellationEmail, sendEmail, sendOrderEmail, sendTicketEmail, sendWaitlistNotifyEmail, stockLabel, uid, useMobile } from "../utils";
 
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
   const getInitDetail = () => {

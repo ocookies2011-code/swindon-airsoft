@@ -1,5 +1,5 @@
 // pages/PlayerWaitlist.jsx
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { waitlistApi } from "../api";
 import { fmtDate } from "../utils";

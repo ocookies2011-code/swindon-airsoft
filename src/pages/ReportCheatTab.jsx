@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { useMobile } from "../utils";
+import { sendEmail, useMobile } from "../utils";
 
 function ReportCheatTab({ cu, showToast }) {
   const BLANK = { reportedName: "", videoUrl: "", description: "" };

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtDate, gmtShort, useMobile, WaiverModal } from "../utils";
+import { WaiverModal, fmtDate, gmtShort, sendEmail, useMobile } from "../utils";
 import { logAction } from "./adminHelpers";
 
 function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, cu }) {

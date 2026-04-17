@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import * as emailUtils from "../utils/email";
+import { sendEmail } from "../utils";
 
 function EmailTestCard({ showToast, sectionHead }) {
   const [testEmail, setTestEmail] = useState("");

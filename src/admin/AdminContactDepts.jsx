@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { logAction } from "./adminHelpers";
+import { fmtErr } from "../utils";
 
 function AdminContactDepts({ showToast, save, cu }) {
   const [depts, setDepts]   = useState([]);

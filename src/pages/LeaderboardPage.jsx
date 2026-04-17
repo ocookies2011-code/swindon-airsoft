@@ -1,5 +1,5 @@
 // pages/LeaderboardPage.jsx — player leaderboard
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { useMobile, RankInsignia, DesignationInsignia } from "../utils";

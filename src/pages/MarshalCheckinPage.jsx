@@ -1,5 +1,5 @@
 // pages/MarshalCheckinPage.jsx — marshal QR check-in tool
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { QRScanner, useMobile, fmtDate, gmtShort } from "../utils";

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { SquareCheckoutButton, loadSquareConfig, useMobile, fmtDate } from "../utils";
+import { SquareCheckoutButton, fmtDate, loadSquareConfig, sendAdminUkaraNotification, useMobile } from "../utils";
 
 function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const isMobile = useMobile(640);
