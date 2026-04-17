@@ -1343,19 +1343,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
                 {upcomingEvents.map((ev, idx) => renderCard(ev, idx, false))}
               </div>
-
-              {/* Past events section */}
-              {pastEvents.length > 0 && (
-                <div style={{ marginTop:48 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".25em", color:"#3a4020", textTransform:"uppercase" }}>Past Operations</div>
-                    <div style={{ flex:1, height:1, background:"linear-gradient(to right,#1a2808,transparent)" }} />
-                  </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16, opacity:0.5, filter:"grayscale(0.4)" }}>
-                    {pastEvents.map((ev, idx) => renderCard(ev, idx, true))}
-                  </div>
-                </div>
-              )}
             </>
           );
         })()}
