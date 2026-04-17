@@ -294,7 +294,7 @@ function TrackingBlock({ trackingNumber, adminMode = false, onStatusResolved }) 
 export {
   TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS,
   TM_STATUS_MAP, TM_CARRIER_MAP,
-  trackKeyCache, getTrackingKey, fetchTrackingStatus,
+  getTrackingKey, fetchTrackingStatus,
   detectCourier,
   AdminTrackStatusCell, AdminTrackBadge, TrackingBlock,
 };
