@@ -1,4 +1,5 @@
 // utils/email.js — EmailJS constants + all send*Email functions
+import { fmtDate } from "./helpers";
 // ── Send Ticket Email ────────────────────────────────────────
 // ── EmailJS shared helper ────────────────────────────────────
 // Keys must be set in .env as VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY

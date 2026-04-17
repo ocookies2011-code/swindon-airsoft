@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { normaliseProfile } from "../api";
 import { fmtErr } from "./helpers";
+import { sendWelcomeEmail } from "./email";
 
 function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
