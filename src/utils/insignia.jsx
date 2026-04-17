@@ -1,75 +1,22 @@
 // utils/insignia.jsx — RankInsignia, DesignationInsignia SVG components
 import React from "react";
 
-// ─────────────────────────────────────────────────────────────
 function RankInsignia({ rank, size = 56 }) {
   const s = size; const c = "#c8ff00"; const dim = "#1e3008"; const gold = "#c8a000"; const cx = s / 2; const cy = s / 2;
-
-  const Chevron = ({ y }) => (
-    <polyline points={`${s*.12},${y + s*.14} ${cx},${y} ${s*.88},${y + s*.14}`}
-      fill="none" stroke={c} strokeWidth={s * .04} strokeLinecap="round" strokeLinejoin="round"/>
-  );
-  const Pip = ({ px, py, filled = false }) => (
-    <g>
-      <polygon points={`${px},${py - s*.13} ${px + s*.12},${py - s*.04} ${px + s*.08},${py + s*.1} ${px - s*.08},${py + s*.1} ${px - s*.12},${py - s*.04}`}
-        fill={filled ? gold : "none"} stroke={gold} strokeWidth={s * .03}/>
-    </g>
-  );
-  const Crown = ({ px, py }) => {
-    const w = s * .32; const h = s * .2;
-    return (
-      <g fill="none" stroke={gold} strokeWidth={s * .035} strokeLinejoin="round">
-        <polyline points={`${px - w},${py + h*.4} ${px - w},${py - h*.3} ${px - w*.5},${py + h*.05} ${px},${py - h*.6} ${px + w*.5},${py + h*.05} ${px + w},${py - h*.3} ${px + w},${py + h*.4}`}/>
-        <line x1={px - w} y1={py + h*.4} x2={px + w} y2={py + h*.4}/>
-        <circle cx={px} cy={py - h*.6} r={s*.04} fill={gold}/>
-        <circle cx={px - w*.5} cy={py - h*.05} r={s*.03} fill={gold}/>
-        <circle cx={px + w*.5} cy={py - h*.05} r={s*.03} fill={gold}/>
-      </g>
-    );
-  };
-  const Beret = ({ col = c }) => {
-    const bw = s * .7; const bh = s * .32; const bx = cx - bw/2; const by = cy - bh * .3;
-    return (
-      <g>
-        <ellipse cx={cx} cy={by} rx={bw/2} ry={bh} fill="rgba(200,255,0,.06)" stroke={col} strokeWidth={s*.03}/>
-        <rect x={bx} y={by + bh*.55} width={bw} height={s*.09} fill="rgba(200,255,0,.1)" stroke={col} strokeWidth={s*.025} rx={s*.01}/>
-        <polygon points={`${cx - s*.04},${by - bh*.1} ${cx},${by - bh*.38} ${cx + s*.04},${by - bh*.1} ${cx},${by + bh*.18}`} fill={col} stroke="none" opacity=".7"/>
-        <line x1={bx + bw*.05} y1={by + bh*.64} x2={bx - s*.05} y2={by + bh*.9} stroke={col} strokeWidth={s*.02} strokeLinecap="round" opacity=".5"/>
-        <line x1={bx + bw*.95} y1={by + bh*.64} x2={bx + bw + s*.05} y2={by + bh*.9} stroke={col} strokeWidth={s*.02} strokeLinecap="round" opacity=".5"/>
-      </g>
-    );
-  };
+  const Chevron = ({ y }) => (<polyline points={`${s*.12},${y + s*.14} ${cx},${y} ${s*.88},${y + s*.14}`} fill="none" stroke={c} strokeWidth={s * .04} strokeLinecap="round" strokeLinejoin="round"/>);
+  const Pip = ({ px, py, filled = false }) => (<g><polygon points={`${px},${py - s*.13} ${px + s*.12},${py - s*.04} ${px + s*.08},${py + s*.1} ${px - s*.08},${py + s*.1} ${px - s*.12},${py - s*.04}`} fill={filled ? gold : "none"} stroke={gold} strokeWidth={s * .03}/></g>);
+  const Crown = ({ px, py }) => { const w = s * .32; const h = s * .2; return (<g fill="none" stroke={gold} strokeWidth={s * .035} strokeLinejoin="round"><polyline points={`${px - w},${py + h*.4} ${px - w},${py - h*.3} ${px - w*.5},${py + h*.05} ${px},${py - h*.6} ${px + w*.5},${py + h*.05} ${px + w},${py - h*.3} ${px + w},${py + h*.4}`}/><line x1={px - w} y1={py + h*.4} x2={px + w} y2={py + h*.4}/><circle cx={px} cy={py - h*.6} r={s*.04} fill={gold}/><circle cx={px - w*.5} cy={py - h*.05} r={s*.03} fill={gold}/><circle cx={px + w*.5} cy={py - h*.05} r={s*.03} fill={gold}/></g>); };
+  const Beret = ({ col = c }) => { const bw = s * .7; const bh = s * .32; const bx = cx - bw/2; const by = cy - bh * .3; return (<g><ellipse cx={cx} cy={by} rx={bw/2} ry={bh} fill="rgba(200,255,0,.06)" stroke={col} strokeWidth={s*.03}/><rect x={bx} y={by + bh*.55} width={bw} height={s*.09} fill="rgba(200,255,0,.1)" stroke={col} strokeWidth={s*.025} rx={s*.01}/><polygon points={`${cx - s*.04},${by - bh*.1} ${cx},${by - bh*.38} ${cx + s*.04},${by - bh*.1} ${cx},${by + bh*.18}`} fill={col} stroke="none" opacity=".7"/><line x1={bx + bw*.05} y1={by + bh*.64} x2={bx - s*.05} y2={by + bh*.9} stroke={col} strokeWidth={s*.02} strokeLinecap="round" opacity=".5"/><line x1={bx + bw*.95} y1={by + bh*.64} x2={bx + bw + s*.05} y2={by + bh*.9} stroke={col} strokeWidth={s*.02} strokeLinecap="round" opacity=".5"/></g>); };
   const gap = s * .135;
   const insig = {
-    "CIVILIAN": (
-      <circle cx={cx} cy={cy} r={s*.1} fill="none" stroke={dim} strokeWidth={s*.025} strokeDasharray={`${s*.05},${s*.05}`}/>
-    ),
+    "CIVILIAN": (<circle cx={cx} cy={cy} r={s*.1} fill="none" stroke={dim} strokeWidth={s*.025} strokeDasharray={`${s*.05},${s*.05}`}/>),
     "PRIVATE": (<Beret/>),
     "RECRUIT": (<Beret col="#6ab030"/>),
-    "OPERATIVE": (
-      <g><Chevron y={cy - gap*1.6}/><Chevron y={cy - gap*.45}/><Chevron y={cy + gap*.7}/></g>
-    ),
-    "SENIOR OPERATIVE": (
-      <g>
-        <Pip px={cx - s*.18} py={cy}/>
-        <Pip px={cx}         py={cy}/>
-        <Pip px={cx + s*.18} py={cy}/>
-      </g>
-    ),
-    "FIELD COMMANDER": (
-      <g>
-        <Crown px={cx} py={cy - s*.12}/>
-        <Pip px={cx - s*.15} py={cy + s*.2} filled/>
-        <Pip px={cx + s*.15} py={cy + s*.2} filled/>
-      </g>
-    ),
+    "OPERATIVE": (<g><Chevron y={cy - gap*1.6}/><Chevron y={cy - gap*.45}/><Chevron y={cy + gap*.7}/></g>),
+    "SENIOR OPERATIVE": (<g><Pip px={cx - s*.18} py={cy}/><Pip px={cx} py={cy}/><Pip px={cx + s*.18} py={cy}/></g>),
+    "FIELD COMMANDER": (<g><Crown px={cx} py={cy - s*.12}/><Pip px={cx - s*.15} py={cy + s*.2} filled/><Pip px={cx + s*.15} py={cy + s*.2} filled/></g>),
   };
-  return (
-    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}>
-      <rect width={s} height={s} fill="#080a06" rx={s * .04}/>
-      {insig[rank] || <circle cx={cx} cy={cy} r={s*.08} fill={dim}/>}
-    </svg>
-  );
+  return (<svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}><rect width={s} height={s} fill="#080a06" rx={s * .04}/>{insig[rank] || <circle cx={cx} cy={cy} r={s*.08} fill={dim}/>}</svg>);
 }
 
 function DesignationInsignia({ desig, size = 56 }) {
@@ -86,51 +33,7 @@ function DesignationInsignia({ desig, size = 56 }) {
     "VETERAN":      <g strokeWidth={s*.033}><polygon points={`${cx},${cy - s*.22} ${cx + s*.07},${cy - s*.07} ${cx + s*.23},${cy - s*.07} ${cx + s*.11},${cy + s*.04} ${cx + s*.16},${cy + s*.22} ${cx},${cy + s*.13} ${cx - s*.16},${cy + s*.22} ${cx - s*.11},${cy + s*.04} ${cx - s*.23},${cy - s*.07} ${cx - s*.07},${cy - s*.07}`} fill="rgba(79,195,247,.08)" stroke={c}/><circle cx={cx} cy={cy - s*.01} r={s*.06} fill={c} stroke="none"/></g>,
     "LEGEND":       <g strokeWidth={s*.033}><polygon points={`${cx},${cy - s*.24} ${cx + s*.09},${cy - s*.07} ${cx + s*.26},${cy - s*.07} ${cx + s*.12},${cy + s*.04} ${cx + s*.18},${cy + s*.24} ${cx},${cy + s*.14} ${cx - s*.18},${cy + s*.24} ${cx - s*.12},${cy + s*.04} ${cx - s*.26},${cy - s*.07} ${cx - s*.09},${cy - s*.07}`} fill="rgba(200,160,0,.15)" stroke={gold}/><polygon points={`${cx},${cy - s*.12} ${cx + s*.04},${cy - s*.03} ${cx + s*.12},${cy - s*.03} ${cx + s*.06},${cy + s*.02} ${cx + s*.08},${cy + s*.11} ${cx},${cy + s*.06} ${cx - s*.08},${cy + s*.11} ${cx - s*.06},${cy + s*.02} ${cx - s*.12},${cy - s*.03} ${cx - s*.04},${cy - s*.03}`} fill={gold} stroke="none"/></g>,
   };
-  return (
-    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}>
-      <rect width={s} height={s} fill="#080a06" rx={s * .04}/>
-      {icons[desig] || <text x={cx} y={cy + s*.07} textAnchor="middle" fontSize={s*.35} fill={c}>{desig[0]}</text>}
-    </svg>
-  );
+  return (<svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}><rect width={s} height={s} fill="#080a06" rx={s * .04}/>{icons[desig] || <text x={cx} y={cy + s*.07} textAnchor="middle" fontSize={s*.35} fill={c}>{desig[0]}</text>}</svg>);
 }
-
-// ─────────────────────────────────────────────────────────────
-// Exports — everything that AdminPanel.jsx or App.jsx may need
-// ─────────────────────────────────────────────────────────────
-export {
-  // Helpers / constants
-  renderMd, stockLabel, fmtErr,
-  gmtNow, gmtDate, gmtShort, fmtDate, uid,
-  CSS,
-  // Square
-  loadSquareConfig, resetSquareConfig, SquareCheckoutButton,
-  ShopifyCheckoutButton, loadShopifyConfig,
-  _squareAppId, _squareLocationId, _squareEnv,
-  // Tracking
-  TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS,
-  TM_STATUS_MAP, TM_CARRIER_MAP,
-  getTrackingKey, fetchTrackingStatus,
-  detectCourier,
-  AdminTrackStatusCell, AdminTrackBadge, TrackingBlock,
-  // Data hook
-  useData,
-  // UI components
-  SkeletonCard, Toast, useMobile, useToast,
-  GmtClock, Countdown, QRCode, QRScanner,
-  SupabaseAuthModal, WaiverModal, PublicNav,
-  // Email
-  EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
-  sendEmail,
-  sendTicketEmail, sendEventReminderEmail, sendWaitlistNotifyEmail,
-  sendCancellationEmail, sendWelcomeEmail,
-  sendOrderEmail, sendDispatchEmail, sendNewEventEmail,
-  sendAdminBookingNotification, sendAdminOrderNotification,
-  sendAdminReturnNotification, sendReturnDecisionEmail,
-  sendAdminUkaraNotification, sendUkaraDecisionEmail, sendUkaraRevokedEmail,
-  // Home
-  HomePage, CountdownPanel,
-  // Player insignia
-  RankInsignia, DesignationInsignia,
-};
 
 export { RankInsignia, DesignationInsignia };
