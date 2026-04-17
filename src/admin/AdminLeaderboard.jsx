@@ -26,4 +26,6 @@ function AdminLeaderboard({ data, updateUser, showToast }) {
   );
 }
 
+// ── Admin Failed Payments ─────────────────────────────────
+
 export { AdminLeaderboard };

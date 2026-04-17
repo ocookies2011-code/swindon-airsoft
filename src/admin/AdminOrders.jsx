@@ -15,7 +15,6 @@ import {
   sendDispatchEmail, sendAdminOrderNotification,
   sendAdminReturnNotification, sendReturnDecisionEmail,
 } from "../utils";
-import { squareRefund } from "../api";
 import { logAction } from "./adminHelpers";
 
 function AdminOrdersInline({ showToast, cu }) {
