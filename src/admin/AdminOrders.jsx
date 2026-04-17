@@ -2,19 +2,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import {
-  renderMd, stockLabel, fmtErr, fmtDate, gmtShort, uid,
-  detectCourier, TrackingBlock, AdminTrackStatusCell,
-  useMobile, GmtClock, QRScanner,
-  WaiverModal, RankInsignia, DesignationInsignia,
-  resetSquareConfig,
-} from "../utils";
+import { AdminTrackStatusCell, DesignationInsignia, GmtClock, QRScanner, RankInsignia, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtShort, renderMd, resetSquareConfig, sendAdminOrderNotification, sendAdminReturnNotification, sendDispatchEmail, sendReturnDecisionEmail, stockLabel, uid, useMobile } from "../utils";
 import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
-import {
-  sendDispatchEmail, sendAdminOrderNotification,
-  sendAdminReturnNotification, sendReturnDecisionEmail,
-} from "../utils";
 import { logAction } from "./adminHelpers";
 
 function AdminOrdersInline({ showToast, cu }) {
