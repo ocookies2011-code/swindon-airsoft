@@ -652,11 +652,4 @@ function AppInner() {
 }
 
 
-export default function App() {
-  return <ErrorBoundary><AppInner /></ErrorBoundary>;
-}
-
-
-export default function App() {
-  return <ErrorBoundary><AppInner /></ErrorBoundary>;
-}
+export { AppInner };

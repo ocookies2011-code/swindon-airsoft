@@ -1,6 +1,6 @@
 // App.jsx — root entry: ErrorBoundary wraps AppInner
 // All routing, pages, and state live in AppInner.jsx
-import AppInner from "./AppInner";
+import { AppInner } from "./AppInner";
 import React from "react";
 
 class ErrorBoundary extends React.Component {
