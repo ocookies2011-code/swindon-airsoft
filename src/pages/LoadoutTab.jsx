@@ -11,6 +11,16 @@ const LOADOUT_WEAPON_FIELDS = [
   { key: "Upgrades", field: "upgrades", placeholder: "e.g. Prometheus hop rubber, SHS motor" },
 ];
 
+const LOADOUT_GEAR_FIELDS = [
+  { key: "Helmet",      field: "helmet",     placeholder: "e.g. Ops-Core FAST Carbon" },
+  { key: "Vest / Rig",  field: "vest",       placeholder: "e.g. Crye JPC 2.0" },
+  { key: "Camo",        field: "camo",       placeholder: "e.g. Multicam / MTP" },
+  { key: "Eye Pro",     field: "eyepro",     placeholder: "e.g. Revision Sawfly" },
+  { key: "Comms",       field: "comms",      placeholder: "e.g. Baofeng UV-5R + Peltor" },
+  { key: "Boots",       field: "boots",      placeholder: "e.g. Haix Black Eagle" },
+  { key: "Other Gear",  field: "other_gear", placeholder: "Knee pads, gloves, chest rig extras…" },
+];
+
 function LoadoutTab({ cu, showToast }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

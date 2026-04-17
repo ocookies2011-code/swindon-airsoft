@@ -15,6 +15,13 @@ const ORDER_STATUS_META = {
   return_received:  { color: "#4caf50",     bg: "rgba(76,175,80,.08)", border: "rgba(76,175,80,.25)",  icon: "📦", label: "Return Received",  step: 4, desc: "We have received your return." },
 };
 
+const ORDER_STEPS = [
+  { step: 1, label: "Order Placed" },
+  { step: 2, label: "Processing" },
+  { step: 3, label: "Dispatched" },
+  { step: 4, label: "Delivered" },
+];
+
 function ReturnRequestBlock({ order, onUpdate }) {
   const [step, setStep]               = useState("idle");
   const [reason, setReason]           = useState("");
