@@ -4,6 +4,17 @@ import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { TrackingBlock, detectCourier, fmtDate, gmtShort, sendAdminReturnNotification, useMobile } from "../utils";
 
+const ORDER_STATUS_META = {
+  pending:    { color: "#4fc3f7", bg: "rgba(79,195,247,.1)",   border: "rgba(79,195,247,.3)",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>, label: "Order Received",    step: 1, desc: "Your order has been placed and is awaiting processing." },
+  processing: { color: "var(--gold)", bg: "rgba(200,150,0,.1)", border: "rgba(200,150,0,.3)",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-9.5"/></svg>, label: "Processing",        step: 2, desc: "Your order is being prepared and packed." },
+  dispatched: { color: "#c8ff00", bg: "rgba(200,255,0,.08)",   border: "rgba(200,255,0,.25)",  icon: "▸", label: "Dispatched",        step: 3, desc: "Your order is on its way. Check your tracking number below." },
+  completed:  { color: "#4caf50", bg: "rgba(76,175,80,.1)",    border: "rgba(76,175,80,.3)",   icon: "✅", label: "Delivered",         step: 4, desc: "Order complete. Enjoy your kit!" },
+  cancelled:  { color: "var(--red)", bg: "rgba(220,50,50,.08)", border: "rgba(220,50,50,.25)", icon: "✗",  label: "Cancelled",         step: 0, desc: "This order has been cancelled." },
+  return_requested: { color: "var(--gold)", bg: "rgba(200,150,0,.08)", border: "rgba(200,150,0,.25)", icon: "↩", label: "Return Requested", step: 3, desc: "Your return request is being reviewed." },
+  return_approved:  { color: "#4fc3f7",     bg: "rgba(79,195,247,.08)", border: "rgba(79,195,247,.25)", icon: "✅", label: "Return Approved",  step: 3, desc: "Return approved — please send the item back." },
+  return_received:  { color: "#4caf50",     bg: "rgba(76,175,80,.08)", border: "rgba(76,175,80,.25)",  icon: "📦", label: "Return Received",  step: 4, desc: "We have received your return." },
+};
+
 function ReturnRequestBlock({ order, onUpdate }) {
   const [step, setStep]               = useState("idle");
   const [reason, setReason]           = useState("");

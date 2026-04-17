@@ -4,6 +4,13 @@ import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { useMobile } from "../utils";
 
+const LOADOUT_WEAPON_FIELDS = [
+  { key: "Name",     field: "name",     placeholder: "e.g. Tokyo Marui M4A1" },
+  { key: "FPS",      field: "fps",      placeholder: "e.g. 350 FPS" },
+  { key: "Mags",     field: "mags",     placeholder: "e.g. 5× mid-cap 120rnd" },
+  { key: "Upgrades", field: "upgrades", placeholder: "e.g. Prometheus hop rubber, SHS motor" },
+];
+
 function LoadoutTab({ cu, showToast }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
