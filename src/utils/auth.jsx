@@ -5,6 +5,7 @@ import * as api from "../api";
 import { normaliseProfile } from "../api";
 import { fmtErr } from "./helpers";
 import { sendWelcomeEmail } from "./email";
+import { SA_LOGO_SRC } from "../assets/logoImage";
 
 function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
