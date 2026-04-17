@@ -104,7 +104,7 @@ function AdminUkaraApplications({ showToast, cu }) {
       }
       // Send decision email
       try {
-        const { sendUkaraDecisionEmail } = await import("./utils");
+        const { sendUkaraDecisionEmail } = await import("../utils");
         const adminEmail = await api.settings.get("contact_email").catch(() => null);
         await sendUkaraDecisionEmail({ toEmail: approveModal.email, toName: approveModal.name, approved: true, ukaraId: ukaraIdInput.trim() });
       } catch {}
@@ -125,7 +125,7 @@ function AdminUkaraApplications({ showToast, cu }) {
     try {
       await api.ukaraApplications.decline(declineModal.id, declineReason.trim());
       try {
-        const { sendUkaraDecisionEmail } = await import("./utils");
+        const { sendUkaraDecisionEmail } = await import("../utils");
         await sendUkaraDecisionEmail({ toEmail: declineModal.email, toName: declineModal.name, approved: false, declineReason: declineReason.trim() });
       } catch {}
       logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "UKARA declined", detail: `${declineModal.name} — Reason: ${declineReason}` });
