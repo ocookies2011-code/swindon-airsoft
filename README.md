@@ -270,4 +270,3 @@ Folder	Files	Lines
 `src/pages/`	19	~8,120
 `src/admin/`	26	~10,588
 Total	62	~23,186
-
