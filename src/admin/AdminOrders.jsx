@@ -169,6 +169,7 @@ function AdminOrdersInline({ showToast, cu }) {
   const STATUS_TABS = ["pending","processing","dispatched","completed","terminal","cancelled","return_requested","return_approved","return_received","all","refunded"];
   const isTerminalOrder = (o) => o.postage_name === null && Number(o.postage) === 0 && o.square_order_id;
   const visibleOrders = statusTab === "all" ? orders : statusTab === "terminal" ? orders.filter(isTerminalOrder) : orders.filter(o => o.status === statusTab);
+  const returnCount = orders.filter(o => o.status === "return_requested").length;
 
   return (
     <div>
@@ -176,14 +177,20 @@ function AdminOrdersInline({ showToast, cu }) {
         <div style={{ fontSize:13, color:"var(--muted)" }}>{orders.length} orders · <span style={{ color:"var(--accent)" }}>£{totalRevenue.toFixed(2)}</span> total</div>
         <button className="btn btn-ghost btn-sm" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
       </div>
+      {returnCount > 0 && (
+        <div className="alert alert-gold" style={{ marginBottom:12, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }} onClick={() => setStatusTab("return_requested")}>
+          <span>⚠️ {returnCount} return request{returnCount > 1 ? "s" : ""} awaiting action</span>
+          <span style={{ fontSize:11, opacity:.7 }}>Click to view →</span>
+        </div>
+      )}
       <div className="grid-4 mb-2">
         {[
           { label: "Total Orders", val: orders.length, color: "" },
           { label: "Pending", val: orders.filter(o => o.status === "pending").length, color: "blue" },
           { label: "Dispatched", val: orders.filter(o => o.status === "dispatched").length, color: "gold" },
-          { label: "Revenue", val: `£${totalRevenue.toFixed(2)}`, color: "teal" },
+          { label: "Returns", val: returnCount, color: returnCount > 0 ? "red" : "", onClick: () => setStatusTab("return_requested") },
         ].map(s => (
-          <div key={s.label} className={`stat-card ${s.color}`}>
+          <div key={s.label} className={`stat-card ${s.color}`} style={{ cursor: s.onClick ? "pointer" : "default" }} onClick={s.onClick}>
             <div className="stat-val">{s.val}</div>
             <div className="stat-label">{s.label}</div>
           </div>
@@ -193,9 +200,10 @@ function AdminOrdersInline({ showToast, cu }) {
         {STATUS_TABS.map(t => {
           const cnt = t === "all" ? orders.length : orders.filter(o => o.status === t).length;
           const tabLabel = t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          const isReturnTab = t === "return_requested";
           return (
             <button key={t} className={`nav-tab${statusTab === t ? " active" : ""}`} onClick={() => setStatusTab(t)}>
-              {tabLabel}{cnt > 0 && <span style={{ marginLeft:5, background: statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
+              {tabLabel}{cnt > 0 && <span style={{ marginLeft:5, background: isReturnTab && statusTab !== t ? "var(--red)" : statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", color: isReturnTab && statusTab !== t ? "#fff" : "inherit", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
             </button>
           );
         })}
