@@ -123,10 +123,11 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
             const extrasEntries = Object.entries(b.extras || {}).filter(([,v]) => v > 0);
             const extrasLabels = extrasEntries.map(([k, qty]) => {
               const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
+              // Try to find the extra by its event_extras id
               const exDef = ev.extras?.find(e => e.id === xId);
-              // exDef.name may be a JSON string like {"n":"Name","pid":"...","vid":null}
-              let exName = xId;
+              let exName = null;
               if (exDef) {
+                // name may still be JSON from older records
                 try {
                   const parsed = typeof exDef.name === "string" && exDef.name.startsWith("{")
                     ? JSON.parse(exDef.name)
@@ -134,10 +135,23 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
                   exName = parsed?.n || exDef.name;
                 } catch { exName = exDef.name; }
               }
+              // Fallback: try to find by productId in shop data
+              if (!exName) {
+                const shopP = (data.shop || []).find(p => p.id === xId);
+                if (shopP) {
+                  exName = shopP.name;
+                  if (vId) {
+                    const varDef = (shopP.variants || []).find(v => v.id === vId);
+                    if (varDef) exName = `${shopP.name} — ${varDef.name}`;
+                  }
+                }
+              }
+              // Last resort: show shortened ID rather than full UUID
+              if (!exName) exName = `Extra (${xId.slice(0,8)})`;
               const shopP = exDef ? (data.shop || []).find(p => p.id === exDef.productId) : null;
               const varDef = vId && shopP ? (shopP.variants || []).find(vv => vv.id === vId) : null;
-              const label = varDef ? `${exName} — ${varDef.name}` : exName;
-              return `${label} ×${qty}`;
+              if (varDef) exName = `${exName} — ${varDef.name}`;
+              return `${exName} ×${qty}`;
             });
 
             return (
