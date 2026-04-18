@@ -446,7 +446,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
         {/* Search + Sort row */}
         <div style={{ display:"flex", gap:8, marginBottom:16, alignItems:"stretch" }}>
-          <div style={{ flex:1, position:"relative" }}>
+          <div style={{ flex:1, maxWidth:320, position:"relative" }}>
             <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#3a5010", fontSize:14, pointerEvents:"none" }}>🔍</span>
             <input value={shopSearch} onChange={e => setShopSearch(e.target.value)} placeholder="SEARCH ARMOURY…"
               style={{ width:"100%", background:"#111a0a", border:"1px solid #2a4010", color:"#e8f8b0", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:16, letterSpacing:".12em", padding:"12px 40px 12px 40px", outline:"none", boxSizing:"border-box", textTransform:"uppercase", caretColor:"#c8ff00" }} />
