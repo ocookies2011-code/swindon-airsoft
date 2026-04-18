@@ -648,6 +648,6 @@ const ALLOWED_COUNTRY_CODES = new Set([
       )}
     </>
   );
-
+}
 
 export { AppInner };
