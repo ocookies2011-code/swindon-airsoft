@@ -187,14 +187,14 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.08) 3px,rgba(0,0,0,.08) 4px)", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto" }}>
           <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: ".3em", color: "#3a5010", marginBottom: 12 }}>// SWINDON AIRSOFT · LEGAL COMPLIANCE</div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: isMobile ? 36 : 52, letterSpacing: ".04em", textTransform: "uppercase", color: "#e8f0d0", lineHeight: 1, marginBottom: 12 }}>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontWeight: 900, fontSize: isMobile ? 36 : 52, letterSpacing: ".04em", textTransform: "uppercase", color: "#e8f0d0", lineHeight: 1, marginBottom: 12 }}>
             UKARA <span style={{ color: "#c8ff00" }}>Registration</span>
           </div>
           <p style={{ color: "#6a8a50", fontSize: 14, lineHeight: 1.7, margin: "0 0 24px" }}>
             Your legal defence for purchasing Realistic Imitation Firearms in the UK. £5/year.
           </p>
           {!cu?.ukara && !existingApp && (
-            <a href="#ukara-form" style={{ background: "#c8ff00", color: "#0a0e07", padding: "11px 28px", borderRadius: 6, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: ".1em", textDecoration: "none", textTransform: "uppercase" }}>
+            <a href="#ukara-form" style={{ background: "#c8ff00", color: "#0a0e07", padding: "11px 28px", borderRadius: 6, fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: ".1em", textDecoration: "none", textTransform: "uppercase" }}>
               Apply Now ↓
             </a>
           )}
@@ -207,8 +207,8 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12, marginBottom: 40 }}>
           {steps.map(s => (
             <div key={s.num} style={{ background: "#0a0d07", border: "1px solid #1e2a10", borderRadius: 8, padding: "16px 14px" }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 900, color: "#c8ff00", opacity: .4, lineHeight: 1, marginBottom: 6 }}>{s.num}</div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#e8f0d0", letterSpacing: ".06em", marginBottom: 6 }}>{s.title}</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 900, color: "#c8ff00", opacity: .4, lineHeight: 1, marginBottom: 6 }}>{s.num}</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#e8f0d0", letterSpacing: ".06em", marginBottom: 6 }}>{s.title}</div>
               <div style={{ fontSize: 12, color: "#5a7a40", lineHeight: 1.6 }}>{s.desc}</div>
             </div>
           ))}
@@ -218,7 +218,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         {!checkingExisting && cu?.ukara && !existingApp && (
           <div style={{ background: "rgba(200,255,0,.06)", border: "1px solid #2a4a10", borderRadius: 10, padding: "28px 32px", textAlign: "center", marginBottom: 32 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🎖️</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#c8ff00", letterSpacing: ".08em", marginBottom: 8 }}>YOU ALREADY HAVE A UKARA ID</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#c8ff00", letterSpacing: ".08em", marginBottom: 8 }}>YOU ALREADY HAVE A UKARA ID</div>
             <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 16, color: "#e8f0d0", marginBottom: 10, letterSpacing: ".1em" }}>{cu.ukara}</div>
             <p style={{ color: "#6a8a50", fontSize: 13, margin: 0 }}>Your UKARA ID is active. If you need to renew or have any issues, please <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#c8d8a0", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 13 }}>contact us</button>.</p>
           </div>
@@ -238,10 +238,10 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                     <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 9, letterSpacing: ".25em", color: isExpired ? "#8a3030" : "#3a6020", marginBottom: 4 }}>
                       {isExpired ? "// UKARA EXPIRED" : "// UKARA ACTIVE"}
                     </div>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 900, color: isExpired ? "#ff6060" : "#c8ff00", letterSpacing: ".06em", lineHeight: 1 }}>
+                    <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 900, color: isExpired ? "#ff6060" : "#c8ff00", letterSpacing: ".06em", lineHeight: 1 }}>
                       {existingApp.ukara_id}
                     </div>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#4a7030", letterSpacing: ".04em", marginTop: 2 }}>
+                    <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#4a7030", letterSpacing: ".04em", marginTop: 2 }}>
                       SWINDON AIRSOFT · REGISTERED PLAYER
                     </div>
                   </div>
@@ -249,7 +249,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                     <div style={{ fontSize: 10, color: "#4a6a30", marginBottom: 2, letterSpacing: ".1em", fontFamily: "'Share Tech Mono', monospace" }}>
                       {isExpired ? "EXPIRED" : "EXPIRES"}
                     </div>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: isExpired ? "#ff6060" : expiresSoon ? "#ffb74d" : "#e8f0d0" }}>
+                    <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: isExpired ? "#ff6060" : expiresSoon ? "#ffb74d" : "#e8f0d0" }}>
                       {new Date(existingApp.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                     </div>
                     {!isExpired && countdown && (
@@ -276,7 +276,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                 {/* Renewal prompt */}
                 {(isExpired || expiresSoon) && !existingApp.renewal_requested && (
                   <div style={{ background: isExpired ? "rgba(220,50,50,.1)" : "rgba(255,183,77,.08)", border: `1px solid ${isExpired ? "#5a2020" : "#4a3810"}`, borderRadius: 8, padding: "16px 18px", marginBottom: 0 }}>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, color: isExpired ? "#ff8080" : "#ffb74d", fontSize: 15, marginBottom: 6 }}>
+                    <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontWeight: 700, color: isExpired ? "#ff8080" : "#ffb74d", fontSize: 15, marginBottom: 6 }}>
                       {isExpired ? "⚠️ Your UKARA has expired" : "⚠️ Your UKARA expires soon"}
                     </div>
                     <p style={{ color: "#7a6040", fontSize: 13, margin: "0 0 14px", lineHeight: 1.6 }}>
@@ -293,7 +293,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                           style={{ marginTop: 2, accentColor: "#c8ff00", width: 15, height: 15, flexShrink: 0 }}
                         />
                         <div>
-                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#c8d8a0", letterSpacing: ".06em" }}>
+                          <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#c8d8a0", letterSpacing: ".06em" }}>
                             AUTO-RENEW — £5/YEAR
                           </div>
                           <div style={{ fontSize: 11, color: "#5a7a40", marginTop: 2, lineHeight: 1.5 }}>
@@ -334,7 +334,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         {!checkingExisting && existingApp?.status === "pending" && (
           <div style={{ background: "rgba(255,183,77,.06)", border: "1px solid #3a2800", borderRadius: 10, padding: "28px 32px", marginBottom: 32, textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#ffb74d", letterSpacing: ".08em", marginBottom: 8 }}>APPLICATION UNDER REVIEW</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#ffb74d", letterSpacing: ".08em", marginBottom: 8 }}>APPLICATION UNDER REVIEW</div>
             <p style={{ color: "#7a6040", fontSize: 13, margin: 0 }}>Your application and £5 payment have been received. We'll contact you at <strong style={{ color: "#c8d8a0" }}>{existingApp.email}</strong> within 3–5 working days.</p>
           </div>
         )}
@@ -343,7 +343,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         {!checkingExisting && existingApp?.status === "declined" && (
           <div style={{ background: "rgba(220,50,50,.06)", border: "1px solid #5a1a1a", borderRadius: 10, padding: "28px 32px", marginBottom: 32, textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>❌</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#ff6060", letterSpacing: ".08em", marginBottom: 8 }}>APPLICATION DECLINED</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#ff6060", letterSpacing: ".08em", marginBottom: 8 }}>APPLICATION DECLINED</div>
             {existingApp.admin_notes && <p style={{ color: "#c8a0a0", fontSize: 13, margin: "0 0 8px" }}>Reason: {existingApp.admin_notes}</p>}
             <p style={{ color: "#6a4040", fontSize: 12, marginTop: 8 }}>Please <button onClick={() => setPage("contact")} style={{ background: "none", border: "none", color: "#ff8080", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}>contact us</button> if you have questions.</p>
           </div>
@@ -352,7 +352,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         {/* ── APPLICATION FORM — only if no existing active/pending app ── */}
         {!checkingExisting && !cu?.ukara && (!existingApp || existingApp.status === "declined") && (
           <div id="ukara-form" style={{ scrollMarginTop: 80 }}>
-            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: "#e8f0d0", margin: "0 0 6px", letterSpacing: ".03em" }}>
+            <h2 style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: "#e8f0d0", margin: "0 0 6px", letterSpacing: ".03em" }}>
               {existingApp?.status === "declined" ? "Re-Apply for UKARA Registration" : "Apply for UKARA Registration"}
             </h2>
             <p style={{ color: "#5a7a40", fontSize: 13, margin: "0 0 24px" }}>Annual fee: £5 — paid with your application.</p>
@@ -360,7 +360,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
             {submitted ? (
               <div style={{ background: "rgba(200,255,0,.06)", border: "1px solid #2a4a10", borderRadius: 10, padding: "40px 32px", textAlign: "center" }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>🎖️</div>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 700, color: "#c8ff00", letterSpacing: ".08em", marginBottom: 10 }}>APPLICATION SUBMITTED</div>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 700, color: "#c8ff00", letterSpacing: ".08em", marginBottom: 10 }}>APPLICATION SUBMITTED</div>
                 <p style={{ color: "#8aaa60", fontSize: 14, lineHeight: 1.7, marginBottom: 4 }}>Payment received and application submitted.</p>
                 <p style={{ color: "#6a8a50", fontSize: 13, lineHeight: 1.7 }}>We'll review your details and contact you at <strong style={{ color: "#c8d8a0" }}>{form.email}</strong> within 3–5 working days.</p>
                 <button onClick={() => setPage("home")} className="btn btn-ghost" style={{ marginTop: 20 }}>← Back to Home</button>
@@ -373,7 +373,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                 ))}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
                   <button onClick={() => setAppStep("details")} style={{ background: "none", border: "none", color: "#4a6a28", fontSize: 13, cursor: "pointer", padding: 0 }}>← Back</button>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: "#e8f0d0", letterSpacing: ".04em" }}>STEP 2 — PAYMENT</div>
+                  <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: "#e8f0d0", letterSpacing: ".04em" }}>STEP 2 — PAYMENT</div>
                 </div>
 
                 {/* Summary */}
@@ -397,8 +397,8 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                 </div>
 
                 <div style={{ background: "#0d1a08", border: "1px solid #2a4a10", borderRadius: 8, padding: "16px 18px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, color: "#e8f0d0", fontWeight: 700 }}>UKARA Registration — 1 year</div>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 900, color: "#c8ff00" }}>£5.00</div>
+                  <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 16, color: "#e8f0d0", fontWeight: 700 }}>UKARA Registration — 1 year</div>
+                  <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 900, color: "#c8ff00" }}>£5.00</div>
                 </div>
 
                 {/* Subscription opt-in */}
@@ -411,7 +411,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                       style={{ marginTop: 2, accentColor: "#c8ff00", width: 15, height: 15, flexShrink: 0 }}
                     />
                     <div>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#c8d8a0", letterSpacing: ".06em" }}>
+                      <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: "#c8d8a0", letterSpacing: ".06em" }}>
                         AUTO-RENEW — £5/YEAR
                       </div>
                       <div style={{ fontSize: 11, color: "#5a7a40", marginTop: 2, lineHeight: 1.5 }}>
@@ -442,7 +442,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                   <div key={v+h} style={{ position: "absolute", [v]: 0, [h]: 0, width: 22, height: 22, borderTop: v==="top" ? "2px solid #c8ff00" : "none", borderBottom: v==="bottom" ? "2px solid #c8ff00" : "none", borderLeft: h==="left" ? "2px solid #c8ff00" : "none", borderRight: h==="right" ? "2px solid #c8ff00" : "none" }} />
                 ))}
 
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#4a6a28", letterSpacing: ".08em", marginBottom: 20 }}>STEP 1 OF 2 — YOUR DETAILS & DOCUMENTS</div>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: "#4a6a28", letterSpacing: ".08em", marginBottom: 20 }}>STEP 1 OF 2 — YOUR DETAILS & DOCUMENTS</div>
 
                 {cu?.waiverData && (
                   <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", borderLeft: "3px solid #c8ff00", borderRadius: 6, padding: "10px 14px", marginBottom: 20, fontSize: 12, color: "#6a8a40", display: "flex", alignItems: "center", gap: 8 }}>
@@ -453,13 +453,13 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                 {!cu && (
                   <div style={{ background: "rgba(200,255,0,.05)", border: "1px solid rgba(200,255,0,.2)", borderRadius: 8, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <span style={{ color: "#c8d8a0", fontSize: 13 }}>⚠️ You must be logged in to apply.</span>
-                    <button onClick={() => setAuthModal("login")} style={{ background: "#c8ff00", color: "#0a0e07", border: "none", padding: "7px 18px", borderRadius: 5, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>LOG IN / REGISTER</button>
+                    <button onClick={() => setAuthModal("login")} style={{ background: "#c8ff00", color: "#0a0e07", border: "none", padding: "7px 18px", borderRadius: 5, fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>LOG IN / REGISTER</button>
                   </div>
                 )}
 
                 {cu && (cu.gamesAttended || 0) < 3 && (
                   <div style={{ background: "rgba(220,50,50,.08)", border: "1px solid #5a1a1a", borderRadius: 8, padding: "14px 18px", marginBottom: 24 }}>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, color: "#ff8080", fontSize: 14, marginBottom: 4 }}>⚠️ Not enough games at Swindon Airsoft</div>
+                    <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontWeight: 700, color: "#ff8080", fontSize: 14, marginBottom: 4 }}>⚠️ Not enough games at Swindon Airsoft</div>
                     <p style={{ color: "#8a5050", fontSize: 13, margin: 0 }}>
                       You've attended <strong style={{ color: "#ff8080" }}>{cu.gamesAttended || 0}</strong> game{cu.gamesAttended !== 1 ? "s" : ""}. You need at least <strong style={{ color: "#ff8080" }}>3</strong> to apply. <button onClick={() => setPage("events")} style={{ background: "none", border: "none", color: "#ff8080", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 13 }}>Book a game →</button>
                     </p>
@@ -494,12 +494,12 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: ".2em", color: "#4a6a28", marginBottom: 4 }}>// GAMES AT SWINDON AIRSOFT</div>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 900, color: (cu?.gamesAttended || 0) >= 3 ? "#c8ff00" : "#ff6060" }}>
+                      <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 900, color: (cu?.gamesAttended || 0) >= 3 ? "#c8ff00" : "#ff6060" }}>
                         {cu?.gamesAttended || 0} <span style={{ fontSize: 14, color: "#4a6a28", fontWeight: 400 }}>games attended</span>
                       </div>
                       <div style={{ fontSize: 12, color: "#4a6a28", marginTop: 2 }}>Minimum 3 required · verified from your booking history</div>
                     </div>
-                    <div style={{ background: (cu?.gamesAttended || 0) >= 3 ? "rgba(200,255,0,.1)" : "rgba(220,50,50,.1)", border: `1px solid ${(cu?.gamesAttended || 0) >= 3 ? "#2a4a10" : "#5a1a1a"}`, borderRadius: 6, padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: ".1em", color: (cu?.gamesAttended || 0) >= 3 ? "#c8ff00" : "#ff6060" }}>
+                    <div style={{ background: (cu?.gamesAttended || 0) >= 3 ? "rgba(200,255,0,.1)" : "rgba(220,50,50,.1)", border: `1px solid ${(cu?.gamesAttended || 0) >= 3 ? "#2a4a10" : "#5a1a1a"}`, borderRadius: 6, padding: "6px 14px", fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: ".1em", color: (cu?.gamesAttended || 0) >= 3 ? "#c8ff00" : "#ff6060" }}>
                       {(cu?.gamesAttended || 0) >= 3 ? "✓ ELIGIBLE" : "✗ NOT ELIGIBLE"}
                     </div>
                   </div>
@@ -518,7 +518,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                     {govIdPreview ? (
                       <div><img src={govIdPreview} alt="Gov ID" style={{ maxHeight: 140, maxWidth: "100%", borderRadius: 4, border: "1px solid #2a3a10" }} /><div style={{ fontSize: 12, color: "#c8ff00", marginTop: 8 }}>✓ {govIdFile?.name}</div></div>
                     ) : (
-                      <div><div style={{ fontSize: 28, marginBottom: 8, opacity: .4 }}>🪪</div><div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: "#4a6a28", letterSpacing: ".06em" }}>Click or drag to upload Government ID</div><div style={{ fontSize: 11, color: "#3a4a20", marginTop: 4 }}>JPG, PNG or PDF · stored securely, admin-only</div></div>
+                      <div><div style={{ fontSize: 28, marginBottom: 8, opacity: .4 }}>🪪</div><div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 13, color: "#4a6a28", letterSpacing: ".06em" }}>Click or drag to upload Government ID</div><div style={{ fontSize: 11, color: "#3a4a20", marginTop: 4 }}>JPG, PNG or PDF · stored securely, admin-only</div></div>
                     )}
                   </div>
                 </div>
@@ -536,14 +536,14 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                     {facePreview ? (
                       <div><img src={facePreview} alt="Face photo" style={{ maxHeight: 140, maxWidth: "100%", borderRadius: 4, border: "1px solid #2a3a10" }} /><div style={{ fontSize: 12, color: "#c8ff00", marginTop: 8 }}>✓ {faceFile?.name}</div></div>
                     ) : (
-                      <div><div style={{ fontSize: 28, marginBottom: 8, opacity: .4 }}>🤳</div><div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: "#4a6a28", letterSpacing: ".06em" }}>Click or drag to upload face photo</div><div style={{ fontSize: 11, color: "#3a4a20", marginTop: 4 }}>JPG or PNG · well-lit, full face visible</div></div>
+                      <div><div style={{ fontSize: 28, marginBottom: 8, opacity: .4 }}>🤳</div><div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 13, color: "#4a6a28", letterSpacing: ".06em" }}>Click or drag to upload face photo</div><div style={{ fontSize: 11, color: "#3a4a20", marginTop: 4 }}>JPG or PNG · well-lit, full face visible</div></div>
                     )}
                   </div>
                 </div>
 
                 {/* Declaration */}
                 <div style={{ marginBottom: 24, background: "#080b06", border: "1px solid #1a2a0a", borderRadius: 8, padding: "18px 20px" }}>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#c8d8a0", marginBottom: 10, letterSpacing: ".06em" }}>DECLARATION</div>
+                  <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: "#c8d8a0", marginBottom: 10, letterSpacing: ".06em" }}>DECLARATION</div>
                   <p style={{ color: "#6a8a45", fontSize: 12, lineHeight: 1.7, marginBottom: 14 }}>
                     By proceeding I confirm that: (1) I am 18 years or older; (2) I have attended at least 3 airsoft game days at Swindon Airsoft within the past year; (3) the information and documents I have provided are truthful and accurate; (4) I understand that providing false information may constitute a criminal offence under the Violent Crime Reduction Act 2006.
                   </p>
@@ -557,7 +557,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                   <button
                     onClick={handleProceedToPayment}
                     disabled={!cu || (cu?.gamesAttended || 0) < 3}
-                    style={{ background: (!cu || (cu?.gamesAttended || 0) < 3) ? "#1a2a0a" : "#c8ff00", color: (!cu || (cu?.gamesAttended || 0) < 3) ? "#3a5020" : "#0a0e07", border: "none", padding: "12px 32px", borderRadius: 6, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: ".1em", cursor: (!cu || (cu?.gamesAttended || 0) < 3) ? "not-allowed" : "pointer", textTransform: "uppercase" }}
+                    style={{ background: (!cu || (cu?.gamesAttended || 0) < 3) ? "#1a2a0a" : "#c8ff00", color: (!cu || (cu?.gamesAttended || 0) < 3) ? "#3a5020" : "#0a0e07", border: "none", padding: "12px 32px", borderRadius: 6, fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: ".1em", cursor: (!cu || (cu?.gamesAttended || 0) < 3) ? "not-allowed" : "pointer", textTransform: "uppercase" }}
                   >
                     CONTINUE TO PAYMENT — £5 →
                   </button>
@@ -570,11 +570,11 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
 
         {/* FAQ */}
         <div style={{ marginTop: 48 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#e8f0d0", marginBottom: 16, letterSpacing: ".04em" }}>Frequently Asked Questions</div>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#e8f0d0", marginBottom: 16, letterSpacing: ".04em" }}>Frequently Asked Questions</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {faqs.map((f, i) => (
               <div key={i} style={{ background: "#0a0d07", border: "1px solid #1a2a0a", borderRadius: 8, padding: "16px 20px" }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: "#c8d8a0", marginBottom: 6 }}>{f.q}</div>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: "#c8d8a0", marginBottom: 6 }}>{f.q}</div>
                 <p style={{ color: "#5a7a40", fontSize: 13, lineHeight: 1.7, margin: 0 }}>{f.a}</p>
               </div>
             ))}

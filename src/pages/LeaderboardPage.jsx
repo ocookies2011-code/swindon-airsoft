@@ -54,7 +54,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
         ))}
         <div style={{ maxWidth: 760, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>◈ — SWINDON AIRSOFT — FIELD RECORDS — ◈</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
             COMBAT <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>ROLL</span>
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".25em", color:"#3a5010", marginTop:12 }}>▸ RANKED BY FIELD DEPLOYMENTS — DEDICATION, NOT KILLS ◂</div>
@@ -66,7 +66,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
               ["YOUR RANK", myRank >= 0 ? `#${myRank + 1}` : "—"],
             ].map(([label, val]) => (
               <div key={label} style={{ textAlign:"center" }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:28, color:"#c8ff00", lineHeight:1 }}>{val}</div>
+                <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:28, color:"#c8ff00", lineHeight:1 }}>{val}</div>
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#2a3a10", marginTop:3 }}>{label}</div>
               </div>
             ))}
@@ -80,7 +80,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
         {cu?.role === "player" && (
           <div style={{ background:"#0c1009", border:"1px solid #1e2c0a", padding:"12px 18px", marginBottom:28, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
             <div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", color:"#c8ff00", marginBottom:2 }}>FIELD VISIBILITY</div>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", color:"#c8ff00", marginBottom:2 }}>FIELD VISIBILITY</div>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>{cu.leaderboardOptOut ? "STATUS: GHOST — YOUR NAME IS HIDDEN" : "STATUS: ACTIVE — YOUR NAME IS VISIBLE"}</div>
             </div>
             <button className={`btn btn-sm ${cu.leaderboardOptOut ? "btn-primary" : "btn-ghost"}`}
@@ -104,13 +104,13 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                     onMouseEnter={e=>{ if(p.publicProfile) e.currentTarget.style.borderColor="rgba(138,138,138,.6)"; }}
                     onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(138,138,138,.3)"; }}>
                     <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#8a8a8a,transparent)" }} />
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", color:"#8a8a8a", marginBottom:8 }}>2ND</div>
-                    <div style={{ width:52, height:52, borderRadius:"50%", background:"#0a0c08", border:"2px solid #8a8a8a", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:20, fontWeight:700, color:"#8a8a8a", fontFamily:"'Barlow Condensed',sans-serif" }}>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", color:"#8a8a8a", marginBottom:8 }}>2ND</div>
+                    <div style={{ width:52, height:52, borderRadius:"50%", background:"#0a0c08", border:"2px solid #8a8a8a", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:20, fontWeight:700, color:"#8a8a8a", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
                       {p.profilePic ? <img src={p.profilePic} alt="" onError={e=>{e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.7) grayscale(.3)" }} /> : (p.callsign||p.name)[0]}
                     </div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".06em", color:isMe?"#e8f0d8":"#8a8a8a", textTransform:"uppercase", lineHeight:1.2, marginBottom:4 }}>{p.callsign||p.name}</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".06em", color:isMe?"#e8f0d8":"#8a8a8a", textTransform:"uppercase", lineHeight:1.2, marginBottom:4 }}>{p.callsign||p.name}</div>
                     {isMe && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--accent)", marginBottom:4 }}>← YOU</div>}
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#8a8a8a", lineHeight:1 }}>{p.gamesAttended}</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#8a8a8a", lineHeight:1 }}>{p.gamesAttended}</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".2em", color:"#2a3a10", marginTop:2 }}>DEPLOYMENTS</div>
                     {p.vipStatus==="active" && <div style={{ marginTop:6 }}><span className="tag tag-gold" style={{ fontSize:8 }}>★ VIP</span></div>}
                   </div>
@@ -126,13 +126,13 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                     onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(200,160,0,.45)"; }}>
                     <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"linear-gradient(90deg,transparent,#c8a000,transparent)" }} />
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:"#c8a000", marginBottom:6, filter:"drop-shadow(0 0 6px rgba(200,160,0,.5))" }}>👑</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".25em", color:"#c8a000", marginBottom:10 }}>FIELD COMMANDER</div>
-                    <div style={{ width:64, height:64, borderRadius:"50%", background:"#0a0c08", border:"2px solid #c8a000", margin:"0 auto 12px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:24, fontWeight:700, color:"#c8a000", fontFamily:"'Barlow Condensed',sans-serif", boxShadow:"0 0 16px rgba(200,160,0,.2)" }}>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".25em", color:"#c8a000", marginBottom:10 }}>FIELD COMMANDER</div>
+                    <div style={{ width:64, height:64, borderRadius:"50%", background:"#0a0c08", border:"2px solid #c8a000", margin:"0 auto 12px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:24, fontWeight:700, color:"#c8a000", fontFamily:"'Oswald','Barlow Condensed',sans-serif", boxShadow:"0 0 16px rgba(200,160,0,.2)" }}>
                       {p.profilePic ? <img src={p.profilePic} alt="" onError={e=>{e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.1) saturate(0.9)" }} /> : (p.callsign||p.name)[0]}
                     </div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".07em", color:isMe?"#e8f0d8":"#c8a000", textTransform:"uppercase", lineHeight:1.2, marginBottom:4 }}>{p.callsign||p.name}</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".07em", color:isMe?"#e8f0d8":"#c8a000", textTransform:"uppercase", lineHeight:1.2, marginBottom:4 }}>{p.callsign||p.name}</div>
                     {isMe && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--accent)", marginBottom:4 }}>← YOU</div>}
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:34, color:"#c8a000", lineHeight:1, filter:"drop-shadow(0 0 8px rgba(200,160,0,.3))" }}>{p.gamesAttended}</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:34, color:"#c8a000", lineHeight:1, filter:"drop-shadow(0 0 8px rgba(200,160,0,.3))" }}>{p.gamesAttended}</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".2em", color:"#2a3a10", marginTop:2 }}>DEPLOYMENTS</div>
                     {p.vipStatus==="active" && <div style={{ marginTop:8 }}><span className="tag tag-gold">★ VIP OPERATIVE</span></div>}
                   </div>
@@ -147,13 +147,13 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                     onMouseEnter={e=>{ if(p.publicProfile) e.currentTarget.style.borderColor="rgba(139,69,19,.6)"; }}
                     onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(139,69,19,.3)"; }}>
                     <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#8b4513,transparent)" }} />
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", color:"#8b4513", marginBottom:8 }}>3RD</div>
-                    <div style={{ width:52, height:52, borderRadius:"50%", background:"#0a0c08", border:"2px solid #8b4513", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:20, fontWeight:700, color:"#8b4513", fontFamily:"'Barlow Condensed',sans-serif" }}>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", color:"#8b4513", marginBottom:8 }}>3RD</div>
+                    <div style={{ width:52, height:52, borderRadius:"50%", background:"#0a0c08", border:"2px solid #8b4513", margin:"0 auto 10px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:20, fontWeight:700, color:"#8b4513", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
                       {p.profilePic ? <img src={p.profilePic} alt="" onError={e=>{e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.7) sepia(.2)" }} /> : (p.callsign||p.name)[0]}
                     </div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".06em", color:isMe?"#e8f0d8":"#8b4513", textTransform:"uppercase", lineHeight:1.2, marginBottom:4 }}>{p.callsign||p.name}</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".06em", color:isMe?"#e8f0d8":"#8b4513", textTransform:"uppercase", lineHeight:1.2, marginBottom:4 }}>{p.callsign||p.name}</div>
                     {isMe && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--accent)", marginBottom:4 }}>← YOU</div>}
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#8b4513", lineHeight:1 }}>{p.gamesAttended}</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#8b4513", lineHeight:1 }}>{p.gamesAttended}</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".2em", color:"#2a3a10", marginTop:2 }}>DEPLOYMENTS</div>
                     {p.vipStatus==="active" && <div style={{ marginTop:6 }}><span className="tag tag-gold" style={{ fontSize:8 }}>★ VIP</span></div>}
                   </div>
@@ -221,17 +221,17 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
               <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px)", pointerEvents:"none" }} />
               {(isTop3 || isMe) && <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:isMe?"var(--accent)":medalColor }} />}
               {/* Rank number */}
-              <div style={{ width:40, textAlign:"center", flexShrink:0, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:isTop3?22:16, color:medalColor||"#2a3a10", lineHeight:1 }}>
+              <div style={{ width:40, textAlign:"center", flexShrink:0, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:isTop3?22:16, color:medalColor||"#2a3a10", lineHeight:1 }}>
                 {i + 1}
               </div>
               {/* Avatar */}
-              <div style={{ width:36, height:36, background:"#0a0c08", border:`1px solid ${isMe?"rgba(200,255,0,.5)":medalColor||"#1a2808"}`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:14, overflow:"hidden", flexShrink:0, color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif" }}>
+              <div style={{ width:36, height:36, background:"#0a0c08", border:`1px solid ${isMe?"rgba(200,255,0,.5)":medalColor||"#1a2808"}`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:14, overflow:"hidden", flexShrink:0, color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
                 {player.profilePic ? <img src={player.profilePic} alt="" onError={e=>{e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", filter:"contrast(1.05) saturate(0.85)" }} /> : (player.callsign||player.name)[0]}
               </div>
               {/* Name + rank */}
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".07em", color:isMe?"#e8f0d8":medalColor||"#b0c090", textTransform:"uppercase", lineHeight:1.1 }}>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".07em", color:isMe?"#e8f0d8":medalColor||"#b0c090", textTransform:"uppercase", lineHeight:1.1 }}>
                     {player.callsign||player.name}
                   </div>
                   {isMe && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".15em", color:"var(--accent)", background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", padding:"1px 5px", whiteSpace:"nowrap" }}>← YOU</div>}
@@ -243,12 +243,12 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
               </div>
               {/* Deployment count */}
               <div style={{ textAlign:"right", flexShrink:0 }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:isMe?"var(--accent)":medalColor||"#c8ff00", lineHeight:1 }}>{player.gamesAttended}</div>
+                <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:isMe?"var(--accent)":medalColor||"#c8ff00", lineHeight:1 }}>{player.gamesAttended}</div>
                 {player.publicProfile && onPlayerClick ? (
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".1em", color:"#3a5010", marginTop:3 }}>VIEW FILE ▸</div>
                 ) : !player.publicProfile ? (
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".1em", color:"#2a2a2a", marginTop:3, display:"flex", alignItems:"center", justifyContent:"flex-end", gap:3 }}>
-                    <svg width="7" height="7" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1" stroke="#2a2a2a" strokeWidth="1.5"/><path d="M4 6V4a2 2 0 014 0v2" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round"/></svg>GHOST
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".1em", color:"#1e2e12", marginTop:3, display:"flex", alignItems:"center", justifyContent:"flex-end", gap:3 }}>
+                    <svg width="7" height="7" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1" stroke="#1e2e12" strokeWidth="1.5"/><path d="M4 6V4a2 2 0 014 0v2" stroke="#1e2e12" strokeWidth="1.5" strokeLinecap="round"/></svg>GHOST
                   </div>
                 ) : null}
               </div>

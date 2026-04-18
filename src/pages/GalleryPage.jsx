@@ -45,7 +45,7 @@ function GalleryPage({ data }) {
       ))}
       <div style={{ maxWidth:900, margin:'0 auto', textAlign:'center', position:'relative', zIndex:1 }}>
         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:'.35em', color:'#3a5010', marginBottom:14, textTransform:'uppercase' }}>◈ — SWINDON AIRSOFT — FIELD INTELLIGENCE — ◈</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:'clamp(30px,6vw,56px)', letterSpacing:'.18em', textTransform:'uppercase', color:'#e8f0d8', lineHeight:1, marginBottom:6 }}>
+        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:'clamp(30px,6vw,56px)', letterSpacing:'.18em', textTransform:'uppercase', color:'#e8f0d8', lineHeight:1, marginBottom:6 }}>
           MISSION <span style={{ color:'#c8ff00', textShadow:'0 0 30px rgba(200,255,0,.35)' }}>ARCHIVE</span>
         </div>
         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:'.25em', color:'#3a5010', marginTop:12 }}>▸ CLASSIFIED FIELD FOOTAGE — AUTHORISED VIEWING ONLY ◂</div>
@@ -107,7 +107,7 @@ function GalleryPage({ data }) {
                       </div>
                     </div>
                     <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, letterSpacing:'.12em', color:'#e8f0d8', textTransform:'uppercase' }}>{album.title}</div>
+                      <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, letterSpacing:'.12em', color:'#e8f0d8', textTransform:'uppercase' }}>{album.title}</div>
                       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#c8ff00', letterSpacing:'.15em' }}>VIEW →</div>
                     </div>
                   </div>
@@ -129,7 +129,7 @@ function GalleryPage({ data }) {
             style={{ background:'transparent', border:'1px solid #2a3a10', color:'#5a7a30', fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:'.15em', padding:'6px 14px', cursor:'pointer' }}>
             ← ALL ALBUMS
           </button>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:'.2em', color:'#c8ff00', textTransform:'uppercase' }}>▸ {openAlbum.title}</div>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:'.2em', color:'#c8ff00', textTransform:'uppercase' }}>▸ {openAlbum.title}</div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#2a3a10', letterSpacing:'.15em', marginLeft:'auto' }}>{openAlbum.images.length} IMAGES</div>
         </div>
         {openAlbum.images.length === 0

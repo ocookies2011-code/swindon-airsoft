@@ -308,7 +308,7 @@ function AdminCash({ data, cu, showToast }) {
       {terminalActive && (
         <div style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.35)", borderRadius:6, padding:"14px 18px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
           <div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".08em", color:"#4fc3f7", marginBottom:4 }}>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".08em", color:"#4fc3f7", marginBottom:4 }}>
               📟 TERMINAL CHECKOUT — {terminalStatus || "PENDING"}
             </div>
             <div style={{ fontSize:12, color:"var(--muted)" }}>
@@ -416,7 +416,7 @@ function AdminCash({ data, cu, showToast }) {
                       title={unavailable ? "No Terminal Device ID set — go to Settings → Square" : ""}
                       style={{
                         flex: 1, padding: "10px 8px", borderRadius: 4, cursor: unavailable ? "not-allowed" : "pointer",
-                        fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em",
+                        fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em",
                         textTransform: "uppercase", border: "1px solid",
                         background: payMethod === m ? (isTerminal ? "rgba(79,195,247,.15)" : "rgba(200,255,0,.12)") : "var(--card)",
                         color: unavailable ? "var(--muted)" : payMethod === m ? (isTerminal ? "#4fc3f7" : "var(--accent)") : "var(--muted)",
@@ -447,7 +447,7 @@ function AdminCash({ data, cu, showToast }) {
                   ✕ Cancel Terminal Payment
                 </button>
               ) : (
-                <button className="btn" style={{ width: "100%", padding: 10, background: "rgba(79,195,247,.15)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: ".08em" }}
+                <button className="btn" style={{ width: "100%", padding: 10, background: "rgba(79,195,247,.15)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: ".08em" }}
                   disabled={terminalBusy || items.length === 0} onClick={startTerminalCheckout}>
                   {terminalBusy ? "⏳ Sending…" : "📟 Send to Terminal"}
                 </button>

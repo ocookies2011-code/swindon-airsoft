@@ -272,10 +272,10 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
       <div className="modal-box wide" onClick={ev => ev.stopPropagation()} style={{ maxWidth: 780, margin: "0 auto", borderRadius: 0, minHeight: "100vh" }}>
 
         {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, paddingBottom:16, borderBottom:"1px solid #1a1a1a" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, paddingBottom:16, borderBottom:"1px solid #111a0a" }}>
           <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:44, width:"auto", objectFit:"contain", flexShrink:0 }} />
           <div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, letterSpacing:".05em", textTransform:"uppercase" }}>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, letterSpacing:".05em", textTransform:"uppercase" }}>
               PLAYER <span style={{ color:"var(--accent)" }}>WAIVER</span>
             </div>
             <div style={{ fontSize:11, color:"var(--muted)", letterSpacing:".1em" }}>VALID UNTIL 31 DECEMBER {new Date().getFullYear()}</div>
@@ -297,29 +297,29 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
           {waivers.map((w, i) => (
             <div key={i} style={{ display:"flex", alignItems:"center", gap:0 }}>
               <button onClick={() => setActiveIdx(i)}
-                style={{ padding:"6px 14px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
-                  background: activeIdx === i ? "var(--accent)" : "#1a1a1a", color: activeIdx === i ? "#000" : "var(--muted)",
+                style={{ padding:"6px 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
+                  background: activeIdx === i ? "var(--accent)" : "#111a0a", color: activeIdx === i ? "#000" : "var(--muted)",
                   border:"1px solid " + (activeIdx === i ? "var(--accent)" : "#333"), borderRadius:"2px 0 0 2px", cursor:"pointer" }}>
                 {w.name || `Player ${i+1}`}
               </button>
               {i > 0 && (
                 <button onClick={() => removeWaiver(i)}
-                  style={{ padding:"6px 8px", background: activeIdx === i ? "var(--accent)" : "#1a1a1a", color: activeIdx === i ? "#000" : "#666",
+                  style={{ padding:"6px 8px", background: activeIdx === i ? "var(--accent)" : "#111a0a", color: activeIdx === i ? "#000" : "#666",
                     border:"1px solid " + (activeIdx === i ? "var(--accent)" : "#333"), borderLeft:"none", borderRadius:"0 2px 2px 0", cursor:"pointer", fontSize:11 }}>✕</button>
               )}
               {i === 0 && <div style={{ borderRadius:"0 2px 2px 0" }} />}
             </div>
           ))}
           <button onClick={addWaiver}
-            style={{ padding:"6px 14px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
+            style={{ padding:"6px 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase",
               background:"none", color:"var(--accent)", border:"1px dashed var(--accent)", borderRadius:2, cursor:"pointer", marginLeft:4 }}>
             + Add Player
           </button>
         </div>
 
         {/* T&C box */}
-        <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:20, marginBottom:20 }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase", marginBottom:12 }}>
+        <div style={{ background:"#111", border:"1px solid #1e2e12", borderRadius:4, padding:20, marginBottom:20 }}>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase", marginBottom:12 }}>
             TERMS &amp; CONDITIONS
           </div>
           <div style={{ maxHeight:170, overflowY:"auto", paddingRight:4 }}>
@@ -334,7 +334,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
         </div>
 
         {/* Under 18 */}
-        <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:14, marginBottom:16, display:"flex", gap:12, alignItems:"flex-start" }}>
+        <div style={{ background:"#111", border:"1px solid #1e2e12", borderRadius:4, padding:14, marginBottom:16, display:"flex", gap:12, alignItems:"flex-start" }}>
           <input type="checkbox" id={`wchild-${activeIdx}`} checked={active.isChild} onChange={ev => fw("isChild", ev.target.checked)}
             style={{ width:18, height:18, marginTop:2, accentColor:"var(--accent)", flexShrink:0 }} />
           <div>
@@ -384,7 +384,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
         </div>
 
         {/* Address */}
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:8 }}>ADDRESS</div>
+        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase", marginBottom:8 }}>ADDRESS</div>
         <div className="form-group" style={{ marginBottom:10 }}><label>ADDRESS LINE 1 *</label><input value={active.addr1} onChange={ev => fw("addr1", ev.target.value)} /></div>
         <div className="form-group" style={{ marginBottom:10 }}><label>ADDRESS LINE 2</label><input value={active.addr2} onChange={ev => fw("addr2", ev.target.value)} /></div>
         <div className="form-row" style={{ marginBottom:10 }}>
@@ -422,7 +422,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
         </div>
 
         {/* Agree */}
-        <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:20, padding:14, background:"#111", border:"1px solid #2a2a2a", borderRadius:4 }}>
+        <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:20, padding:14, background:"#111", border:"1px solid #1e2e12", borderRadius:4 }}>
           <input type="checkbox" id={`wagree-${activeIdx}`} checked={active.agreed} onChange={ev => fw("agreed", ev.target.checked)}
             style={{ width:18, height:18, marginTop:2, accentColor:"var(--accent)", flexShrink:0 }} />
           <label htmlFor={`wagree-${activeIdx}`} style={{ cursor:"pointer", fontSize:13, lineHeight:1.6 }}>

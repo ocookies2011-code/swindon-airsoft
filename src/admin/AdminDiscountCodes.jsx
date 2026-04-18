@@ -157,7 +157,7 @@ function AdminDiscountCodes({ data, showToast, cu }) {
 
   const scopeLabel = (s) => ({ all: 'All', shop: 'Shop only', events: 'Events only' }[s] || s);
 
-  const cs = { fontFamily: "'Barlow Condensed',sans-serif" };
+  const cs = { fontFamily: "'Oswald','Barlow Condensed',sans-serif" };
 
   // Group redemptions by code id for the history tab
   const redemptionsByCode = redemptions.reduce((acc, r) => {
@@ -391,7 +391,7 @@ function AdminDiscountCodes({ data, showToast, cu }) {
             </table>
             <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Total saved by players</span>
-              <strong style={{ fontSize: 20, color: 'var(--accent)', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900 }}>£{redemptions.reduce((s, r) => s + Number(r.amount_saved), 0).toFixed(2)}</strong>
+              <strong style={{ fontSize: 20, color: 'var(--accent)', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900 }}>£{redemptions.reduce((s, r) => s + Number(r.amount_saved), 0).toFixed(2)}</strong>
             </div>
           </div>
         )

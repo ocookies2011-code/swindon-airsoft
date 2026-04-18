@@ -57,7 +57,7 @@ function AppInner() {
   // setPage writes the hash AND updates state
   const setPage = (p) => {
     setPageState(p);
-    // Preserve admin sub-hash when returning; otherwise just set the page
+    window.scrollTo({ top: 0, behavior: "instant" });
     if (p !== "admin") window.location.hash = p;
     else {
       const cur = window.location.hash.replace("#","").split("/");
@@ -287,23 +287,23 @@ function AppInner() {
             htmlContent: `
               <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px;border:1px solid #2a2a2a">
                 <div style="text-align:center;margin-bottom:28px">
-                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">
+                  <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">
                     SWINDON <span style="color:#c8ff00">AIRSOFT</span>
                   </div>
                   <div style="font-size:11px;letter-spacing:.2em;color:#c8a000;margin-top:4px;text-transform:uppercase">⭐ Elite Operative Status</div>
                 </div>
                 <div style="background:linear-gradient(135deg,#0c1009,#111a06);border:1px solid #2a3a10;border-left:3px solid #c8a000;border-radius:6px;padding:24px;text-align:center;margin-bottom:24px">
-                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:36px;letter-spacing:.15em;color:#c8a000;text-transform:uppercase;margin-bottom:8px">VIP ACTIVATED</div>
+                  <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:36px;letter-spacing:.15em;color:#c8a000;text-transform:uppercase;margin-bottom:8px">VIP ACTIVATED</div>
                   <div style="font-size:13px;color:#aaa;line-height:1.7">Welcome to the elite, <strong style="color:#fff">${target.name || "Operative"}</strong>. Your VIP membership is now live.</div>
                 </div>
                 <div style="margin-bottom:20px">
-                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.15em;color:#c8ff00;text-transform:uppercase;margin-bottom:12px">YOUR BENEFITS</div>
+                  <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.15em;color:#c8ff00;text-transform:uppercase;margin-bottom:12px">YOUR BENEFITS</div>
                   ${["10% discount on all game day bookings","10% discount at Airsoft Armoury UK","Free game day on your birthday","Access to VIP-only events","Priority booking for special events","VIP badge on your player profile"].map(b =>
                     `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #1a2808;font-size:13px;color:#8aaa50"><span style="color:#c8a000;font-size:10px">★</span>${b}</div>`
                   ).join("")}
                 </div>
                 <div style="text-align:center;margin-top:24px">
-                  <a href="${window.location.origin}${window.location.pathname}#profile/vip" style="display:inline-block;background:#c8a000;color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.2em;text-transform:uppercase;padding:12px 28px;text-decoration:none">VIEW MY VIP STATUS →</a>
+                  <a href="${window.location.origin}${window.location.pathname}#profile/vip" style="display:inline-block;background:#c8a000;color:#000;font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.2em;text-transform:uppercase;padding:12px 28px;text-decoration:none">VIEW MY VIP STATUS →</a>
                 </div>
               </div>
             `,
@@ -364,7 +364,7 @@ function AppInner() {
   if (loading) {
     const isSlowLoad = loadingSeconds >= 6;
     return (
-      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", background:"#080a06", overflow:"hidden", position:"relative", fontFamily:"'Barlow Condensed',sans-serif" }}>
+      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", background:"#080a06", overflow:"hidden", position:"relative", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
         {/* Crosshair reticle background */}
         <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", opacity:.04, pointerEvents:"none" }}>
           <svg width="520" height="520" viewBox="0 0 520 520" fill="none">
@@ -424,7 +424,7 @@ function AppInner() {
   // ── Geo-block screens ─────────────────────────────────────
   if (geoStatus === "checking") {
     return (
-      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12, background:"#080a06", fontFamily:"'Barlow Condensed',sans-serif" }}>
+      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12, background:"#080a06", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
         <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ width:120, height:"auto", objectFit:"contain", marginBottom:4 }} />
         <div style={{ width:160, height:2, background:"#1a2808", position:"relative", overflow:"hidden", marginTop:8 }}>
           <div style={{ position:"absolute", top:0, left:0, height:"100%", width:"100%", background:"linear-gradient(90deg,transparent,#c8ff00,transparent)", animation:"scanBar 1.4s ease-in-out infinite" }}/>
@@ -439,7 +439,7 @@ function AppInner() {
     return (
       <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:20, background:"#0d1117", padding:24, textAlign:"center" }}>
         <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ width:80, height:"auto", objectFit:"contain" }} />
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:28, fontWeight:900, letterSpacing:".1em", color:"#fff" }}>NOT AVAILABLE IN YOUR REGION</div>
+        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:28, fontWeight:900, letterSpacing:".1em", color:"#fff" }}>NOT AVAILABLE IN YOUR REGION</div>
         <div style={{ fontSize:14, color:"#555", maxWidth:340, lineHeight:1.7 }}>
           Swindon Airsoft is only available to visitors in the UK, Ireland, and EU member states.
         </div>
@@ -470,7 +470,7 @@ function AppInner() {
           <style>{CSS}</style>
           <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
             <div style={{ fontSize: 48 }}>🔒</div>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 32, letterSpacing: ".1em", color: "var(--red)" }}>ACCESS DENIED</div>
             <div style={{ color: "var(--muted)", fontSize: 14 }}>Admin access only.</div>
             <button className="btn btn-ghost" onClick={() => setPage("home")}>← Back to Site</button>
           </div>

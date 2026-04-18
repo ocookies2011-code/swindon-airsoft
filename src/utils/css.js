@@ -4,7 +4,7 @@ const CSS = `
 
 /* ── RESET ── */
 *{box-sizing:border-box;margin:0;padding:0;}
-body,#root{background:#080b06;color:#c8d4b0;font-family:'Barlow Condensed',sans-serif;min-height:100vh;}
+body,#root{background:#080b06;color:#c8d4b0;font-family:'Oswald','Barlow Condensed',sans-serif;min-height:100vh;}
 
 /* ── VARIABLES ── */
 :root{
@@ -18,7 +18,7 @@ body,#root{background:#080b06;color:#c8d4b0;font-family:'Barlow Condensed',sans-
   --sidebar-w:230px;--nav-h:68px;--bottom-nav-h:64px;
   --font-mil:'Oswald','Barlow Condensed',sans-serif;
   --font-mono:'Share Tech Mono',monospace;
-  --font-body:'Barlow Condensed',sans-serif;
+  --font-body:'Oswald','Barlow Condensed',sans-serif;
 }
 
 /* ── SCROLLBAR ── */
@@ -30,6 +30,8 @@ body,#root{background:#080b06;color:#c8d4b0;font-family:'Barlow Condensed',sans-
 .font-mil{font-family:var(--font-mil);font-weight:700;}
 .font-mono{font-family:var(--font-mono);}
 .font-cond{font-family:var(--font-body);}
+/* All headings use Oswald */
+h1,h2,h3,h4,h5,h6{font-family:var(--font-mil);}
 
 /* ── NAV ── */
 .pub-nav{background:#040604;border-bottom:2px solid var(--border2);position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.8);}

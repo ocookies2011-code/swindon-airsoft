@@ -39,7 +39,7 @@ function StaffPage({ staff = [] }) {
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>
             ◈ — SWINDON AIRSOFT — PERSONNEL DOSSIER — ◈
           </div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
             CHAIN OF <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>COMMAND</span>
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".25em", color:"#3a5010", marginTop:12 }}>
@@ -77,7 +77,7 @@ function StaffPage({ staff = [] }) {
             <div style={{ display:"flex", alignItems:"center", margin: tierIdx===0 ? "36px 0 28px" : "4px 0 28px" }}>
               <div style={{ flex:1, height:1, background:"linear-gradient(to right,transparent,#1e2c0a)" }} />
               <div style={{
-                fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11,
+                fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11,
                 letterSpacing:".3em", textTransform:"uppercase",
                 padding:"5px 22px", margin:"0 12px",
                 color: tier.rank===1 ? "#c8a000" : tier.rank===2 ? "#c8ff00" : "#3a5010",
@@ -170,7 +170,7 @@ function StaffCard({ member, rank, pips }) {
         ))}
         {/* Rank badge for owner */}
         {isOwner && (
-          <div style={{ position:"absolute", top:8, right:8, background:gold, color:"#000", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:8, letterSpacing:".15em", padding:"2px 8px", zIndex:4 }}>
+          <div style={{ position:"absolute", top:8, right:8, background:gold, color:"#000", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:8, letterSpacing:".15em", padding:"2px 8px", zIndex:4 }}>
             ★ C/O
           </div>
         )}
@@ -178,7 +178,7 @@ function StaffCard({ member, rank, pips }) {
 
       {/* Info */}
       <div style={{ padding:"12px 12px 10px", position:"relative", zIndex:6 }}>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:17, letterSpacing:".1em", color: isOwner ? gold : "#dce8c8", textTransform:"uppercase", lineHeight:1.15, marginBottom:5 }}>
+        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:17, letterSpacing:".1em", color: isOwner ? gold : "#dce8c8", textTransform:"uppercase", lineHeight:1.15, marginBottom:5 }}>
           {member.name}
         </div>
         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".16em", color:accent, opacity:.85, marginBottom:8 }}>

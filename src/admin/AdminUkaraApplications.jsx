@@ -205,7 +205,7 @@ function AdminUkaraApplications({ showToast, cu }) {
     };
     const c = map[s] || map.pending;
     return (
-      <span style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}`, borderRadius: 4, padding: "2px 10px", fontSize: 10, fontWeight: 900, letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif" }}>
+      <span style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}`, borderRadius: 4, padding: "2px 10px", fontSize: 10, fontWeight: 900, letterSpacing: ".12em", fontFamily: "'Oswald','Barlow Condensed',sans-serif" }}>
         {c.label}
       </span>
     );
@@ -218,7 +218,7 @@ function AdminUkaraApplications({ showToast, cu }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
         <div>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 900, color: "#e8f0d0", letterSpacing: ".04em" }}>UKARA APPLICATIONS</div>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 900, color: "#e8f0d0", letterSpacing: ".04em" }}>UKARA APPLICATIONS</div>
           <div style={{ fontSize: 12, color: "#4a6a28" }}>Manage player UKARA registration applications</div>
         </div>
         <button className="btn btn-sm" onClick={load} style={{ fontSize: 12 }}>↻ Refresh</button>
@@ -287,7 +287,7 @@ function AdminUkaraApplications({ showToast, cu }) {
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setSelected(app)}>👁 View</button>
                       {app._synthetic && (
-                        <span style={{ fontSize: 10, color: "#4fc3f7", border: "1px solid #1a3a4a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🗄 DB RECORD</span>
+                        <span style={{ fontSize: 10, color: "#4fc3f7", border: "1px solid #1a3a4a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Oswald','Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🗄 DB RECORD</span>
                       )}
                       {!app._synthetic && app.status === "pending" && (
                         <>
@@ -296,7 +296,7 @@ function AdminUkaraApplications({ showToast, cu }) {
                         </>
                       )}
                       {app.renewal_requested && app.status === "approved" && (
-                        <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
+                        <span style={{ fontSize: 10, color: "#ce93d8", border: "1px solid #4a2a5a", padding: "2px 8px", borderRadius: 4, fontFamily: "'Oswald','Barlow Condensed',sans-serif", letterSpacing: ".08em" }}>🔄 RENEWAL</span>
                       )}
                       {app.status === "approved" && (
                         <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => { setExpiryModal(app); setExpiryDate(app.expires_at ? app.expires_at.slice(0, 10) : ""); }}>📅 Expiry</button>
@@ -315,7 +315,7 @@ function AdminUkaraApplications({ showToast, cu }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSelected(null)}>
           <div style={{ background: "#0d1209", border: "1px solid #2a3a10", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 680, width: "100%", maxHeight: "90vh", overflowY: "auto", position: "relative" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setSelected(null)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#4a6a28", fontSize: 18, cursor: "pointer" }}>✕</button>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 22, fontWeight: 900, color: "#e8f0d0", marginBottom: 4 }}>{selected.name}</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 22, fontWeight: 900, color: "#e8f0d0", marginBottom: 4 }}>{selected.name}</div>
             <div style={{ marginBottom: 20 }}>{statusChip(selected.status)}</div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
@@ -427,7 +427,7 @@ function AdminUkaraApplications({ showToast, cu }) {
       {expiryModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => !expiryBusy && setExpiryModal(null)}>
           <div style={{ background: "#0d1209", border: "1px solid #2a4a10", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 400, width: "100%" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#c8ff00", marginBottom: 4 }}>📅 SET EXPIRY DATE</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#c8ff00", marginBottom: 4 }}>📅 SET EXPIRY DATE</div>
             <div style={{ color: "#6a8a50", fontSize: 13, marginBottom: 4 }}>{expiryModal.name}</div>
             <div style={{ fontFamily: "monospace", fontSize: 12, color: "#c8ff00", marginBottom: 20 }}>{expiryModal.ukara_id}</div>
             {expiryModal.expires_at && (
@@ -459,7 +459,7 @@ function AdminUkaraApplications({ showToast, cu }) {
       {approveModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setApproveModal(null)}>
           <div style={{ background: "#0d1209", border: "1px solid #2a4a10", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 440, width: "100%" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#c8ff00", marginBottom: 4 }}>APPROVE APPLICATION</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#c8ff00", marginBottom: 4 }}>APPROVE APPLICATION</div>
             <div style={{ color: "#6a8a50", fontSize: 13, marginBottom: 20 }}>{approveModal.name} · {approveModal.email}</div>
             <label style={{ display: "block", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#4a6a28", marginBottom: 6 }}>UKARA ID</label>
             <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -485,7 +485,7 @@ function AdminUkaraApplications({ showToast, cu }) {
       {declineModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setDeclineModal(null)}>
           <div style={{ background: "#0d0909", border: "1px solid #5a1a1a", borderRadius: 10, padding: "28px 28px 24px", maxWidth: 440, width: "100%" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#ff6060", marginBottom: 4 }}>DECLINE APPLICATION</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 900, color: "#ff6060", marginBottom: 4 }}>DECLINE APPLICATION</div>
             <div style={{ color: "#7a5050", fontSize: 13, marginBottom: 20 }}>{declineModal.name} · {declineModal.email}</div>
             <label style={{ display: "block", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#8a4040", marginBottom: 6 }}>REASON (shown to player)</label>
             <textarea
@@ -496,7 +496,7 @@ function AdminUkaraApplications({ showToast, cu }) {
               style={{ width: "100%", background: "#0a0505", border: "1px solid #5a1a1a", color: "#ff8080", padding: "10px 14px", borderRadius: 6, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
             />
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-              <button onClick={handleDecline} disabled={actioning} style={{ flex: 1, background: "rgba(220,50,50,.18)", border: "1px solid rgba(220,50,50,.4)", color: "#ff6060", padding: "10px", borderRadius: 6, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+              <button onClick={handleDecline} disabled={actioning} style={{ flex: 1, background: "rgba(220,50,50,.18)", border: "1px solid rgba(220,50,50,.4)", color: "#ff6060", padding: "10px", borderRadius: 6, fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
                 {actioning ? "⏳ Declining…" : "✗ Confirm Decline"}
               </button>
               <button onClick={() => setDeclineModal(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>

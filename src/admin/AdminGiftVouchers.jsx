@@ -6,7 +6,7 @@ import { fmtDate, fmtErr, sendEmail, useMobile } from "../utils";
 import { logAction } from "./adminHelpers";
 
 function AdminGiftVouchers({ showToast, cu }) {
-  const cs = { fontFamily: "'Barlow Condensed',sans-serif" };
+  const cs = { fontFamily: "'Oswald','Barlow Condensed',sans-serif" };
 
   const EMPTY_FORM = { recipientEmail: '', recipientName: '', purchaserName: '', amount: '', message: '', note: '' };
 
@@ -89,13 +89,13 @@ function AdminGiftVouchers({ showToast, cu }) {
           htmlContent: `
             <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px;border:1px solid #2a2a2a">
               <div style="text-align:center;margin-bottom:28px">
-                <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">SWINDON <span style="color:#c8ff00">AIRSOFT</span></div>
+                <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">SWINDON <span style="color:#c8ff00">AIRSOFT</span></div>
                 <div style="font-size:11px;letter-spacing:.2em;color:#3a5010;margin-top:4px;text-transform:uppercase">Gift Voucher</div>
               </div>
               ${form.message.trim() ? `<div style="background:#1a1a1a;border-left:3px solid #c8ff00;padding:14px 16px;margin-bottom:20px;font-style:italic;color:#bbb;font-size:14px">"${form.message.trim()}"</div>` : ''}
               <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;padding:24px;text-align:center;margin-bottom:20px">
                 <div style="font-size:11px;letter-spacing:.15em;color:#555;text-transform:uppercase;margin-bottom:8px">Voucher Value</div>
-                <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:60px;color:#c8ff00;line-height:1">£${amt.toFixed(2)}</div>
+                <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:60px;color:#c8ff00;line-height:1">£${amt.toFixed(2)}</div>
                 <div style="font-size:11px;color:#555;margin-top:8px">Valid on events &amp; shop orders · Unused balance carries forward</div>
               </div>
               <div style="background:#0d0d0d;border:1px solid #2a3a10;border-radius:6px;padding:20px;text-align:center;margin-bottom:24px">
@@ -206,7 +206,7 @@ function AdminGiftVouchers({ showToast, cu }) {
       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
         <input className="input" placeholder="Search code, email, name…" value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex:1, minWidth:200, background:'#111a0a', border:'1px solid #2a4010', color:'#e8f8b0', fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, letterSpacing:'.08em', padding:'9px 14px' }} />
+          style={{ flex:1, minWidth:200, background:'#111a0a', border:'1px solid #2a4010', color:'#e8f8b0', fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:14, letterSpacing:'.08em', padding:'9px 14px' }} />
         {['all','active','partial','fully used','disabled'].map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             style={{ ...cs, padding:'8px 14px', fontSize:12, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', cursor:'pointer', transition:'all .15s',

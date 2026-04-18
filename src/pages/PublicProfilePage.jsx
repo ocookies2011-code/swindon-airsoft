@@ -38,7 +38,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
   );
   if (notFound) return (
     <div style={{ background: "#080a06", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: ".15em", color: "#c8ff00" }}>FILE NOT FOUND</div>
+      <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: ".15em", color: "#c8ff00" }}>FILE NOT FOUND</div>
       <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#3a5010" }}>OPERATIVE HAS NOT ENABLED PUBLIC PROFILE</div>
       <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setPage(prevPage || "leaderboard")}>← BACK</button>
     </div>
@@ -54,7 +54,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
 
   const SectionHeader = ({ label }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-      <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: ".3em", color: "#c8ff00", textTransform: "uppercase" }}>▸ {label}</div>
+      <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: ".3em", color: "#c8ff00", textTransform: "uppercase" }}>▸ {label}</div>
       <div style={{ flex: 1, height: 1, background: "linear-gradient(to right,#1e2c0a,transparent)" }} />
     </div>
   );
@@ -63,7 +63,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
     if (!name) return null;
     return (
       <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "12px 14px", marginBottom: 8 }}>
-        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".2em", color: "#c8ff00", textTransform: "uppercase", marginBottom: 8 }}>{title}</div>
+        <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".2em", color: "#c8ff00", textTransform: "uppercase", marginBottom: 8 }}>{title}</div>
         {[["MODEL", name], ["FPS", fps], ["MAGS", mags], ["UPGRADES", upgrades]].filter(([, v]) => v).map(([k, v]) => (
           <div key={k} style={{ display: "flex", gap: 10, padding: "5px 0", borderBottom: "1px solid #1a2808", fontSize: 12 }}>
             <span style={{ color: "#3a5010", minWidth: 72, fontSize: 10, fontWeight: 700, letterSpacing: ".1em", fontFamily: "'Share Tech Mono',monospace", paddingTop: 1, flexShrink: 0 }}>{k}</span>
@@ -98,33 +98,33 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
           }} />
         ))}
         <div style={{ maxWidth: 760, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <button onClick={() => setPage(prevPage || "leaderboard")} style={{ background: "none", border: "1px solid #2a3a10", color: "#3a5010", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11, letterSpacing: ".15em", padding: "4px 12px", cursor: "pointer", marginBottom: 20 }}>← BACK</button>
+          <button onClick={() => setPage(prevPage || "leaderboard")} style={{ background: "none", border: "1px solid #2a3a10", color: "#3a5010", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 11, letterSpacing: ".15em", padding: "4px 12px", cursor: "pointer", marginBottom: 20 }}>← BACK</button>
           <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
             {/* Avatar */}
-            <div style={{ width: 88, height: 88, border: "2px solid #c8ff00", overflow: "hidden", background: "#0a0c08", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 900, color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0, position: "relative" }}>
+            <div style={{ width: 88, height: 88, border: "2px solid #c8ff00", overflow: "hidden", background: "#0a0c08", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 900, color: "#c8ff00", fontFamily: "'Oswald','Barlow Condensed',sans-serif", flexShrink: 0, position: "relative" }}>
               {profile.profile_pic
                 ? <img src={profile.profile_pic} alt="" onError={e => { e.target.style.display="none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.05) saturate(0.8)" }} />
                 : (profile.callsign || "?")[0].toUpperCase()}
               {profile.can_marshal && (
-                <div style={{ position: "absolute", bottom: 0, right: 0, background: "#c8ff00", color: "#000", fontSize: 7, fontWeight: 900, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".08em", padding: "2px 4px" }}>MSHL</div>
+                <div style={{ position: "absolute", bottom: 0, right: 0, background: "#c8ff00", color: "#000", fontSize: 7, fontWeight: 900, fontFamily: "'Oswald','Barlow Condensed',sans-serif", letterSpacing: ".08em", padding: "2px 4px" }}>MSHL</div>
               )}
             </div>
             {/* Name block */}
             <div style={{ flex: 1, minWidth: 180 }}>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".25em", color: "#3a5010", marginBottom: 4 }}>OPERATIVE FILE // SWINDON AIRSOFT</div>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(22px,5vw,38px)", letterSpacing: ".1em", color: "#e8f0d8", textTransform: "uppercase", lineHeight: 1, marginBottom: 4 }}>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(22px,5vw,38px)", letterSpacing: ".1em", color: "#e8f0d8", textTransform: "uppercase", lineHeight: 1, marginBottom: 4 }}>
                 {profile.callsign || "OPERATIVE"}
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 {profile.vip_status === "active" && (
-                  <span style={{ background: "rgba(200,160,0,.15)", border: "1px solid rgba(200,160,0,.4)", color: "#c8a000", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>★ VIP OPERATIVE</span>
+                  <span style={{ background: "rgba(200,160,0,.15)", border: "1px solid rgba(200,160,0,.4)", color: "#c8a000", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>★ VIP OPERATIVE</span>
                 )}
                 {profile.can_marshal && (
-                  <span style={{ background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.4)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>🎖 MARSHAL</span>
+                  <span style={{ background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.4)", color: "#c8ff00", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>🎖 MARSHAL</span>
                 )}
                 {designation && (() => {
                   const DESIG_ICONS = { "GHOST":"👻","SNIPER":"🎯","MEDIC":"🩹","DEMOLITIONS":"💥","RECON":"🔭","HEAVY GUNNER":"🔫","SUPPORT":"🛡","SQUAD LEADER":"⚔️","VETERAN":"🎖","LEGEND":"🏆" };
-                  return <span style={{ background: "rgba(79,195,247,.1)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>{DESIG_ICONS[designation] || "◆"} {designation}</span>;
+                  return <span style={{ background: "rgba(79,195,247,.1)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>{DESIG_ICONS[designation] || "◆"} {designation}</span>;
                 })()}
                 {profile.join_date && (
                   <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".1em" }}>ENLISTED {new Date(profile.join_date).getFullYear()}</span>
@@ -156,14 +156,14 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
                 <path d="M24,25 Q18,30 18,35" fill="none" stroke="#c8ff00" strokeWidth="1.4" strokeLinecap="round"/>
                 <path d="M24,25 Q30,30 30,35" fill="none" stroke="#c8ff00" strokeWidth="1.4" strokeLinecap="round"/>
               </svg>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 36, color: "#c8ff00", lineHeight: 1 }}>{games}</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 36, color: "#c8ff00", lineHeight: 1 }}>{games}</div>
             </div>
 
             {/* Rank */}
             <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10" }}>RANK</div>
               <RankInsignia rank={rankTitle} size={48}/>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".06em" }}>{rankTitle}</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".06em" }}>{rankTitle}</div>
             </div>
 
             {/* Designation — only if set */}
@@ -171,7 +171,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
               <div style={{ background: "#0c1009", border: "1px solid rgba(79,195,247,.25)", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#1a3a4a" }}>DESIGNATION</div>
                 <DesignationInsignia desig={designation} size={48}/>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
               </div>
             )}
 
@@ -197,7 +197,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
                   </g>
                 )}
               </svg>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: profile.vip_status === "active" ? "#c8a000" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: profile.vip_status === "active" ? "#c8a000" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
                 {profile.vip_status === "active" ? "ACTIVE" : profile.vip_status === "expired" ? "EXPIRED" : "STANDARD"}
               </div>
             </div>
@@ -222,7 +222,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
                   </g>
                 )}
               </svg>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: profile.can_marshal ? "#c8ff00" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: profile.can_marshal ? "#c8ff00" : "#2a3a10", lineHeight: 1, letterSpacing: ".06em" }}>
                 {profile.can_marshal ? "QUALIFIED" : "NOT QUALIFIED"}
               </div>
             </div>

@@ -220,12 +220,12 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
     return (
       <div style={{ marginTop: 12 }}>
         <div style={{ background: "#0d1a0d", border: "1px solid #1e3a1e", padding: "8px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
+          <span style={{ background: "#2d7a2d", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", letterSpacing: ".15em", fontFamily: "'Oswald','Barlow Condensed',sans-serif", flexShrink: 0 }}>TEST MODE</span>
           <span style={{ fontSize: 11, color: "#5aab5a", fontFamily: "'Share Tech Mono',monospace" }}>Mock payments — no real money taken. Set Square to Production in Admin → Settings.</span>
         </div>
-        <div style={{ background: "#111", border: "1px solid #2a2a2a", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
+        <div style={{ background: "#111", border: "1px solid #1e2e12", padding: "10px 14px", marginBottom: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
           <span>{description}</span>
-          <span style={{ color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
+          <span style={{ color: "var(--accent)", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
         </div>
         <button className="btn btn-primary" style={{ width: "100%", padding: "13px", fontSize: 14, letterSpacing: ".15em", opacity: disabled ? .5 : 1 }}
           disabled={disabled} onClick={() => onSuccess({ id: "MOCK-" + Date.now(), status: "COMPLETED", mock: true })}>
@@ -254,9 +254,9 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
         <div style={{ fontSize: 10, letterSpacing: ".15em", color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", marginBottom: 10, textTransform: "uppercase" }}>Card Details</div>
         <div ref={cardRef} style={{ minHeight: 48 }} />
       </div>
-      <div style={{ background: "#111", border: "1px solid #1a1a1a", padding: "10px 14px", marginBottom: 10, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
+      <div style={{ background: "#111", border: "1px solid #111a0a", padding: "10px 14px", marginBottom: 10, fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
         <span>{description}</span>
-        <span style={{ color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
+        <span style={{ color: "var(--accent)", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 16 }}>£{Number(amount).toFixed(2)}</span>
       </div>
       {!sqReady && !sqError && (
         <div style={{ color: "var(--muted)", fontSize: 12, padding: 8 }}>Loading card form…</div>

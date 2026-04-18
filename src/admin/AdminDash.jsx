@@ -111,7 +111,7 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
               onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
             >
               <div style={{ marginBottom: 8, display: "flex", alignItems: "center" }}>{qa.icon}</div>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".1em", color: qa.textColor, textTransform: "uppercase" }}>{qa.label}</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".1em", color: qa.textColor, textTransform: "uppercase" }}>{qa.label}</div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{qa.sub}</div>
             </button>
           ))}
@@ -122,7 +122,7 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
       {nextEvent && (
         <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".12em", color: "#c8ff00", textTransform: "uppercase" }}>📅 Next Event: {nextEvent.title}</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".12em", color: "#c8ff00", textTransform: "uppercase" }}>📅 Next Event: {nextEvent.title}</div>
             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
               {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {nextEvent.bookings.length} player(s) booked
             </div>

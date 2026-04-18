@@ -255,12 +255,12 @@ function CustomerOrderDetail({ order: selected, onPatch }) {
             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)", letterSpacing: ".15em", marginBottom: 4 }}>
               ORDER #{(selected.id||"").slice(-8).toUpperCase()}
             </div>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", color: displayColor, textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", color: displayColor, textTransform: "uppercase" }}>
               {meta.icon} {displayLabel}
             </div>
             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 5 }}>{meta.desc}</div>
           </div>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: "var(--accent)" }}>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: "var(--accent)" }}>
             £{Number(selected.total).toFixed(2)}
           </div>
         </div>
@@ -277,13 +277,13 @@ function CustomerOrderDetail({ order: selected, onPatch }) {
               return (
                 <div key={s.step} style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, gap:0 }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? "#c8ff00" : "#1a1a1a", border: `2px solid ${done ? "#c8ff00" : current ? "rgba(200,255,0,.4)" : "#2a2a2a"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: done ? "#000" : "var(--muted)", fontWeight: 900, boxShadow: current ? "0 0 12px rgba(200,255,0,.4)" : "none", transition: "all .3s" }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? "#c8ff00" : "#111a0a", border: `2px solid ${done ? "#c8ff00" : current ? "rgba(200,255,0,.4)" : "#1e2e12"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: done ? "#000" : "var(--muted)", fontWeight: 900, boxShadow: current ? "0 0 12px rgba(200,255,0,.4)" : "none", transition: "all .3s" }}>
                       {done ? "✓" : s.step}
                     </div>
                     <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: done ? "#c8ff00" : "var(--muted)", marginTop: 6, textAlign: "center", letterSpacing: ".08em", textTransform: "uppercase" }}>{s.label}</div>
                   </div>
                   {i < ORDER_STEPS.length - 1 && (
-                    <div style={{ flex: 2, height: 2, background: meta.step > s.step ? "#c8ff00" : "#1a1a1a", transition: "background .3s", marginBottom: 20 }} />
+                    <div style={{ flex: 2, height: 2, background: meta.step > s.step ? "#c8ff00" : "#111a0a", transition: "background .3s", marginBottom: 20 }} />
                   )}
                 </div>
               );
@@ -323,12 +323,12 @@ function CustomerOrderDetail({ order: selected, onPatch }) {
             </div>
           </div>
         ))}
-        <div style={{ padding: "10px 16px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
+        <div style={{ padding: "10px 16px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#080b06" }}>
           <span style={{ fontSize: 12, color: "var(--muted)" }}>Postage ({selected.postage_name || "Standard"})</span>
           <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12 }}>£{Number(selected.postage || 0).toFixed(2)}</span>
         </div>
-        <div style={{ padding: "12px 16px", borderTop: "2px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#0a0a0a" }}>
-          <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: ".08em", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase" }}>Total Paid</span>
+        <div style={{ padding: "12px 16px", borderTop: "2px solid var(--border)", display: "flex", justifyContent: "space-between", background: "#080b06" }}>
+          <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: ".08em", fontFamily: "'Oswald','Barlow Condensed',sans-serif", textTransform: "uppercase" }}>Total Paid</span>
           <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 900, color: "var(--accent)" }}>£{Number(selected.total).toFixed(2)}</span>
         </div>
       </div>
@@ -403,7 +403,7 @@ function PlayerOrders({ cu }) {
   if (orders.length === 0) return (
     <div style={{ textAlign: "center", padding: 60 }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>📦</div>
-      <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 18, letterSpacing: ".15em", color: "var(--muted)", textTransform: "uppercase" }}>No Orders Yet</div>
+      <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 18, letterSpacing: ".15em", color: "var(--muted)", textTransform: "uppercase" }}>No Orders Yet</div>
       <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#2a3a10", marginTop: 8 }}>Head to the shop to browse our gear</div>
     </div>
   );
@@ -431,7 +431,7 @@ function PlayerOrders({ cu }) {
                   {meta.icon} {meta.label.toUpperCase()}
                 </div>
               </div>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: isActive ? "#fff" : "var(--muted)", letterSpacing: ".05em", lineHeight: 1.3, marginBottom: 3 }}>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: isActive ? "#fff" : "var(--muted)", letterSpacing: ".05em", lineHeight: 1.3, marginBottom: 3 }}>
                 {items.slice(0,2).map(i => i.name).join(", ")}{items.length > 2 ? ` +${items.length-2}` : ""}
               </div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a3a3a", display: "flex", justifyContent: "space-between" }}>

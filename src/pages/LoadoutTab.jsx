@@ -78,7 +78,7 @@ function LoadoutTab({ cu, showToast }) {
     <div className="card">
       <div style={{ background: "rgba(200,255,0,.06)", border: "1px solid rgba(200,255,0,.2)", padding: "14px 16px", marginBottom: 24, borderRadius: 4, display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".12em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 4 }}>🌐 Public Profile</div>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".12em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 4 }}>🌐 Public Profile</div>
           <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>When enabled, anyone can view your callsign, profile picture, games attended, and loadout via a shareable link. Personal details are never shown.</div>
           {publicProfile && (
             <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -92,7 +92,7 @@ function LoadoutTab({ cu, showToast }) {
             <div style={{ width: 18, height: 18, borderRadius: "50%", background: publicProfile ? "#000" : "#888", position: "absolute", top: 2, left: publicProfile ? 22 : 2, transition: "left .2s" }} />
           </div>
           <input type="checkbox" checked={publicProfile} onChange={e => setPublicProfile(e.target.checked)} style={{ display: "none" }} />
-          <span style={{ fontSize: 12, color: publicProfile ? "var(--accent)" : "var(--muted)", fontWeight: 700, letterSpacing: ".08em", fontFamily: "'Barlow Condensed',sans-serif" }}>{publicProfile ? "PROFILE PUBLIC" : "PROFILE PRIVATE"}</span>
+          <span style={{ fontSize: 12, color: publicProfile ? "var(--accent)" : "var(--muted)", fontWeight: 700, letterSpacing: ".08em", fontFamily: "'Oswald','Barlow Condensed',sans-serif" }}>{publicProfile ? "PROFILE PUBLIC" : "PROFILE PRIVATE"}</span>
         </label>
       </div>
 
@@ -108,7 +108,7 @@ function LoadoutTab({ cu, showToast }) {
         { label: "Support / Special (optional)",prefix: "support" },
       ].map(({ label, prefix }) => (
         <div key={prefix} style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 10 }}>🔫 {label}</div>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 10 }}>🔫 {label}</div>
           <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", padding: "12px 14px", borderRadius: 2 }}>
             {LOADOUT_WEAPON_FIELDS.map(({ key, field, placeholder }) => (
               <div className="form-group" key={field} style={{ marginBottom: 10 }}>
@@ -121,7 +121,7 @@ function LoadoutTab({ cu, showToast }) {
       ))}
 
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 10 }}>🪖 Kit &amp; Gear</div>
+        <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".14em", color: "var(--accent)", textTransform: "uppercase", marginBottom: 10 }}>🪖 Kit &amp; Gear</div>
         <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", padding: "12px 14px", borderRadius: 2 }}>
           {LOADOUT_GEAR_FIELDS.map(({ key, field, placeholder }) => (
             <div className="form-group" key={field} style={{ marginBottom: 10 }}>

@@ -38,8 +38,8 @@ function ShopClosedPage({ setPage }) {
           }} />
         ))}
         <div style={{ position:"relative", zIndex:1 }}>
-          <div style={{ fontSize:9, letterSpacing:".25em", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, marginBottom:10 }}>⬡ SWINDON AIRSOFT · ONLINE SHOP</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:32, color:"#e8ffb0", letterSpacing:".04em", marginBottom:8 }}>SHOP TEMPORARILY CLOSED</div>
+          <div style={{ fontSize:9, letterSpacing:".25em", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, marginBottom:10 }}>⬡ SWINDON AIRSOFT · ONLINE SHOP</div>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:32, color:"#e8ffb0", letterSpacing:".04em", marginBottom:8 }}>SHOP TEMPORARILY CLOSED</div>
           <div style={{ fontSize:14, color:"var(--muted)", lineHeight:1.7, maxWidth:600 }}>
             Our on-site shop is currently closed. You can order everything you need from our full retail store — with the option to collect your order at one of our game days.
           </div>
@@ -59,14 +59,14 @@ function ShopClosedPage({ setPage }) {
         <div style={{ position:"absolute", top:0, right:0, width:120, height:120, background:"radial-gradient(circle,rgba(200,255,0,.08) 0%,transparent 70%)", pointerEvents:"none" }} />
         <div style={{ display:"flex", alignItems:"flex-start", gap:20, flexWrap:"wrap" }}>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", color:"#c8ff00", marginBottom:8, textTransform:"uppercase" }}>🛒 Our Retail Store</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#fff", marginBottom:8 }}>Airsoft Armoury UK</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", color:"#c8ff00", marginBottom:8, textTransform:"uppercase" }}>🛒 Our Retail Store</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:"#fff", marginBottom:8 }}>Airsoft Armoury UK</div>
             <div style={{ fontSize:13, color:"#a0cc60", lineHeight:1.7, marginBottom:16 }}>
               The UK's premier airsoft retailer — thousands of products in stock with fast dispatch. Use code <strong style={{ color:"#c8ff00", background:"rgba(200,255,0,.1)", padding:"1px 8px", borderRadius:3, fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>COLLECTION</strong> at checkout to collect your order at one of our Swindon Airsoft game days instead of paying for postage.
             </div>
             <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
               <a href="https://airsoftarmoury.uk" target="_blank" rel="noopener noreferrer"
-                style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#c8ff00", color:"#0a0f06", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".12em", padding:"11px 22px", borderRadius:3, textDecoration:"none", textTransform:"uppercase" }}>
+                style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#c8ff00", color:"#0a0f06", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".12em", padding:"11px 22px", borderRadius:3, textDecoration:"none", textTransform:"uppercase" }}>
                 🌐 VISIT STORE
               </a>
               <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00", fontFamily:"'Share Tech Mono',monospace", fontSize:13, letterSpacing:".15em", padding:"11px 18px", borderRadius:3 }}>
@@ -76,7 +76,7 @@ function ShopClosedPage({ setPage }) {
           </div>
           {/* Collection info box */}
           <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid #2a3a10", borderRadius:6, padding:"16px 18px", minWidth:0, flexShrink:0, width:"100%" }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".2em", color:"#c8ff00", marginBottom:10, textTransform:"uppercase" }}>📦 Game Day Collection</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".2em", color:"#c8ff00", marginBottom:10, textTransform:"uppercase" }}>📦 Game Day Collection</div>
             {[
               ["1", "Order from airsoftarmoury.uk"],
               ["2", 'Enter code COLLECTION at checkout'],
@@ -84,7 +84,7 @@ function ShopClosedPage({ setPage }) {
               ["4", "Collect at the field — no postage!"],
             ].map(([n, t]) => (
               <div key={n} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:8 }}>
-                <div style={{ background:"rgba(200,255,0,.15)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, width:20, height:20, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>{n}</div>
+                <div style={{ background:"rgba(200,255,0,.15)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, width:20, height:20, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>{n}</div>
                 <div style={{ fontSize:12, color:"#a0cc60", lineHeight:1.5 }}>{t}</div>
               </div>
             ))}
@@ -94,12 +94,12 @@ function ShopClosedPage({ setPage }) {
 
       {/* What they sell */}
       <div style={{ marginBottom:24 }}>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".2em", color:"var(--muted)", textTransform:"uppercase", marginBottom:14 }}>◈ WHAT'S AVAILABLE AT AIRSOFT ARMOURY UK</div>
+        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".2em", color:"var(--muted)", textTransform:"uppercase", marginBottom:14 }}>◈ WHAT'S AVAILABLE AT AIRSOFT ARMOURY UK</div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:10 }}>
           {categories.map(({ icon, label, desc }) => (
             <div key={label} style={{ background:"#0b1007", border:"1px solid #2a3a10", borderRadius:6, padding:"14px 16px" }}>
               <div style={{ fontSize:22, marginBottom:6 }}>{icon}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, color:"#c8e878", letterSpacing:".06em", marginBottom:4 }}>{label}</div>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, color:"#c8e878", letterSpacing:".06em", marginBottom:4 }}>{label}</div>
               <div style={{ fontSize:11, color:"var(--muted)", lineHeight:1.5 }}>{desc}</div>
             </div>
           ))}
@@ -109,7 +109,7 @@ function ShopClosedPage({ setPage }) {
       {/* CTA */}
       <div style={{ textAlign:"center", padding:"24px 0 8px" }}>
         <a href="https://airsoftarmoury.uk" target="_blank" rel="noopener noreferrer"
-          style={{ display:"inline-flex", alignItems:"center", gap:10, background:"rgba(200,255,0,.08)", border:"1px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, letterSpacing:".15em", padding:"14px 32px", borderRadius:3, textDecoration:"none", textTransform:"uppercase" }}>
+          style={{ display:"inline-flex", alignItems:"center", gap:10, background:"rgba(200,255,0,.08)", border:"1px solid #c8ff00", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, letterSpacing:".15em", padding:"14px 32px", borderRadius:3, textDecoration:"none", textTransform:"uppercase" }}>
           🛒 SHOP AT AIRSOFTARMOURY.UK →
         </a>
         <div style={{ fontSize:11, color:"var(--muted)", marginTop:10, fontFamily:"'Share Tech Mono',monospace" }}>
@@ -357,14 +357,14 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1, display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
           <div style={{ textAlign:"center", flex:1 }}>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>◈ — SWINDON AIRSOFT — QUARTERMASTER — ◈</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
               FIELD <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>ARMOURY</span>
             </div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".25em", color:"#3a5010", marginTop:12 }}>▸ PROCURE YOUR GEAR — REPORT TO QUARTERMASTER ◂</div>
           </div>
           {/* Cart button */}
           <div style={{ flexShrink:0, marginTop:4 }}>
-            <button style={{ background:"rgba(200,255,0,.06)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", padding:"10px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all .15s" }}
+            <button style={{ background:"rgba(200,255,0,.06)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".2em", padding:"10px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all .15s" }}
               onMouseEnter={e => { e.currentTarget.style.background="rgba(200,255,0,.12)"; e.currentTarget.style.borderColor="#c8ff00"; }}
               onMouseLeave={e => { e.currentTarget.style.background="rgba(200,255,0,.06)"; e.currentTarget.style.borderColor="#2a3a10"; }}
               onClick={() => setCartOpen(true)}>
@@ -377,7 +377,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
       <div style={{ maxWidth:1100, margin:"0 auto", padding:"40px 16px 80px" }}>
         {cu?.vipStatus === "active" && (
-          <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"10px 16px", marginBottom:24, display:"flex", alignItems:"center", gap:10, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"#c8a000" }}>
+          <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"10px 16px", marginBottom:24, display:"flex", alignItems:"center", gap:10, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"#c8a000" }}>
             ★ VIP OPERATIVE — 10% DISCOUNT APPLIED ON ALL ITEMS
           </div>
         )}
@@ -387,7 +387,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           <div style={{ marginBottom:32 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>◈ —</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8" }}>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8" }}>
                 RECENTLY <span style={{ color:"#c8ff00" }}>VIEWED</span>
               </div>
               <div style={{ flex:1, height:1, background:"linear-gradient(to right,#1a2808,transparent)" }} />
@@ -411,9 +411,9 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                       : <div style={{ aspectRatio:"4/3", background:"#080a06", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, color:"#1a2808" }}>🎯</div>
                     }
                     <div style={{ padding:"8px 10px" }}>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".05em", textTransform:"uppercase", color:"#9ab870", lineHeight:1.2, marginBottom:3,
+                      <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".05em", textTransform:"uppercase", color:"#9ab870", lineHeight:1.2, marginBottom:3,
                         whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{prod.name}</div>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8ff00" }}>£{Number(rvPrice).toFixed(2)}</div>
+                      <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8ff00" }}>£{Number(rvPrice).toFixed(2)}</div>
                     </div>
                   </div>
                 );
@@ -436,11 +436,11 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             <div style={{ display:"flex", alignItems:"center", gap:14 }}>
               <span style={{ fontSize:24, flexShrink:0 }}>🎟️</span>
               <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".1em", textTransform:"uppercase", color:"#c8a000" }}>Gift Vouchers</div>
+                <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".1em", textTransform:"uppercase", color:"#c8a000" }}>Gift Vouchers</div>
                 <div style={{ fontSize:12, color:"#5a7a30", marginTop:1 }}>The perfect gift — redeemable on events &amp; shop orders</div>
               </div>
             </div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".1em", color:"#c8a000", whiteSpace:"nowrap", flexShrink:0 }}>BUY ONE →</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".1em", color:"#c8a000", whiteSpace:"nowrap", flexShrink:0 }}>BUY ONE →</div>
           </div>
         )}
 
@@ -449,11 +449,11 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           <div style={{ flex:1, maxWidth:320, position:"relative" }}>
             <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#3a5010", fontSize:14, pointerEvents:"none" }}>🔍</span>
             <input value={shopSearch} onChange={e => setShopSearch(e.target.value)} placeholder="SEARCH ARMOURY…"
-              style={{ width:"100%", background:"#111a0a", border:"1px solid #2a4010", color:"#e8f8b0", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:16, letterSpacing:".12em", padding:"12px 40px 12px 40px", outline:"none", boxSizing:"border-box", textTransform:"uppercase", caretColor:"#c8ff00" }} />
+              style={{ width:"100%", background:"#111a0a", border:"1px solid #2a4010", color:"#e8f8b0", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:16, letterSpacing:".12em", padding:"12px 40px 12px 40px", outline:"none", boxSizing:"border-box", textTransform:"uppercase", caretColor:"#c8ff00" }} />
             {shopSearch && <button onClick={() => setShopSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#5a7a30", cursor:"pointer", fontSize:16, lineHeight:1 }}>✕</button>}
           </div>
           <select value={shopSort} onChange={e => setShopSort(e.target.value)}
-            style={{ background:"#111a0a", border:"1px solid #2a4010", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", padding:"12px 14px", outline:"none", cursor:"pointer", flexShrink:0, textTransform:"uppercase" }}>
+            style={{ background:"#111a0a", border:"1px solid #2a4010", color:"#c8e878", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", padding:"12px 14px", outline:"none", cursor:"pointer", flexShrink:0, textTransform:"uppercase" }}>
             <option value="default">SORT: DEFAULT</option>
             <option value="price-asc">PRICE: LOW → HIGH</option>
             <option value="price-desc">PRICE: HIGH → LOW</option>
@@ -467,7 +467,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
           <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom: (shopSearch || shopCatFilter) ? 10 : 24, alignItems:"center" }}>
             <button
               onClick={() => setShopCatFilter("")}
-              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", textTransform:"uppercase",
+              style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", textTransform:"uppercase",
                 padding:"6px 16px", border:"1px solid", cursor:"pointer", transition:"all .15s",
                 background: shopCatFilter === "" ? "#c8ff00" : "transparent",
                 borderColor: shopCatFilter === "" ? "#c8ff00" : "#2a3a10",
@@ -476,7 +476,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
             {allShopCategories.map(cat => (
               <button key={cat}
                 onClick={() => setShopCatFilter(shopCatFilter === cat ? "" : cat)}
-                style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", textTransform:"uppercase",
+                style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", textTransform:"uppercase",
                   padding:"6px 16px", border:"1px solid", cursor:"pointer", transition:"all .15s",
                   background: shopCatFilter === cat ? "#c8ff00" : "transparent",
                   borderColor: shopCatFilter === cat ? "#c8ff00" : "#2a3a10",
@@ -497,9 +497,9 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         {filteredShop.length === 0 && (shopSearch || shopCatFilter) && (
           <div style={{ maxWidth:1100, margin:"0 auto", padding:"60px 16px", textAlign:"center" }}>
             <div style={{ fontSize:40, marginBottom:16, opacity:.2 }}>🎯</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".2em", color:"#2a3a10", textTransform:"uppercase" }}>NO ITEMS FOUND</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".2em", color:"#2a3a10", textTransform:"uppercase" }}>NO ITEMS FOUND</div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#1a2808", letterSpacing:".15em", marginTop:8 }}>TRY A DIFFERENT SEARCH OR CLEAR FILTERS</div>
-            <button onClick={() => { setShopSearch(""); setShopCatFilter(""); }} style={{ marginTop:16, background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"6px 18px", cursor:"pointer" }}>CLEAR FILTERS</button>
+            <button onClick={() => { setShopSearch(""); setShopCatFilter(""); }} style={{ marginTop:16, background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"6px 18px", cursor:"pointer" }}>CLEAR FILTERS</button>
           </div>
         )}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
@@ -554,7 +554,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   )}
                   {!inStock && !hasV && (
                     <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3 }}>
-                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, letterSpacing:".2em", color:"#ef4444", border:"2px solid #ef4444", padding:"4px 14px", transform:"rotate(-3deg)" }}>OUT OF STOCK</span>
+                      <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, letterSpacing:".2em", color:"#ef4444", border:"2px solid #ef4444", padding:"4px 14px", transform:"rotate(-3deg)" }}>OUT OF STOCK</span>
                     </div>
                   )}
                 </div>
@@ -569,7 +569,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   {item.category && (
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#4a6a20", textTransform:"uppercase", marginBottom:4 }}>◈ {item.category}</div>
                   )}
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".06em", textTransform:"uppercase", color:"#dce8c8", lineHeight:1.1, marginBottom:6 }}>{item.name}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".06em", textTransform:"uppercase", color:"#dce8c8", lineHeight:1.1, marginBottom:6 }}>{item.name}</div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", lineHeight:1.6, marginBottom:10 }}>
                     {(item.description||"").replace(/[*#_~`]/g,"").slice(0,70)}{(item.description||"").length>70?"…":""}
                   </div>
@@ -579,7 +579,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 <div style={{ borderTop:"1px solid #1a2808", padding:"10px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(0,0,0,.3)", position:"relative", zIndex:6 }}>
                   <div>
                     {hasV && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", marginBottom:2, letterSpacing:".1em" }}>FROM</div>}
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, color:"#c8ff00", lineHeight:1 }}>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, color:"#c8ff00", lineHeight:1 }}>
                       £{cu?.vipStatus === "active" ? (displayPrice * 0.9).toFixed(2) : Number(displayPrice).toFixed(2)}
                       {cu?.vipStatus === "active" && <span style={{ fontSize:9, color:"#c8a000", marginLeft:5, fontFamily:"'Share Tech Mono',monospace" }}>VIP</span>}
                     </div>
@@ -628,7 +628,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         {hasMoreShop && (
           <div style={{ textAlign:"center", marginTop:32 }}>
             <button onClick={() => setShopPage(p => p + 1)}
-              style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".22em", padding:"10px 32px", cursor:"pointer", transition:"all .15s" }}
+              style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".22em", padding:"10px 32px", cursor:"pointer", transition:"all .15s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor="#c8ff00"; e.currentTarget.style.color="#c8ff00"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.color="#5a7a30"; }}>
               ▸ LOAD MORE — {filteredShop.length - shopPage * SHOP_PAGE_SIZE} MORE ITEMS
@@ -643,11 +643,11 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
       {/* CART MODAL */}
       {cartOpen && (
         <div className="overlay" onClick={() => setCartOpen(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", borderRadius:0 }}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background:"#0d0d0d", border:"1px solid #1e2e12", borderRadius:0 }}>
             {/* Modal header */}
             <div style={{ borderBottom:"1px solid #2a3a10", paddingBottom:16, marginBottom:16 }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".25em", color:"var(--muted)", marginBottom:4 }}>◈ — QUARTERMASTER</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>LOADOUT REVIEW</div>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:24, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>LOADOUT REVIEW</div>
             </div>
 
             {cart.length === 0
@@ -657,17 +657,17 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {cart.map(item => (
                   <div key={item.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid #1a2808" }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".06em", fontSize:14, textTransform:"uppercase", color:"#b0c090" }}>{item.name}</div>
+                      <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".06em", fontSize:14, textTransform:"uppercase", color:"#b0c090" }}>{item.name}</div>
                       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", marginTop:2 }}>£{item.price.toFixed(2)} EACH</div>
                     </div>
                     <div className="gap-2" style={{ alignItems:"center" }}>
                       <div style={{ display:"flex", alignItems:"center", border:"1px solid #2a3a10", background:"#080a06" }}>
-                        <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{ background:"none", border:"none", color:"#c8ff00", padding:"4px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>−</button>
-                        <span style={{ padding:"0 8px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, color:"#c8ff00" }}>{item.qty}</span>
-                        <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{ background:"none", border:"none", color:"#c8ff00", padding:"4px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>+</button>
+                        <button onClick={() => updateCartQty(item.key, item.qty - 1)} style={{ background:"none", border:"none", color:"#c8ff00", padding:"4px 10px", cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900 }}>−</button>
+                        <span style={{ padding:"0 8px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:14, color:"#c8ff00" }}>{item.qty}</span>
+                        <button onClick={() => updateCartQty(item.key, item.qty + 1)} style={{ background:"none", border:"none", color:"#c8ff00", padding:"4px 10px", cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900 }}>+</button>
                       </div>
-                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:16, fontWeight:900, color:"#c8ff00", minWidth:60, textAlign:"right" }}>£{(item.price * item.qty).toFixed(2)}</span>
-                      <button style={{ background:"none", border:"none", color:"#ef4444", cursor:"pointer", fontSize:14, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }} onClick={() => removeFromCart(item.key)}>✕</button>
+                      <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:16, fontWeight:900, color:"#c8ff00", minWidth:60, textAlign:"right" }}>£{(item.price * item.qty).toFixed(2)}</span>
+                      <button style={{ background:"none", border:"none", color:"#ef4444", cursor:"pointer", fontSize:14, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900 }} onClick={() => removeFromCart(item.key)}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -675,7 +675,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 {!hasNoPost && postageOptions.length > 0 && (
                   <div className="form-group mt-2">
                     <label style={{ color:"#3a5010", fontSize:9, letterSpacing:".2em" }}>POSTAGE METHOD</label>
-                    <select value={postageId} onChange={e => setPostageId(e.target.value)} style={{ background:"#080a06", border:"1px solid #2a3a10", borderRadius:0, color:"#b0c090", fontFamily:"'Barlow Condensed',sans-serif" }}>
+                    <select value={postageId} onChange={e => setPostageId(e.target.value)} style={{ background:"#080a06", border:"1px solid #2a3a10", borderRadius:0, color:"#b0c090", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
                       {postageOptions.map(p => <option key={p.id} value={p.id}>{p.name} — £{Number(p.price).toFixed(2)}</option>)}
                     </select>
                   </div>
@@ -689,12 +689,12 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                   <div style={{ flex:1, height:1, background:"#2a3a10" }} />
                 </div>
 
-                {cu?.vipStatus === "active" && <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"8px 12px", marginBottom:8, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".12em", color:"#c8a000" }}>★ VIP 10% DISCOUNT APPLIED</div>}
+                {cu?.vipStatus === "active" && <div style={{ background:"rgba(200,160,0,.06)", border:"1px solid rgba(200,160,0,.2)", padding:"8px 12px", marginBottom:8, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".12em", color:"#c8a000" }}>★ VIP 10% DISCOUNT APPLIED</div>}
 
                 {/* ── Discount Code ── */}
                 {cu && (
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 9, letterSpacing: '.2em', color: '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount / Voucher Code</div>
+                    <div style={{ fontSize: 9, letterSpacing: '.2em', color: '#3a5010', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, marginBottom: 5, textTransform: 'uppercase' }}>🏷️ Discount / Voucher Code</div>
                     {!shopAppliedDiscount ? (
                       <div style={{ display: 'flex', gap: 0 }}>
                         <input
@@ -702,19 +702,19 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                           onChange={e => { setShopDiscountInput(e.target.value.toUpperCase()); setShopDiscountError(''); }}
                           onKeyDown={e => e.key === 'Enter' && applyShopDiscount(cu)}
                           placeholder="ENTER CODE"
-                          style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', borderRight: 'none', color: '#c8e878', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '.1em', padding: '8px 10px', outline: 'none', textTransform: 'uppercase', borderRadius: 0 }}
+                          style={{ flex: 1, background: '#0c1009', border: '1px solid #2a3a10', borderRight: 'none', color: '#c8e878', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '.1em', padding: '8px 10px', outline: 'none', textTransform: 'uppercase', borderRadius: 0 }}
                           onFocus={e => e.target.style.borderColor = '#4a6820'}
                           onBlur={e => e.target.style.borderColor = '#2a3a10'}
                         />
                         <button onClick={() => applyShopDiscount(cu)} disabled={shopDiscountChecking || !shopDiscountInput.trim()}
-                          style={{ background: shopDiscountInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: shopDiscountInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: '.1em', padding: '8px 12px', cursor: shopDiscountInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
+                          style={{ background: shopDiscountInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: shopDiscountInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: '.1em', padding: '8px 12px', cursor: shopDiscountInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
                           {shopDiscountChecking ? '⏳' : 'APPLY'}
                         </button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(200,255,0,.08)', border: '1px solid rgba(200,255,0,.3)', borderLeft: '3px solid #c8ff00' }}>
                         <div>
-                          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: '#c8ff00', letterSpacing: '.08em' }}>
+                          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, color: '#c8ff00', letterSpacing: '.08em' }}>
                             ✓ {shopAppliedDiscount.code}
                           </div>
                           <div style={{ fontSize: 10, color: '#5a7a30', marginTop: 1 }}>
@@ -722,7 +722,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                           </div>
                         </div>
                         <button onClick={() => { setShopAppliedDiscount(null); setShopDiscountInput(''); setShopDiscountError(''); }}
-                          style={{ background: 'none', border: '1px solid #2a3a10', color: '#5a7a30', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '4px 8px', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}>REMOVE</button>
+                          style={{ background: 'none', border: '1px solid #2a3a10', color: '#5a7a30', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '4px 8px', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700 }}>REMOVE</button>
                       </div>
                     )}
                     {shopDiscountError && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>⚠ {shopDiscountError}</div>}
@@ -751,17 +751,17 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #2a3a10' }}>
                   {shopDiscountSaving > 0 && (
                     <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, marginBottom: 4, color: '#5a7a30' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 13, marginBottom: 4, color: '#5a7a30' }}>
                         <span>Subtotal</span>
                         <span>£{subTotal.toFixed(2)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, marginBottom: 6, color: '#c8ff00', background: 'rgba(200,255,0,.05)', padding: '3px 6px', borderRadius: 2 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 13, marginBottom: 6, color: '#c8ff00', background: 'rgba(200,255,0,.05)', padding: '3px 6px', borderRadius: 2 }}>
                         <span>🏷️ Code: {shopAppliedDiscount?.code}</span>
                         <span style={{ fontWeight: 700 }}>−£{shopDiscountSaving.toFixed(2)}</span>
                       </div>
                     </>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, color: '#e8f0d8' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 24, color: '#e8f0d8' }}>
                     <span>TOTAL</span>
                     <span style={{ color: '#c8ff00' }}>£{grandTotal.toFixed(2)}</span>
                   </div>
@@ -786,7 +786,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
                 )}
               </>
             )}
-            <button style={{ width:"100%", marginTop:12, background:"transparent", border:"1px solid #2a3a10", color:"#3a5010", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".2em", padding:"10px", cursor:"pointer", transition:"all .15s" }}
+            <button style={{ width:"100%", marginTop:12, background:"transparent", border:"1px solid #2a3a10", color:"#3a5010", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".2em", padding:"10px", cursor:"pointer", transition:"all .15s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor="#c8ff00"; e.currentTarget.style.color="#c8ff00"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor="#2a3a10"; e.currentTarget.style.color="#3a5010"; }}
               onClick={() => setCartOpen(false)}>✕ CLOSE LOADOUT</button>
@@ -895,14 +895,14 @@ function ProductReviews({ item, cu }) {
   const SectionHead = () => (
     <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>◈ —</div>
-      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>
+      <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>
         FIELD <span style={{ color:"#c8ff00" }}>REPORTS</span>
       </div>
       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>— ◈</div>
       {reviews.length > 0 && (
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8 }}>
           <Stars rating={Math.round(avg)} />
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8a000" }}>{avg.toFixed(1)}</span>
+          <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8a000" }}>{avg.toFixed(1)}</span>
           <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".1em" }}>({reviews.length})</span>
         </div>
       )}
@@ -918,7 +918,7 @@ function ProductReviews({ item, cu }) {
         {cu && !myReview && !editing && hasPurchased && (
           <button
             onClick={() => setEditing(true)}
-            style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"8px 18px", cursor:"pointer", marginBottom:24, transition:"border-color .15s, color .15s" }}
+            style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em", padding:"8px 18px", cursor:"pointer", marginBottom:24, transition:"border-color .15s, color .15s" }}
             onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8ff00";e.currentTarget.style.color="#c8ff00";}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor="#2a3a10";e.currentTarget.style.color="#5a7a30";}}
           >◈ SUBMIT FIELD REPORT</button>
@@ -932,14 +932,14 @@ function ProductReviews({ item, cu }) {
           <div style={{ background:"#0c1009", border:"1px solid #2a3a10", borderLeft:"3px solid #c8a000", padding:"12px 16px", marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#5a7a30", letterSpacing:".1em" }}>YOU ALREADY SUBMITTED A REPORT</div>
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => setEditing(true)} style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>EDIT</button>
-              <button onClick={deleteReview} disabled={deleting} style={{ background:"transparent", border:"1px solid #3a1a1a", color:"#6b3333", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>{deleting ? "…" : "DELETE"}</button>
+              <button onClick={() => setEditing(true)} style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>EDIT</button>
+              <button onClick={deleteReview} disabled={deleting} style={{ background:"transparent", border:"1px solid #3a1a1a", color:"#6b3333", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"5px 12px", cursor:"pointer" }}>{deleting ? "…" : "DELETE"}</button>
             </div>
           </div>
         )}
         {(editing) && (
           <div style={{ background:"#0c1009", border:"1px solid #2a3a10", padding:"18px", marginBottom:24 }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".22em", color:"#c8ff00", marginBottom:14 }}>⬡ {myReview ? "EDIT" : "SUBMIT"} FIELD REPORT</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".22em", color:"#c8ff00", marginBottom:14 }}>⬡ {myReview ? "EDIT" : "SUBMIT"} FIELD REPORT</div>
             <div style={{ marginBottom:12 }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".15em", marginBottom:6 }}>RATING</div>
               <Stars rating={draftRating} size={22} interactive onSet={setDraftRating} />
@@ -959,11 +959,11 @@ function ProductReviews({ item, cu }) {
             {error && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#ef4444", letterSpacing:".1em", marginBottom:10 }}>⚠ {error}</div>}
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={saveReview} disabled={saving}
-                style={{ background:"#c8ff00", color:"#000", border:"none", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", padding:"8px 20px", cursor:"pointer" }}>
+                style={{ background:"#c8ff00", color:"#000", border:"none", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:11, letterSpacing:".2em", padding:"8px 20px", cursor:"pointer" }}>
                 {saving ? "SAVING…" : "SUBMIT REPORT"}
               </button>
               <button onClick={() => { setEditing(false); setError(""); if (myReview) { setDraftRating(myReview.rating); setDraftBody(myReview.body); } }}
-                style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", padding:"8px 14px", cursor:"pointer" }}>
+                style={{ background:"transparent", border:"1px solid #2a3a10", color:"#5a7a30", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", padding:"8px 14px", cursor:"pointer" }}>
                 CANCEL
               </button>
             </div>
@@ -974,7 +974,7 @@ function ProductReviews({ item, cu }) {
 
         {!loading && reviews.length === 0 && (
           <div style={{ background:"#0c1009", border:"1px solid #1a2808", padding:"32px 24px", textAlign:"center" }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".2em", color:"#2a3a10", textTransform:"uppercase", marginBottom:6 }}>NO FIELD REPORTS YET</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".2em", color:"#2a3a10", textTransform:"uppercase", marginBottom:6 }}>NO FIELD REPORTS YET</div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#1a2808", letterSpacing:".12em" }}>Be the first to submit a report on this item.</div>
           </div>
         )}
@@ -985,7 +985,7 @@ function ProductReviews({ item, cu }) {
               {r.user_id === cu?.id && <div style={{ position:"absolute", top:10, right:12, fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#c8a000", letterSpacing:".12em" }}>YOUR REPORT</div>}
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
                 <Stars rating={r.rating} size={13} />
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".1em", color:"#8aaa50", textTransform:"uppercase" }}>{r.user_name}</span>
+                <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".1em", color:"#8aaa50", textTransform:"uppercase" }}>{r.user_name}</span>
                 <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", background:"rgba(200,255,0,.06)", border:"1px solid #1a2808", padding:"1px 6px", letterSpacing:".1em" }}>✓ VERIFIED PURCHASE</span>
                 <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em", marginLeft:"auto" }}>
                   {new Date(r.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
@@ -1041,13 +1041,13 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
       {/* Breadcrumb bar */}
       <div style={{ background:"#0c1009", borderBottom:"1px solid #1a2808", padding:"12px 24px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", display:"flex", alignItems:"center", gap:8, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#2a3a10" }}>
-          <button onClick={onBack} style={{ background:"none", border:"none", color:"#c8ff00", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".15em", fontSize:11, padding:0 }}>
+          <button onClick={onBack} style={{ background:"none", border:"none", color:"#c8ff00", cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, letterSpacing:".15em", fontSize:11, padding:0 }}>
             ← ARMOURY
           </button>
           <span style={{ color:"#1a2808" }}>▸</span>
           <span style={{ color:"#3a5010", textTransform:"uppercase", letterSpacing:".12em" }}>{item.name}</span>
           <div style={{ marginLeft:"auto" }}>
-            <button style={{ background:"rgba(200,255,0,.06)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".18em", padding:"6px 14px", cursor:"pointer" }}
+            <button style={{ background:"rgba(200,255,0,.06)", border:"1px solid #2a3a10", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".18em", padding:"6px 14px", cursor:"pointer" }}
               onClick={onCartOpen}>
               ◈ LOADOUT {cartCount > 0 && <span style={{ background:"#c8ff00", color:"#000", padding:"1px 6px", fontSize:10, marginLeft:4, fontWeight:900 }}>{cartCount}</span>}
             </button>
@@ -1060,7 +1060,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
 
         {/* LEFT — Image */}
         <div>
-          <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", borderTop:"3px solid var(--accent)", position:"relative", overflow:"hidden" }}>
+          <div style={{ background:"#0d0d0d", border:"1px solid #1e2e12", borderTop:"3px solid var(--accent)", position:"relative", overflow:"hidden" }}>
             {/* Corner brackets */}
             <div style={{ position:"absolute", top:10, left:10, width:18, height:18, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
             <div style={{ position:"absolute", top:10, right:10, width:18, height:18, borderTop:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
@@ -1075,7 +1075,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
                   {displayImg
                     ? (
                       <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setImgLightbox(displayImg)}>
-                        <img src={displayImg} alt={item.name} onError={e=>{e.target.style.display='none';}} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#0a0a0a", transition:"opacity .2s" }} />
+                        <img src={displayImg} alt={item.name} onError={e=>{e.target.style.display='none';}} style={{ width:"100%", aspectRatio:"4/3", objectFit:"contain", display:"block", background:"#080b06", transition:"opacity .2s" }} />
                         <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,.7)", border:"1px solid rgba(200,255,0,.3)", color:"rgba(200,255,0,.8)", fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".15em", padding:"3px 8px", pointerEvents:"none" }}>⊕ ENLARGE</div>
                       </div>
                     )
@@ -1096,7 +1096,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
             })()}
             {!item.stock && (
               <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:28, letterSpacing:".2em", color:"var(--red)", border:"3px solid var(--red)", padding:"8px 24px", transform:"rotate(-5deg)" }}>OUT OF STOCK</span>
+                <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:28, letterSpacing:".2em", color:"var(--red)", border:"3px solid var(--red)", padding:"8px 24px", transform:"rotate(-5deg)" }}>OUT OF STOCK</span>
               </div>
             )}
           </div>
@@ -1108,8 +1108,8 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
               { label:"AVAILABILITY", val: hasVariants && !selectedVariant ? "— SELECT —" : stockLabel(stockAvail).text, color: hasVariants && !selectedVariant ? "var(--muted)" : stockLabel(stockAvail).color },
               { label:"STATUS", val: hasVariants && !selectedVariant ? "— SELECT —" : stockAvail > 0 ? "IN STOCK" : "OUT OF STOCK", color: hasVariants && !selectedVariant ? "var(--muted)" : stockAvail > 0 ? "var(--accent)" : "var(--red)" },
             ].map(s => (
-              <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #1a1a1a", padding:"8px 12px" }}>
-                <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
+              <div key={s.label} style={{ background:"#0d0d0d", border:"1px solid #111a0a", padding:"8px 12px" }}>
+                <div style={{ fontSize:8, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:2 }}>{s.label}</div>
                 <div style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color: s.color || "var(--text)" }}>{s.val}</div>
               </div>
             ))}
@@ -1127,7 +1127,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           </div>
 
           {/* Name */}
-          <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:8 }}>{item.name}</h1>
+          <h1 style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:36, color:"#fff", letterSpacing:".04em", textTransform:"uppercase", lineHeight:1, marginBottom:8 }}>{item.name}</h1>
 
           {/* Rating summary */}
           {prodRevSummary && (
@@ -1135,7 +1135,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
               {[1,2,3,4,5].map(n => (
                 <span key={n} style={{ fontSize:14, color: n <= Math.round(prodRevSummary.avg) ? "#c8a000" : "#2a3a10", lineHeight:1 }}>★</span>
               ))}
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"#c8a000" }}>{prodRevSummary.avg.toFixed(1)}</span>
+              <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"#c8a000" }}>{prodRevSummary.avg.toFixed(1)}</span>
               <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".08em" }}>({prodRevSummary.count} {prodRevSummary.count === 1 ? "report" : "reports"})</span>
             </div>
           )}
@@ -1148,7 +1148,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           {/* Variant selector */}
           {hasVariants && (
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:10 }}>
+              <div style={{ fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, textTransform:"uppercase", marginBottom:10 }}>
                 SELECT VARIANT
               </div>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
@@ -1159,16 +1159,16 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
                     <button key={v.id}
                       onClick={() => { if (!outV) { setSelectedVariant(v); setQty(1); } }}
                       style={{
-                        padding:"10px 18px", fontFamily:"'Barlow Condensed',sans-serif",
+                        padding:"10px 18px", fontFamily:"'Oswald','Barlow Condensed',sans-serif",
                         fontSize:13, fontWeight:700, letterSpacing:".1em", textTransform:"uppercase",
-                        background: sel ? "var(--accent)" : outV ? "#0a0a0a" : "#1a1a1a",
+                        background: sel ? "var(--accent)" : outV ? "#080b06" : "#111a0a",
                         border: `2px solid ${sel ? "var(--accent)" : outV ? "#222" : "#333"}`,
                         color: sel ? "#fff" : outV ? "#333" : "var(--text)",
                         cursor: outV ? "not-allowed" : "pointer",
                         position:"relative",
                       }}>
                       <div>{v.name}</div>
-                      <div style={{ fontSize:11, color: sel ? "rgba(255,255,255,.8)" : outV ? "#2a2a2a" : "var(--muted)", marginTop:2 }}>
+                      <div style={{ fontSize:11, color: sel ? "rgba(255,255,255,.8)" : outV ? "#1e2e12" : "var(--muted)", marginTop:2 }}>
                         {outV ? stockLabel(0).text : `£${Number(v.price).toFixed(2)}`}
                       </div>
                     </button>
@@ -1182,7 +1182,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           <div style={{ marginBottom:20 }}>
             {displayPrice ? (
               <div style={{ display:"flex", alignItems:"baseline", gap:12 }}>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:48, color:"var(--accent)", lineHeight:1 }}>£{displayPrice}</span>
+                <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:48, color:"var(--accent)", lineHeight:1 }}>£{displayPrice}</span>
                 {vipPrice && <span className="tag tag-gold">VIP PRICE</span>}
                 {!hasVariants && item.onSale && item.salePrice && (
                   <span style={{ textDecoration:"line-through", color:"var(--muted)", fontSize:18 }}>£{item.price}</span>
@@ -1202,9 +1202,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           {canAdd ? (
             <div style={{ display:"flex", gap:12, alignItems:"stretch", marginBottom:12 }}>
               <div style={{ display:"flex", alignItems:"center", border:"1px solid #333", background:"#0d0d0d" }}>
-                <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>−</button>
-                <span style={{ padding:"0 16px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:22, color:"#fff", minWidth:50, textAlign:"center" }}>{qty}</span>
-                <button onClick={() => setQty(q => Math.min(stockAvail, q + 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>+</button>
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>−</button>
+                <span style={{ padding:"0 16px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:22, color:"#fff", minWidth:50, textAlign:"center" }}>{qty}</span>
+                <button onClick={() => setQty(q => Math.min(stockAvail, q + 1))} style={{ background:"none", border:"none", color:"var(--text)", padding:"12px 18px", fontSize:20, cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>+</button>
               </div>
               <button className="btn btn-primary" style={{ flex:1, padding:"12px 24px", fontSize:14, letterSpacing:".15em" }} onClick={handleAdd}>
                 ADD TO CART × {qty}
@@ -1240,7 +1240,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           <img src={imgLightbox} alt="" onClick={e => e.stopPropagation()}
             style={{ maxWidth:"90vw", maxHeight:"88vh", objectFit:"contain", boxShadow:"0 0 80px rgba(0,0,0,.9), 0 0 0 1px #1a2808", cursor:"default" }} />
           <button onClick={() => setImgLightbox(null)}
-            style={{ position:"absolute", top:16, right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:14, width:36, height:36, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, letterSpacing:".1em", zIndex:502 }}>✕</button>
+            style={{ position:"absolute", top:16, right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:14, width:36, height:36, cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, letterSpacing:".1em", zIndex:502 }}>✕</button>
           {/* Navigate between images */}
           {(() => {
             const variantImg = selectedVariant?.image;
@@ -1250,9 +1250,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
             return (
               <>
                 <button onClick={e => { e.stopPropagation(); const i = (curIdx - 1 + allImgs.length) % allImgs.length; setImgLightbox(allImgs[i]); setActiveImgIdx(i); }}
-                  style={{ position:"absolute", left:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>‹</button>
+                  style={{ position:"absolute", left:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900 }}>‹</button>
                 <button onClick={e => { e.stopPropagation(); const i = (curIdx + 1) % allImgs.length; setImgLightbox(allImgs[i]); setActiveImgIdx(i); }}
-                  style={{ position:"absolute", right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900 }}>›</button>
+                  style={{ position:"absolute", right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900 }}>›</button>
                 <div style={{ position:"absolute", bottom:16, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"rgba(200,255,0,.4)", letterSpacing:".2em" }}>
                   {String(curIdx+1).padStart(2,"0")} / {String(allImgs.length).padStart(2,"0")}
                 </div>
@@ -1276,7 +1276,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
           <div style={{ borderTop:"1px solid #1a2808", paddingTop:32, marginBottom:20 }}>
             <div style={{ display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>◈ —</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>RELATED <span style={{ color:"#c8ff00" }}>EQUIPMENT</span></div>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:18, letterSpacing:".15em", textTransform:"uppercase", color:"#e8f0d8" }}>RELATED <span style={{ color:"#c8ff00" }}>EQUIPMENT</span></div>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010" }}>— ◈</div>
             </div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#2a3a10", letterSpacing:".15em", marginTop:4 }}>
@@ -1312,9 +1312,9 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
                     : <div style={{ aspectRatio:"4/3", background:"#080a06", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, color:"#1a2808" }}>🎯</div>
                   }
                   <div style={{ padding:"10px 12px 12px" }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".06em", textTransform:"uppercase", color:"#c8e878", marginBottom:4, lineHeight:1.2 }}>{rel.name}</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".06em", textTransform:"uppercase", color:"#c8e878", marginBottom:4, lineHeight:1.2 }}>{rel.name}</div>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, color:"#c8ff00" }}>£{Number(relPrice).toFixed(2)}</div>
+                      <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, color:"#c8ff00" }}>£{Number(relPrice).toFixed(2)}</div>
                       <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:sl.color, letterSpacing:".1em" }}>{sl.text}</span>
                     </div>
                   </div>

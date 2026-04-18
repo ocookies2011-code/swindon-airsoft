@@ -180,7 +180,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
             <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: "var(--muted)" }}>⚙ ADMIN</span>
               <span style={{ color: "var(--border)" }}>·</span>
-              <span style={{ color: "var(--text)", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".06em", textTransform: "uppercase" }}>{NAV.find(n => n.id === section)?.label || section}</span>
+              <span style={{ color: "var(--text)", fontFamily: "'Oswald','Barlow Condensed',sans-serif", letterSpacing: ".06em", textTransform: "uppercase" }}>{NAV.find(n => n.id === section)?.label || section}</span>
             </div>
           </div>
           <div className="gap-2" style={{ alignItems: "center" }}>

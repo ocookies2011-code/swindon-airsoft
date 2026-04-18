@@ -763,17 +763,17 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                             <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking({ ...b, eventObj: ev, eventTitle: ev.title })}>View</button>
                             <button className="btn btn-sm btn-ghost" onClick={() => openEdit({ ...b, eventTitle: ev.title, eventObj: ev })}>Edit</button>
                             {b.squareOrderId && b.total > 0 && (
-                              <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
+                              <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
                                 onClick={() => { setRefundModal({ booking: b }); setRefundAmt(b.total.toFixed(2)); setRefundNote(""); }}>£ Refund</button>
                             )}
                             <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(b)}>Del</button>
-                            <button onClick={downloadTicket} style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", borderRadius:2, whiteSpace:"nowrap" }}>
+                            <button onClick={downloadTicket} style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", borderRadius:2, whiteSpace:"nowrap" }}>
                               ⬇ Ticket
                             </button>
                             <button
                               onClick={() => resendTicket(b, ev)}
                               disabled={resendBusy[b.id]}
-                              style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.25)", color: resendBusy[b.id] ? "#555" : "#4fc3f7", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id] ? "default" : "pointer", borderRadius:2, whiteSpace:"nowrap" }}
+                              style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.25)", color: resendBusy[b.id] ? "#555" : "#4fc3f7", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id] ? "default" : "pointer", borderRadius:2, whiteSpace:"nowrap" }}
                             >
                               {resendBusy[b.id] ? "…" : "📧 Resend"}
                             </button>
@@ -876,11 +876,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
                   </div>
                   <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
-                    <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>
+                    <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>
                     <div style={{ padding:"0 14px" }}>
                       <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                         <span>{ticketLabel} ×{cb.qty}</span>
-                        <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{ticketLineTotal}</span>
+                        <span style={{ color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>£{ticketLineTotal}</span>
                       </div>
                       {extras.map(([key, qty]) => {
                         const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
@@ -905,11 +905,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         return (
                           <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                             <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
-                            <span style={{ color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
+                            <span style={{ color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
                           </div>
                         );
                       })}
-                      <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Barlow Condensed',sans-serif" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
                         <span>TOTAL</span>
                         <span style={{ color:"var(--accent)" }}>£{cb.total.toFixed(2)}</span>
                       </div>
@@ -1166,7 +1166,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
             {/* ── Game Day Extras ── */}
             <div style={{ border:"1px solid #2a2a2a", borderLeft:"3px solid var(--accent)", marginBottom:16 }}>
-              <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>
+              <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>
                 GAME DAY EXTRAS — tick shop products to offer on this event
               </div>
               <div style={{ padding:14 }}>
@@ -1354,7 +1354,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [key]: Math.max(0, qty - 1) })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>−</button>
-                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Barlow Condensed',sans-serif" }}>{qty}</span>
+                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Oswald','Barlow Condensed',sans-serif" }}>{qty}</span>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [key]: qty + 1 })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>+</button>
                                 </div>
@@ -1368,7 +1368,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [ex.id]: Math.max(0, qty - 1) })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>−</button>
-                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Barlow Condensed',sans-serif" }}>{qty}</span>
+                                  <span style={{ minWidth: 20, textAlign: "center", fontFamily: "'Oswald','Barlow Condensed',sans-serif" }}>{qty}</span>
                                   <button onClick={() => abf("extras", { ...addBookingForm.extras, [ex.id]: qty + 1 })}
                                     style={{ background: "#222", border: "1px solid #333", color: "#fff", width: 28, height: 28, cursor: "pointer" }}>+</button>
                                 </div>
@@ -1388,7 +1388,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                   {addBookingForm.type === "walkOn" ? "Walk-On" : "Rental"} ×{addBookingForm.qty}
                   {extrasPreviewTotal > 0 && ` + extras`}
                 </span>
-                <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, color: "var(--accent)" }}>£{previewTotal.toFixed(2)}</span>
+                <span style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 20, color: "var(--accent)" }}>£{previewTotal.toFixed(2)}</span>
               </div>
 
               <div className="gap-2">

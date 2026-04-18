@@ -22,7 +22,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
           <p>This is a friendly reminder that you have not yet signed your Swindon Airsoft waiver for <strong>${new Date().getFullYear()}</strong>.</p>
           <p>Waivers must be signed before you can participate in any game days. Please log in to your account and complete your waiver as soon as possible.</p>
           <p style="margin-top:24px">
-            <a href="https://www.swindon-airsoft.com" style="display:inline-block;background:#c8ff00;color:#000;font-weight:700;padding:12px 28px;text-decoration:none;border-radius:3px;font-family:'Barlow Condensed',Arial,sans-serif;font-size:14px;letter-spacing:.08em">
+            <a href="https://www.swindon-airsoft.com" style="display:inline-block;background:#c8ff00;color:#000;font-weight:700;padding:12px 28px;text-decoration:none;border-radius:3px;font-family:'Oswald','Barlow Condensed',Arial,sans-serif;font-size:14px;letter-spacing:.08em">
               SIGN YOUR WAIVER →
             </a>
           </p>
@@ -145,7 +145,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
               {allWaivers.length > 1 && (
                 <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:16 }}>
                   {allWaivers.map((w, i) => (
-                    <span key={i} style={{ padding:"4px 12px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", textTransform:"uppercase", background:"var(--accent)", color:"#000", borderRadius:2 }}>
+                    <span key={i} style={{ padding:"4px 12px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", textTransform:"uppercase", background:"var(--accent)", color:"#000", borderRadius:2 }}>
                       {w.name || `Player ${i+1}`}{i === 0 ? " ★" : ""}
                     </span>
                   ))}
@@ -156,7 +156,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
               {allWaivers.map((w, i) => (
                 <div key={i} style={{ marginBottom:20, paddingBottom:20, borderBottom: i < allWaivers.length - 1 ? "1px solid #2a2a2a" : "none" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase" }}>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:12, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase" }}>
                       {allWaivers.length > 1 ? `PLAYER ${i+1}${i === 0 ? " (PRIMARY)" : " (ADDITIONAL)"}` : "WAIVER DETAILS"}
                     </div>
                     {i > 0 && (
@@ -166,7 +166,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
                         showToast("Waiver removed");
                         logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver removed", detail: `Player: ${vw.name}` });
                         setView(null);
-                      }} style={{ background:"none", border:"1px solid var(--red)", color:"var(--red)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
+                      }} style={{ background:"none", border:"1px solid var(--red)", color:"var(--red)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
                         🗑 REMOVE
                       </button>
                     )}

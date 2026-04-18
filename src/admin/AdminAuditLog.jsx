@@ -64,7 +64,7 @@ function AdminAuditLog() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         <div>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", textTransform: "uppercase" }}>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: ".1em", textTransform: "uppercase" }}>
             🔐 Admin Audit Log
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>

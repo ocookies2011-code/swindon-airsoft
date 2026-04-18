@@ -79,18 +79,18 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
           ? `🎟️ Your Swindon Airsoft Gift Voucher — £${finalAmount.toFixed(2)}`
           : `🎁 You've received a £${finalAmount.toFixed(2)} Swindon Airsoft Gift Voucher!`,
         htmlContent: `
-          <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px;border:1px solid #2a2a2a">
+          <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px;border:1px solid #1e2e12">
             <div style="text-align:center;margin-bottom:28px">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">
+              <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:.18em;color:#e8f0d8;text-transform:uppercase">
                 SWINDON <span style="color:#c8ff00">AIRSOFT</span>
               </div>
               <div style="font-size:11px;letter-spacing:.2em;color:#3a5010;margin-top:4px;text-transform:uppercase">Gift Voucher</div>
             </div>
             ${!isForSelf ? `<p style="font-size:14px;color:#aaa;margin-bottom:20px"><strong style="color:#fff">${cu.name}</strong> has sent you a gift voucher!</p>` : ''}
-            ${message.trim() ? `<div style="background:#1a1a1a;border-left:3px solid #c8ff00;padding:14px 16px;margin-bottom:20px;font-style:italic;color:#bbb;font-size:14px">"${message.trim()}"</div>` : ''}
-            <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;padding:24px;text-align:center;margin-bottom:20px">
+            ${message.trim() ? `<div style="background:#111a0a;border-left:3px solid #c8ff00;padding:14px 16px;margin-bottom:20px;font-style:italic;color:#bbb;font-size:14px">"${message.trim()}"</div>` : ''}
+            <div style="background:#0d0d0d;border:1px solid #1e2e12;border-radius:6px;padding:24px;text-align:center;margin-bottom:20px">
               <div style="font-size:11px;letter-spacing:.15em;color:#555;text-transform:uppercase;margin-bottom:8px">Voucher Value</div>
-              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:60px;color:#c8ff00;line-height:1">£${finalAmount.toFixed(2)}</div>
+              <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:60px;color:#c8ff00;line-height:1">£${finalAmount.toFixed(2)}</div>
               <div style="font-size:11px;color:#555;margin-top:8px">Valid on events &amp; shop orders · Unused balance carries forward</div>
             </div>
             <div style="background:#0d0d0d;border:1px solid #2a3a10;border-radius:6px;padding:20px;text-align:center;margin-bottom:24px">
@@ -112,7 +112,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
           subject:     `✅ Gift voucher sent to ${recipientNameFinal || recipientEmailFinal} — £${finalAmount.toFixed(2)}`,
           htmlContent: `
             <div style="font-family:sans-serif;max-width:600px;background:#111;color:#ddd;padding:32px;border-radius:8px">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:24px;color:#e8f0d8;margin-bottom:16px">Voucher Sent!</div>
+              <div style="font-family:'Oswald','Barlow Condensed',sans-serif;font-weight:900;font-size:24px;color:#e8f0d8;margin-bottom:16px">Voucher Sent!</div>
               <p style="font-size:14px;color:#aaa;margin-bottom:16px">Your <strong style="color:#c8ff00">£${finalAmount.toFixed(2)}</strong> gift voucher has been sent to <strong style="color:#fff">${recipientEmailFinal}</strong>.</p>
               <p style="font-size:13px;color:#666">Voucher code: <span style="font-family:monospace;color:#c8ff00">${voucher.code}</span></p>
               <p style="font-size:12px;color:#555;margin-top:12px">If the recipient has any trouble redeeming it, they can contact us and quote the code above.</p>
@@ -149,7 +149,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
     return (
       <div className="page-content" style={{ maxWidth: 520, textAlign: 'center', paddingTop: 60 }}>
         <div style={{ fontSize: 52, marginBottom: 16 }}>🎟️</div>
-        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: '.1em', textTransform: 'uppercase', color: '#e8f0d8', marginBottom: 8 }}>Voucher Sent!</div>
+        <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: '.1em', textTransform: 'uppercase', color: '#e8f0d8', marginBottom: 8 }}>Voucher Sent!</div>
         <p style={{ color: '#aaa', fontSize: 14, marginBottom: 24 }}>
           A <strong style={{ color: '#c8ff00' }}>£{done.amount.toFixed(2)}</strong> gift voucher has been emailed to <strong style={{ color: '#fff' }}>{done.recipientEmail}</strong>.
         </p>
@@ -180,7 +180,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
         ))}
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: '.35em', color: '#3a5010', marginBottom: 14, textTransform: 'uppercase' }}>◈ — SWINDON AIRSOFT — ◈</div>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 'clamp(30px,6vw,52px)', letterSpacing: '.18em', textTransform: 'uppercase', color: '#e8f0d8', lineHeight: 1, marginBottom: 6 }}>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 'clamp(30px,6vw,52px)', letterSpacing: '.18em', textTransform: 'uppercase', color: '#e8f0d8', lineHeight: 1, marginBottom: 6 }}>
             GIFT <span style={{ color: '#c8a000' }}>VOUCHERS</span>
           </div>
           <div style={{ fontSize: 14, color: '#aaa', marginTop: 14, maxWidth: 420, margin: '14px auto 0' }}>
@@ -198,19 +198,19 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
           </div>
         )}
 
-        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '28px 24px', marginBottom: 20 }}>
+        <div style={{ background: '#111', border: '1px solid #1e2e12', padding: '28px 24px', marginBottom: 20 }}>
 
           {/* Who is this for? */}
           <div style={{ marginBottom: 28 }}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>Who is this for?</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>Who is this for?</div>
             <div style={{ display: 'flex', gap: 10 }}>
               {[['For myself', true], ['For someone else', false]].map(([label, val]) => (
                 <button key={label} onClick={() => setForSelf(val)} style={{
                   flex: 1, padding: '10px 0',
-                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.08em', textTransform: 'uppercase',
+                  fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.08em', textTransform: 'uppercase',
                   cursor: 'pointer', transition: 'all .15s',
                   background: forSelf === val ? 'rgba(200,255,0,.12)' : 'transparent',
-                  border:     forSelf === val ? '1px solid var(--accent)' : '1px solid #2a2a2a',
+                  border:     forSelf === val ? '1px solid var(--accent)' : '1px solid #1e2e12',
                   color:      forSelf === val ? 'var(--accent)' : 'var(--muted)',
                 }}>
                   {forSelf === val ? '◉' : '○'} {label}
@@ -222,7 +222,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
           {/* Recipient details — only when gifting to someone else */}
           {!forSelf && (
             <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: -2 }}>Recipient details</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: -2 }}>Recipient details</div>
               <div>
                 <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Their email address *</label>
                 <input
@@ -265,15 +265,15 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
 
           {/* Amount selector */}
           <div style={{ marginBottom: 28 }}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>Choose amount</div>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>Choose amount</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
               {PRESET_AMOUNTS.map(v => (
                 <button key={v} onClick={() => { setAmount(v); setUseCustom(false); }} style={{
                   padding: '14px 0',
-                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22,
+                  fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22,
                   cursor: 'pointer', transition: 'all .15s',
                   background: !useCustom && amount === v ? 'rgba(200,255,0,.12)' : 'transparent',
-                  border:     !useCustom && amount === v ? '1px solid var(--accent)' : '1px solid #2a2a2a',
+                  border:     !useCustom && amount === v ? '1px solid var(--accent)' : '1px solid #1e2e12',
                   color:      !useCustom && amount === v ? 'var(--accent)' : '#ccc',
                 }}>
                   £{v}
@@ -282,10 +282,10 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
             </div>
             <button onClick={() => setUseCustom(true)} style={{
               width: '100%', padding: '10px 0',
-              fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.08em', textTransform: 'uppercase',
+              fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '.08em', textTransform: 'uppercase',
               cursor: 'pointer', transition: 'all .15s',
               background: useCustom ? 'rgba(200,255,0,.12)' : 'transparent',
-              border:     useCustom ? '1px solid var(--accent)' : '1px solid #2a2a2a',
+              border:     useCustom ? '1px solid var(--accent)' : '1px solid #1e2e12',
               color:      useCustom ? 'var(--accent)' : 'var(--muted)',
               marginBottom: useCustom ? 10 : 0,
             }}>
@@ -293,7 +293,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
             </button>
             {useCustom && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: 'var(--muted)', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 24 }}>£</span>
+                <span style={{ color: 'var(--muted)', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 24 }}>£</span>
                 <input
                   type="number"
                   min="1" max="500" step="1"
@@ -301,7 +301,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
                   placeholder="Enter amount (£1–£500)"
                   value={customAmount}
                   onChange={e => setCustomAmount(e.target.value)}
-                  style={{ flex: 1, fontSize: 18, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}
+                  style={{ flex: 1, fontSize: 18, fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700 }}
                   autoFocus
                 />
               </div>
@@ -309,15 +309,15 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
           </div>
 
           {/* Summary + pay */}
-          <div style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', padding: '16px 20px', marginBottom: 16 }}>
+          <div style={{ background: '#0d0d0d', border: '1px solid #1e2e12', padding: '16px 20px', marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: !forSelf && recipientEmailFinal && emailValid ? 8 : 0 }}>
               <span style={{ fontSize: 13, color: 'var(--muted)' }}>Gift voucher value</span>
-              <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 24, color: finalAmount >= 1 ? '#c8ff00' : 'var(--muted)' }}>
+              <span style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 24, color: finalAmount >= 1 ? '#c8ff00' : 'var(--muted)' }}>
                 {finalAmount >= 1 ? `£${finalAmount.toFixed(2)}` : '—'}
               </span>
             </div>
             {!forSelf && recipientEmailFinal && emailValid && (
-              <div style={{ fontSize: 12, color: 'var(--muted)', borderTop: '1px solid #2a2a2a', paddingTop: 8 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', borderTop: '1px solid #1e2e12', paddingTop: 8 }}>
                 Will be emailed to: <span style={{ color: '#aaa' }}>{recipientEmailFinal}</span>
               </div>
             )}
@@ -344,14 +344,14 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
         </div>
 
         {/* How it works */}
-        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '24px', marginBottom: 20 }}>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>How it works</div>
+        <div style={{ background: '#111', border: '1px solid #1e2e12', padding: '24px', marginBottom: 20 }}>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>How it works</div>
           {[
             ['🎟️', 'Purchase a voucher', 'Choose a value and pay by card. The code is generated and emailed instantly.'],
             ['📧', 'Code sent by email', forSelf ? 'The voucher code is sent to your email address.' : "The code is sent directly to the recipient's email address, along with your personal message."],
             ['✅', 'Redeem at checkout', 'Enter the code in the discount / voucher field at any event booking or shop order. Any unused balance carries forward automatically.'],
           ].map(([icon, title, desc]) => (
-            <div key={title} style={{ display: 'flex', gap: 14, padding: '10px 0', borderBottom: '1px solid #1a1a1a' }}>
+            <div key={title} style={{ display: 'flex', gap: 14, padding: '10px 0', borderBottom: '1px solid #111a0a' }}>
               <span style={{ fontSize: 18, flexShrink: 0, width: 26 }}>{icon}</span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#ccc', marginBottom: 2 }}>{title}</div>
@@ -362,8 +362,8 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
         </div>
 
         {/* Balance checker */}
-        <div style={{ background: '#111', border: '1px solid #2a2a2a', padding: '24px' }}>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>Check voucher balance</div>
+        <div style={{ background: '#111', border: '1px solid #1e2e12', padding: '24px' }}>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>Check voucher balance</div>
           <div style={{ display: 'flex', gap: 0, marginBottom: 10 }}>
             <input
               value={balanceInput}
@@ -377,7 +377,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
             <button
               onClick={checkBalance}
               disabled={balanceChecking || !balanceInput.trim()}
-              style={{ background: balanceInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: balanceInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: '.1em', padding: '9px 16px', cursor: balanceInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
+              style={{ background: balanceInput.trim() ? 'rgba(200,255,0,.15)' : 'rgba(200,255,0,.04)', border: '1px solid #2a3a10', color: balanceInput.trim() ? '#c8ff00' : '#3a5010', fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: '.1em', padding: '9px 16px', cursor: balanceInput.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap', transition: 'all .15s' }}>
               {balanceChecking ? '⏳' : 'CHECK'}
             </button>
           </div>
@@ -392,7 +392,7 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 2 }}>Remaining balance</div>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, color: '#c8ff00', lineHeight: 1 }}>£{Number(balanceResult.balance).toFixed(2)}</div>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, color: '#c8ff00', lineHeight: 1 }}>£{Number(balanceResult.balance).toFixed(2)}</div>
               </div>
             </div>
           )}

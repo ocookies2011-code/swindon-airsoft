@@ -27,7 +27,7 @@ function TermsPage({ setPage }) {
       ))}
       <div style={{ maxWidth:900, margin:"0 auto", textAlign:"center", position:"relative", zIndex:1 }}>
         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>◈ — SWINDON AIRSOFT — LEGAL & COMPLIANCE — ◈</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
           TERMS & <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>PRIVACY</span>
         </div>
         <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".2em", color:"#3a5010", marginTop:12 }}>▸ LAST UPDATED: {new Date().toLocaleDateString("en-GB", { day:"2-digit", month:"long", year:"numeric" }).toUpperCase()} ◂</div>
@@ -36,7 +36,7 @@ function TermsPage({ setPage }) {
   );
 
   const SectionTitle = ({ id, children }) => (
-    <div id={id} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".15em", color:"#c8ff00", textTransform:"uppercase", marginBottom:10, marginTop:36, paddingBottom:8, borderBottom:"1px solid #1a2808", display:"flex", alignItems:"center", gap:10 }}>
+    <div id={id} style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".15em", color:"#c8ff00", textTransform:"uppercase", marginBottom:10, marginTop:36, paddingBottom:8, borderBottom:"1px solid #1a2808", display:"flex", alignItems:"center", gap:10 }}>
       <span style={{ color:"#3a5010" }}>▸</span> {children}
     </div>
   );
@@ -85,7 +85,7 @@ function TermsPage({ setPage }) {
         <div style={{ maxWidth:900, margin:"0 auto", padding:"0 16px", display:"flex", gap:0, overflowX:"auto" }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setActiveSection(t.id)}
-              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", textTransform:"uppercase", padding:"14px 18px", background:"none", border:"none", borderBottom: activeSection === t.id ? "2px solid #c8ff00" : "2px solid transparent", color: activeSection === t.id ? "#c8ff00" : "#3a5010", cursor:"pointer", whiteSpace:"nowrap", transition:"color .15s" }}
+              style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", textTransform:"uppercase", padding:"14px 18px", background:"none", border:"none", borderBottom: activeSection === t.id ? "2px solid #c8ff00" : "2px solid transparent", color: activeSection === t.id ? "#c8ff00" : "#3a5010", cursor:"pointer", whiteSpace:"nowrap", transition:"color .15s" }}
             >{t.label}</button>
           ))}
         </div>
@@ -130,7 +130,7 @@ function TermsPage({ setPage }) {
                 { type:"Bolt-Action Sniper", fps:"500fps", weight:"0.20g", med:"30m MED" },
               ].map(g => (
                 <div key={g.type} style={{ background:"rgba(200,255,0,.04)", border:"1px solid #2a3a10", padding:"14px 16px" }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".1em", color:"#c8ff00", textTransform:"uppercase", marginBottom:8 }}>{g.type}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".1em", color:"#c8ff00", textTransform:"uppercase", marginBottom:8 }}>{g.type}</div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:2 }}>
                     <div>Limit: <span style={{ color:"#c8e878" }}>{g.fps} ({g.weight})</span></div>
                     <div>MED: <span style={{ color:"#c8e878" }}>{g.med}</span></div>
@@ -167,7 +167,7 @@ function TermsPage({ setPage }) {
                 ["Magazine", "£16 per replacement magazine"],
               ].map(([item, cost], i) => (
                 <div key={item} style={{ display:"flex", alignItems:"flex-start", gap:16, padding:"10px 16px", background: i % 2 === 0 ? "transparent" : "rgba(200,255,0,.02)", borderBottom:"1px solid #1a2808" }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".08em", color:"#c8e878", minWidth:120, flexShrink:0, textTransform:"uppercase" }}>{item}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".08em", color:"#c8e878", minWidth:120, flexShrink:0, textTransform:"uppercase" }}>{item}</div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.7 }}>{cost}</div>
                 </div>
               ))}
@@ -185,7 +185,7 @@ function TermsPage({ setPage }) {
                 { color:"rgba(60,60,60,.25)", border:"#555", titleColor:"#ccc", icon:"⚫", title:"Black Card — Suspension", desc:"Issued for severe or repeated misconduct. The player is suspended indefinitely. Booking is disabled. Reinstatement requires a direct review and approval by the site owner. The reason will be provided." },
               ].map(c => (
                 <div key={c.title} style={{ background:c.color, border:`1px solid ${c.border}`, padding:"16px", borderRadius:4 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:c.titleColor, marginBottom:8 }}>{c.icon} {c.title}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:c.titleColor, marginBottom:8 }}>{c.icon} {c.title}</div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.8 }}>{c.desc}</div>
                 </div>
               ))}
@@ -203,7 +203,7 @@ function TermsPage({ setPage }) {
                 { icon:"🚩", title:"False Reports", desc:"Submitting a false or malicious report is itself a breach of our Code of Conduct. Players found to have submitted dishonest reports may themselves be subject to disciplinary action including card issuance." },
               ].map(c => (
                 <div key={c.title} style={{ background:"rgba(239,83,80,.07)", border:"1px solid rgba(239,83,80,.25)", padding:"16px", borderRadius:4 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#ef9a9a", marginBottom:8 }}>{c.icon} {c.title}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#ef9a9a", marginBottom:8 }}>{c.icon} {c.title}</div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.8 }}>{c.desc}</div>
                 </div>
               ))}
@@ -249,7 +249,7 @@ function TermsPage({ setPage }) {
                 { title:"Within 24 hours of event", icon:"🚫", color:"var(--red)", bg:"rgba(255,60,60,.05)", border:"rgba(255,60,60,.2)", items:["Cancellations are not permitted within 24 hours of the event", "The Cancel Booking button will be unavailable in your profile", "In exceptional circumstances please contact us directly"] },
               ].map(box => (
                 <div key={box.title} style={{ background:box.bg, border:"1px solid " + box.border, padding:16 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".1em", color:box.color, textTransform:"uppercase", marginBottom:10 }}>{box.icon} {box.title}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:13, letterSpacing:".1em", color:box.color, textTransform:"uppercase", marginBottom:10 }}>{box.icon} {box.title}</div>
                   <ul style={{ listStyle:"none", padding:0, margin:0 }}>
                     {box.items.map((item, i) => (
                       <li key={i} style={{ display:"flex", gap:8, alignItems:"flex-start", padding:"3px 0", fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.8 }}>
@@ -289,7 +289,7 @@ function TermsPage({ setPage }) {
                 { icon:"🚫", title:"Eligibility", desc:"You must have a valid waiver signed for the current year to join or be offered a waitlist place. Players with a Red Card or Black Card suspension cannot join the waitlist." },
               ].map(c => (
                 <div key={c.title} style={{ background:"rgba(79,195,247,.05)", border:"1px solid rgba(79,195,247,.18)", padding:"16px", borderRadius:4 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#4fc3f7", marginBottom:8 }}>{c.icon} {c.title}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#4fc3f7", marginBottom:8 }}>{c.icon} {c.title}</div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#8aaa60", lineHeight:1.8 }}>{c.desc}</div>
                 </div>
               ))}

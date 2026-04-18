@@ -313,13 +313,13 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         <td colSpan={8} style={{ padding:"0 0 8px 0", background:"transparent", border:"none" }}>
           <div style={{ margin:"0 0 4px 0", background:"#0c1009", border:"1px solid #2a3a10", borderRadius:4, padding:"16px 18px" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase" }}>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase" }}>
                 📋 Waiver — {wu.name}
                 {wu.waiverPending && <span className="tag tag-gold" style={{ marginLeft:8, fontSize:10 }}>{wu.waiverPending._removeExtra ? "🗑 Removal Request" : "⚠ Changes Pending"}</span>}
               </div>
               <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                 <button onClick={downloadWaiver}
-                  style={{ background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", padding:"4px 12px", cursor:"pointer", borderRadius:2 }}>
+                  style={{ background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", padding:"4px 12px", cursor:"pointer", borderRadius:2 }}>
                   ⬇ DOWNLOAD
                 </button>
                 <button onClick={() => setWaiverViewPlayer(null)} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:18, lineHeight:1 }}>✕</button>
@@ -328,7 +328,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
             {allWaivers.length === 0 && <div style={{ color:"var(--muted)", fontSize:13 }}>No waiver on file.</div>}
             {allWaivers.map((w, i) => (
               <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 16 : 0, paddingBottom: i < allWaivers.length - 1 ? 16 : 0, borderBottom: i < allWaivers.length - 1 ? "1px solid #1a2808" : "none" }}>
-                {allWaivers.length > 1 && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".15em", color:"var(--muted)", marginBottom:8, textTransform:"uppercase" }}>Player {i+1}{i===0?" (Primary)":""}</div>}
+                {allWaivers.length > 1 && <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".15em", color:"var(--muted)", marginBottom:8, textTransform:"uppercase" }}>Player {i+1}{i===0?" (Primary)":""}</div>}
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))", gap:"4px 24px" }}>
                   {wFields(w).map(([k, v]) => (
                     <div key={k} style={{ display:"flex", gap:8, padding:"5px 0", borderBottom:"1px solid #111", fontSize:12 }}>
@@ -427,7 +427,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               { key:"admin",  label:"ADMINS",  count: allUsers.filter(u=>u.role==="admin").length },
             ].map(({ key, label, count }) => (
               <button key={key} onClick={() => { setRoleFilter(key); setSelectedPlayerIds(new Set()); }}
-                style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em",
+                style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em",
                   padding:"5px 14px", border:"1px solid", cursor:"pointer", transition:"all .15s",
                   background: roleFilter===key ? "rgba(200,255,0,.12)" : "transparent",
                   borderColor: roleFilter===key ? "rgba(200,255,0,.5)" : "var(--border)",
@@ -454,7 +454,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
             <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", marginBottom:8, flexWrap:"wrap" }}>
               <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#c8ff00", letterSpacing:".15em", whiteSpace:"nowrap" }}>{selectedPlayerIds.size} SELECTED</span>
               <select value={bulkAction} onChange={e => setBulkAction(e.target.value)}
-                style={{ background:"#0c1009", border:"1px solid #2a3a10", color:"#c8e878", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, padding:"4px 8px", outline:"none" }}>
+                style={{ background:"#0c1009", border:"1px solid #2a3a10", color:"#c8e878", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, padding:"4px 8px", outline:"none" }}>
                 <option value="">— Choose action —</option>
                 <option value="export-csv">📊 Export CSV</option>
                 <option value="bulk-email">📧 Send Email</option>
@@ -609,7 +609,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
           {/* ── Inline VIP Applications ── */}
           {vipApps.length > 0 && (
             <div style={{ marginTop:12, background:"rgba(200,160,0,.05)", border:"1px solid rgba(200,160,0,.2)", borderRadius:4, padding:"16px 18px" }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--gold)", textTransform:"uppercase", marginBottom:14 }}>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--gold)", textTransform:"uppercase", marginBottom:14 }}>
                 ⭐ VIP Applications — {vipApps.length} pending
               </div>
               {vipApps.map(u => (
@@ -647,7 +647,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
           {/* ── Inline Deletion Requests ── */}
           {allUsers.filter(u => u.deleteRequest).length > 0 && (
             <div style={{ marginTop:12, background:"rgba(220,30,30,.05)", border:"1px solid rgba(220,30,30,.2)", borderRadius:4, padding:"16px 18px" }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--red)", textTransform:"uppercase", marginBottom:14 }}>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".12em", color:"var(--red)", textTransform:"uppercase", marginBottom:14 }}>
                 🗑 Deletion Requests — {allUsers.filter(u => u.deleteRequest).length}
               </div>
               {allUsers.filter(u => u.deleteRequest).map(u => (
@@ -737,7 +737,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               </div>
             </div>
 
-            <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>Delivery Address</div>
+            <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Oswald','Barlow Condensed', sans-serif" }}>Delivery Address</div>
             <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 2, padding: "12px 14px", marginBottom: 14 }}>
               {(() => {
                 const parts = (edit.address || "").split("\n");
@@ -779,7 +779,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
             </div>
             {/* Rank & Designation — shown on public profile */}
             <div style={{ background: "rgba(200,255,0,.03)", border: "1px solid rgba(200,255,0,.15)", padding: "12px 14px", marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: ".12em", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 10 }}>🎖 Public Profile Rank &amp; Designation</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: ".12em", fontFamily: "'Oswald','Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 10 }}>🎖 Public Profile Rank &amp; Designation</div>
 
               {/* Standard Rank */}
               <div style={{ marginBottom: 14 }}>
@@ -1043,7 +1043,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   border: `1px solid rgba(${u.cardStatus==="yellow"?"200,160,0":u.cardStatus==="red"?"220,30,30":"80,80,80"},.35)`,
                   padding:"12px 14px", borderRadius:3, marginBottom:16
                 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:cardColors[u.cardStatus], marginBottom:4 }}>{cardLabels[u.cardStatus]}</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:cardColors[u.cardStatus], marginBottom:4 }}>{cardLabels[u.cardStatus]}</div>
                   {u.cardReason && <div style={{ fontSize:12, color:"var(--muted)" }}>Reason: {u.cardReason}</div>}
                   {u.cardIssuedAt && <div style={{ fontSize:11, color:"var(--muted)", marginTop:3, fontFamily:"'Share Tech Mono',monospace" }}>Issued: {new Date(u.cardIssuedAt).toLocaleDateString("en-GB")}</div>}
                 </div>

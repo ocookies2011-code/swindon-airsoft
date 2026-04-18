@@ -65,7 +65,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".25em", color: "#3a5010", marginBottom: 4 }}>◈ — MARSHAL STATION</div>
-        <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, letterSpacing: ".1em", textTransform: "uppercase", color: "#e8f0d8" }}>PLAYER CHECK-IN</div>
+        <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, letterSpacing: ".1em", textTransform: "uppercase", color: "#e8f0d8" }}>PLAYER CHECK-IN</div>
       </div>
 
       {/* Event selector */}
@@ -78,7 +78,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
         </div>
         {ev && (
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 15, color: "#9ab870" }}>
+            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 15, color: "#9ab870" }}>
               {checkedInCount} / {ev.bookings.length} checked in
             </div>
             <div className="progress-bar" style={{ flex: 1, minWidth: 80 }}>
@@ -162,7 +162,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
               opacity: b.checkedIn ? 0.5 : 1,
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, color: b.checkedIn ? "#3a5010" : "#b0c090", textTransform: "uppercase", letterSpacing: ".06em" }}>{b.userName}</div>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 15, color: b.checkedIn ? "#3a5010" : "#b0c090", textTransform: "uppercase", letterSpacing: ".06em" }}>{b.userName}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#3a5010", marginTop: 2 }}>{b.type === "walkOn" ? "WALK-ON" : "RENTAL"} · QTY {b.qty}</div>
                 {extrasLabels.length > 0 && (
                   <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4 }}>

@@ -253,7 +253,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                   {isGreen ? "🟢" : cs === "yellow" ? "🟡" : cs === "red" ? "🔴" : "⚫"}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, letterSpacing: ".06em", marginBottom: 4,
+                  <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 16, letterSpacing: ".06em", marginBottom: 4,
                     color: isGreen ? "var(--accent)" : cs === "yellow" ? "var(--gold)" : cs === "red" ? "var(--red)" : "#ccc" }}>
                     {isGreen       && "Green Card — All Clear"}
                     {cs === "yellow" && "Yellow Card — Formal Warning"}
@@ -307,7 +307,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Changing your email requires confirmation via a link sent to your new address.</div>
           </div>
 
-          <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>Delivery Address</div>
+          <div style={{ marginBottom: 6, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "var(--muted)", textTransform: "uppercase", fontFamily: "'Oswald','Barlow Condensed', sans-serif" }}>Delivery Address</div>
           <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 2, padding: "14px 16px", marginBottom: 14 }}>
             <div className="form-group" style={{ marginBottom: 10 }}>
               <label>Address Line 1</label>
@@ -391,7 +391,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                   <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:12 }}>
                     {allWaivers.map((w, i) => (
                       <button key={i} style={{
-                        padding:"4px 12px", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700,
+                        padding:"4px 12px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700,
                         fontSize:11, letterSpacing:".1em", textTransform:"uppercase",
                         background:"var(--accent)", color:"#000", border:"none", borderRadius:2, cursor:"default"
                       }}>
@@ -401,10 +401,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                   </div>
                 )}
                 {allWaivers.map((w, i) => (
-                  <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 20 : 0, paddingBottom: i < allWaivers.length - 1 ? 20 : 0, borderBottom: i < allWaivers.length - 1 ? "1px solid #2a2a2a" : "none" }}>
+                  <div key={i} style={{ marginBottom: i < allWaivers.length - 1 ? 20 : 0, paddingBottom: i < allWaivers.length - 1 ? 20 : 0, borderBottom: i < allWaivers.length - 1 ? "1px solid #1e2e12" : "none" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
                       {allWaivers.length > 1 && (
-                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase" }}>
+                        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".15em", color:"var(--accent)", textTransform:"uppercase" }}>
                           PLAYER {i + 1}{i === 0 ? " (PRIMARY)" : " (ADDITIONAL)"}
                         </div>
                       )}
@@ -415,7 +415,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                           const removalRequest = { _removeExtra: true, _extraIndex: i - 1, _playerName: w.name, _requestedAt: new Date().toISOString() };
                           await updateUser(cu.id, { waiverPending: removalRequest });
                           showToast("Removal request submitted — awaiting admin approval.");
-                        }} style={{ background:"none", border:"1px solid var(--red)", color:"var(--red)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
+                        }} style={{ background:"none", border:"1px solid var(--red)", color:"var(--red)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
                           🗑 REQUEST REMOVAL
                         </button>
                       )}
@@ -453,8 +453,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 * { box-sizing:border-box; margin:0; padding:0; }
 @media print { .noprint{display:none!important} body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important} }
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800;900&family=Share+Tech+Mono&display=swap');
-body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
-.ticket { width:520px; max-width:100%; background:#111; border:1px solid #2a2a2a; position:relative; overflow:hidden; }
+body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; color:#fff; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+.ticket { width:520px; max-width:100%; background:#111; border:1px solid #1e2e12; position:relative; overflow:hidden; }
 .ticket::before { content:''; position:absolute; inset:0; background-image:radial-gradient(ellipse at 20% 30%,rgba(30,50,10,.25) 0%,transparent 50%),radial-gradient(ellipse at 70% 70%,rgba(20,40,5,.2) 0%,transparent 40%); pointer-events:none; z-index:0; }
 .ticket > * { position:relative; z-index:1; }
 .corner { position:absolute; width:18px; height:18px; z-index:2; }
@@ -467,7 +467,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
 .evname { font-size:26px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; line-height:1; margin-bottom:5px; }
 .evdate { font-family:'Share Tech Mono',monospace; font-size:11px; color:#4a6820; letter-spacing:.1em; }
 .tear { display:flex; align-items:center; height:24px; }
-.notch { width:14px; height:28px; background:#0a0a0a; flex-shrink:0; }
+.notch { width:14px; height:28px; background:#080b06; flex-shrink:0; }
 .notch.l { border-radius:0 14px 14px 0; margin-left:-1px; }
 .notch.r { border-radius:14px 0 0 14px; margin-right:-1px; }
 .tearline { flex:1; border-top:1px dashed #283810; }
@@ -484,7 +484,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
 .foottxt { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:.15em; color:#283810; }
 .bars { display:flex; gap:2px; align-items:center; }
 .bar { background:#1e2c08; width:2px; border-radius:1px; }
-.printbtn { margin-top:20px; background:#c8ff00; color:#000; border:none; padding:12px 32px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
+.printbtn { margin-top:20px; background:#c8ff00; color:#000; border:none; padding:12px 32px; font-family:'Oswald','Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
 </style></head><body>
 <div class="ticket">
   <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
@@ -525,7 +525,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
               <div style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>No bookings yet.</div>
             ) : (
               <>
-                <div style={{ marginBottom:16, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>
+                <div style={{ marginBottom:16, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>
                   {myBookings.length} booking{myBookings.length !== 1 ? "s" : ""}
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
@@ -539,11 +539,11 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
                         <div key={b.id} style={{
                           display:"flex", alignItems:"center", justifyContent:"space-between",
                           padding:"10px 14px", background:"var(--surface)",
-                          borderLeft:`3px solid ${b.checkedIn ? "#c8ff00" : isPast ? "#2a2a2a" : "#4fc3f7"}`,
+                          borderLeft:`3px solid ${b.checkedIn ? "#c8ff00" : isPast ? "#1e2e12" : "#4fc3f7"}`,
                           gap:12, flexWrap:"wrap",
                         }}>
                           <div style={{ display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:0 }}>
-                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".04em", color: isPast ? "var(--muted)" : "#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".04em", color: isPast ? "var(--muted)" : "#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                               {b.eventTitle}
                             </div>
                             <div style={{ fontSize:11, color:"var(--muted)", display:"flex", gap:10, flexWrap:"wrap" }}>
@@ -554,22 +554,22 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
                           </div>
                           <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0 }}>
                             <span style={{
-                              fontSize:10, fontWeight:800, fontFamily:"'Barlow Condensed',sans-serif",
+                              fontSize:10, fontWeight:800, fontFamily:"'Oswald','Barlow Condensed',sans-serif",
                               letterSpacing:".12em", padding:"2px 8px", textTransform:"uppercase",
                               background: b.checkedIn ? "rgba(200,255,0,.1)" : isPast ? "rgba(255,255,255,.04)" : "rgba(79,195,247,.1)",
                               color: b.checkedIn ? "#c8ff00" : isPast ? "#555" : "#4fc3f7",
-                              border: `1px solid ${b.checkedIn ? "rgba(200,255,0,.2)" : isPast ? "#2a2a2a" : "rgba(79,195,247,.2)"}`,
+                              border: `1px solid ${b.checkedIn ? "rgba(200,255,0,.2)" : isPast ? "#1e2e12" : "rgba(79,195,247,.2)"}`,
                             }}>
                               {b.checkedIn ? "✓ Attended" : isPast ? "Missed" : "Booked"}
                             </span>
                             <button
                               onClick={() => openTicket(b)}
                               title="View / Print Ticket"
-                              style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
+                              style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
                               🎟 Ticket
                             </button>
                             {canCancel && (
-                              <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
+                              <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
                                 ✕ Cancel
                               </button>
                             )}
@@ -608,7 +608,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
         return (
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
             <div style={{ background:"#0d0d0d", border:"1px solid #6b2222", maxWidth:460, width:"100%", padding:28 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".12em", color:"#ef4444", textTransform:"uppercase", marginBottom:6 }}>⚠ CANCEL BOOKING</div>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".12em", color:"#ef4444", textTransform:"uppercase", marginBottom:6 }}>⚠ CANCEL BOOKING</div>
               <div style={{ fontWeight:700, fontSize:15, color:"var(--text)", marginBottom:4 }}>{b.eventTitle}</div>
               <div style={{ fontSize:12, color:"var(--muted)", marginBottom:16 }}>{fmtDate(b.eventDate)} · {b.type === "rental" ? "Rental" : "Walk-On"} × {b.qty} · Paid £{originalTotal.toFixed(2)}</div>
 
@@ -618,10 +618,10 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
                   <div key={tier.label} style={{ background: tier.condition ? tier.bg : "transparent", border:`1px solid ${tier.condition ? tier.border : "rgba(255,255,255,.06)"}`, padding:"10px 12px", display:"flex", alignItems:"flex-start", gap:10 }}>
                     <div style={{ width:8, height:8, borderRadius:"50%", background: tier.condition ? tier.color : "#333", flexShrink:0, marginTop:4 }} />
                     <div>
-                      <div style={{ fontSize:11, fontWeight:700, color: tier.condition ? tier.color : "#444", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase", marginBottom:2 }}>{tier.label}</div>
+                      <div style={{ fontSize:11, fontWeight:700, color: tier.condition ? tier.color : "#444", fontFamily:"'Oswald','Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase", marginBottom:2 }}>{tier.label}</div>
                       <div style={{ fontSize:11, color: tier.condition ? "var(--text)" : "#444" }}>{tier.desc}</div>
                     </div>
-                    {tier.condition && <div style={{ marginLeft:"auto", fontSize:10, fontWeight:800, color:tier.color, fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", flexShrink:0 }}>← YOU ARE HERE</div>}
+                    {tier.condition && <div style={{ marginLeft:"auto", fontSize:10, fontWeight:800, color:tier.color, fontFamily:"'Oswald','Barlow Condensed',sans-serif", letterSpacing:".08em", flexShrink:0 }}>← YOU ARE HERE</div>}
                   </div>
                 ))}
               </div>
@@ -655,7 +655,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
               ) : (
                 <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
                   <button onClick={() => setCancelModal(null)} disabled={cancelling} className="btn btn-ghost">Keep Booking</button>
-                  <button onClick={doCancel} disabled={cancelling} style={{ background:"#6b2222", border:"1px solid #ef4444", color:"#fca5a5", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".1em", padding:"8px 20px", cursor:cancelling?"wait":"pointer", textTransform:"uppercase" }}>
+                  <button onClick={doCancel} disabled={cancelling} style={{ background:"#6b2222", border:"1px solid #ef4444", color:"#fca5a5", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".1em", padding:"8px 20px", cursor:cancelling?"wait":"pointer", textTransform:"uppercase" }}>
                     {cancelling ? "Cancelling…" : "Confirm Cancellation"}
                   </button>
                 </div>
@@ -692,7 +692,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
             <div style={{ background: "rgba(200,160,0,.12)", border: "1px solid rgba(200,160,0,.4)", borderRadius: 6, padding: "12px 16px", marginBottom: 16, display: "flex", gap: 14, alignItems: "center" }}>
               <span style={{ fontSize: 32 }}>🎂</span>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 14, color: "var(--gold)", fontFamily: "'Barlow Condensed',sans-serif", textTransform: "uppercase", letterSpacing: ".06em" }}>Happy Birthday from Swindon Airsoft! 🎉</div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: "var(--gold)", fontFamily: "'Oswald','Barlow Condensed',sans-serif", textTransform: "uppercase", letterSpacing: ".06em" }}>Happy Birthday from Swindon Airsoft! 🎉</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>As a VIP member, we've added a <strong style={{ color: "var(--gold)" }}>FREE GAME DAY</strong> to your account — enjoy it on us! Book any game day and it's on the house.</div>
               </div>
             </div>
@@ -714,7 +714,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
             </div>
           )}
 
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4, fontFamily: "'Oswald','Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: ".05em" }}>VIP Membership</div>
           <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>VIP members receive 10% off all game days and 10% off at Airsoft Armoury UK (airsoftarmoury.uk), a free game day on their birthday, plus UKARA ID registration. Annual membership costs <strong style={{ color: "var(--gold)" }}>£40/year</strong>.</p>
           {[
             { label: "Games Attended", value: `${gamesAttended} / 3 required`, ok: gamesAttended >= 3 },
@@ -732,7 +732,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
           {/* Active — near expiry: show renew button */}
           {cu.vipStatus === "active" && nearExpiry && (
             <div style={{ background: "rgba(200,160,0,.08)", border: "1px solid rgba(200,160,0,.3)", padding: "14px 16px", marginTop: 8, borderRadius: 4 }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 14, color: "var(--gold)", marginBottom: 6 }}>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 14, color: "var(--gold)", marginBottom: 6 }}>
                 ⚠ VIP expires {expiry.toLocaleDateString("en-GB")}
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Renew now to keep your discount and UKARA registration.</div>
@@ -748,7 +748,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
           {/* Expired */}
           {cu.vipStatus === "expired" && (
             <div style={{ background: "rgba(200,0,0,.07)", border: "1px solid rgba(200,0,0,.25)", padding: "14px 16px", marginTop: 8, borderRadius: 4 }}>
-              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 14, color: "var(--red)", marginBottom: 6 }}>✗ VIP Membership Expired</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 14, color: "var(--red)", marginBottom: 6 }}>✗ VIP Membership Expired</div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Your membership has lapsed. Renew to restore your benefits.</div>
               <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setPage("vip")}>
                 Renew VIP — £40/year →
@@ -762,7 +762,7 @@ body { font-family:'Barlow Condensed',sans-serif; background:#0a0a0a; color:#fff
               border: `1px solid rgba(${cu.cardStatus==="yellow"?"200,160,0":cu.cardStatus==="red"?"220,30,30":"80,80,80"},.35)`,
               padding:"14px 16px", marginTop:10, marginBottom:4, borderRadius:4
             }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, marginBottom:6,
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, marginBottom:6,
                 color: cu.cardStatus==="yellow" ? "var(--gold)" : cu.cardStatus==="red" ? "var(--red)" : "#bbb" }}>
                 {cu.cardStatus === "yellow" && "🟡 Yellow Card — Formal Warning"}
                 {cu.cardStatus === "red"    && "🔴 Red Card — Temporary Ban"}

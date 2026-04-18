@@ -57,7 +57,7 @@ function AdminSettings({ showToast, cu }) {
     return (
       <div
         onClick={() => toggleSection(key)}
-        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", userSelect:"none", fontWeight:700, fontSize:14, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase", marginBottom: isOpen ? 14 : 0 }}
+        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", userSelect:"none", fontWeight:700, fontSize:14, color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", letterSpacing:".08em", textTransform:"uppercase", marginBottom: isOpen ? 14 : 0 }}
       >
         <span>{label}</span>
         <span style={{ fontSize:16, color:"var(--muted)", transition:"transform .2s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
@@ -127,7 +127,7 @@ function AdminSettings({ showToast, cu }) {
               <button key={m} onClick={() => setSquareEnv(m)}
                 style={{
                   padding: "8px 22px", borderRadius: 4, border: "1px solid",
-                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer",
+                  fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer",
                   background: squareEnv === m ? (m === "production" ? "var(--accent)" : "#2d7a2d") : "var(--card)",
                   color: squareEnv === m ? "#000" : "var(--muted)",
                   borderColor: squareEnv === m ? (m === "production" ? "var(--accent)" : "#2d7a2d") : "var(--border)",

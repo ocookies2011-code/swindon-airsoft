@@ -121,7 +121,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         ))}
         <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".35em", color: "#3a5010", marginBottom: 14, textTransform: "uppercase" }}>◈ — SWINDON AIRSOFT — ELITE CLEARANCE — ◈</div>
-          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
+          <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
             ELITE <span style={{ color: "#c8a000", textShadow: "0 0 30px rgba(200,160,0,.35)" }}>OPERATIVE</span>
           </div>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ UNLOCK EXCLUSIVE CLEARANCE — JOIN OUR ELITE SQUAD ◂</div>
@@ -156,12 +156,12 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         <div className="grid-2" style={{ gap:24, marginBottom:32 }}>
 
           {/* Benefits */}
-          <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px", position:"relative" }}>
+          <div style={{ background:"#111", border:"1px solid #1e2e12", padding:"28px 24px", position:"relative" }}>
             <div style={{ position:"absolute", top:0, left:0, width:16, height:16, borderTop:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)" }} />
             <div style={{ position:"absolute", bottom:0, right:0, width:16, height:16, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)" }} />
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>VIP BENEFITS</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>VIP BENEFITS</div>
             {benefits.map((b, i) => (
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #1a1a1a" }}>
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #111a0a" }}>
                 <div style={{ width:20, height:20, background:"rgba(200,255,0,.15)", border:"1px solid var(--accent)", borderRadius:2, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                   <span style={{ color:"var(--accent)", fontSize:11, fontWeight:900 }}>✓</span>
                 </div>
@@ -171,16 +171,16 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
           </div>
 
           {/* Apply box */}
-          <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px" }}>
+          <div style={{ background:"#111", border:"1px solid #1e2e12", padding:"28px 24px" }}>
             {/* Price */}
             <div style={{ textAlign:"center", marginBottom:24 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:64, color:"var(--accent)", lineHeight:1 }}>£40</div>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:64, color:"var(--accent)", lineHeight:1 }}>£40</div>
               <div style={{ fontSize:13, color:"var(--muted)", marginTop:4 }}>per year</div>
             </div>
 
             {/* Requirements */}
-            <div style={{ background:"#0d0d0d", border:"1px solid #2a2a2a", padding:"16px", marginBottom:20 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".15em", textTransform:"uppercase", color:"var(--muted)", marginBottom:12 }}>REQUIREMENTS</div>
+            <div style={{ background:"#0d0d0d", border:"1px solid #1e2e12", padding:"16px", marginBottom:20 }}>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".15em", textTransform:"uppercase", color:"var(--muted)", marginBottom:12 }}>REQUIREMENTS</div>
               {[
                 { label:"Registered account", met: !!cu },
                 { label:`3 game days completed (${gamesAttended}/3)`, met: gamesAttended >= 3 },
@@ -240,7 +240,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
                   {[0, 1].map(slot => {
                     const img = idImages[slot];
                     return (
-                      <div key={slot} style={{ border:`2px dashed ${img ? "#2a3a10" : "#1a1a1a"}`, background:"#0a0a0a", borderRadius:3, overflow:"hidden", position:"relative", aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:6 }}>
+                      <div key={slot} style={{ border:`2px dashed ${img ? "#2a3a10" : "#111a0a"}`, background:"#080b06", borderRadius:3, overflow:"hidden", position:"relative", aspectRatio:"4/3", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:6 }}>
                         {img ? (
                           <>
                             <img src={img.preview} alt={`ID ${slot+1}`} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
@@ -318,8 +318,8 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
         </div>
 
         {/* How it works */}
-        <div style={{ background:"#111", border:"1px solid #2a2a2a", padding:"28px 24px", marginBottom:32 }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"#fff", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>HOW IT WORKS</div>
+        <div style={{ background:"#111", border:"1px solid #1e2e12", padding:"28px 24px", marginBottom:32 }}>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"#fff", letterSpacing:".08em", textTransform:"uppercase", marginBottom:20 }}>HOW IT WORKS</div>
           <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:16 }}>
             {[
               { num:"01", title:"PLAY 3 GAMES", desc:"Attend 3 game days to meet the eligibility requirement. Check-ins are tracked automatically." },
@@ -327,9 +327,9 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
               { num:"03", title:"PAY & APPLY", desc:"Pay the £40 annual fee. Your application and ID are submitted instantly for admin review." },
               { num:"04", title:"ADMIN ACTIVATES", desc:"Admin reviews your ID and activates your VIP status — usually within 24 hours of payment." },
             ].map(step => (
-              <div key={step.num} style={{ padding:16, background:"#0d0d0d", border:"1px solid #1a1a1a" }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:36, color:"var(--accent)", opacity:.4, lineHeight:1, marginBottom:8 }}>{step.num}</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#fff", letterSpacing:".06em", textTransform:"uppercase", marginBottom:6 }}>{step.title}</div>
+              <div key={step.num} style={{ padding:16, background:"#0d0d0d", border:"1px solid #111a0a" }}>
+                <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:36, color:"var(--accent)", opacity:.4, lineHeight:1, marginBottom:8 }}>{step.num}</div>
+                <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, color:"#fff", letterSpacing:".06em", textTransform:"uppercase", marginBottom:6 }}>{step.title}</div>
                 <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.6 }}>{step.desc}</div>
               </div>
             ))}

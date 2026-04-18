@@ -234,7 +234,7 @@ function TrackingBlock({ trackingNumber, adminMode = false, onStatusResolved }) 
           </a>
         </div>
         <a href={linkUrl} target="_blank" rel="noopener noreferrer"
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.35)", color: "#c8ff00", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".18em", padding: adminMode ? "6px 12px" : "8px 16px", textDecoration: "none", whiteSpace: "nowrap" }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.35)", color: "#c8ff00", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: ".18em", padding: adminMode ? "6px 12px" : "8px 16px", textDecoration: "none", whiteSpace: "nowrap" }}
           onMouseEnter={e => e.currentTarget.style.background = "rgba(200,255,0,.2)"}
           onMouseLeave={e => e.currentTarget.style.background = "rgba(200,255,0,.1)"}>
           ▸ TRACK{!courier ? " (Royal Mail)" : ""}
@@ -250,7 +250,7 @@ function TrackingBlock({ trackingNumber, adminMode = false, onStatusResolved }) 
       {trackStatus && (
         <div style={{ marginTop: 10, borderTop: "1px solid rgba(200,255,0,.15)", paddingTop: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, letterSpacing: ".1em", color: statusColor, textTransform: "uppercase" }}>
+            <span style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 14, letterSpacing: ".1em", color: statusColor, textTransform: "uppercase" }}>
               {trackStatus.status === "Delivered" ? "✅" : trackStatus.status === "Out for Delivery" ? "🚚" : "📦"} {trackStatus.status}
             </span>
             <button onClick={refreshStatus} disabled={trackLoading}
