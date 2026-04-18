@@ -1,4 +1,4 @@
-// utils/nav.jsx — PublicNav (top nav, mobile drawer, bottom nav)
+// utils/nav.jsx — PublicNav — MILITARY THEME (all original logic preserved)
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { SA_LOGO_SRC } from "../assets/logoImage";
@@ -8,18 +8,16 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpenDropdown(null);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpenDropdown(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
   const allLinks = [
-    { id: "home", label: "Home", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg> },
+    { id: "home",   label: "Home",   icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg> },
     { id: "events", label: "Events", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
     { id: "shop", label: "Shop", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
       children: [
@@ -28,7 +26,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
       ]
     },
     { id: "leaderboard", label: "Leaderboard", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg> },
-    { id: "gallery", label: "Gallery", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
+    { id: "gallery",     label: "Gallery",     icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
     {
       id: "about", label: "About", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4"/><path d="M10 9v6M10 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
       children: [
@@ -41,42 +39,44 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
       ]
     },
   ];
-  const links = allLinks;
+
   const aboutPages = ["about","qa","staff","contact","terms","ukara"];
-  const shopPages = ["shop","gift-vouchers"];
+  const shopPages  = ["shop","gift-vouchers"];
+
   const go = (id) => {
-    // Guard: admin page requires admin role — never navigate there otherwise
     if (id === "admin" && cu?.role !== "admin") return;
     setPage(id);
     setDrawerOpen(false);
   };
 
   const signOut = () => {
-    // Do NOT await signOut — it can hang indefinitely due to noopLock in some browsers.
-    // Fire-and-forget, wipe tokens manually, then reload immediately.
     supabase.auth.signOut().catch(() => {});
-    Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith("sb-")).forEach(k => localStorage.removeItem(k));
     window.location.href = window.location.pathname;
   };
 
   return (
     <>
-      <nav className="pub-nav">
-        <div className="pub-nav-inner">
+      {/* ── DESKTOP NAV ── */}
+      <nav style={{ background:"#040604", borderBottom:"2px solid #2a4018", position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 24px rgba(0,0,0,.9)" }}>
+        <div style={{ display:"flex", alignItems:"center", height:68, padding:"0 24px", maxWidth:1280, margin:"0 auto" }}>
           {/* Logo */}
-          <div className="pub-nav-logo" onClick={() => go("home")}>
-            <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:56, width:"auto", objectFit:"contain", flexShrink:0 }} />
+          <div style={{ display:"flex", alignItems:"center", marginRight:32, flexShrink:0, cursor:"pointer" }} onClick={() => go("home")}>
+            <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:52, width:"auto", objectFit:"contain", filter:"drop-shadow(0 0 6px rgba(200,255,0,.2))" }} />
           </div>
+
           {/* Desktop links */}
           <div className="pub-nav-links" ref={dropdownRef}>
-            {links.map(l => (
+            {allLinks.map(l => (
               l.children ? (
                 <div key={l.id} className="pub-nav-link-wrap">
-                  <button className={`pub-nav-link ${(l.id === "about" ? aboutPages : shopPages).includes(page) ? "active" : ""}`}
-                    onClick={() => setOpenDropdown(v => v === l.id ? null : l.id)}>
+                  <button
+                    className={`pub-nav-link ${(l.id === "about" ? aboutPages : shopPages).includes(page) ? "active" : ""}`}
+                    onClick={() => setOpenDropdown(v => v === l.id ? null : l.id)}
+                  >
                     {l.label} <span style={{ fontSize:9, opacity:.6, marginLeft:2 }}>{openDropdown === l.id ? "▴" : "▾"}</span>
                   </button>
-                  <div className="pub-nav-dropdown" style={openDropdown === l.id ? { display:'block' } : {}}>
+                  <div className="pub-nav-dropdown" style={openDropdown === l.id ? { display:"block" } : {}}>
                     {l.children.map(c => (
                       <button key={c.id} className={`pub-nav-dropdown-item ${page === c.id ? "active" : ""}`}
                         onClick={() => { go(c.id); setOpenDropdown(null); }}>
@@ -92,6 +92,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
               )
             ))}
           </div>
+
           {/* Desktop actions */}
           <div className="pub-nav-actions">
             {cu ? (
@@ -100,37 +101,38 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
                   <button className="btn btn-sm btn-gold" onClick={() => go("admin")}>⚙ Admin</button>
                 )}
                 {(cu.canMarshal && cu.role !== "admin") && (
-                  <button className="btn btn-sm" style={{ background:"rgba(0,180,100,.15)", border:"1px solid rgba(0,180,100,.4)", color:"#00c864", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => go("marshal")}><svg width="12" height="12" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>Marshal</button>
+                  <button className="btn btn-sm" style={{ background:"rgba(0,180,100,.15)", border:"1px solid rgba(0,180,100,.4)", color:"#00c864", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => go("marshal")}>
+                    <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    Marshal
+                  </button>
                 )}
                 <button className="btn btn-sm btn-ghost" onClick={() => go("profile")}>{cu.name.split(" ")[0]}</button>
                 <button className="btn btn-sm btn-ghost" onClick={signOut}>Sign Out</button>
               </>
             ) : (
               <>
-                <button className="btn btn-sm btn-primary" onClick={() => setAuthModal("login")} style={{ padding:"8px 20px", fontSize:12 }}>LOGIN</button>
-                <button className="btn btn-sm btn-primary" onClick={() => setAuthModal("register")}>Register</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => setAuthModal("login")} style={{ fontSize:12, letterSpacing:".12em" }}>LOGIN</button>
+                <button className="btn btn-sm btn-primary" onClick={() => setAuthModal("register")} style={{ fontSize:12, letterSpacing:".12em" }}>REGISTER</button>
               </>
             )}
           </div>
-          {/* Hamburger (mobile only) */}
+
+          {/* Hamburger */}
           <button className="pub-nav-hamburger" onClick={() => setDrawerOpen(true)}>☰</button>
         </div>
       </nav>
 
-      {/* Mobile drawer */}
+      {/* ── MOBILE DRAWER ── */}
       <div className={`pub-nav-drawer ${drawerOpen ? "open" : ""}`} onClick={() => setDrawerOpen(false)}>
         <div className="pub-nav-drawer-panel" onClick={e => e.stopPropagation()}>
           <div className="pub-nav-drawer-logo" style={{ display:"flex", alignItems:"center" }}>
-            <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:56, width:"auto", objectFit:"contain" }} />
+            <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:52, width:"auto", objectFit:"contain" }} />
           </div>
-          {links.map(l => (
+          {allLinks.map(l => (
             l.children ? (
               <div key={l.id}>
-                <div style={{ padding:"10px 20px 4px", fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:800, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
-                  {l.id === "about"
-                    ? <><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#3a4a20" strokeWidth="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 8v.5" strokeLinecap="round"/></svg> ABOUT</>
-                    : <><svg width="9" height="9" viewBox="0 0 20 20" fill="none" stroke="#3a4a20" strokeWidth="2"><path d="M3 5h14l-1.5 9H4.5L3 5z"/></svg> SHOP</>
-                  }
+                <div style={{ padding:"10px 20px 4px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:9, fontWeight:600, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
+                  {l.icon} {l.label}
                 </div>
                 {l.children.map(c => (
                   <button key={c.id} className={`pub-nav-drawer-link ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)} style={{ paddingLeft:32 }}>
@@ -153,14 +155,14 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
                 </button>
               )}
               {(cu.canMarshal && cu.role !== "admin") && (
-                <button className="pub-nav-drawer-link" style={{ color: "#00c864" }} onClick={() => go("marshal")}>
+                <button className="pub-nav-drawer-link" style={{ color:"#00c864" }} onClick={() => go("marshal")}>
                   <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> Marshal Check-In
                 </button>
               )}
               <button className="pub-nav-drawer-link" onClick={() => go("profile")}>
                 <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> {cu.name}
               </button>
-              <button className="pub-nav-drawer-link" style={{ color: "var(--red)" }} onClick={signOut}>
+              <button className="pub-nav-drawer-link" style={{ color:"var(--red)" }} onClick={signOut}>
                 <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 3h4v14h-4M9 14l4-4-4-4M13 10H4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></span> Sign Out
               </button>
             </>
@@ -177,15 +179,15 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
         </div>
       </div>
 
-      {/* Bottom nav (mobile only) */}
+      {/* ── BOTTOM NAV (mobile) ── */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
           {[
-            { id: "home", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg>, label: "Home" },
-            { id: "events", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label: "Events" },
-            { id: "shop", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label: "Shop" },
-            { id: "leaderboard", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg>, label: "Ranks" },
-            { id: "profile", icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label: "Profile" },
+            { id:"home",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Home" },
+            { id:"events",      icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Events" },
+            { id:"shop",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Shop" },
+            { id:"leaderboard", icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Ranks" },
+            { id:"profile",     icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Profile" },
           ].map(b => (
             <button key={b.id} className={`bottom-nav-btn ${page === b.id ? "active" : ""}`} onClick={() => go(b.id)}>
               <span className="bottom-nav-icon" style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>{b.icon}</span>
@@ -197,6 +199,5 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
     </>
   );
 }
-
 
 export { PublicNav };
