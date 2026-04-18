@@ -90,7 +90,7 @@ function AdminOrdersInline({ showToast, cu }) {
     try {
       let newStatus = order.status;
       if (returnAction === "approve")   newStatus = "return_approved";
-      if (returnAction === "reject")    newStatus = order.status === "return_requested" ? "dispatched" : order.status;
+      if (returnAction === "reject")    newStatus = "completed";
       if (returnAction === "received")  newStatus = "return_received";
 
       // Save rejection reason to DB if rejecting
