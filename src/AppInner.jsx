@@ -24,6 +24,8 @@ const ALLOWED_COUNTRY_CODES = new Set([
   "DE","GR","HU","IE","IT","LV","LT","LU","MT","NL",
   "PL","PT","RO","SK","SI","ES","SE",
 ]);
+
+function AppInner() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
   // ── Offline detection ─────────────────────────────────────
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
