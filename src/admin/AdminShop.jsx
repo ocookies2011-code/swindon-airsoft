@@ -366,11 +366,10 @@ function AdminShop({ data, save, showToast, cu }) {
             ☰ Drag rows to reorder. Variants can be reordered inside the edit modal.
           </p>
           <div style={{overflowX:"auto", width:"100%", WebkitOverflowScrolling:"touch"}}>
-          <table className="data-table" style={{minWidth:900}}>
+          <table className="data-table" style={{minWidth:820, tableLayout:"fixed"}}>
             <thead><tr>
               <th style={{width:28}}></th>
               <th>Product</th>
-              <th style={{width:100}}>Category</th>
               <th style={{width:80}}>Price</th>
               <th style={{width:70}}>Cost</th>
               <th style={{width:70}}>Margin</th>
@@ -380,7 +379,7 @@ function AdminShop({ data, save, showToast, cu }) {
               <th style={{width:65}}>No Post</th>
               <th style={{width:75}}>Game+</th>
               <th style={{width:60}}>Hidden</th>
-              <th style={{width:80}}></th>
+              <th style={{width:120, whiteSpace:"nowrap"}}></th>
             </tr></thead>
             <tbody>
               {(() => {
@@ -408,7 +407,6 @@ function AdminShop({ data, save, showToast, cu }) {
                     >
                       <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
                       <td style={{ fontWeight:600 }}>{item.name}</td>
-                      <td>{item.category ? <span className="tag tag-blue" style={{fontSize:10}}>{item.category}</span> : <span style={{color:"var(--muted)"}}>—</span>}</td>
                       <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
                       <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
                         {item.variants?.length > 0
@@ -464,8 +462,8 @@ function AdminShop({ data, save, showToast, cu }) {
                       <td>{item.noPost ? <span className="tag tag-gold">Yes</span> : "—"}</td>
                       <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
                       <td>{item.hiddenFromShop ? <span className="tag tag-red" title="Hidden from public shop">🔒</span> : "—"}</td>
-                      <td>
-                        <div className="gap-2">
+                      <td style={{whiteSpace:"nowrap"}}>
+                        <div style={{display:"flex",gap:6,flexWrap:"nowrap"}}>
                           <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
                           <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
                         </div>
@@ -475,7 +473,7 @@ function AdminShop({ data, save, showToast, cu }) {
                 };
 
                 if (filteredShopOrder.length === 0) {
-                  return <tr><td colSpan={12} style={{textAlign:"center",color:"var(--muted)",padding:30}}>{productSearch || categoryFilter ? "No matching products" : "No products yet"}</td></tr>;
+                  return <tr><td colSpan={11} style={{textAlign:"center",color:"var(--muted)",padding:30}}>{productSearch || categoryFilter ? "No matching products" : "No products yet"}</td></tr>;
                 }
 
                 // When filtering/searching show flat list; otherwise group by category
@@ -497,7 +495,7 @@ function AdminShop({ data, save, showToast, cu }) {
                       return (
                         <React.Fragment key={cat}>
                           <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat(cat)}>
-                            <td colSpan={12} style={{ background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px" }}>
+                            <td colSpan={11} style={{ background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px" }}>
                               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                                 <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>
                                   {isCatCollapsed ? "▶" : "▼"} {cat}
@@ -517,7 +515,7 @@ function AdminShop({ data, save, showToast, cu }) {
                         <React.Fragment key="__none">
                           {sortedCats.length > 0 && (
                             <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat("__none")}>
-                              <td colSpan={12} style={{ background:"rgba(120,120,120,.05)", borderTop:"2px solid rgba(150,150,150,.14)", borderBottom:"1px solid rgba(150,150,150,.08)", padding:"7px 12px" }}>
+                              <td colSpan={11} style={{ background:"rgba(120,120,120,.05)", borderTop:"2px solid rgba(150,150,150,.14)", borderBottom:"1px solid rgba(150,150,150,.08)", padding:"7px 12px" }}>
                                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                                   <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>
                                     {isUncatCollapsed ? "▶" : "▼"} Uncategorised
