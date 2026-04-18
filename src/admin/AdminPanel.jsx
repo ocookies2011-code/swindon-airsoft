@@ -2,6 +2,7 @@
 // Imports all admin sub-panels and re-exports public-facing pages
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import * as api from "../api";
 import { GmtClock } from "../utils";
 import { SA_LOGO_SRC } from "../assets/logoImage";
 
@@ -36,6 +37,8 @@ import { StaffPage }       from "../pages/StaffPage";
 import { ContactPage }     from "../pages/ContactPage";
 import { PlayerWaitlist }  from "../pages/PlayerWaitlist";
 import { TermsPage }       from "../pages/TermsPage";
+
+const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
 
 function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
   const getInitialSection = () => {
@@ -177,7 +180,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
             <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: "var(--muted)" }}>⚙ ADMIN</span>
               <span style={{ color: "var(--border)" }}>·</span>
-              <span style={{ color: "var(--text)", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".06em", textTransform: "uppercase" }}>{NAV.find(n => n.id === section)?.label || section}</span>
+              <span style={{ color: "var(--text)", fontFamily: "'Oswald','Barlow Condensed',sans-serif", letterSpacing: ".06em", textTransform: "uppercase" }}>{NAV.find(n => n.id === section)?.label || section}</span>
             </div>
           </div>
           <div className="gap-2" style={{ alignItems: "center" }}>
