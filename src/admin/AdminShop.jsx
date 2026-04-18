@@ -40,8 +40,26 @@ function AdminShop({ data, save, showToast, cu }) {
     return list;
   }, [shopOrder, productSearch, categoryFilter]);
 
-  // Collapsed category state - all expanded by default
-  const [collapsedCats, setCollapsedCats] = useState({});
+  // Collapsed category state - all collapsed by default
+  const [collapsedCats, setCollapsedCats] = useState(() => {
+    // Pre-collapse all categories including uncategorised on first render
+    const initial = { "__none": true };
+    return initial;
+  });
+  // When categories load, ensure all are collapsed
+  const allCatKeys = useMemo(() => {
+    const cats = [...new Set(shopOrder.map(p => p.category).filter(Boolean))].sort();
+    return cats;
+  }, [shopOrder]);
+  // Keep new categories collapsed as they appear
+  React.useEffect(() => {
+    setCollapsedCats(prev => {
+      const next = { ...prev };
+      allCatKeys.forEach(c => { if (!(c in next)) next[c] = true; });
+      if (!("__none" in next)) next["__none"] = true;
+      return next;
+    });
+  }, [allCatKeys]);
   const toggleCat = (cat) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
   const dragVariantIdx = useRef(null);
   const [form, setForm] = useState(blank);
@@ -347,8 +365,23 @@ function AdminShop({ data, save, showToast, cu }) {
           <p style={{fontSize:12,color:"var(--muted)",marginBottom:12}}>
             ☰ Drag rows to reorder. Variants can be reordered inside the edit modal.
           </p>
-          <div className="table-wrap"><table className="data-table">
-            <thead><tr><th style={{width:28}}></th><th>Product</th><th>Category</th><th>Base Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Stock</th><th>Sale</th><th>No Post</th><th>Game Extra</th><th>Hidden</th><th></th></tr></thead>
+          <div style={{overflowX:"auto", width:"100%", WebkitOverflowScrolling:"touch"}}>
+          <table className="data-table" style={{minWidth:900}}>
+            <thead><tr>
+              <th style={{width:28}}></th>
+              <th>Product</th>
+              <th style={{width:100}}>Category</th>
+              <th style={{width:80}}>Price</th>
+              <th style={{width:70}}>Cost</th>
+              <th style={{width:70}}>Margin</th>
+              <th style={{width:65}}>Variants</th>
+              <th style={{width:60}}>Stock</th>
+              <th style={{width:50}}>Sale</th>
+              <th style={{width:65}}>No Post</th>
+              <th style={{width:75}}>Game+</th>
+              <th style={{width:60}}>Hidden</th>
+              <th style={{width:80}}></th>
+            </tr></thead>
             <tbody>
               {(() => {
                 const renderRow = (item) => {
@@ -466,7 +499,7 @@ function AdminShop({ data, save, showToast, cu }) {
                           <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat(cat)}>
                             <td colSpan={12} style={{ background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px" }}>
                               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>
+                                <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>
                                   {isCatCollapsed ? "▶" : "▼"} {cat}
                                 </span>
                                 <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{groups[cat].length} item{groups[cat].length !== 1 ? "s" : ""}</span>
@@ -486,7 +519,7 @@ function AdminShop({ data, save, showToast, cu }) {
                             <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat("__none")}>
                               <td colSpan={12} style={{ background:"rgba(120,120,120,.05)", borderTop:"2px solid rgba(150,150,150,.14)", borderBottom:"1px solid rgba(150,150,150,.08)", padding:"7px 12px" }}>
                                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>
+                                  <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>
                                     {isUncatCollapsed ? "▶" : "▼"} Uncategorised
                                   </span>
                                   <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{uncategorised.length} item{uncategorised.length !== 1 ? "s" : ""}</span>
@@ -638,7 +671,7 @@ function AdminShop({ data, save, showToast, cu }) {
 
             {/* Cost price — admin only, never shown to public */}
             <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:3,padding:"10px 14px",marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:8,fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase"}}>🔒 Admin Only — Cost &amp; Margin</div>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:8,fontFamily:"'Oswald','Barlow Condensed',sans-serif",textTransform:"uppercase"}}>🔒 Admin Only — Cost &amp; Margin</div>
               <div className="form-row" style={{marginBottom:0}}>
                 <div className="form-group" style={{marginBottom:0}}>
                   <label>Your Cost Price (£) <span style={{fontWeight:400,color:"var(--muted)"}}>— not shown to customers</span></label>
@@ -680,7 +713,7 @@ function AdminShop({ data, save, showToast, cu }) {
 
             {/* ── VARIANTS EDITOR ── */}
             <div style={{border:"1px solid #2a2a2a",borderLeft:"3px solid var(--accent)",marginBottom:14}}>
-              <div style={{background:"#0d0d0d",padding:"8px 14px",fontSize:9,letterSpacing:".25em",color:"var(--accent)",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #2a2a2a"}}>
+              <div style={{background:"#0d0d0d",padding:"8px 14px",fontSize:9,letterSpacing:".25em",color:"var(--accent)",fontFamily:"'Oswald','Barlow Condensed',sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #2a2a2a"}}>
                 VARIANTS (optional) — e.g. sizes, colours &nbsp;<span style={{fontWeight:400,fontSize:10,color:"var(--muted)",letterSpacing:".05em"}}>☰ drag to reorder</span>
               </div>
               <div style={{padding:14}}>
