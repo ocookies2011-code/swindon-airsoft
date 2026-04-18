@@ -124,9 +124,19 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
             const extrasLabels = extrasEntries.map(([k, qty]) => {
               const [xId, vId] = k.includes(":") ? k.split(":") : [k, null];
               const exDef = ev.extras?.find(e => e.id === xId);
+              // exDef.name may be a JSON string like {"n":"Name","pid":"...","vid":null}
+              let exName = xId;
+              if (exDef) {
+                try {
+                  const parsed = typeof exDef.name === "string" && exDef.name.startsWith("{")
+                    ? JSON.parse(exDef.name)
+                    : null;
+                  exName = parsed?.n || exDef.name;
+                } catch { exName = exDef.name; }
+              }
               const shopP = exDef ? (data.shop || []).find(p => p.id === exDef.productId) : null;
               const varDef = vId && shopP ? (shopP.variants || []).find(vv => vv.id === vId) : null;
-              const label = exDef ? (varDef ? `${exDef.name} — ${varDef.name}` : exDef.name) : xId;
+              const label = varDef ? `${exName} — ${varDef.name}` : exName;
               return `${label} ×${qty}`;
             });
 
