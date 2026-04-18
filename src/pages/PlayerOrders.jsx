@@ -236,7 +236,7 @@ function ReturnRequestBlock({ order, onUpdate }) {
 }
 
 // ── Order Detail (customer view) ─────────────────────────────
-function CustomerOrderDetail({ order: selected }) {
+function CustomerOrderDetail({ order: selected, onPatch }) {
   const items = Array.isArray(selected.items) ? selected.items : [];
   const meta = ORDER_STATUS_META[selected.status] || ORDER_STATUS_META.pending;
   const isCancelled = selected.status === "cancelled";
@@ -343,8 +343,7 @@ function CustomerOrderDetail({ order: selected }) {
 
       {/* Return request section */}
       <ReturnRequestBlock order={selected} onUpdate={(patch) => {
-        // Patch the local order so the UI reflects the request immediately
-        Object.assign(selected, patch);
+        if (onPatch) onPatch(patch);
       }} />
     </div>
   );
@@ -367,13 +366,21 @@ function PlayerOrders({ cu }) {
       if (!error) {
         const loaded = data || [];
         setOrders(loaded);
-        const active = loaded.find(o => !["completed","cancelled"].includes(o.status));
-        if (active) setActiveOrder(active.id);
-        else if (loaded.length > 0) setActiveOrder(loaded[0].id);
+        // Keep activeOrder if it still exists, otherwise pick best default
+        setActiveOrder(prev => {
+          if (prev && loaded.find(o => o.id === prev)) return prev;
+          const active = loaded.find(o => !["completed","cancelled"].includes(o.status));
+          return active ? active.id : (loaded.length > 0 ? loaded[0].id : null);
+        });
       }
     } catch (e) { console.warn("PlayerOrders fetch:", e.message); }
     finally { if (isMounted.current) setLoading(false); }
   }, [cu?.id]);
+
+  // Patch a single order in local state without full reload
+  const patchOrder = useCallback((orderId, patch) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...patch } : o));
+  }, []);
 
   useEffect(() => {
     isMounted.current = true;
@@ -418,7 +425,7 @@ function PlayerOrders({ cu }) {
               style={{ padding: "12px 14px", marginBottom: 6, cursor: "pointer", border: `1px solid ${isActive ? meta.border : "var(--border)"}`, background: isActive ? meta.bg : "#0d0d0d", transition: "all .15s" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
-                  #{(o.id||"").slice(-6).toUpperCase()}
+                  #{(o.id||"").slice(-8).toUpperCase()}
                 </div>
                 <div style={{ fontSize: 10, fontWeight: 700, color: meta.color, fontFamily: "'Share Tech Mono',monospace" }}>
                   {meta.icon} {meta.label.toUpperCase()}
@@ -450,7 +457,7 @@ function PlayerOrders({ cu }) {
       </div>
 
       {/* ── Order detail ── */}
-      {selected && <CustomerOrderDetail order={selected} />}
+      {selected && <CustomerOrderDetail order={selected} onPatch={(patch) => patchOrder(selected.id, patch)} />}
     </div>
   );
 }
