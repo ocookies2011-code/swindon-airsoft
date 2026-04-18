@@ -5,6 +5,8 @@ import * as api from "../api";
 import { fmtDate, fmtErr } from "../utils";
 import { diffFields, logAction } from "./adminHelpers";
 
+const emptyBanner = () => ({ text:"", color:"#c8ff00", bg:"#080a06", icon:"⚡" });
+
 function AdminMessages({ data, save, showToast, cu }) {
   const [banners, setBanners] = useState(() => Array.isArray(data.homeMsg) && data.homeMsg.length > 0 ? data.homeMsg.map(b => ({ ...emptyBanner(), ...b })) : []);
   const [facebook, setFacebook] = useState(data.socialFacebook || "");

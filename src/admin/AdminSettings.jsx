@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtErr, resetSquareConfig } from "../utils";
+import { fmtErr, resetSquareConfig, trackKeyCache } from "../utils";
 import { logAction } from "./adminHelpers";
 import { EmailTestCard } from "./EmailTestCard";
 
