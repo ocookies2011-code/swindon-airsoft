@@ -18,7 +18,12 @@ import { ProfilePage }        from "./pages/ProfilePage";
 import { PublicProfilePage }  from "./pages/PublicProfilePage";
 import { UKARAPage }          from "./pages/UKARAPage";
 
-function AppInner() {
+const ALLOWED_COUNTRY_CODES = new Set([
+  "GB","IE",                                           // UK + Ireland
+  "AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR",  // EU
+  "DE","GR","HU","IE","IT","LV","LT","LU","MT","NL",
+  "PL","PT","RO","SK","SI","ES","SE",
+]);
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
   // ── Offline detection ─────────────────────────────────────
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
