@@ -7,6 +7,18 @@ import { diffFields, logAction } from "./adminHelpers";
 
 const emptyBanner = () => ({ text:"", color:"#c8ff00", bg:"#080a06", icon:"⚡" });
 
+const PRESET_ICONS = ["⚡","🎯","⚠️","🔥","📢","✅","❗","🎮","🏆","🛡️","💥","📅"];
+const PRESET_COMBOS = [
+  { label:"Lime / Black",   color:"#c8ff00", bg:"#080a06" },
+  { label:"White / Dark",   color:"#ffffff", bg:"#111418" },
+  { label:"Amber / Black",  color:"#ffb300", bg:"#100900" },
+  { label:"Red / Dark",     color:"#ff4444", bg:"#120808" },
+  { label:"Cyan / Dark",    color:"#4fc3f7", bg:"#060e12" },
+  { label:"Green / Black",  color:"#4caf50", bg:"#070d07" },
+  { label:"Purple / Dark",  color:"#ce93d8", bg:"#0d080f" },
+  { label:"Orange / Black", color:"#ff7043", bg:"#0f0800" },
+];
+
 function AdminMessages({ data, save, showToast, cu }) {
   const [banners, setBanners] = useState(() => Array.isArray(data.homeMsg) && data.homeMsg.length > 0 ? data.homeMsg.map(b => ({ ...emptyBanner(), ...b })) : []);
   const [facebook, setFacebook] = useState(data.socialFacebook || "");
