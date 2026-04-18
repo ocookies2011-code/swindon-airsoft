@@ -5,12 +5,15 @@ import * as api from "../api";
 import { QRScanner, useMobile, fmtDate, gmtShort } from "../utils";
 
 function MarshalCheckinPage({ data, showToast, save, updateUser }) {
-  const [evId, setEvId] = useState(data.events[0]?.id || "");
+  // Only show events from today onwards
+  const today = new Date().toISOString().slice(0, 10);
+  const upcomingEvents = data.events.filter(e => e.date >= today).sort((a,b) => a.date.localeCompare(b.date));
+  const [evId, setEvId] = useState(upcomingEvents[0]?.id || "");
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const ev = data.events.find(e => e.id === evId);
+  const ev = upcomingEvents.find(e => e.id === evId);
   const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
 
   const doCheckin = async (booking, evObj) => {
@@ -50,7 +53,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
 
   const onQRScan = (code) => {
     setScanning(false);
-    for (const evObj of data.events) {
+    for (const evObj of upcomingEvents) {
       const b = evObj.bookings.find(x => x.id === code);
       if (b) {
         if (b.checkedIn) { showToast(`${b.userName} already checked in`, "gold"); return; }
@@ -73,7 +76,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Select Event</label>
           <select value={evId} onChange={e => setEvId(e.target.value)}>
-            {data.events.map(e => <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)}</option>)}
+            {upcomingEvents.length === 0 ? <option value="">No upcoming events</option> : upcomingEvents.map(e => <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)}</option>)}
           </select>
         </div>
         {ev && (

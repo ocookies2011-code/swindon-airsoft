@@ -24,6 +24,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
   const [playerSearch, setPlayerSearch] = useState("");
+  const [playerSort, setPlayerSort] = useState("az"); // az | za | games | ukara
   const [roleFilter, setRoleFilter] = useState("all"); // all | player | admin
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(new Set());
   const [bulkAction, setBulkAction] = useState("");
@@ -91,6 +92,19 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                u.ukara?.toLowerCase().includes(q);
       })
     : roleFiltered;
+
+  const sortedPlayers = [...filteredPlayers].sort((a, b) => {
+    if (playerSort === "az")    return (a.name || "").localeCompare(b.name || "");
+    if (playerSort === "za")    return (b.name || "").localeCompare(a.name || "");
+    if (playerSort === "games") return (b.gamesAttended || 0) - (a.gamesAttended || 0);
+    if (playerSort === "ukara") {
+      const au = a.ukara || "", bu = b.ukara || "";
+      if (au && !bu) return -1;
+      if (!au && bu) return 1;
+      return au.localeCompare(bu);
+    }
+    return 0;
+  });
 
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -447,8 +461,23 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               <button className="btn btn-ghost btn-sm" onClick={() => setPlayerSearch("")}>✕ Clear</button>
             )}
             <span style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>
-              {filteredPlayers.length} / {roleFiltered.length}
+              {sortedPlayers.length} / {roleFiltered.length}
             </span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".12em" }}>SORT:</span>
+            {[
+              { val:"az",    label:"A → Z" },
+              { val:"za",    label:"Z → A" },
+              { val:"games", label:"Games Played" },
+              { val:"ukara", label:"UKARA ID" },
+            ].map(s => (
+              <button key={s.val} className={"btn btn-sm " + (playerSort === s.val ? "btn-primary" : "btn-ghost")}
+                style={{ fontSize:11, padding:"5px 12px" }}
+                onClick={() => setPlayerSort(s.val)}>
+                {s.label}
+              </button>
+            ))}
           </div>
           {selectedPlayerIds.size > 0 && (
             <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", marginBottom:8, flexWrap:"wrap" }}>
@@ -557,7 +586,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               </th>
               <th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
             <tbody>
-              {filteredPlayers.map(u => (
+              {sortedPlayers.map(u => (
                 <React.Fragment key={u.id}>
                 <tr style={{ background: selectedPlayerIds.has(u.id) ? "rgba(200,255,0,.03)" : "" }}>
                   <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
