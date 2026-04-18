@@ -212,8 +212,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       });
     };
 
-    const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, walkOnLeft)) }));
-    const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, rentalLeft)) }));
+    const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, Math.max(0, walkOnLeft))) }));
+    const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
 
 
 
@@ -719,26 +719,26 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid #2a3a10", background: woHeldForMe ? "rgba(200,255,0,.05)" : "rgba(200,255,0,.02)" }}>
                       <div>
                         <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🎯 Walk-On</div>
-                        <div style={{ fontSize:11, color: walkOnLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                          £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft === 0 ? "FULL" : walkOnLeft <= 3 ? "ALMOST FULL" : "AVAILABLE"}
+                        <div style={{ fontSize:11, color: walkOnLeft <= 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
+                          £{ev.walkOnPrice}{vipDisc > 0 ? ` → £${(ev.walkOnPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {walkOnLeft <= 0 ? "FULL" : walkOnLeft <= 3 ? "ALMOST FULL" : "AVAILABLE"}
                         </div>
                         {woHeldForMe && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--accent)", marginTop:3 }}>
                             ⏱ YOUR SLOT — RESERVED {woMinsLeft} MIN LEFT
                           </div>
                         )}
-                        {woHeldForOther && walkOnLeft === 0 && (
+                        {woHeldForOther && walkOnLeft <= 0 && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", marginTop:3 }}>
                             🔒 HELD FOR WAITLIST — {woMinsLeft} MIN
                           </div>
                         )}
-                        {!woHold && walkOnLeft === 0 && wlEntries.filter(w => w.ticket_type === "walkOn").length > 0 && (
+                        {!woHold && walkOnLeft <= 0 && wlEntries.filter(w => w.ticket_type === "walkOn").length > 0 && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", marginTop:2 }}>
                             {wlEntries.filter(w => w.ticket_type === "walkOn").length} on waitlist
                           </div>
                         )}
                       </div>
-                      {walkOnLeft === 0 ? (
+                      {walkOnLeft <= 0 ? (
                         woHeldForMe ? (
                           // This is the waitlisted player whose slot is being held — show booking controls
                           <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
@@ -767,7 +767,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                         <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                           <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
                           <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
-                          <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
+                          <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
                         </div>
                       )}
                     </div>
@@ -786,26 +786,26 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom: ev.extras.length > 0 ? "1px solid #111a0a" : "none", background: rnHeldForMe ? "rgba(200,255,0,.05)" : undefined }}>
                       <div>
                         <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:14, color:"#fff" }}>🪖 Rental Package</div>
-                        <div style={{ fontSize:11, color: rentalLeft === 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
-                          £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft === 0 ? "FULL" : rentalLeft <= 3 ? "ALMOST FULL" : "AVAILABLE"}
+                        <div style={{ fontSize:11, color: rentalLeft <= 0 ? "var(--red)" : "var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>
+                          £{ev.rentalPrice}{vipDisc > 0 ? ` → £${(ev.rentalPrice*(1-vipDisc)).toFixed(2)} VIP` : ""} · {rentalLeft <= 0 ? "FULL" : rentalLeft <= 3 ? "ALMOST FULL" : "AVAILABLE"}
                         </div>
                         {rnHeldForMe && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--accent)", marginTop:3 }}>
                             ⏱ YOUR SLOT — RESERVED {rnMinsLeft} MIN LEFT
                           </div>
                         )}
-                        {rnHeldForOther && rentalLeft === 0 && (
+                        {rnHeldForOther && rentalLeft <= 0 && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", marginTop:3 }}>
                             🔒 HELD FOR WAITLIST — {rnMinsLeft} MIN
                           </div>
                         )}
-                        {!rnHold && rentalLeft === 0 && wlEntries.filter(w => w.ticket_type === "rental").length > 0 && (
+                        {!rnHold && rentalLeft <= 0 && wlEntries.filter(w => w.ticket_type === "rental").length > 0 && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", marginTop:2 }}>
                             {wlEntries.filter(w => w.ticket_type === "rental").length} on waitlist
                           </div>
                         )}
                       </div>
-                      {rentalLeft === 0 ? (
+                      {rentalLeft <= 0 ? (
                         rnHeldForMe ? (
                           <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
                             <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
@@ -833,7 +833,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                         <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                           <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                           <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                          <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
+                          <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
                         </div>
                       )}
                     </div>
@@ -851,7 +851,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   <div style={{ padding:"0 16px 14px" }}>
                     <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, margin:"12px 0 8px" }}>EXTRAS</div>
                     {visibleExtras.map(ex => {
-                      const lp = (data.shop || []).find(s => s.id === ex.productId);
+                      // Find linked product — by productId first, then by matching name as fallback
+                      const lp = (data.shop || []).find(s => s.id === ex.productId)
+                             || (ex.productId ? null : (data.shop || []).find(s => s.name === ex.name));
                       const liveNoPost = lp ? lp.noPost : ex.noPost;
                       const hasVariants = lp?.variants?.length > 0;
                       return (
@@ -924,7 +926,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                     </div>
                   )}
                   {visibleExtras.flatMap(ex => {
-                    const lp = (data.shop || []).find(s => s.id === ex.productId);
+                    const lp = (data.shop || []).find(s => s.id === ex.productId)
+                           || (ex.productId ? null : (data.shop || []).find(s => s.name === ex.name));
                     if (lp?.variants?.length > 0) {
                       return lp.variants
                         .filter(v => getExtraQty(ex.id, v.id) > 0)

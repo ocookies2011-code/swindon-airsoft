@@ -179,7 +179,7 @@ function HomePage({ data, setPage, onProductClick }) {
                   {[
                     { icon:"📅", title: fmtDate(nextEvent.date), sub:"DEPART " + nextEvent.time + " HRS GMT" + (nextEvent.endTime ? " · ENDEX " + nextEvent.endTime + " HRS" : "") },
                     { icon:"📍", title: nextEvent.location, sub:"WILTSHIRE SECTOR" },
-                    { icon:"👥", title: `${spotsLeft} slots remaining`, sub:`${booked} of ${total} confirmed` },
+                    { icon:"👥", title: `${spotsLeft} slots remaining`, sub: spotsLeft === 0 ? "FULLY BOOKED" : spotsLeft <= 5 ? "ALMOST FULL" : "SPACES AVAILABLE" },
                   ].map((row, i) => (
                     <div key={i} style={{ display:"flex", gap:14, alignItems:"flex-start", padding:"14px 0", borderBottom: i < 2 ? "1px solid " + BORDER : "none" }}>
                       <div style={{ fontSize:18, flexShrink:0, marginTop:2 }}>{row.icon}</div>
