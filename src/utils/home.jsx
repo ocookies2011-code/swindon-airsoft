@@ -50,7 +50,7 @@ function HomePage({ data, setPage, onProductClick }) {
               ...MIL,
               fontSize: 13,
               letterSpacing: ".06em",
-              borderBottom: i < data.homeMsg.length - 1 ? `1px solid ${BORDER}` : "none",
+              borderBottom: i < data.homeMsg.length - 1 ? "1px solid " + BORDER : "none",
             }}>
               {msg.icon && <span style={{ fontSize:16, flexShrink:0 }}>{msg.icon}</span>}
               <span>{msg.text}</span>
@@ -70,10 +70,10 @@ function HomePage({ data, setPage, onProductClick }) {
           <div key={v+h} style={{ position:"absolute", width:20, height:20, zIndex:2,
             top:v==="top"?16:"auto", bottom:v==="bottom"?16:"auto",
             left:h==="left"?16:"auto", right:h==="right"?16:"auto",
-            borderTop:v==="top":`1px solid rgba(200,255,0,.4)`:"none",
-            borderBottom:v==="bottom"?`1px solid rgba(200,255,0,.4)`:"none",
-            borderLeft:h==="left"?`1px solid rgba(200,255,0,.4)`:"none",
-            borderRight:h==="right"?`1px solid rgba(200,255,0,.4)`:"none",
+            borderTop:v==="top"?"1px solid rgba(200,255,0,.4)":"none",
+            borderBottom:v==="bottom"?"1px solid rgba(200,255,0,.4)":"none",
+            borderLeft:h==="left"?"1px solid rgba(200,255,0,.4)":"none",
+            borderRight:h==="right"?"1px solid rgba(200,255,0,.4)":"none",
           }} />
         ))}
         {/* Watermark logo */}
@@ -177,11 +177,11 @@ function HomePage({ data, setPage, onProductClick }) {
                 <div style={{ ...MONO, fontSize:9, color: MUTED, letterSpacing:".22em", textTransform:"uppercase", marginBottom:20 }}>// Mission Brief</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
                   {[
-                    { icon:"📅", title: fmtDate(nextEvent.date), sub:`DEPART ${nextEvent.time} HRS GMT${nextEvent.endTime ? ` · ENDEX ${nextEvent.endTime} HRS` : ""}` },
+                    { icon:"📅", title: fmtDate(nextEvent.date), sub:"DEPART " + nextEvent.time + " HRS GMT" + (nextEvent.endTime ? " · ENDEX " + nextEvent.endTime + " HRS" : "") },
                     { icon:"📍", title: nextEvent.location, sub:"WILTSHIRE SECTOR" },
                     { icon:"👥", title: `${spotsLeft} slots remaining`, sub:`${booked} of ${total} confirmed` },
                   ].map((row, i) => (
-                    <div key={i} style={{ display:"flex", gap:14, alignItems:"flex-start", padding:"14px 0", borderBottom: i < 2 ? `1px solid ${BORDER}` : "none" }}>
+                    <div key={i} style={{ display:"flex", gap:14, alignItems:"flex-start", padding:"14px 0", borderBottom: i < 2 ? "1px solid " + BORDER : "none" }}>
                       <div style={{ fontSize:18, flexShrink:0, marginTop:2 }}>{row.icon}</div>
                       <div>
                         <div style={{ ...MIL, fontSize:16, fontWeight:700, color:"#fff", textTransform:"uppercase", letterSpacing:".07em" }}>{row.title}</div>
@@ -218,7 +218,7 @@ function HomePage({ data, setPage, onProductClick }) {
             { svg:<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><polygon points="16,2 19.5,12 30,12 21.5,18.5 24.5,28.5 16,22 7.5,28.5 10.5,18.5 2,12 12.5,12" stroke={ACCENT} strokeWidth="1.5" fill="none"/></svg>, title:"VIP BENEFITS", desc:"10% off all bookings. Free birthday game day. UKARA support." },
             { svg:<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect x="4" y="8" width="24" height="16" rx="2" stroke={ACCENT} strokeWidth="1.5"/><path d="M10 12h12M10 16h8M10 20h10" stroke={ACCENT} strokeWidth="1.2" strokeLinecap="round"/></svg>, title:"RENTAL GEAR", desc:"Full kit hire available — gun, BBs, and face protection included." },
           ].map((f, i) => (
-            <div key={f.title} style={{ padding:"28px 24px", borderRight: !isMobile && i < 3 ? `1px solid ${BORDER}` : "none", borderBottom: isMobile && i < 2 ? `1px solid ${BORDER}` : "none" }}>
+            <div key={f.title} style={{ padding:"28px 24px", borderRight: !isMobile && i < 3 ? "1px solid " + BORDER : "none", borderBottom: isMobile && i < 2 ? "1px solid " + BORDER : "none" }}>
               <div style={{ marginBottom:12 }}>{f.svg}</div>
               <div style={{ ...MIL, fontSize:15, fontWeight:700, letterSpacing:".1em", color:"#fff", textTransform:"uppercase", marginBottom:6 }}>{f.title}</div>
               <div style={{ fontSize:12, color: MUTED, lineHeight:1.7 }}>{f.desc}</div>
