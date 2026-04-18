@@ -144,7 +144,9 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
         </div>
       )}
 
-      <div className="grid-6 mb-2">
+      {/* ── STATS OVERVIEW ── */}
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", color: "var(--muted)", marginBottom: 12, textTransform: "uppercase" }}>📊 Overview</div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { label: "Total Revenue", val: `£${revenue.toFixed(0)}`, sub: "From bookings", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, color: "", superAdminOnly: true },
           { label: "Bookings", val: allBookings.length, sub: `${data.events.length} events`, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="14.5" x2="15" y2="14.5"/></svg>, color: "gold" },
