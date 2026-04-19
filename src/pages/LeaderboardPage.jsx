@@ -144,10 +144,8 @@ function PodiumCard({ player, rank, isMe, onPlayerClick }) {
         </div>
         {isMe && <div style={{ ...MONO, fontSize:7, color:ACCENT, marginBottom:4, position:"relative", zIndex:1 }}>← YOU</div>}
 
-        {/* Real name shown under callsign if they have a callsign */}
-        <div style={{ ...MONO, fontSize:9, color:MUTED, letterSpacing:".12em", marginBottom:10, minHeight:14, position:"relative", zIndex:1 }}>
-          {player.callsign ? player.name : "\u00a0"}
-        </div>
+        {/* Spacer only — no real name shown when callsign is used */}
+        <div style={{ marginBottom:10, minHeight:14 }}/>
 
         {/* Score */}
         <div style={{ ...MIL, fontSize:scoreSize, fontWeight:700, color:ACCENT, lineHeight:1, position:"relative", zIndex:1, filter: rank===1?"drop-shadow(0 0 12px rgba(200,255,0,.3))":"none" }}>
@@ -337,7 +335,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                             {isMe && <span style={{ ...MONO, fontSize:7, color:ACCENT, background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", padding:"1px 5px", marginLeft:8 }}>← YOU</span>}
                           </div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
-                            {player.callsign && <span style={{ ...MONO, fontSize:9, color:MUTED }}>{player.name}</span>}
+                            {/* real name hidden when callsign present */}
                             <span style={{ ...MONO, fontSize:8, color:MUTED, letterSpacing:".1em" }}>{rankTitle}</span>
                           </div>
                         </div>
