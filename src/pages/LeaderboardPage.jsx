@@ -114,7 +114,7 @@ function PodiumCard({ player, rank, isMe, onPlayerClick }) {
         onMouseLeave={e => { e.currentTarget.style.transform = ""; }}
       >
         {/* Top accent bar */}
-        <div style={{ position:"absolute", top:0, left:0, right:0, height: rank===1?3:2, background: rank===1?`linear-gradient(90deg,transparent,${GOLD},transparent)`:rank===2?"linear-gradient(90deg,transparent,#999,transparent)":"linear-gradient(90deg,transparent,#c97d2a,transparent)" }}/>
+        <div style={{ position:"absolute", top:0, left:0, right:0, height: rank===1?3:2, background: rank===1?"linear-gradient(90deg,transparent,"+GOLD+",transparent)":rank===2?"linear-gradient(90deg,transparent,#999,transparent)":"linear-gradient(90deg,transparent,#c97d2a,transparent)" }}/>
         {/* Gold inner glow */}
         {rank===1 && <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 0%,rgba(212,160,23,.09) 0%,transparent 65%)", pointerEvents:"none" }}/>}
         {/* Scanlines */}
@@ -133,10 +133,16 @@ function PodiumCard({ player, rank, isMe, onPlayerClick }) {
         {/* Crown for 1st */}
         {rank === 1 && <div style={{ fontSize:22, marginBottom:4, position:"relative", zIndex:1 }}>👑</div>}
 
-        {/* Rank label */}
-        <div style={{ ...MONO, fontSize:8, color: rank===1?GOLD:MUTED, letterSpacing:".2em", marginBottom:8, position:"relative", zIndex:1 }}>
-          {rank===1?"FIELD COMMANDER":rank===2?"SENIOR OPERATIVE":"OPERATIVE"}
-        </div>
+        {/* Rank insignia + label */}
+        {(() => {
+          const rd = getPlayerRank(player.gamesAttended || 0);
+          return (
+            <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"center", marginBottom:8, position:"relative", zIndex:1 }}>
+              <RankInsigniaIcon pip={rd.pip} tier={rd.tier} size={24}/>
+              <span style={{ ...MONO, fontSize:8, color:TIER_COLORS[rd.tier]||MUTED, letterSpacing:".12em" }}>{rd.abbr} · {rd.rank}</span>
+            </div>
+          );
+        })()}
 
         {/* Name */}
         <div style={{ ...MIL, fontWeight:700, fontSize: rank===1?20:rank===2?17:15, letterSpacing:".06em", color: isMe?"#fff":rank===1?GOLD:rank===2?"#bbb":"#c97d2a", textTransform:"uppercase", marginBottom:3, position:"relative", zIndex:1, lineHeight:1.1 }}>
@@ -194,11 +200,87 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
 
   const myRank = cu ? board.findIndex(p => p.id === cu.id) : -1;
 
-  const getRankTitle = (i) => {
-    if (i < 3)  return "ELITE";
-    if (i < 10) return "VETERAN";
-    if (i < 25) return "OPERATIVE";
-    return "RECRUIT";
+  // British Army rank system — thresholds by games played
+  const BRIT_RANKS = [
+    { min:400, rank:"Field Marshal",       abbr:"FM",     tier:10, pip:"FM"  },
+    { min:300, rank:"General",             abbr:"Gen",    tier:9,  pip:"GEN" },
+    { min:250, rank:"Lieutenant General",  abbr:"Lt Gen", tier:9,  pip:"GEN" },
+    { min:200, rank:"Major General",       abbr:"Maj Gen",tier:8,  pip:"MG"  },
+    { min:160, rank:"Brigadier",           abbr:"Brig",   tier:8,  pip:"BG"  },
+    { min:130, rank:"Colonel",             abbr:"Col",    tier:7,  pip:"COL" },
+    { min:100, rank:"Lieutenant Colonel",  abbr:"Lt Col", tier:7,  pip:"COL" },
+    { min:80,  rank:"Major",               abbr:"Maj",    tier:6,  pip:"MAJ" },
+    { min:60,  rank:"Captain",             abbr:"Cpt",    tier:6,  pip:"CPT" },
+    { min:45,  rank:"Lieutenant",          abbr:"Lt",     tier:5,  pip:"LT"  },
+    { min:35,  rank:"Second Lieutenant",   abbr:"2Lt",    tier:5,  pip:"2LT" },
+    { min:28,  rank:"Warrant Officer I",   abbr:"WO1",    tier:4,  pip:"WO"  },
+    { min:20,  rank:"Warrant Officer II",  abbr:"WO2",    tier:4,  pip:"WO"  },
+    { min:15,  rank:"Staff Sergeant",      abbr:"S/Sgt",  tier:3,  pip:"SSG" },
+    { min:10,  rank:"Sergeant",            abbr:"Sgt",    tier:3,  pip:"SGT" },
+    { min:6,   rank:"Corporal",            abbr:"Cpl",    tier:2,  pip:"CPL" },
+    { min:3,   rank:"Lance Corporal",      abbr:"L/Cpl",  tier:2,  pip:"LCL" },
+    { min:0,   rank:"Private",             abbr:"Pte",    tier:1,  pip:"PTE" },
+  ];
+
+  const getPlayerRank = (games) => {
+    return BRIT_RANKS.find(r => games >= r.min) || BRIT_RANKS[BRIT_RANKS.length - 1];
+  };
+
+  // Tier colours
+  const TIER_COLORS = {
+    1: "#5a6e42", 2: "#7a9a50", 3: "#c8d4b0",
+    4: "#4fc3f7", 5: "#81c784", 6: "#ffd54f",
+    7: "#ffb74d", 8: "#ef5350", 9: GOLD, 10: ACCENT,
+  };
+
+  // British rank insignia SVG
+  const RankInsigniaIcon = ({ pip, tier, size = 28 }) => {
+    const col = TIER_COLORS[tier] || MUTED;
+    const s = size;
+    // Pip = small diamond, Bar = horizontal bar, Crown = crown shape
+    const Pip = ({x,y,r=4}) => <polygon points={`${x},${y-r} ${x+r},${y} ${x},${y+r} ${x-r},${y}`} fill={col}/>;
+    const Bar = ({y}) => <rect x="2" y={y} width={s-4} height="3" rx="1" fill={col}/>;
+    const Crown = ({cx,cy,w=10,h=7}) => (
+      <g>
+        <rect x={cx-w/2} y={cy+h*0.4} width={w} height={h*0.6} rx="1" fill={col}/>
+        <polygon points={`${cx-w/2},${cy+h*0.4} ${cx-w/2},${cy} ${cx-w/4},${cy+h*0.25} ${cx},${cy} ${cx+w/4},${cy+h*0.25} ${cx+w/2},${cy} ${cx+w/2},${cy+h*0.4}`} fill={col}/>
+      </g>
+    );
+    const Star = ({cx,cy,r=4}) => {
+      const pts = [];
+      for(let i=0;i<10;i++){
+        const a = (i*36-90)*Math.PI/180;
+        const rr = i%2===0?r:r*0.4;
+        pts.push(`${cx+rr*Math.cos(a)},${cy+rr*Math.sin(a)}`);
+      }
+      return <polygon points={pts.join(' ')} fill={col}/>;
+    };
+
+    const c = s/2;
+    const insignia = {
+      PTE: <text x={c} y={c+4} textAnchor="middle" fontSize={s*0.45} fill={col} fontFamily="'Oswald',sans-serif" fontWeight="700">Pte</text>,
+      LCL: <g><Bar y={c-1}/></g>,
+      CPL: <g><Bar y={c-3}/><Bar y={c+2}/></g>,
+      SGT: <g><Bar y={c-5}/><Bar y={c}/><Bar y={c+5}/></g>,
+      SSG: <g><Bar y={c-6}/><Bar y={c-1}/><Bar y={c+4}/><Crown cx={c} cy={2}/></g>,
+      WO:  <g><Crown cx={c} cy={2}/><Star cx={c} cy={c+4}/></g>,
+      "2LT": <g><Pip x={c} y={c}/></g>,
+      LT:  <g><Pip x={c-5} y={c}/><Pip x={c+5} y={c}/></g>,
+      CPT: <g><Pip x={c-8} y={c}/><Pip x={c} y={c}/><Pip x={c+8} y={c}/></g>,
+      MAJ: <g><Crown cx={c} cy={c-2}/></g>,
+      COL: <g><Crown cx={c} cy={c-5}/><Pip x={c-6} y={c+5}/><Pip x={c+6} y={c+5}/></g>,
+      BG:  <g><Crown cx={c} cy={c-5}/><Star cx={c} cy={c+5}/></g>,
+      MG:  <g><Crown cx={c} cy={c-7}/><Star cx={c-5} cy={c+3}/><Star cx={c+5} cy={c+3}/></g>,
+      GEN: <g><Crown cx={c} cy={c-7}/><Star cx={c-7} cy={c+2}/><Star cx={c} cy={c+4}/><Star cx={c+7} cy={c+2}/></g>,
+      FM:  <g><Crown cx={c} cy={c-8}/><Star cx={c-8} cy={c+1}/><Star cx={c-3} cy={c+5}/><Star cx={c+3} cy={c+5}/><Star cx={c+8} cy={c+1}/></g>,
+    };
+
+    return (
+      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ flexShrink:0 }}>
+        <rect width={s} height={s} rx="3" fill="rgba(0,0,0,.3)" stroke={col} strokeWidth="1" strokeOpacity=".4"/>
+        {insignia[pip] || insignia.PTE}
+      </svg>
+    );
   };
 
   return (
@@ -311,7 +393,11 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                   {pagePlayers.map((player, i) => {
                     const absRank = pageStart + i + 4; // +4 because top 3 are excluded
                     const isMe = cu && player.id === cu.id;
-                    const rankTitle = getRankTitle(absRank - 1);
+                    const playerRankData = getPlayerRank(player.gamesAttended || 0);
+                    const rankTitle = playerRankData.rank;
+                    const rankAbbr = playerRankData.abbr;
+                    const rankTier = playerRankData.tier;
+                    const rankPip = playerRankData.pip;
                     const initials = ((player.callsign || player.name) || "?")[0].toUpperCase();
                     return (
                       <div key={player.id}
@@ -336,7 +422,8 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                           </div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
                             {/* real name hidden when callsign present */}
-                            <span style={{ ...MONO, fontSize:8, color:MUTED, letterSpacing:".1em" }}>{rankTitle}</span>
+                            <RankInsigniaIcon pip={rankPip} tier={rankTier} size={22}/>
+                          <span style={{ ...MONO, fontSize:8, color:TIER_COLORS[rankTier]||MUTED, letterSpacing:".08em" }}>{rankAbbr} · {rankTitle}</span>
                           </div>
                         </div>
                         <div style={{ display:"flex", gap:4, alignItems:"center" }}>
