@@ -103,9 +103,9 @@ function AppInner() {
     const onHash = () => {
       const parts = window.location.hash.replace("#","").split("/");
       const p = parts[0];
-      if (p === "admin") { setPageState("admin"); return; }
-      if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); return; }
-      if (PUBLIC_PAGES.includes(p)) setPageState(p);
+      if (p === "admin") { setPageState("admin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
+      if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); window.scrollTo({ top:0, behavior:"instant" }); return; }
+      if (PUBLIC_PAGES.includes(p)) { setPageState(p); window.scrollTo({ top:0, behavior:"instant" }); }
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -505,7 +505,7 @@ function AppInner() {
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} />
 
       <div className="pub-page-wrap">
-        {page === "home"        && <HomePage data={data} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; }} />}
+        {page === "home"        && <HomePage data={data} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; window.scrollTo({ top:0, behavior:"instant" }); }} />}
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />
@@ -516,7 +516,7 @@ function AppInner() {
             recentlyViewed={recentlyViewed}
             cart={shopCart} setCart={setShopCart}
             cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
-            onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); }}
+            onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); window.scrollTo({ top:0, behavior:"instant" }); }}
             setPage={setPage}
           />
         )}
@@ -525,7 +525,7 @@ function AppInner() {
             item={selectedProduct}
             cu={cu}
             shopItems={data.shop || []}
-            onProductClick={(p) => { setSelectedProduct(p); trackRecentlyViewed(p); }}
+            onProductClick={(p) => { setSelectedProduct(p); trackRecentlyViewed(p); window.scrollTo({ top:0, behavior:"instant" }); }}
             onBack={() => setSelectedProduct(null)}
             cartCount={shopCart.reduce((s, i) => s + i.qty, 0)}
             onCartOpen={() => { setShopCartOpen(true); setSelectedProduct(null); }}
@@ -545,7 +545,7 @@ function AppInner() {
             }}
           />
         )}
-        {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} onPlayerClick={id => { setPrevPage("leaderboard"); setPublicProfileId(id); setPageState("player"); window.location.hash = "player/" + id; }} />}
+        {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} onPlayerClick={id => { setPrevPage("leaderboard"); setPublicProfileId(id); setPageState("player"); window.location.hash = "player/" + id; window.scrollTo({ top:0, behavior:"instant" }); }} />}
         {page === "marshal"     && cu?.canMarshal && <MarshalCheckinPage data={data} showToast={showToast} save={save} updateUser={updateUserAndRefresh} />}
         {page === "marshal"     && !cu?.canMarshal && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Access denied.</div>}
         {page === "gallery"     && <GalleryPage data={data} />}

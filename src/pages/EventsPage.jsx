@@ -15,6 +15,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const setDetail = (id) => {
     setDetailState(id);
     window.location.hash = id ? "events/" + id : "events";
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
   const [waiverModal, setWaiverModal] = useState(false);
   const [tab, setTab] = useState("info");
