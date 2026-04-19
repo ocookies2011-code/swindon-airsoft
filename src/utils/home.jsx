@@ -375,7 +375,90 @@ function HomePage({ data, setPage, onProductClick }) {
         </div>
       </div>
 
-      {/* ── PARTNER SHOP + TECH ── */}
+
+      {/* ── PHOTO GALLERY STRIP ── */}
+      {(() => {
+        // images are plain URL strings from gallery.getAll()
+        const allImgs = (data.albums || []).flatMap(a => (a.images || []).map(url => typeof url === "string" ? { url } : url)).filter(i => i.url);
+        if (allImgs.length === 0) return null;
+        // Pick up to 8 random images, seeded by hour so they don't jump on re-render
+        const seed = Math.floor(Date.now() / 3600000);
+        const shuffled = [...allImgs].sort((a,b) => {
+          const ha = Math.sin((seed + allImgs.indexOf(a)) * 9301 + 49297) * 233280;
+          const hb = Math.sin((seed + allImgs.indexOf(b)) * 9301 + 49297) * 233280;
+          return (ha % 1) - (hb % 1);
+        }).slice(0, 8);
+        return (
+          <div style={{ background:"#040604", borderTop:`1px solid ${BORDER2}`, borderBottom:`1px solid ${BORDER2}`, overflow:"hidden", position:"relative" }}>
+            {/* Section label */}
+            <div style={{ padding:"20px 24px 14px", display:"flex", alignItems:"center", gap:16, maxWidth:1200, margin:"0 auto" }}>
+              <div style={{ ...MONO, fontSize:8, color:MUTED, letterSpacing:".28em", textTransform:"uppercase" }}>◈ FIELD FOOTAGE</div>
+              <div style={{ flex:1, height:1, background:`linear-gradient(90deg,${BORDER2},transparent)` }}/>
+              <button onClick={() => setPage("gallery")}
+                style={{ ...MONO, fontSize:9, letterSpacing:".15em", color:ACCENT, background:"none", border:`1px solid rgba(200,255,0,.25)`, padding:"4px 14px", cursor:"pointer", textTransform:"uppercase" }}>
+                FULL GALLERY →
+              </button>
+            </div>
+            {/* Horizontal scroll strip */}
+            <div style={{ display:"flex", gap:3, paddingBottom:3, overflowX:"auto", WebkitOverflowScrolling:"touch", scrollbarWidth:"none" }}>
+              {shuffled.map((img, i) => (
+                <div key={img.id || i} onClick={() => setPage("gallery")} style={{ flexShrink:0, width: isMobile ? 160 : 220, height: isMobile ? 110 : 150, overflow:"hidden", cursor:"pointer", position:"relative", background:BG3 }}
+                  onMouseEnter={e => { e.currentTarget.querySelector("img").style.transform = "scale(1.06)"; e.currentTarget.querySelector("img").style.filter = "saturate(.9)"; }}
+                  onMouseLeave={e => { e.currentTarget.querySelector("img").style.transform = ""; e.currentTarget.querySelector("img").style.filter = "saturate(.65)"; }}
+                >
+                  <img src={img.url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", filter:"saturate(.65)", transition:"transform .4s, filter .3s" }}/>
+                  {/* subtle green tint overlay */}
+                  <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,transparent 60%,rgba(8,14,4,.6))", pointerEvents:"none" }}/>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── NEWS STRIP ── */}
+      {(() => {
+        const latestNews = (data.news || []).filter(p => p.published).slice(0, 3);
+        if (latestNews.length === 0) return null;
+        const catColors = { update:"#4fc3f7", event:ACCENT, safety:"#ef5350", community:"#d4a017" };
+        return (
+          <div style={{ maxWidth:1200, margin:"0 auto", padding: isMobile ? "32px 16px" : "40px 24px 8px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:20 }}>
+              <div>
+                <div style={{ ...MONO, fontSize:8, color:MUTED, letterSpacing:".22em", textTransform:"uppercase", marginBottom:4 }}>INTEL FEED · LATEST DISPATCHES</div>
+                <div style={{ ...MIL, fontSize:22, fontWeight:700, letterSpacing:".18em", textTransform:"uppercase", color:"#fff" }}>NEWS & <span style={{ color:ACCENT }}>UPDATES</span></div>
+              </div>
+              <div style={{ flex:1, height:1, background:`linear-gradient(90deg,${BORDER2},transparent)` }}/>
+              <button style={{ ...MIL, ...CLIP_BTN, background:"transparent", color:ACCENT, border:`1px solid ${BORDER2}`, fontSize:11, fontWeight:600, letterSpacing:".14em", padding:"7px 16px", textTransform:"uppercase", cursor:"pointer" }}
+                onClick={() => setPage("news")}>ALL NEWS →</button>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:12, marginBottom:40 }}>
+              {latestNews.map(post => {
+                const col = catColors[post.category] || "#4fc3f7";
+                return (
+                  <div key={post.id} onClick={() => setPage("news")} style={{ background:BG2, border:`1px solid ${BORDER}`, cursor:"pointer", position:"relative", overflow:"hidden", transition:"border-color .15s", ...CLIP_CARD }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor=BORDER2;}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor=BORDER;}}
+                  >
+                    <div style={{ height:2, background:`linear-gradient(90deg,${col},transparent)` }}/>
+                    {post.image && <div style={{ height:120, overflow:"hidden", background:BG3 }}><img src={post.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", opacity:.8 }}/></div>}
+                    <div style={{ padding:"14px 16px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                        <span style={{ ...MONO, fontSize:7, letterSpacing:".15em", color:col, border:`1px solid ${col}44`, padding:"2px 6px" }}>{post.category.toUpperCase()}</span>
+                        {post.pinned && <span style={{ ...MONO, fontSize:7, color:ACCENT }}>📌 PINNED</span>}
+                      </div>
+                      <div style={{ ...MIL, fontSize:15, fontWeight:700, color:"#fff", textTransform:"uppercase", letterSpacing:".05em", lineHeight:1.15, marginBottom:6 }}>{post.title}</div>
+                      <div style={{ fontSize:12, color:MUTED, lineHeight:1.6, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{post.body}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── PARTNER SHOP + TECH ── */
       <div style={{ background:"#0a0d08", borderTop:"1px solid #1a2808", borderBottom:"1px solid #1a2808", padding:"36px 16px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,480px),1fr))", gap:1, background:"#1a2808" }}>
           {/* Airsoft Armoury UK */}

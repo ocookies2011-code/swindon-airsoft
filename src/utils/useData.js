@@ -17,7 +17,7 @@ function useData() {
     if (loadingRef.current) return; // already in progress — skip
     loadingRef.current = true;
     setLoadError(null);
-    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [] };
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [], news: [], marshalSchedules: [] };
 
     // Single top-level timeout — if the whole thing takes too long, unblock the UI
     const globalTimeout = setTimeout(() => {
@@ -43,7 +43,7 @@ function useData() {
           const errors = {};
           const safe = (key, p) => p.catch(e => { errors[key] = e.message; return []; });
 
-          const [evList, shopList, postageList, albumList, qaList, staffList, homeMsg,
+          const [evList, shopList, postageList, albumList, qaList, staffList, newsList, homeMsg,
                  socialFacebook, socialInstagram, socialWhatsapp, contactAddress, contactPhone, contactEmail,
                  contactDepartmentsRaw, shopClosed] = await Promise.all([
             safe("events",  api.events.getAll()),
@@ -51,6 +51,7 @@ function useData() {
             safe("postage", api.postage.getAll()),
             safe("gallery", api.gallery.getAll()),
             safe("qa",      api.qa.getAll()),
+            safe("news",    api.news.getAll()),
             safe("staff",   api.staff.getAll()),
             api.settings.get("home_message").catch(() => ""),
             api.settings.get("social_facebook").catch(() => ""),
@@ -94,6 +95,7 @@ function useData() {
             albums: albumList,
             qa: qaList,
             staff: staffList,
+            news: newsList,
             shopClosed: shopClosed === "true",
             homeMsg: (() => { try { const p = JSON.parse(homeMsg); return Array.isArray(p) ? p : (homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []); } catch { return homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []; } })(),
             socialFacebook,

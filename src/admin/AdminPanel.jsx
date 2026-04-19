@@ -29,6 +29,7 @@ import { AdminVisitorStats }       from "./AdminVisitorStats";
 import { AdminAuditLog }           from "./AdminAuditLog";
 import { AdminPurchaseOrders }     from "./AdminPurchaseOrders";
 import { AdminCheatReports }       from "./AdminCheatReports";
+import { AdminNews }              from "./AdminNews";
 import { EmailTestCard }           from "./EmailTestCard";
 
 // Public-facing pages that live in /pages but were originally in AdminPanel.jsx
@@ -45,7 +46,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","cash","purchase-orders","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
+      "contact-admin","messages","news-admin","marshal-admin","cash","purchase-orders","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -123,6 +124,8 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "gallery-admin",     label: "Gallery",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, group: "CONTENT" },
     { id: "qa-admin",          label: "Q&A",               icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, group: "CONTENT" },
     { id: "messages",          label: "Site Messages",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f48fb1" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>, group: "CONTENT" },
+    { id: "news-admin",        label: "News & Updates",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>, group: "CONTENT" },
+    { id: "marshal-admin",     label: "Marshal Schedule",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>, group: "CONTENT" },
     { id: "contact-admin",     label: "Contact Depts",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, group: "CONTENT" },
 
     // ── ANALYTICS ────────────────────────────────────────
@@ -205,6 +208,8 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}
           {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} cu={cu} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} cu={cu} />}
+          {section === "news-admin" && <AdminNews showToast={showToast} cu={cu} />}
+          {section === "marshal-admin" && <div className="page-content"><div className="page-title">Marshal Schedule</div><div className="page-sub" style={{marginTop:8,color:"var(--muted)"}}>Marshal scheduling is managed from the public-facing Marshal page. Direct players with can_marshal=true to the Marshal section in their profile.</div></div>}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}

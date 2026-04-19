@@ -26,6 +26,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
       ]
     },
     { id: "leaderboard", label: "Leaderboard", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg> },
+    { id: "news",        label: "News",        icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg> },
     { id: "gallery",     label: "Gallery",     icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
     {
       id: "about", label: "About", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4"/><path d="M10 9v6M10 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
@@ -36,11 +37,12 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
         { id: "contact", label: "Contact",        icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> },
         { id: "ukara",   label: "UKARA",          icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
         { id: "terms",   label: "Terms & Privacy",icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+        { id: "marshal-schedule", label: "Marshal Schedule", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg> },
       ]
     },
   ];
 
-  const aboutPages = ["about","qa","staff","contact","terms","ukara"];
+  const aboutPages = ["about","qa","staff","contact","terms","ukara","marshal-schedule"];
   const shopPages  = ["shop","gift-vouchers"];
 
   const go = (id) => {
@@ -187,6 +189,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
             { id:"events",      icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Events" },
             { id:"shop",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Shop" },
             { id:"leaderboard", icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Ranks" },
+            { id:"news", icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>, label:"News" },
             { id:"profile",     icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Profile" },
           ].map(b => (
             <button key={b.id} className={`bottom-nav-btn ${page === b.id ? "active" : ""}`} onClick={() => go(b.id)}>

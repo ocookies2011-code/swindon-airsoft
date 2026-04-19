@@ -9,7 +9,9 @@ import { AdminPanel, AboutPage, StaffPage, ContactPage, PlayerWaitlist, TermsPag
 import { EventsPage }         from "./pages/EventsPage";
 import { GiftVoucherPage }    from "./pages/GiftVoucherPage";
 import { ShopPage, ShopClosedPage, ProductPage } from "./pages/ShopPage";
-import { MarshalCheckinPage } from "./pages/MarshalCheckinPage";
+import { MarshalCheckinPage }  from "./pages/MarshalCheckinPage";
+import { MarshalSchedulePage } from "./pages/MarshalSchedulePage";
+import { NewsPage }            from "./pages/NewsPage";
 import { LeaderboardPage }    from "./pages/LeaderboardPage";
 import { GalleryPage }        from "./pages/GalleryPage";
 import { VipPage }            from "./pages/VipPage";
@@ -40,7 +42,7 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
@@ -548,6 +550,8 @@ function AppInner() {
         {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} onPlayerClick={id => { setPrevPage("leaderboard"); setPublicProfileId(id); setPageState("player"); window.location.hash = "player/" + id; window.scrollTo({ top:0, behavior:"instant" }); }} />}
         {page === "marshal"     && cu?.canMarshal && <MarshalCheckinPage data={data} showToast={showToast} save={save} updateUser={updateUserAndRefresh} />}
         {page === "marshal"     && !cu?.canMarshal && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Access denied.</div>}
+        {page === "news"           && <NewsPage data={data} />}
+        {page === "marshal-schedule" && <MarshalSchedulePage data={data} cu={cu} showToast={showToast} />}
         {page === "gallery"     && <GalleryPage data={data} />}
         {page === "qa"          && <QAPage data={data} />}
         {page === "gift-vouchers" && <GiftVoucherPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
