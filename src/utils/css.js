@@ -420,6 +420,162 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;clip-path:none;}
 .admin-shell .data-table tbody tr:hover td{background:rgba(255,255,255,.03);}
 .admin-shell .section-link{clip-path:none;border-radius:2px;}
 
+/* ═══════════════════════════════════════════════════════
+   COMPREHENSIVE RESPONSIVE — mobile / tablet / desktop
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Tablet (≤1024px) ── */
+@media(max-width:1024px){
+  .page-content{padding:28px 20px;}
+  .page-content-sm{padding:28px 20px;}
+  .hero-mil{padding:48px 20px 44px;}
+  .grid-4{grid-template-columns:1fr 1fr;}
+  .stats-bar{padding:12px 16px;}
+  .stats-bar-inner{grid-template-columns:repeat(2,1fr);}
+}
+
+/* ── Mobile (≤768px) ── */
+@media(max-width:768px){
+  /* Typography scale down */
+  .hero-mil-h1{font-size:clamp(28px,8vw,52px) !important;}
+  .section-title{font-size:clamp(18px,5vw,28px);}
+
+  /* Page structure */
+  .page-content{padding:20px 12px;}
+  .page-content-sm{padding:20px 12px;}
+
+  /* Event card booking panel — stack vertically, prevent overflow */
+  .event-booking-panel{flex-direction:column !important;}
+
+  /* Shop product grid */
+  .shop-grid{grid-template-columns:1fr 1fr !important;}
+
+  /* Grids */
+  .grid-2{grid-template-columns:1fr;}
+  .grid-3,.grid-4{grid-template-columns:1fr 1fr;}
+
+  /* Modals — full screen on mobile */
+  .modal-box{max-width:100% !important;max-height:100vh !important;height:100vh;border-radius:0;}
+  .modal-box.wide{max-width:100% !important;}
+
+  /* Stats bar */
+  .stats-bar-inner{grid-template-columns:1fr 1fr;}
+
+  /* Countdown panel */
+  .countdown-panel{flex-direction:column;gap:12px;padding:16px;}
+  .countdown-digits{font-size:clamp(28px,8vw,48px) !important;}
+
+  /* Nav tabs — scrollable row */
+  .nav-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+  .nav-tab{white-space:nowrap;flex-shrink:0;}
+
+  /* Tables — allow horizontal scroll */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100vw;}
+  .data-table{min-width:500px;}
+
+  /* Forms */
+  .form-row{grid-template-columns:1fr !important;}
+
+  /* Buttons in rows — wrap cleanly */
+  .btn-row{flex-wrap:wrap;gap:8px;}
+
+  /* Event card */
+  .event-card-banner{height:140px;}
+
+  /* Feature strip */
+  .feature-strip{grid-template-columns:1fr !important;}
+
+  /* Section header stack */
+  .section-header{flex-direction:column;align-items:flex-start;gap:8px;}
+
+  /* VIP banner */
+  .vip-banner{padding:24px 14px;}
+
+  /* Leaderboard podium on mobile — stack */
+  .lb-podium{flex-direction:column !important;align-items:center !important;}
+  .lb-podium-col{width:90% !important;max-width:320px !important;}
+
+  /* Admin topbar — compact */
+  .admin-topbar{padding:0 12px;font-size:12px;}
+
+  /* Page header */
+  .page-header{flex-direction:column;align-items:flex-start;gap:8px;}
+  .page-title{font-size:clamp(18px,5vw,28px);}
+
+  /* Footer grid */
+  .pub-footer-grid{grid-template-columns:1fr !important;}
+}
+
+/* ── Small mobile (≤480px) ── */
+@media(max-width:480px){
+  .grid-3,.grid-4{grid-template-columns:1fr;}
+  .shop-grid{grid-template-columns:1fr !important;}
+  .stats-bar-inner{grid-template-columns:1fr;}
+
+  /* Booking section — tighter padding */
+  .page-content{padding:16px 10px;}
+  .card{padding:16px;}
+
+  /* Event booking slot counters */
+  .slot-counter{flex-direction:column;gap:8px;}
+
+  /* Podium cards */
+  .lb-podium-col{width:95% !important;}
+
+  /* Bottom nav labels — hide on very small */
+  .bottom-nav-label{display:none;}
+  .bottom-nav-icon{font-size:20px;}
+
+  /* Typography */
+  .hero-mil-h1{font-size:clamp(24px,10vw,44px) !important;}
+
+  /* Modals */
+  .modal-box{padding:16px 12px;}
+}
+
+/* ── Touch device improvements ── */
+@media(hover:none) and (pointer:coarse){
+  /* Larger tap targets */
+  .btn{min-height:44px;padding:10px 18px;}
+  .btn-sm{min-height:38px;}
+  .nav-tab{min-height:40px;}
+  .pub-nav-drawer-link{min-height:48px;}
+  .bottom-nav-item{min-height:52px;}
+  input,select,textarea{min-height:44px;font-size:16px !important;} /* prevent zoom on iOS */
+
+  /* Remove hover effects that don't work on touch */
+  .shop-card:hover,.event-card:hover{transform:none !important;}
+}
+
+/* ── Safe area insets (notch phones) ── */
+@supports(padding:env(safe-area-inset-bottom)){
+  .bottom-nav{padding-bottom:env(safe-area-inset-bottom);}
+  .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));}
+  @media(max-width:768px){
+    .admin-content{padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+  }
+}
+
+/* ── Admin panel mobile ── */
+@media(max-width:768px){
+  .admin-topbar{padding:0 10px;height:48px;}
+  .admin-content{padding:14px 10px;}
+  /* Admin quick actions - 2 col on mobile */
+  .admin-qa-grid{grid-template-columns:1fr 1fr !important;}
+  /* Admin tables - horizontal scroll */
+  .admin-shell .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:calc(100vw - 20px);}
+  /* Admin stat cards - 2 col */
+  .admin-shell .stat-card{padding:14px 16px;}
+  /* Section header stack on mobile */
+  .admin-shell .page-header{flex-direction:column;align-items:flex-start;gap:8px;}
+  /* Grid 2 becomes 1 col inside admin on mobile */
+  .admin-shell .grid-2{grid-template-columns:1fr;}
+}
+
+
+html,body,#root{max-width:100vw;overflow-x:hidden;}
+.pub-page-wrap{overflow-x:hidden;}
+
 `
 
 export { CSS };

@@ -10,6 +10,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="events" && p[1] ? p[1] : null;
   };
+  const isMobile = useMobile();
   const [detail, setDetailState] = useState(getInitDetail);
   const setDetail = (id) => {
     setDetailState(id);
