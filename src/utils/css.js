@@ -344,7 +344,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;clip-path:none;}
   .admin-sidebar{transform:translateX(-100%);}
   .admin-sidebar.open{transform:translateX(0);}
   .admin-main{margin-left:0;}
-  .admin-overlay{display:block;}
+  .admin-overlay.open{display:block;}
   .admin-content{padding:14px 12px;}
 }
 @media(min-width:769px){
