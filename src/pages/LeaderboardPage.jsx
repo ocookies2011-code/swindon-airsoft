@@ -122,8 +122,10 @@ function PodiumCard({ player, rank, isMe, onPlayerClick }) {
 
         {/* Avatar */}
         <div style={{ width:avSize, height:avSize, borderRadius:"50%", background:BG3, border:`${rank===1?3:2}px solid ${borderColors[rank]}`, margin:"0 auto 12px", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:rank===1?30:24, fontWeight:700, color:ACCENT, ...MIL, position:"relative", boxShadow: rank===1?`0 0 20px rgba(212,160,23,.25)`:"none" }}>
-          {player.profilePic && <img src={player.profilePic} alt="" onError={e=>{e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }}/>}
-          <span style={{ position:"relative", zIndex:1 }}>{initials}</span>
+          {player.profilePic
+            ? <img src={player.profilePic} alt="" onError={e=>{e.target.parentNode.querySelector(".pfb").style.display="flex";e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }}/>
+            : null}
+          <span className="pfb" style={{ position:"relative", zIndex:1, display:player.profilePic?"none":"flex" }}>{initials}</span>
           {/* Medal badge */}
           <div style={{ position:"absolute", top:-8, right:-8, fontSize: rank===1?20:16, zIndex:3, filter:"drop-shadow(0 2px 4px rgba(0,0,0,.8))" }}>{medals[rank]}</div>
         </div>
@@ -142,9 +144,9 @@ function PodiumCard({ player, rank, isMe, onPlayerClick }) {
         </div>
         {isMe && <div style={{ ...MONO, fontSize:7, color:ACCENT, marginBottom:4, position:"relative", zIndex:1 }}>← YOU</div>}
 
-        {/* Callsign / designation */}
-        <div style={{ ...MONO, fontSize:9, color:ACCENT, letterSpacing:".15em", marginBottom:10, minHeight:14, position:"relative", zIndex:1 }}>
-          {player.callsign && player.name !== player.callsign ? `◈ ${player.name}` : "\u00a0"}
+        {/* Real name shown under callsign if they have a callsign */}
+        <div style={{ ...MONO, fontSize:9, color:MUTED, letterSpacing:".12em", marginBottom:10, minHeight:14, position:"relative", zIndex:1 }}>
+          {player.callsign ? player.name : "\u00a0"}
         </div>
 
         {/* Score */}
@@ -324,8 +326,10 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                         <div className="lbbar" style={{ position:"absolute", left:0, top:0, bottom:0, width:2, background:"transparent", transition:"background .12s" }}/>
                         <div style={{ ...MONO, fontSize:12, color:MUTED, letterSpacing:".05em" }}>#{absRank}</div>
                         <div style={{ width:38, height:38, borderRadius:"50%", background:BG3, border:`1px solid ${isMe?"rgba(200,255,0,.4)":BORDER2}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:ACCENT, overflow:"hidden", flexShrink:0, position:"relative", ...MIL }}>
-                          {player.profilePic && <img src={player.profilePic} alt="" onError={e=>{e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }}/>}
-                          <span style={{ position:"relative", zIndex:1 }}>{initials}</span>
+                          {player.profilePic
+                            ? <img src={player.profilePic} alt="" onError={e=>{e.target.nextSibling.style.display="flex";e.target.style.display="none";}} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }}/>
+                            : null}
+                          <span style={{ position:"relative", zIndex:1, display:player.profilePic?"none":"flex", alignItems:"center", justifyContent:"center", width:"100%", height:"100%" }}>{initials}</span>
                         </div>
                         <div style={{ padding:"0 12px", minWidth:0 }}>
                           <div style={{ ...MIL, fontSize:14, fontWeight:700, color:isMe?"#fff":"#c8d4b0", letterSpacing:".05em", textTransform:"uppercase", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -333,7 +337,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                             {isMe && <span style={{ ...MONO, fontSize:7, color:ACCENT, background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", padding:"1px 5px", marginLeft:8 }}>← YOU</span>}
                           </div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
-                            {player.callsign && player.name !== player.callsign && <span style={{ ...MONO, fontSize:9, color:MUTED }}>{player.name}</span>}
+                            {player.callsign && <span style={{ ...MONO, fontSize:9, color:MUTED }}>{player.name}</span>}
                             <span style={{ ...MONO, fontSize:8, color:MUTED, letterSpacing:".1em" }}>{rankTitle}</span>
                           </div>
                         </div>
