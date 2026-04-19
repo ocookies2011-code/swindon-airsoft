@@ -366,20 +366,20 @@ function AdminShop({ data, save, showToast, cu }) {
             ☰ Drag rows to reorder. Variants can be reordered inside the edit modal.
           </p>
           <div style={{overflowX:"auto", width:"100%", WebkitOverflowScrolling:"touch"}}>
-          <table className="data-table" style={{minWidth:820, tableLayout:"fixed"}}>
+          <table className="data-table" style={{minWidth:900, tableLayout:"auto"}}>
             <thead><tr>
               <th style={{width:28}}></th>
-              <th>Product</th>
+              <th style={{minWidth:120}}>Product</th>
               <th style={{width:80}}>Price</th>
-              <th style={{width:70}}>Cost</th>
-              <th style={{width:70}}>Margin</th>
-              <th style={{width:65}}>Variants</th>
-              <th style={{width:60}}>Stock</th>
-              <th style={{width:50}}>Sale</th>
-              <th style={{width:65}}>No Post</th>
-              <th style={{width:75}}>Game+</th>
+              <th style={{width:80}}>Cost</th>
+              <th style={{width:100}}>Margin</th>
+              <th style={{width:80}}>Variants</th>
+              <th style={{width:80}}>Stock</th>
+              <th style={{width:60}}>Sale</th>
+              <th style={{width:70}}>No Post</th>
+              <th style={{width:60}}>Game+</th>
               <th style={{width:60}}>Hidden</th>
-              <th style={{width:120, whiteSpace:"nowrap"}}></th>
+              <th style={{width:110, whiteSpace:"nowrap"}}></th>
             </tr></thead>
             <tbody>
               {(() => {
@@ -408,7 +408,7 @@ function AdminShop({ data, save, showToast, cu }) {
                       <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
                       <td style={{ fontWeight:600 }}>{item.name}</td>
                       <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
-                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,verticalAlign:"top"}}>
                         {item.variants?.length > 0
                           ? item.variants.some(v => v.costPrice)
                             ? item.variants.map(v => (
@@ -420,7 +420,7 @@ function AdminShop({ data, save, showToast, cu }) {
                           : item.costPrice ? `£${Number(item.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>
                         }
                       </td>
-                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,verticalAlign:"top"}}>
                         {item.variants?.length > 0
                           ? item.variants.some(v => v.costPrice && v.price > 0)
                             ? item.variants.filter(v => v.costPrice && v.price > 0).map(v => {
@@ -442,13 +442,13 @@ function AdminShop({ data, save, showToast, cu }) {
                           : <span style={{color:"var(--muted)"}}>—</span>
                         }
                       </td>
-                      <td>
+                      <td style={{verticalAlign:"top"}}>
                         {item.variants?.length > 0
                           ? <span className="tag tag-blue">{item.variants.length} variants</span>
                           : <span style={{color:"var(--muted)"}}>—</span>
                         }
                       </td>
-                      <td>
+                      <td style={{verticalAlign:"top"}}>
                         {item.variants?.length > 0
                           ? item.variants.map(v => (
                               <div key={v.id} style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>
