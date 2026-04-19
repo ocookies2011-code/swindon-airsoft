@@ -381,13 +381,10 @@ function HomePage({ data, setPage, onProductClick }) {
         // images are plain URL strings from gallery.getAll()
         const allImgs = (data.albums || []).flatMap(a => (a.images || []).map(url => typeof url === "string" ? { url } : url)).filter(i => i.url);
         if (allImgs.length === 0) return null;
-        // Pick up to 8 random images, seeded by hour so they don't jump on re-render
-        const seed = Math.floor(Date.now() / 3600000);
-        const shuffled = [...allImgs].sort((a,b) => {
-          const ha = Math.sin((seed + allImgs.indexOf(a)) * 9301 + 49297) * 233280;
-          const hb = Math.sin((seed + allImgs.indexOf(b)) * 9301 + 49297) * 233280;
-          return (ha % 1) - (hb % 1);
-        }).slice(0, 8);
+        // Pick up to 8 images — use a stable slice based on hour so they don't flicker on re-render
+        const hourSlot = Math.floor(Date.now() * 0.001 / 3600) % Math.max(1, allImgs.length);
+        const rotated = [...allImgs.slice(hourSlot), ...allImgs.slice(0, hourSlot)];
+        const shuffled = rotated.slice(0, 8);
         return (
           <div style={{ background:"#040604", borderTop:`1px solid ${BORDER2}`, borderBottom:`1px solid ${BORDER2}`, overflow:"hidden", position:"relative" }}>
             {/* Section label */}
