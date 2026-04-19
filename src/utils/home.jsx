@@ -154,7 +154,7 @@ function HomePage({ data, setPage, onProductClick }) {
                   {[["DAYS",null],[":",null],["HRS",null],[":",null],["MIN",null],[":",null],["SEC",null]].map((_, idx) => {
                     if (idx % 2 === 1) return <div key={idx} style={{ ...MIL, fontSize:22, color: BORDER2, padding:"0 2px", alignSelf:"flex-start", marginTop:6 }}>:</div>;
                     const labels = ["DAYS","HRS","MIN","SEC"];
-                    const l = labels[Math.floor(idx/2)];
+                    const half = 2; const l = labels[Math.floor(idx/half)];
                     return (
                       <div key={idx} style={{ background: BG, border:`1px solid ${BORDER2}`, padding:"10px 14px", textAlign:"center", minWidth:58, ...CLIP_CARD_SM }}>
                         <CountdownUnit target={target} unit={l} />
@@ -382,7 +382,7 @@ function HomePage({ data, setPage, onProductClick }) {
         const allImgs = (data.albums || []).flatMap(a => (a.images || []).map(url => typeof url === "string" ? { url } : url)).filter(i => i.url);
         if (allImgs.length === 0) return null;
         // Pick up to 8 images — use a stable slice based on hour so they don't flicker on re-render
-        const hourSlot = Math.floor(Date.now() * 0.001 / 3600) % Math.max(1, allImgs.length);
+        const msPerHour = 3600000; const hourSlot = Math.floor(Date.now() / msPerHour) % Math.max(1, allImgs.length);
         const rotated = [...allImgs.slice(hourSlot), ...allImgs.slice(0, hourSlot)];
         const shuffled = rotated.slice(0, 8);
         return (
@@ -527,7 +527,7 @@ function HomePage({ data, setPage, onProductClick }) {
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
                 <div>
                   <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(18px,4vw,22px)", color:"#4fc3f7", letterSpacing:".04em" }}>£40</span>
-                  <span style={{ fontSize:11, color:"#4a7a8a", marginLeft:6, letterSpacing:".1em" }}>/ HOUR + PARTS</span>
+                  <span style={{ fontSize:11, color:"#4a7a8a", marginLeft:6, letterSpacing:".1em" }>{"/ HOUR + PARTS"}</span>
                 </div>
                 <a href="https://wa.me/447877731973" target="_blank" rel="noopener noreferrer"
                   style={{ display:"inline-flex", alignItems:"center", gap:7, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".12em", padding:"9px 16px", textDecoration:"none", textTransform:"uppercase" }}
@@ -558,7 +558,14 @@ function CountdownUnit({ target, unit }) {
   useEffect(() => {
     const tick = () => {
       const diff = Math.max(0, new Date(target) - new Date());
-      const map = { DAYS: Math.floor(diff/86400000), HRS: Math.floor((diff%86400000)/3600000), MIN: Math.floor((diff%3600000)/60000), SEC: Math.floor((diff%60000)/1000) };
+      const DAY=86400000, HR=3600000, MIN=60000, SEC=1000;
+      const dDAY = Math.floor(diff / DAY);
+      const remH  = diff - dDAY * DAY;
+      const dHR   = Math.floor(remH / HR);
+      const remM  = remH - dHR * HR;
+      const dMIN  = Math.floor(remM / MIN);
+      const remS = remM - dMIN * MIN; const dSEC = Math.floor(remS / SEC);
+      const map = { DAYS:dDAY, HRS:dHR, MINS:dMIN, SECS:dSEC };
       setVal(map[unit] ?? 0);
     };
     tick();
@@ -577,10 +584,13 @@ function CountdownPanel({ target }) {
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, [target]);
-  const d = Math.floor(diff/86400000);
-  const h = Math.floor((diff%86400000)/3600000);
-  const m = Math.floor((diff%3600000)/60000);
-  const s = Math.floor((diff%60000)/1000);
+  const DAY=86400000, HR=3600000, MIN=60000, SEC=1000;
+  const d = Math.floor(diff / DAY);
+  const remH = diff - d * DAY;
+  const h = Math.floor(remH / HR);
+  const remM = remH - h * HR;
+  const m = Math.floor(remM / MIN);
+  const remS = remM - m * MIN; const s = Math.floor(remS / SEC);
   return (
     <>
       {[["DAYS",d],["HRS",h],["MIN",m],["SEC",s]].map(([l,n]) => (
