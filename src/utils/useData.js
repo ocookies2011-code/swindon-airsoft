@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 // utils/useData.js — primary data loading hook
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { normaliseProfile } from "../api";
@@ -17,7 +17,7 @@ function useData() {
     if (loadingRef.current) return; // already in progress — skip
     loadingRef.current = true;
     setLoadError(null);
-    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [], news: [], marshalSchedules: [] };
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [], news: [] };
 
     // Single top-level timeout — if the whole thing takes too long, unblock the UI
     const globalTimeout = setTimeout(() => {
@@ -51,8 +51,8 @@ function useData() {
             safe("postage", api.postage.getAll()),
             safe("gallery", api.gallery.getAll()),
             safe("qa",      api.qa.getAll()),
-            safe("news",    api.news.getAll()),
             safe("staff",   api.staff.getAll()),
+            api.news ? safe("news", api.news.getAll()) : Promise.resolve([]),
             api.settings.get("home_message").catch(() => ""),
             api.settings.get("social_facebook").catch(() => ""),
             api.settings.get("social_instagram").catch(() => ""),
