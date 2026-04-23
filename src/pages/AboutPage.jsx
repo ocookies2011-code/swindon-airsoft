@@ -2,6 +2,12 @@
 import React, { useState } from "react";
 import { useMobile } from "../utils/hooks";
 
+const Divider = () => (
+  <div style={{ height:1, background:"linear-gradient(90deg,transparent,#2a4018,#2a4018,transparent)", margin:"32px 0", position:"relative" }}>
+    <div style={{ position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)", background:"#080b06", padding:"0 16px", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".3em" }}>◆</div>
+  </div>
+);
+
 function AboutPage({ setPage }) {
   const isMobile = useMobile(700);
 
