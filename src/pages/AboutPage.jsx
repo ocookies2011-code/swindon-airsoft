@@ -1,8 +1,9 @@
 // pages/AboutPage.jsx
 import React, { useState } from "react";
+import { useMobile } from "../utils/hooks";
 
 function AboutPage({ setPage }) {
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 700;
+  const isMobile = useMobile(700);
 
   const InfoRow = ({ icon, children }) => (
     <div style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom:14 }}>

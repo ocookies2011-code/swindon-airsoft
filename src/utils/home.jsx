@@ -1,5 +1,6 @@
 // utils/home.jsx — HomePage, CountdownPanel
 import React, { useState, useEffect } from "react";
+import { useMobile } from "./hooks";
 
 function HomePage({ data, setPage, onProductClick }) {
   const isMobile = useMobile(700);
