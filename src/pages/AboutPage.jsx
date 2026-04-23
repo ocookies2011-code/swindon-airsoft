@@ -1,17 +1,8 @@
 // pages/AboutPage.jsx
 import React, { useState } from "react";
 
-function Divider() {
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:16, margin:"40px 0" }}>
-      <div style={{ flex:1, height:1, background:"linear-gradient(to right,transparent,#2a3a10)" }} />
-      <div style={{ color:"#c8ff00", fontSize:14, opacity:.5 }}>✦</div>
-      <div style={{ flex:1, height:1, background:"linear-gradient(to left,transparent,#2a3a10)" }} />
-    </div>
-  );
-}
-
 function AboutPage({ setPage }) {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 700;
 
   const InfoRow = ({ icon, children }) => (
     <div style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom:14 }}>
@@ -26,7 +17,7 @@ function AboutPage({ setPage }) {
       </div>
       <div style={{ flex:1, borderLeft:"1px solid #2a3a10", paddingLeft:20, paddingBottom:24, position:"relative" }}>
         <div style={{ position:"absolute", left:-5, top:5, width:8, height:8, background:"#c8ff00", borderRadius:"50%", boxShadow:"0 0 8px rgba(200,255,0,.5)" }} />
-        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", marginBottom:5 }}>{title}</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", marginBottom:5 }}>{title}</div>
         {desc && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#5a7a40", lineHeight:1.8 }}>{desc}</div>}
       </div>
     </div>
@@ -49,7 +40,7 @@ function AboutPage({ setPage }) {
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".35em", color:"#3a5010", marginBottom:14, textTransform:"uppercase" }}>
             ◈ — SWINDON AIRSOFT — OPERATIONAL BRIEF — ◈
           </div>
-          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(30px,6vw,56px)", letterSpacing:".18em", textTransform:"uppercase", color:"#e8f0d8", lineHeight:1, marginBottom:6 }}>
             ABOUT <span style={{ color:"#c8ff00", textShadow:"0 0 30px rgba(200,255,0,.35)" }}>US</span>
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:".2em", color:"#5a7a30", marginTop:10 }}>
@@ -67,8 +58,8 @@ function AboutPage({ setPage }) {
 
         {/* ── WELCOME CARD ── */}
         <div style={{ background:"linear-gradient(135deg,#0c1009,#0a0f07)", border:"1px solid #2a3a10", borderLeft:"4px solid #c8ff00", padding:"26px 30px", marginBottom:44, position:"relative", overflow:"hidden" }}>
-          <div style={{ position:"absolute", right:20, top:8, fontSize:80, opacity:.04, color:"#c8ff00", pointerEvents:"none", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, lineHeight:1 }}>SA</div>
-          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, letterSpacing:".1em", color:"#c8ff00", textTransform:"uppercase", marginBottom:12 }}>
+          <div style={{ position:"absolute", right:20, top:8, fontSize:80, opacity:.04, color:"#c8ff00", pointerEvents:"none", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, lineHeight:1 }}>SA</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, letterSpacing:".1em", color:"#c8ff00", textTransform:"uppercase", marginBottom:12 }}>
             Welcome to Swindon Airsoft
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"#7a9a50", lineHeight:1.9 }}>
@@ -80,7 +71,7 @@ function AboutPage({ setPage }) {
         {/* ── NEED TO KNOW ── */}
         <div style={{ marginBottom:8 }}>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".3em", color:"#3a5010", marginBottom:6 }}>▸ SECTION 01</div>
-          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:20 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:20 }}>
             NEED TO <span style={{ color:"#c8ff00" }}>KNOW</span>
           </div>
         </div>
@@ -103,7 +94,7 @@ function AboutPage({ setPage }) {
         {/* ── DAY SCHEDULE ── */}
         <div style={{ marginBottom:8 }}>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".3em", color:"#3a5010", marginBottom:6 }}>▸ SECTION 02</div>
-          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:24 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:24 }}>
             A DAY AT <span style={{ color:"#c8ff00" }}>SWINDON AIRSOFT</span>
           </div>
         </div>
@@ -119,12 +110,12 @@ function AboutPage({ setPage }) {
         {/* ── LOCATION ── */}
         <div style={{ marginBottom:8 }}>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".3em", color:"#3a5010", marginBottom:6 }}>▸ SECTION 03</div>
-          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:20 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:20 }}>
             HOW TO <span style={{ color:"#c8ff00" }}>FIND US</span>
           </div>
         </div>
         <div style={{ background:"#0a0f07", border:"1px solid #2a3a10", padding:"24px 26px", marginBottom:44 }}>
-          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".08em", color:"#e8f0d8", marginBottom:16 }}>SWINDON AIRSOFT</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".08em", color:"#e8f0d8", marginBottom:16 }}>SWINDON AIRSOFT</div>
           <InfoRow icon="📍">
             <span>Manor Hl, Swindon, <span style={{ color:"#c8ff00", fontWeight:700 }}>SN5 4EG</span></span>
           </InfoRow>
@@ -144,7 +135,7 @@ function AboutPage({ setPage }) {
         {/* ── PRE-ORDERS ── */}
         <div style={{ marginBottom:8 }}>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".3em", color:"#3a5010", marginBottom:6 }}>▸ SECTION 04</div>
-          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:20 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, letterSpacing:".12em", textTransform:"uppercase", color:"#e8f0d8", marginBottom:20 }}>
             PRE-<span style={{ color:"#c8ff00" }}>ORDERS</span>
           </div>
         </div>
@@ -156,13 +147,13 @@ function AboutPage({ setPage }) {
               Airsoft Armoury UK (www.airsoftarmoury.uk)
             </a>
             ? Place your order online and use code{" "}
-            <span style={{ color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".15em" }}>COLLECTION</span>
+            <span style={{ color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".15em" }}>COLLECTION</span>
             {" "}at checkout — we will bring your products to game day.
           </div>
           <div style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.3)", padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
             <span style={{ color:"#c8ff00", fontSize:22, flexShrink:0 }}>⚠</span>
             <div>
-              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".15em", color:"#c8ff00", textTransform:"uppercase" }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".15em", color:"#c8ff00", textTransform:"uppercase" }}>
                 Order Deadline
               </div>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#7a9a50", marginTop:4, lineHeight:1.6 }}>
@@ -173,6 +164,88 @@ function AboutPage({ setPage }) {
         </div>
 
         {/* ── CTA ── */}
+
+        {/* ── Field Partners ── */}
+        <div style={{ marginTop:52 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:28 }}>
+            <div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#5a6e42", letterSpacing:".22em", textTransform:"uppercase", marginBottom:4 }}>FIELD PARTNERS</div>
+              <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:22, fontWeight:700, letterSpacing:".18em", textTransform:"uppercase", color:"#fff" }}>GEAR <span style={{ color:"#c8ff00" }}>ARMOURY</span></div>
+            </div>
+            <div style={{ flex:1, height:1, background:"linear-gradient(90deg,#2a4018,transparent)" }}/>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:1, background:"#1a2808" }}>
+
+            {/* Airsoft Armoury UK */}
+            <div style={{ background:"#0a0d08", padding:"24px", display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:40, height:40, border:"2px solid rgba(200,255,0,.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>🤝</div>
+                <div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", textTransform:"uppercase", marginBottom:3 }}>OFFICIAL FIELD PARTNER</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(16px,4vw,20px)", letterSpacing:".1em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
+                    AIRSOFT <span style={{ color:"#c8ff00" }}>ARMOURY UK</span>
+                  </div>
+                </div>
+              </div>
+              <p style={{ fontSize:13, color:"#7a9a50", lineHeight:1.8, margin:0 }}>
+                Your one-stop shop for quality airsoft gear — handpicked kit trusted by players at Swindon Airsoft. Order online and pick up on game day, no postage needed.
+              </p>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                {["AEGs", "GBBs", "Pistols", "BBs", "Eye Pro", "Helmets", "Tactical Vests", "Magazines", "Accessories", "Batteries"].map(function(cat) {
+                  return (
+                    <span key={cat} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, letterSpacing:".1em", color:"#5a8030", border:"1px solid #1e2e0a", padding:"3px 8px", textTransform:"uppercase" }}>{cat}</span>
+                  );
+                })}
+              </div>
+              <div style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", padding:"12px 16px" }}>
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010", marginBottom:4 }}>FIELD COLLECTION CODE</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(20px,5vw,26px)", color:"#c8ff00", letterSpacing:".15em" }}>COLLECTION</div>
+                <div style={{ fontSize:12, color:"#5a8030", marginTop:6, lineHeight:1.6 }}>Enter at checkout to flag your order for field collection on game day.</div>
+              </div>
+              <a href="https://www.airsoftarmoury.co.uk" target="_blank" rel="noopener noreferrer"
+                style={{ display:"inline-block", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".18em", color:"#000", background:"#c8ff00", padding:"11px 28px", textDecoration:"none", textTransform:"uppercase", textAlign:"center" }}>
+                VISIT ARMOURY UK
+              </a>
+            </div>
+
+            {/* Independent Tech Services */}
+            <div style={{ background:"#0a0d08", padding:"24px", display:"flex", flexDirection:"column", gap:14, position:"relative" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:40, height:40, border:"2px solid rgba(79,195,247,.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>🔧</div>
+                <div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#1a4a5a", textTransform:"uppercase", marginBottom:3 }}>INDEPENDENT TECHNICIAN</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(15px,3.5vw,20px)", letterSpacing:".08em", color:"#e8f0d8", textTransform:"uppercase", lineHeight:1 }}>
+                    AIRSOFT <span style={{ color:"#4fc3f7" }}>TECH SERVICES</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {["Full strip", "Gearbox rebuilds", "Hop-up tuning", "FPS work", "Mag repair", "Air-seal work"].map(function(s) {
+                  return (
+                    <span key={s} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#4fc3f7", background:"rgba(79,195,247,.06)", border:"1px solid rgba(79,195,247,.2)", padding:"3px 8px" }}>{s}</span>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize:12, color:"#4a7a8a", lineHeight:1.7, margin:0 }}>
+                Whether your replica is shooting weak, misfeeding, or making odd noises — it gets a full strip and inspection. You will be contacted straight away to discuss findings before any work begins.
+              </p>
+              <div style={{ background:"rgba(79,195,247,.05)", border:"1px solid rgba(79,195,247,.15)", padding:"12px 16px" }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(18px,4vw,22px)", color:"#4fc3f7", letterSpacing:".04em" }}>£40 per hour</div>
+                <div style={{ fontSize:11, color:"#336070", marginTop:4 }}>Parts discussed before purchase. Full report provided.</div>
+              </div>
+              <a href="https://wa.me/447877731973" target="_blank" rel="noopener noreferrer"
+                style={{ display:"inline-block", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".18em", color:"#25d366", background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", padding:"11px 28px", textDecoration:"none", textTransform:"uppercase", textAlign:"center" }}>
+                WHATSAPP TO BOOK
+              </a>
+              <div style={{ fontSize:10, color:"#2a3a3a", letterSpacing:".05em", lineHeight:1.6, borderTop:"1px solid #0d1a1a", paddingTop:10 }}>
+                This technician operates independently and is not affiliated with, employed by, or acting on behalf of Swindon Airsoft.
+              </div>
+            </div>
+
+          </div>
+        </div>
+
         <div style={{ textAlign:"center", marginTop:56 }}>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".3em", color:"#3a5010", marginBottom:18 }}>▸ READY TO DEPLOY? ◂</div>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
