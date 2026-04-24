@@ -210,7 +210,7 @@ function AboutPage({ setPage }) {
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(20px,5vw,26px)", color:"#c8ff00", letterSpacing:".15em" }}>COLLECTION</div>
                 <div style={{ fontSize:12, color:"#5a8030", marginTop:6, lineHeight:1.6 }}>Enter at checkout to flag your order for field collection on game day.</div>
               </div>
-              <a href="https://www.airsoftarmoury.uk" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.airsoftarmoury.co.uk" target="_blank" rel="noopener noreferrer"
                 style={{ display:"inline-block", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".18em", color:"#000", background:"#c8ff00", padding:"11px 28px", textDecoration:"none", textTransform:"uppercase", textAlign:"center" }}>
                 VISIT ARMOURY UK
               </a>
