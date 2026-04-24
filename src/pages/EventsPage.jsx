@@ -121,7 +121,18 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     // Cart totals
     // VIP discount: 10% on 1 ticket only (cheapest first), but NOT when using credits
     const shopData = data.shop || [];
-    const visibleExtras = ev.extras; // show all event extras
+    // Only show extras where:
+    // 1. The linked product has gameExtra = true (or no product linked = legacy extra, show)
+    // 2. The linked product has stock > 0 (or no product linked)
+    const visibleExtras = (ev.extras || []).filter(ex => {
+      const lp = (data.shop || []).find(s => s.id === ex.productId);
+      if (!lp) return true; // no linked product (legacy) - show as long as price > 0
+      if (lp.gameExtra === false) return false; // product disabled as game extra
+      if (lp.variants && lp.variants.length > 0) {
+        return lp.variants.some(v => Number(v.stock) > 0);
+      }
+      return Number(lp.stock) > 0;
+    }).filter(ex => Number(ex.price) > 0 || (data.shop || []).find(s => s.id === ex.productId)?.variants?.length > 0);
     // extras keyed by "extraId" (no variant) or "extraId:variantId"
     const extraKey = (id, variantId) => variantId ? id + ":" + variantId : id;
     const getExtraQty = (id, variantId) => bCart.extras[extraKey(id, variantId)] || 0;
