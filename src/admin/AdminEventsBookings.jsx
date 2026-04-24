@@ -1174,15 +1174,22 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                   <div style={{ fontSize:12, color:"var(--muted)" }}>No products marked as Game Day Extra yet. Tick "Available as Game Day Extra" on a product in the Shop section.</div>
                 )}
                 {data.shop.filter(p => p.gameExtra).map(p => {
-                  const alreadyAdded = (form.extras || []).some(ex => ex.productId === p.id);
+                  const existingExtra = (form.extras || []).find(ex => ex.productId === p.id);
+                  const isEnabled = existingExtra && existingExtra.enabled !== false;
                   return (
                     <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"6px 0", borderBottom:"1px solid #1a1a1a" }}>
-                      <input type="checkbox" checked={alreadyAdded} onChange={e => {
+                      <input type="checkbox" checked={!!isEnabled} onChange={e => {
                         const extras = form.extras || [];
                         if (e.target.checked) {
-                          f("extras", [...extras, { id: uid(), name: p.name, price: p.price, noPost: p.noPost, productId: p.id, variantId: null }]);
+                          if (existingExtra) {
+                            // Re-enable existing row
+                            f("extras", extras.map(ex => ex.productId === p.id ? { ...ex, enabled: true } : ex));
+                          } else {
+                            f("extras", [...extras, { id: uid(), name: p.name, price: p.price, noPost: p.noPost, productId: p.id, variantId: null, enabled: true }]);
+                          }
                         } else {
-                          f("extras", extras.filter(ex => ex.productId !== p.id));
+                          // Disable rather than remove — preserves the row in DB
+                          f("extras", extras.map(ex => ex.productId === p.id ? { ...ex, enabled: false } : ex));
                         }
                       }} />
                       <div style={{ flex:1 }}>

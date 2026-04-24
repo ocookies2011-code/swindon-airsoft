@@ -179,6 +179,7 @@ export const events = wrapWithTimeout({
         price:      Number(ex.price) || 0,
         no_post:    ex.noPost ?? false,
         sort_order: i,
+        enabled:    ex.enabled !== false,
       }))
       const { error: extErr } = await supabase.from('event_extras').insert(extraRows)
       if (extErr) console.warn('event_extras insert warning:', extErr.message) // non-fatal
@@ -212,6 +213,7 @@ export const events = wrapWithTimeout({
           price:      Number(ex.price) || 0,
           no_post:    ex.noPost ?? ex.no_post ?? false,
           sort_order: i,
+          enabled:    ex.enabled !== false,
         }))
         const { error: ie } = await supabase.from('event_extras').insert(rows)
         if (ie) throw ie
@@ -598,7 +600,7 @@ function normaliseEvent(ev) {
           const parsed = JSON.parse(ex.name)
           if (parsed?.n) { name = parsed.n; productId = parsed.pid || productId; variantId = parsed.vid || variantId }
         } catch {}
-        return { id: ex.id, name, price: Number(ex.price), noPost: ex.no_post, productId, variantId }
+        return { id: ex.id, name, price: Number(ex.price), noPost: ex.no_post, productId, variantId, enabled: ex.enabled !== false }
       }),
     bookings: (ev.bookings || []).map(b => ({
       id:            b.id,

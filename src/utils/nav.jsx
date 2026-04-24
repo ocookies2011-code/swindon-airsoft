@@ -133,12 +133,12 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
           {allLinks.map(l => (
             l.children ? (
               <div key={l.id}>
-                <div style={{ padding:"10px 20px 4px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:9, fontWeight:600, letterSpacing:".25em", color:"#3a4a20", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
+                <div style={{ padding:"10px 20px 4px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:9, fontWeight:600, letterSpacing:".25em", color:"var(--muted)", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
                   {l.icon} {l.label}
                 </div>
                 {l.children.map(c => (
                   <button key={c.id} className={`pub-nav-drawer-link ${page === c.id ? "active" : ""}`} onClick={() => go(c.id)} style={{ paddingLeft:32 }}>
-                    <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"#3a5010", width:20, display:"inline-block" }}>{c.icon}</span> {c.label}
+                    <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, width:20, display:"inline-block" }}>{c.icon}</span> {c.label}
                   </button>
                 ))}
               </div>

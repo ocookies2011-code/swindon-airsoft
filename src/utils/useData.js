@@ -30,6 +30,11 @@ function useData() {
     const MAX_RETRIES = 3;
     const RETRY_DELAYS = [3000, 5000, 8000]; // ms to wait before each retry
 
+    // Preserve the best news result across retries — news loads fast and may
+    // succeed on attempt 1 while events/shop cold-start, then get overwritten
+    // with [] on the forced retry.
+    let bestNewsList = [];
+
     try {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         const isLastAttempt = attempt === MAX_RETRIES;
@@ -68,6 +73,9 @@ function useData() {
           const allEmpty = evList.length === 0 && shopList.length === 0 && staffList.length === 0;
           const hasErrors = Object.keys(errors).length > 0;
 
+          // Keep the best news result — don't let a cold-start retry overwrite a good result with []
+          if (newsList.length > 0) bestNewsList = newsList;
+
           if (hasErrors && allEmpty && !isLastAttempt) {
             // Data looks like a cold-start failure — retry
             console.warn(`loadAll attempt ${attempt + 1} got empty data with errors, retrying...`, errors);
@@ -95,7 +103,7 @@ function useData() {
             albums: albumList,
             qa: qaList,
             staff: staffList,
-            news: newsList,
+            news: newsList.length > 0 ? newsList : bestNewsList,
             shopClosed: shopClosed === "true",
             homeMsg: (() => { try { const p = JSON.parse(homeMsg); return Array.isArray(p) ? p : (homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []); } catch { return homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []; } })(),
             socialFacebook,
