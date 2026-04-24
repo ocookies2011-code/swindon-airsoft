@@ -60,14 +60,14 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
     <>
       {/* ── DESKTOP NAV ── */}
       <nav style={{ background:"#040604", borderBottom:"2px solid #2a4018", position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 24px rgba(0,0,0,.9)" }}>
-        <div style={{ display:"flex", alignItems:"center", height:68, padding:"0 24px", maxWidth:1280, margin:"0 auto" }}>
+        <div style={{ display:"flex", alignItems:"center", height:68, padding:"0 24px", maxWidth:1280, margin:"0 auto", overflow:"hidden" }}>
           {/* Logo */}
           <div style={{ display:"flex", alignItems:"center", marginRight:32, flexShrink:0, cursor:"pointer" }} onClick={() => go("home")}>
             <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:52, width:"auto", objectFit:"contain", filter:"drop-shadow(0 0 6px rgba(200,255,0,.2))" }} />
           </div>
 
           {/* Desktop links */}
-          <div className="pub-nav-links" ref={dropdownRef}>
+          <div className="pub-nav-links" ref={dropdownRef} style={{ flex:"0 1 auto", minWidth:0, overflow:"visible" }}>
             {allLinks.map(l => (
               l.children ? (
                 <div key={l.id} className="pub-nav-link-wrap">
@@ -95,7 +95,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
           </div>
 
           {/* Desktop actions */}
-          <div className="pub-nav-actions">
+          <div className="pub-nav-actions" style={{ marginLeft:"auto", flexShrink:0, display:"flex", gap:6, alignItems:"center" }}>
             {cu ? (
               <>
                 {cu.role === "admin" && (
