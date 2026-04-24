@@ -588,6 +588,9 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;clip-path:none;}
 html,body,#root{max-width:100vw;overflow-x:hidden;}
 .pub-page-wrap{overflow-x:hidden;}
 
+`
+
+export { CSS };
 
 /* ── RESTORED CLASSES ── */
 .countdown-lbl{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-top:4px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;}
