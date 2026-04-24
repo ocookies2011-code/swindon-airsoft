@@ -5,35 +5,6 @@ import * as api from "../api";
 import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "../api";
 import { QRCode, SkeletonCard, SquareCheckoutButton, TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtDate, gmtShort, loadSquareConfig, renderMd, sendAdminBookingNotification, sendCancellationEmail, sendEmail, sendOrderEmail, sendTicketEmail, sendWaitlistNotifyEmail, stockLabel, uid, useMobile } from "../utils";
 
-// Small per-card countdown used on event cards
-function EventCountdown({ date, time }) {
-  const [diff, setDiff] = useState(0);
-  useEffect(() => {
-    const target = new Date(date + "T" + (time || "09:00") + ":00");
-    const tick = () => setDiff(Math.max(0, target - new Date()));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [date, time]);
-  if (diff <= 0) return null;
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor((diff % 86400000) / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  const urgent = diff < 86400000;
-  const units = d > 0 ? [[d,"D"],[h,"H"],[m,"M"]] : [[h,"H"],[m,"M"],[s,"S"]];
-  return (
-    <div style={{ display:"flex", gap:3, alignItems:"center" }}>
-      {units.map(([n,l]) => (
-        <div key={l} style={{ textAlign:"center", background:"rgba(0,0,0,.4)", border:`1px solid ${urgent?"rgba(200,255,0,.3)":"rgba(42,58,16,.6)"}`, padding:"3px 6px", minWidth:30 }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:15, color:urgent?"#c8ff00":"#9ab870", lineHeight:1, letterSpacing:".02em" }}>{String(n).padStart(2,"0")}</div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:6, letterSpacing:".15em", color:"#2a3a10" }}>{l}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
   const getInitDetail = () => {
     const p = window.location.hash.replace("#","").split("/");
@@ -1335,24 +1306,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
                 {/* Footer */}
                 <div style={{ borderTop:"1px solid #1a2808", padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(0,0,0,.3)", position:"relative", zIndex:6 }}>
-                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                    <div>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".15em", color:"#2a3a10", marginBottom:2 }}>FROM</div>
-                      <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:"#c8ff00", lineHeight:1 }}>
-                        £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
-                      </div>
+                  <div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".15em", color:"#2a3a10", marginBottom:2 }}>FROM</div>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:"#c8ff00", lineHeight:1 }}>
+                      £{Math.min(ev.walkOnPrice, ev.rentalPrice)}
                     </div>
-                    {!isPast && !isFull && (
-                      <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, letterSpacing:".15em", color:"#2a3a10" }}>T−</span>
-                        <EventCountdown date={ev.date} time={ev.time} />
-                      </div>
-                    )}
-                    {!isPast && isFull && (
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".12em", color:"#ef4444", border:"1px solid rgba(239,68,68,.3)", padding:"2px 8px", background:"rgba(239,68,68,.06)", display:"inline-block" }}>
-                        ✕ SOLD OUT
-                      </div>
-                    )}
                   </div>
                   {isPast ? (
                     <button disabled style={{ padding:"8px 16px", fontSize:10, letterSpacing:".12em", borderRadius:0, background:"rgba(60,60,60,.2)", border:"1px solid rgba(100,100,100,.3)", color:"#555", cursor:"not-allowed" }}>
