@@ -356,25 +356,32 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             }}>⬇ Download My Data (GDPR)</button>
             {/* Push notifications toggle */}
             {push.supported && (
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#0a0f06", border:"1px solid #1a2808", marginBottom:8 }}>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>🔔 Push Notifications</div>
-                  <div style={{ fontSize:11, color:"var(--muted)" }}>
-                    {push.denied
-                      ? "Blocked in browser — go to browser settings to re-enable"
-                      : push.subscribed
-                        ? "You'll be notified of new events and updates"
-                        : "Get notified when new game days are announced"}
+              <div style={{ background:"#0a0f06", border:"1px solid #1a2808", marginBottom:8 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px" }}>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>🔔 Push Notifications</div>
+                    <div style={{ fontSize:11, color:"var(--muted)" }}>
+                      {push.denied
+                        ? "Blocked — enable in your browser settings then refresh"
+                        : push.subscribed
+                          ? "✓ Active — you'll be notified of new events and updates"
+                          : "Get notified when new game days are announced"}
+                    </div>
                   </div>
+                  <button
+                    className={push.subscribed ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"}
+                    onClick={push.toggle}
+                    disabled={push.loading || push.denied}
+                    style={{ flexShrink:0, marginLeft:16 }}
+                  >
+                    {push.loading ? "…" : push.subscribed ? "Turn Off" : "Enable"}
+                  </button>
                 </div>
-                <button
-                  className={push.subscribed ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"}
-                  onClick={push.toggle}
-                  disabled={push.loading || push.denied}
-                  style={{ flexShrink:0, marginLeft:16 }}
-                >
-                  {push.loading ? "…" : push.subscribed ? "Turn Off" : "Enable"}
-                </button>
+                {push.error && (
+                  <div style={{ padding:"6px 16px 10px", fontSize:11, color:"#ef5350" }}>
+                    ⚠ {push.error}
+                  </div>
+                )}
               </div>
             )}
             <button className="btn btn-danger" onClick={() => setDelConfirm(true)}>Request Account Deletion</button>
