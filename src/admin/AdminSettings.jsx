@@ -274,9 +274,84 @@ function AdminSettings({ showToast, cu }) {
 
       {/* EmailJS test */}
       <EmailTestCard showToast={showToast} sectionHead={sectionHead} />
+
+      {/* Push Notifications */}
+      <div className="card mb-2">
+        {sectionHead("🔔 Push Notifications", "push")}
+        {sectionBody("push", <PushNotificationPanel showToast={showToast} />)}
+      </div>
     </div>
   );
 }
+
+function PushNotificationPanel({ showToast }) {
+  const [title, setTitle]     = React.useState("Swindon Airsoft");
+  const [message, setMessage] = React.useState("");
+  const [url, setUrl]         = React.useState("/");
+  const [sending, setSending] = React.useState(false);
+  const [subCount, setSubCount] = React.useState(null);
+  const { supabase: sb } = { supabase: null }; // fallback
+
+  React.useEffect(() => {
+    import("../supabaseClient").then(({ supabase }) => {
+      supabase.from("push_subscriptions").select("id", { count:"exact", head:true })
+        .then(({ count }) => setSubCount(count || 0));
+    });
+  }, []);
+
+  const send = async () => {
+    if (!message.trim()) { showToast("Message is required", "red"); return; }
+    setSending(true);
+    try {
+      const { supabase } = await import("../supabaseClient");
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          },
+          body: JSON.stringify({ title, message, url }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Send failed");
+      showToast(`✓ Sent to ${data.sent} of ${data.total} subscribers`, "green");
+      setMessage("");
+    } catch (e) {
+      showToast("Send failed: " + e.message, "red");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      <div style={{ fontSize:12, color:"var(--muted)" }}>
+        {subCount === null ? "Counting subscribers…" : `${subCount} player${subCount !== 1 ? "s" : ""} currently subscribed`}
+      </div>
+      <div>
+        <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:4 }}>TITLE</label>
+        <input className="inp" value={title} onChange={e => setTitle(e.target.value)} placeholder="Swindon Airsoft" />
+      </div>
+      <div>
+        <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:4 }}>MESSAGE *</label>
+        <textarea className="inp" rows={3} value={message} onChange={e => setMessage(e.target.value)} placeholder="New game day announced! Book your slot now." style={{ resize:"vertical" }} />
+      </div>
+      <div>
+        <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:4 }}>LINK (optional)</label>
+        <input className="inp" value={url} onChange={e => setUrl(e.target.value)} placeholder="/" />
+      </div>
+      <button className="btn btn-primary" onClick={send} disabled={sending || !message.trim()}>
+        {sending ? "Sending…" : `🔔 Send to ${subCount ?? "all"} subscribers`}
+      </button>
+    </div>
+  );
+}
+
 
 // ── Admin Messages ────────────────────────────────────────
 const PRESET_ICONS = ["⚡","🎯","⚠️","🔥","📢","✅","❗","🎮","🏆","🛡️","💥","📅"];
