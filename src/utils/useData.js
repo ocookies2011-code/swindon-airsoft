@@ -24,7 +24,16 @@ function useData() {
         if (cancelled) return;
         if (error) throw error;
         if (rows && rows.length > 0) {
-          setData(prev => prev ? { ...prev, news: rows } : null);
+          newsRowsRef.current = rows;
+          // Keep retrying the state update until data has loaded (prev non-null)
+          const applyNews = (retries = 0) => {
+            setData(prev => {
+              if (prev) return { ...prev, news: rows };
+              if (retries < 10) setTimeout(() => applyNews(retries + 1), 500);
+              return prev;
+            });
+          };
+          applyNews();
         } else if (attempt < 3) {
           setTimeout(() => { if (!cancelled) fetchNews(attempt + 1); }, 3000 * (attempt + 1));
         }
@@ -38,6 +47,10 @@ function useData() {
     fetchNews();
     return () => { cancelled = true; };
   }, []);
+
+  // Ref to hold fetched news rows so loadAll can pick them up even if
+  // the independent fetchNews effect resolves before data is set.
+  const newsRowsRef = useRef([]);
 
   // Guard: prevent concurrent loadAll calls from racing each other.
   // If one is already running, the next call is a no-op until it finishes.
@@ -139,7 +152,7 @@ function useData() {
             albums: albumList,
             qa: qaList,
             staff: staffList,
-            news: newsList.length > 0 ? newsList : bestNewsList,
+            news: newsList.length > 0 ? newsList : (bestNewsList.length > 0 ? bestNewsList : newsRowsRef.current),
             shopClosed: shopClosed === "true",
             homeMsg: (() => { try { const p = JSON.parse(homeMsg); return Array.isArray(p) ? p : (homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []); } catch { return homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []; } })(),
             socialFacebook,

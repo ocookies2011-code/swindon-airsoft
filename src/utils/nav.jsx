@@ -107,7 +107,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
                     Schedule
                   </button>
                 )}
-                {(cu.canMarshal && cu.role !== "admin") && (
+                {(cu.canMarshal || cu.role === "admin") && (
                   <button className="btn btn-sm" style={{ background:"rgba(0,180,100,.15)", border:"1px solid rgba(0,180,100,.4)", color:"#00c864", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => go("marshal")}>
                     <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                     Marshal
@@ -166,7 +166,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
                   <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg></span> Marshal Schedule
                 </button>
               )}
-              {(cu.canMarshal && cu.role !== "admin") && (
+              {(cu.canMarshal || cu.role === "admin") && (
                 <button className="pub-nav-drawer-link" style={{ color:"#00c864" }} onClick={() => go("marshal")}>
                   <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> Marshal Check-In
                 </button>
