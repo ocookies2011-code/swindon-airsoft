@@ -18,28 +18,27 @@ export function urlBase64ToUint8Array(base64String) {
 }
 
 export async function registerPush(userId) {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return null;
-  try {
-    const reg = await navigator.serviceWorker.register("/sw.js");
-    await navigator.serviceWorker.ready;
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") return null;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
-    const json = sub.toJSON();
-    await supabase.from("push_subscriptions").upsert({
-      user_id: userId,
-      endpoint: json.endpoint,
-      p256dh:   json.keys.p256dh,
-      auth:     json.keys.auth,
-    }, { onConflict: "user_id,endpoint" });
-    return sub;
-  } catch (e) {
-    console.error("Push registration failed:", e);
-    return null;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    throw new Error("Push notifications are not supported in this browser");
   }
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+  const perm = await Notification.requestPermission();
+  if (perm === "denied") throw new Error("PERMISSION_DENIED");
+  if (perm !== "granted") throw new Error("Permission not granted");
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  });
+  const json = sub.toJSON();
+  const { error } = await supabase.from("push_subscriptions").upsert({
+    user_id: userId,
+    endpoint: json.endpoint,
+    p256dh:   json.keys.p256dh,
+    auth:     json.keys.auth,
+  }, { onConflict: "user_id,endpoint" });
+  if (error) throw error;
+  return sub;
 }
 
 export async function unregisterPush(userId) {
@@ -60,10 +59,15 @@ export function usePushNotifications(cu) {
   const [subscribed, setSubscribed] = useState(false);
   const [supported, setSupported]   = useState(false);
   const [loading, setLoading]       = useState(false);
+  const [denied, setDenied]         = useState(false);
+  const [error, setError]           = useState(null);
 
   useEffect(() => {
-    setSupported("serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
-    if (!cu) return;
+    const isSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    setSupported(isSupported);
+    if (!isSupported || !cu) return;
+    // Check current permission
+    if (Notification.permission === "denied") setDenied(true);
     // Check if already subscribed
     navigator.serviceWorker?.getRegistration?.("/sw.js").then(async reg => {
       if (!reg) return;
@@ -75,18 +79,28 @@ export function usePushNotifications(cu) {
   const toggle = async () => {
     if (!cu) return;
     setLoading(true);
+    setError(null);
     try {
       if (subscribed) {
         await unregisterPush(cu.id);
         setSubscribed(false);
       } else {
-        const sub = await registerPush(cu.id);
-        setSubscribed(!!sub);
+        await registerPush(cu.id);
+        setSubscribed(true);
       }
-    } finally { setLoading(false); }
+    } catch (e) {
+      if (e.message === "PERMISSION_DENIED" || Notification.permission === "denied") {
+        setDenied(true);
+        setError("Notifications blocked — enable them in your browser settings then try again");
+      } else {
+        setError(e.message || "Failed to enable notifications");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return { subscribed, supported, loading, toggle };
+  return { subscribed, supported, loading, denied, error, toggle };
 }
 import { squareRefund, waitlistApi, normaliseProfile } from "./api";
 // Add this near the top of utils.jsx, after your imports
