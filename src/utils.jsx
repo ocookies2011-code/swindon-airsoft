@@ -2068,7 +2068,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
               <>
                 {/* Staff dropdown — admin + marshals only */}
                 {(cu.role === "admin" || cu.canMarshal) && (
-                  <div style={{ position:"relative" }}>
+                  <div style={{ position:"relative" }} onMouseDown={e => e.stopPropagation()}>
                     <button
                       className="btn btn-sm"
                       style={{ background:"rgba(165,214,167,.15)", border:"1px solid rgba(165,214,167,.45)", color:"#a5d6a7", display:"inline-flex", alignItems:"center", gap:5 }}
