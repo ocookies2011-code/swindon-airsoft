@@ -913,6 +913,26 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .admin-sidebar{transform:none !important;}
   .admin-overlay{display:none !important;}
 }
+/* ── ADMIN MOBILE FIXES ── */
+.admin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.admin-table-wrap table{min-width:600px;}
+.admin-form-row{display:flex;gap:12px;flex-wrap:wrap;}
+.admin-form-row > *{flex:1;min-width:140px;}
+.admin-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.modal-box{width:calc(100vw - 32px);max-width:700px;max-height:90vh;overflow-y:auto;}
+.modal-box.wide{max-width:900px;}
+@media(max-width:768px){
+  .admin-topbar{padding:0 10px;height:48px;}
+  .admin-content{padding:10px 8px;}
+  .admin-hide-mobile{display:none !important;}
+  .sb-item{padding:8px 10px;}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .data-table{min-width:480px;}
+  .modal-box,.modal-box.wide{width:calc(100vw - 16px) !important;max-width:none !important;}
+  .modal{padding:8px !important;}
+  .nav-tabs{flex-wrap:wrap;}
+  .nav-tab{font-size:11px;padding:6px 10px;}
+}
 .sb-logo{padding:16px 14px 14px;border-bottom:1px solid #1a1a1a;margin-bottom:6px;}
 .sb-logo-text{font-size:16px;font-weight:900;letter-spacing:.1em;font-family:'Barlow Condensed',sans-serif;color:#fff;text-transform:uppercase;}
 .sb-logo-text span{color:var(--accent);}
