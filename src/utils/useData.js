@@ -26,6 +26,11 @@ function useData() {
       setLoading(false);
     }, 20000);
 
+    // Fetch news independently — outside the retry loop so cold-start retries
+    // on events/shop never cause news to be wiped back to [].
+    const newsPromise = api.news.getAll()
+      .catch(e => { console.error("[news] fetch failed:", e?.message || e); return []; });
+
     // Retry up to 3 times with increasing delays to handle cold DB / Supabase wake-up
     const MAX_RETRIES = 3;
     const RETRY_DELAYS = [3000, 5000, 8000]; // ms to wait before each retry
@@ -57,7 +62,8 @@ function useData() {
             safe("gallery", api.gallery.getAll()),
             safe("qa",      api.qa.getAll()),
             safe("staff",   api.staff.getAll()),
-            api.news ? safe("news", api.news.getAll()) : Promise.resolve([]),
+            // News fetched once above, outside retry loop
+            attempt === 0 ? newsPromise : Promise.resolve(bestNewsList.length > 0 ? bestNewsList : []),
             api.settings.get("home_message").catch(() => ""),
             api.settings.get("social_facebook").catch(() => ""),
             api.settings.get("social_instagram").catch(() => ""),

@@ -11,6 +11,11 @@ function AboutPage({ setPage }) {
       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:"#8aaa60", lineHeight:1.8 }}>{children}</div>
     </div>
   );
+  const Divider = () => (
+    <div style={{ borderTop:"1px solid #1e2e12", margin:"32px 0", position:"relative" }}>
+      <span style={{ position:"absolute", top:-8, left:"50%", transform:"translateX(-50%)", background:"#080b06", padding:"0 12px", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", letterSpacing:".2em" }}>◆</span>
+    </div>
+  );
   const TimelineItem = ({ time, title, desc }) => (
     <div style={{ display:"flex", gap:0, marginBottom:0 }}>
       <div style={{ flexShrink:0, width:120, paddingTop:3, paddingBottom:24 }}>
