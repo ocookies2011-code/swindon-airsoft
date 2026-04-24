@@ -45,8 +45,13 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
     setSchedules(p => ({ ...p, [eventId]: rows||[] }));
     // Pre-fill my own status
     const mine = (rows||[]).find(r => r.user_id === cu?.id);
-    if (mine) setMyStatus(p => ({ ...p, [eventId]:{ status:mine.status, role:mine.role, notes:mine.notes||"" }}));
-    else      setMyStatus(p => ({ ...p, [eventId]: p[eventId] || { status:"available", role:"marshal", notes:"" }}));
+    if (mine) {
+      setMyStatus(p => ({ ...p, [eventId]:{ status:mine.status, role:mine.role, notes:mine.notes||"" }}));
+      // Auto-expand notes if there's already a saved note
+      if (mine.notes) setExpandedNotes(p => ({ ...p, [eventId]:true }));
+    } else {
+      setMyStatus(p => ({ ...p, [eventId]: p[eventId] || { status:"available", role:"marshal", notes:"" }}));
+    }
     setLoading(p => ({ ...p, [eventId]:false }));
   };
 
@@ -189,6 +194,11 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
                               <button onClick={() => removeEntry(r.id,ev.id)} style={{ background:"none", border:"none", color:"#ef5350", cursor:"pointer", fontSize:12, flexShrink:0 }}>✕</button>
                             )}
                           </div>
+                          {r.notes ? (
+                            <div style={{ ...MONO, fontSize:9, color:MUTED, padding:"4px 10px 6px 48px", fontStyle:"italic" }}>
+                              💬 {r.notes}
+                            </div>
+                          ) : null}
                         );
                       })}
                     </div>
