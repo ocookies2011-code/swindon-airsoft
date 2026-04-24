@@ -186,8 +186,8 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
               <span style={{ color: "var(--text)", fontFamily: "'Oswald','Barlow Condensed',sans-serif", letterSpacing: ".06em", textTransform: "uppercase" }}>{NAV.find(n => n.id === section)?.label || section}</span>
             </div>
           </div>
-          <div className="gap-2" style={{ alignItems: "center" }}>
-            <span style={{ fontSize: 12, display: "var(--hide-mobile, inline)" }}><GmtClock /></span>
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <span className="admin-hide-mobile" style={{ fontSize: 12 }}><GmtClock /></span>
             <button className="btn btn-sm btn-ghost" onClick={() => setPage("home")}>← Site</button>
           </div>
         </div>
