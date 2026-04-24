@@ -9,6 +9,36 @@ function useData() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+  // Fetch news completely independently — isolated from the events/shop cold-start
+  // retry loop so it can never be wiped back to [] by a retry overwrite.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchNews = async (attempt = 0) => {
+      try {
+        const { data: rows, error } = await supabase
+          .from('news_posts')
+          .select('*')
+          .eq('published', true)
+          .order('pinned', { ascending: false })
+          .order('created_at', { ascending: false });
+        if (cancelled) return;
+        if (error) throw error;
+        if (rows && rows.length > 0) {
+          setData(prev => prev ? { ...prev, news: rows } : null);
+        } else if (attempt < 3) {
+          setTimeout(() => { if (!cancelled) fetchNews(attempt + 1); }, 3000 * (attempt + 1));
+        }
+      } catch (e) {
+        console.error('[news] fetch error:', e?.message || e);
+        if (attempt < 3 && !cancelled) {
+          setTimeout(() => fetchNews(attempt + 1), 3000 * (attempt + 1));
+        }
+      }
+    };
+    fetchNews();
+    return () => { cancelled = true; };
+  }, []);
+
   // Guard: prevent concurrent loadAll calls from racing each other.
   // If one is already running, the next call is a no-op until it finishes.
   const loadingRef = useRef(false);
