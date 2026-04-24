@@ -179,7 +179,8 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
                         const rc = ROLE_CFG[r.role] || ROLE_CFG.marshal;
                         const displayName = r.profile?.callsign || r.profile?.name || "Unknown";
                         return (
-                          <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", background:BG3, border:`1px solid ${BORDER}` }}>
+                          <React.Fragment key={r.id}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", background:BG3, border:`1px solid ${BORDER}` }}>
                             <div style={{ width:28, height:28, borderRadius:"50%", background:"#080b06", border:`1px solid ${BORDER2}`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:11, fontWeight:700, color:ACCENT, flexShrink:0, ...MIL }}>
                               {r.profile?.profile_pic
                                 ? <img src={r.profile.profile_pic} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e=>{e.target.style.display="none";}}/>
@@ -199,6 +200,7 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
                               💬 {r.notes}
                             </div>
                           ) : null}
+                        </React.Fragment>
                         );
                       })}
                     </div>
