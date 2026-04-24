@@ -136,11 +136,11 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;clip-path:none;}
 .data-table tbody tr:hover td{background:rgba(200,255,0,.02);}
 
 /* ── MODAL ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-.modal-box{background:var(--bg2);border:1px solid var(--border2);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 24px 80px rgba(0,0,0,.9);margin:5vh auto;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 24px 80px rgba(0,0,0,.9);}
 
-.modal-box.wide{max-width:780px;max-height:none !important;min-height:auto !important;overflow-y:visible;margin:0 auto;display:block;}
-@media(max-width:768px){.overlay{align-items:flex-start;padding:0;}.modal-box{max-width:100%;max-height:100dvh;border-radius:0;}.modal-box.wide{max-width:100%;max-height:100dvh;border-radius:0;padding:16px;}}
+.modal-box.wide{max-width:780px;max-height:none;overflow-y:visible;}
+@media(max-width:768px){.overlay{align-items:flex-start;padding:0;}.modal-box{max-width:100%;max-height:100dvh;border-radius:0;}.modal-box.wide{max-width:100%;border-radius:0;padding:16px;}}
 .modal-title{font-size:20px;font-weight:700;margin-bottom:20px;font-family:var(--font-mil);letter-spacing:.1em;color:#fff;text-transform:uppercase;}
 
 /* ── MISC ── */
