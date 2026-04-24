@@ -9,48 +9,38 @@ function useData() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
-  // Fetch news completely independently — isolated from the events/shop cold-start
-  // retry loop so it can never be wiped back to [] by a retry overwrite.
-  useEffect(() => {
-    let cancelled = false;
-    const fetchNews = async (attempt = 0) => {
-      try {
-        const { data: rows, error } = await supabase
-          .from('news_posts')
-          .select('*')
-          .eq('published', true)
-          .order('pinned', { ascending: false })
-          .order('created_at', { ascending: false });
-        if (cancelled) return;
-        if (error) throw error;
-        if (rows && rows.length > 0) {
-          newsRowsRef.current = rows;
-          // Keep retrying the state update until data has loaded (prev non-null)
-          const applyNews = (retries = 0) => {
-            setData(prev => {
-              if (prev) return { ...prev, news: rows };
-              if (retries < 10) setTimeout(() => applyNews(retries + 1), 500);
-              return prev;
-            });
-          };
-          applyNews();
-        } else if (attempt < 3) {
-          setTimeout(() => { if (!cancelled) fetchNews(attempt + 1); }, 3000 * (attempt + 1));
-        }
-      } catch (e) {
-        console.error('[news] fetch error:', e?.message || e);
-        if (attempt < 3 && !cancelled) {
-          setTimeout(() => fetchNews(attempt + 1), 3000 * (attempt + 1));
-        }
-      }
-    };
-    fetchNews();
-    return () => { cancelled = true; };
-  }, []);
-
   // Ref to hold fetched news rows so loadAll can pick them up even if
   // the independent fetchNews effect resolves before data is set.
   const newsRowsRef = useRef([]);
+
+  // Fetch news completely independently — isolated from the main data load.
+  // Polls every 2s until data is set, then patches news in directly.
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('news_posts')
+      .select('*')
+      .eq('published', true)
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .then(({ data: rows, error }) => {
+        if (cancelled) return;
+        if (error) { console.error('[news]', error.message); return; }
+        if (!rows || rows.length === 0) return;
+        newsRowsRef.current = rows;
+        // Poll until main data has loaded, then patch news in
+        const patch = () => {
+          if (cancelled) return;
+          setData(prev => {
+            if (!prev) { setTimeout(patch, 300); return prev; }
+            if (prev.news && prev.news.length > 0) return prev; // already set
+            return { ...prev, news: rows };
+          });
+        };
+        patch();
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // Guard: prevent concurrent loadAll calls from racing each other.
   // If one is already running, the next call is a no-op until it finishes.

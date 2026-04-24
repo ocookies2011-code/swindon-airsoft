@@ -48,7 +48,7 @@ h1,h2,h3,h4,h5,h6{font-family:var(--font-mil);}
 .pub-nav-dropdown-item{display:block;width:100%;background:none;border:none;color:var(--muted);font-size:11px;font-weight:600;padding:11px 16px;cursor:pointer;text-align:left;letter-spacing:.12em;text-transform:uppercase;font-family:var(--font-mil);transition:all .1s;white-space:nowrap;border-left:2px solid transparent;}
 .pub-nav-dropdown-item:hover{background:var(--bg3);color:var(--text);border-left-color:var(--accent);}
 .pub-nav-dropdown-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,255,0,.04);}
-.pub-nav-actions{display:flex;gap:10px;align-items:center;margin-left:auto;flex-shrink:0;}
+.pub-nav-actions{display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0;overflow:visible;}
 .pub-nav-hamburger{display:none;background:none;border:1px solid var(--border2);color:var(--text);padding:6px 10px;font-size:18px;cursor:pointer;flex-shrink:0;margin-left:auto;}
 
 /* ── MOBILE DRAWER ── */
