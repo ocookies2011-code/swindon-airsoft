@@ -7,7 +7,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
 import { squareRefund, waitlistApi, normaliseProfile } from "./api";
-
+// Add this near the top of utils.jsx, after your imports
+const SA_LOGO_SRC = "https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png";
 
 function renderMd(md) {
   if (!md) return "";
