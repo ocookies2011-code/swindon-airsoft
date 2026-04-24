@@ -6,6 +6,88 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 import * as api from "./api";
+
+// ── Web Push ──────────────────────────────────────────────────────────────────
+const VAPID_PUBLIC_KEY = "zhW0X2vTSa9gUCCXq5OdLjq7an6BcWM2WvZi6ZWVUGLyrlUaNL8bmbeabU7ixrJC1v3KZtK5pKlYL_vexQUWjQ";
+
+export function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+export async function registerPush(userId) {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return null;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    const json = sub.toJSON();
+    await supabase.from("push_subscriptions").upsert({
+      user_id: userId,
+      endpoint: json.endpoint,
+      p256dh:   json.keys.p256dh,
+      auth:     json.keys.auth,
+    }, { onConflict: "user_id,endpoint" });
+    return sub;
+  } catch (e) {
+    console.error("Push registration failed:", e);
+    return null;
+  }
+}
+
+export async function unregisterPush(userId) {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    if (!reg) return;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await supabase.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", sub.endpoint);
+      await sub.unsubscribe();
+    }
+  } catch (e) { console.error("Push unregister failed:", e); }
+}
+
+// Hook: manages push subscription state for a user
+export function usePushNotifications(cu) {
+  const [subscribed, setSubscribed] = useState(false);
+  const [supported, setSupported]   = useState(false);
+  const [loading, setLoading]       = useState(false);
+
+  useEffect(() => {
+    setSupported("serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
+    if (!cu) return;
+    // Check if already subscribed
+    navigator.serviceWorker?.getRegistration?.("/sw.js").then(async reg => {
+      if (!reg) return;
+      const sub = await reg.pushManager?.getSubscription?.();
+      setSubscribed(!!sub);
+    }).catch(() => {});
+  }, [cu]);
+
+  const toggle = async () => {
+    if (!cu) return;
+    setLoading(true);
+    try {
+      if (subscribed) {
+        await unregisterPush(cu.id);
+        setSubscribed(false);
+      } else {
+        const sub = await registerPush(cu.id);
+        setSubscribed(!!sub);
+      }
+    } finally { setLoading(false); }
+  };
+
+  return { subscribed, supported, loading, toggle };
+}
 import { squareRefund, waitlistApi, normaliseProfile } from "./api";
 // Add this near the top of utils.jsx, after your imports
 const SA_LOGO_SRC = "https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png";
@@ -677,6 +759,110 @@ function useData() {
 
 
 // (SEED data removed — all data comes from Supabase)
+
+// ── Push Notifications ───────────────────────────────────────
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+export async function registerPush(userId) {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return null;
+  if (!VAPID_PUBLIC_KEY) { console.warn("VAPID_PUBLIC_KEY not set"); return null; }
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return null;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    const { endpoint, keys } = sub.toJSON();
+    await supabase.from("push_subscriptions").upsert(
+      { user_id: userId, endpoint, p256dh: keys.p256dh, auth: keys.auth },
+      { onConflict: "user_id,endpoint" }
+    );
+    return sub;
+  } catch (e) {
+    console.error("Push registration failed:", e);
+    return null;
+  }
+}
+
+export async function unregisterPush(userId) {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    const sub = await reg?.pushManager?.getSubscription();
+    if (sub) {
+      await sub.unsubscribe();
+      await supabase.from("push_subscriptions").delete()
+        .eq("user_id", userId).eq("endpoint", sub.endpoint);
+    }
+  } catch (e) { console.error("Push unregister failed:", e); }
+}
+
+export async function getPushState(userId) {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
+  const perm = Notification.permission;
+  if (perm === "denied") return "denied";
+  try {
+    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    const sub = await reg?.pushManager?.getSubscription();
+    if (!sub) return "off";
+    const { data } = await supabase.from("push_subscriptions")
+      .select("id").eq("user_id", userId).eq("endpoint", sub.endpoint).single();
+    return data ? "on" : "off";
+  } catch { return "off"; }
+}
+
+export async function sendPushToAll({ title, message, url }) {
+  const { data, error } = await supabase.functions.invoke("send-push", {
+    body: { title, message, url },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export function usePushNotifications(cu) {
+  const [state, setState] = useState("off"); // off | on | denied | unsupported
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!cu?.id) return;
+    getPushState(cu.id).then(setState);
+  }, [cu?.id]);
+
+  const toggle = async () => {
+    if (!cu?.id) return;
+    setLoading(true);
+    try {
+      if (state === "on") {
+        await unregisterPush(cu.id);
+        setState("off");
+      } else {
+        const sub = await registerPush(cu.id);
+        setState(sub ? "on" : Notification.permission === "denied" ? "denied" : "off");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    supported: state !== "unsupported",
+    subscribed: state === "on",
+    denied: state === "denied",
+    loading,
+    toggle,
+  };
+}
+
 
 // ── CSS ──────────────────────────────────────────────────
 const CSS = `
