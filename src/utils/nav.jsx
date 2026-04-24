@@ -37,12 +37,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
         { id: "contact", label: "Contact",        icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> },
         { id: "ukara",   label: "UKARA",          icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
         { id: "terms",   label: "Terms & Privacy",icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
-        { id: "marshal-schedule", label: "Marshal Schedule", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg> },
       ]
     },
   ];
 
-  const aboutPages = ["about","qa","staff","contact","terms","ukara","marshal-schedule"];
+  const aboutPages = ["about","qa","staff","contact","terms","ukara"];
   const shopPages  = ["shop","gift-vouchers"];
 
   const go = (id) => {
@@ -102,6 +101,12 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
                 {cu.role === "admin" && (
                   <button className="btn btn-sm btn-gold" onClick={() => go("admin")}>⚙ Admin</button>
                 )}
+                {(cu.canMarshal || cu.role === "admin") && (
+                  <button className="btn btn-sm" style={{ background:"rgba(165,214,167,.12)", border:"1px solid rgba(165,214,167,.35)", color:"#a5d6a7", display:"inline-flex", alignItems:"center", gap:5 }} onClick={() => go("marshal-schedule")}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>
+                    Schedule
+                  </button>
+                )}
                 {(cu.canMarshal && cu.role !== "admin") && (
                   <button className="btn btn-sm" style={{ background:"rgba(0,180,100,.15)", border:"1px solid rgba(0,180,100,.4)", color:"#00c864", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => go("marshal")}>
                     <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -154,6 +159,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
               {cu.role === "admin" && (
                 <button className="pub-nav-drawer-link" onClick={() => go("admin")}>
                   <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg></span> Admin Panel
+                </button>
+              )}
+              {(cu.canMarshal || cu.role === "admin") && (
+                <button className="pub-nav-drawer-link" style={{ color:"#a5d6a7" }} onClick={() => go("marshal-schedule")}>
+                  <span style={{ display:"flex", alignItems:"center", width:20 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg></span> Marshal Schedule
                 </button>
               )}
               {(cu.canMarshal && cu.role !== "admin") && (

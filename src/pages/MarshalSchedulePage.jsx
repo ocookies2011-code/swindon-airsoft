@@ -23,69 +23,6 @@ function fmtDate(d) {
   return new Date(d+"T00:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long",year:"numeric"});
 }
 
-// Read-only public view — shows marshal roster per event without edit controls
-function PublicScheduleView({ events, schedules }) {
-  return (
-    <div>
-      <div style={{ background:"linear-gradient(180deg,#0c1a05,#080b06)", borderBottom:`1px solid ${BORDER2}`, padding:"40px 24px 32px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 48px,rgba(200,255,0,.012) 48px,rgba(200,255,0,.012) 49px),repeating-linear-gradient(90deg,transparent,transparent 48px,rgba(200,255,0,.012) 48px,rgba(200,255,0,.012) 49px)", pointerEvents:"none" }}/>
-        <div style={{ maxWidth:900, margin:"0 auto", position:"relative", zIndex:1 }}>
-          <div style={{ ...MONO, fontSize:9, color:MUTED, letterSpacing:".3em", marginBottom:12 }}>◈ SWINDON AIRSOFT · MARSHAL COMMAND</div>
-          <div style={{ ...MIL, fontSize:"clamp(26px,5vw,48px)", fontWeight:700, color:"#fff", textTransform:"uppercase", letterSpacing:".08em", lineHeight:.9, marginBottom:8 }}>
-            MARSHAL <span style={{ color:ACCENT }}>SCHEDULE</span>
-          </div>
-          <div style={{ ...MONO, fontSize:10, color:MUTED }}>◆ MARSHAL ROSTER FOR UPCOMING GAME DAYS ◆</div>
-        </div>
-      </div>
-      <div className="page-content" style={{ maxWidth:900 }}>
-        {events.length === 0 ? (
-          <div style={{ textAlign:"center", padding:80, ...MONO, fontSize:10, color:MUTED, letterSpacing:".2em" }}>NO UPCOMING EVENTS</div>
-        ) : events.map(ev => {
-          const rows = (schedules[ev.id] || []).filter(r => r.status !== "unavailable");
-          return (
-            <div key={ev.id} style={{ background:BG2, border:`1px solid ${BORDER}`, marginBottom:16, overflow:"hidden" }}>
-              <div style={{ background:BG3, borderBottom:`1px solid ${BORDER}`, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
-                <div>
-                  <div style={{ ...MIL, fontSize:16, fontWeight:700, color:"#fff", textTransform:"uppercase", letterSpacing:".06em" }}>{ev.title}</div>
-                  <div style={{ ...MONO, fontSize:10, color:MUTED, marginTop:3 }}>{fmtDate(ev.date)} · {ev.time||"09:00"}</div>
-                </div>
-                <span style={{ ...MONO, fontSize:9, color:ACCENT, border:`1px solid rgba(200,255,0,.3)`, padding:"3px 10px" }}>{rows.length} MARSHALS CONFIRMED</span>
-              </div>
-              <div style={{ padding:"16px 20px" }}>
-                {rows.length === 0 ? (
-                  <div style={{ ...MONO, fontSize:10, color:MUTED }}>No marshals confirmed yet</div>
-                ) : (
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-                    {rows.map(r => {
-                      const sc = STATUS_CFG[r.status] || STATUS_CFG.available;
-                      const rc = ROLE_CFG[r.role] || ROLE_CFG.marshal;
-                      const displayName = r.profile?.callsign || r.profile?.name || "Unknown";
-                      return (
-                        <div key={r.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:BG3, border:`1px solid ${BORDER}` }}>
-                          <div style={{ width:24, height:24, borderRadius:"50%", background:"#080b06", border:`1px solid ${BORDER2}`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", fontSize:10, fontWeight:700, color:ACCENT, flexShrink:0, ...MIL }}>
-                            {r.profile?.profile_pic
-                              ? <img src={r.profile.profile_pic} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e=>{e.target.style.display="none";}}/>
-                              : displayName[0]?.toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ ...MIL, fontSize:12, fontWeight:700, color:"#fff", textTransform:"uppercase", letterSpacing:".04em" }}>{displayName}</div>
-                            <div style={{ ...MONO, fontSize:8, color:MUTED }}>{rc.icon} {rc.label}</div>
-                          </div>
-                          <span style={{ ...MONO, fontSize:8, letterSpacing:".1em", color:sc.color, border:`1px solid ${sc.border}`, padding:"1px 6px" }}>{sc.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export function MarshalSchedulePage({ data, cu, showToast }) {
   const [schedules, setSchedules] = useState({});  // eventId -> [{...}]
   const [loading, setLoading]     = useState({});
@@ -140,10 +77,15 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
   };
 
   if (!cu) return (
-    <PublicScheduleView events={upcomingEvents} schedules={schedules} />
+    <div className="page-content-sm" style={{ textAlign:"center", paddingTop:60 }}>
+      <div style={{ ...MONO, fontSize:11, color:MUTED, letterSpacing:".2em" }}>LOG IN TO VIEW MARSHAL SCHEDULE</div>
+    </div>
   );
   if (!cu.canMarshal && cu.role !== "admin") return (
-    <PublicScheduleView events={upcomingEvents} schedules={schedules} />
+    <div className="page-content-sm" style={{ textAlign:"center", paddingTop:60 }}>
+      <div style={{ ...MIL, fontSize:22, color:MUTED, textTransform:"uppercase", marginBottom:12 }}>Marshal Access Only</div>
+      <div style={{ ...MONO, fontSize:11, color:MUTED, letterSpacing:".15em" }}>Contact admin to be added as a marshal</div>
+    </div>
   );
 
   return (
