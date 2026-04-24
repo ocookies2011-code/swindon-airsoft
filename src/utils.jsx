@@ -1995,6 +1995,8 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
         { id: "gift-vouchers", label: "Gift Vouchers", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8a000" strokeWidth="2"><rect x="2" y="9" width="20" height="13" rx="1"/><path d="M12 9V22M2 14h20M7 9c0-2.8 2.2-5 5-5s5 2.2 5 5" strokeLinecap="round"/></svg> },
       ]
     },
+    { id: "news", label: "News", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M5 7h10M5 10h10M5 13h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
+    { id: "vip", label: "VIP", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><polygon points="10,2 12.5,7.5 18.5,8 14,12.5 15.5,18.5 10,15.5 4.5,18.5 6,12.5 1.5,8 7.5,7.5" stroke="currentColor" strokeWidth="1.4" fill="none"/></svg> },
     { id: "leaderboard", label: "Leaderboard", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg> },
     { id: "gallery", label: "Gallery", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
     {
