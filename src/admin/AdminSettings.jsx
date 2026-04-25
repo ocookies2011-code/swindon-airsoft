@@ -318,13 +318,26 @@ function PushNotificationPanel({ showToast }) {
     setSending(true);
     try {
       const { supabase } = await import("../supabaseClient");
-      // Use supabase.functions.invoke() — handles auth + CORS automatically
-      const { data, error } = await supabase.functions.invoke("send-push", {
-        body: { title, message, url },
-      });
-      if (error) throw error;
-      showToast(`✓ Sent to ${data?.sent ?? "?"} of ${data?.total ?? subs.length} subscribers`, "green");
-      setMessage("");
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ title, message, url }),
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast(`✓ Sent to ${json.sent ?? "?"} of ${json.total ?? subs.length} subscribers`, "green");
+        setMessage("");
+      } else {
+        throw new Error(json.error || `HTTP ${res.status}`);
+      }
     } catch (e) {
       showToast("Failed to send: " + (e?.message || String(e)), "red");
     } finally {
