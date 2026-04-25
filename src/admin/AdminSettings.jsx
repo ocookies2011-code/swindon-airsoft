@@ -333,7 +333,9 @@ function PushNotificationPanel({ showToast }) {
       );
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
-        showToast(`✓ Sent to ${json.sent ?? "?"} of ${json.total ?? subs.length} subscribers`, "green");
+        const detail = json.results ? json.results.map((r,i) => `Sub ${i+1}: ${r.status} ${r.response||r.error||''}`).join(' | ') : '';
+        showToast(`✓ Sent ${json.sent}/${json.total} — FCM: ${detail || 'no detail'}`, "green");
+        console.log('Push results:', json);
         setMessage("");
       } else {
         throw new Error(json.error || `HTTP ${res.status}`);
