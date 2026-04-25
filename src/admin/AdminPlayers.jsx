@@ -374,8 +374,41 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize:12, color:"var(--gold)", marginBottom:8 }}>⚠ Player submitted waiver changes for approval</div>
-                    <div style={{ display:"flex", gap:8 }}>
+                    <div style={{ fontSize:12, color:"var(--gold)", marginBottom:10, fontWeight:700 }}>⚠ Waiver changes pending approval</div>
+                    {/* Old vs New diff */}
+                    {(() => {
+                      const newWaiverData = wu.waiverPending?.waiverData ?? wu.waiverPending;
+                      const newExtras = wu.waiverPending?.extraWaivers !== undefined ? wu.waiverPending.extraWaivers : wu.extraWaivers;
+                      const oldWaivers = [wu.waiverData, ...(wu.extraWaivers || [])].filter(Boolean);
+                      const newWaivers = [newWaiverData, ...(newExtras || [])].filter(Boolean);
+                      const FIELDS = [["name","Name"],["dob","DOB"],["addr1","Address 1"],["addr2","Address 2"],["city","City"],["county","County"],["postcode","Postcode"],["emergencyName","Emerg. Name"],["emergencyPhone","Emerg. Phone"],["medical","Medical"],["guardian","Guardian"]];
+                      return newWaivers.map((nw, wi) => {
+                        const ow = oldWaivers[wi] || {};
+                        const changed = FIELDS.filter(([k]) => (nw[k]||'') !== (ow[k]||''));
+                        return (
+                          <div key={wi} style={{ marginBottom:12 }}>
+                            {newWaivers.length > 1 && <div style={{ fontSize:11, color:"var(--accent)", fontWeight:700, letterSpacing:".1em", marginBottom:6 }}>PLAYER {wi+1}{wi===0?' (PRIMARY)':' (ADDITIONAL)'}</div>}
+                            {changed.length === 0 ? (
+                              <div style={{ fontSize:11, color:"var(--muted)" }}>No field changes — terms re-agreed only</div>
+                            ) : (
+                              <table style={{ width:"100%", fontSize:12, borderCollapse:"collapse" }}>
+                                <thead><tr><th style={{ textAlign:"left", padding:"3px 8px", color:"var(--muted)", fontWeight:600, fontSize:10 }}>Field</th><th style={{ textAlign:"left", padding:"3px 8px", color:"#ef5350", fontSize:10 }}>OLD</th><th style={{ textAlign:"left", padding:"3px 8px", color:"#66bb6a", fontSize:10 }}>NEW</th></tr></thead>
+                                <tbody>
+                                  {changed.map(([k, label]) => (
+                                    <tr key={k} style={{ borderTop:"1px solid #222" }}>
+                                      <td style={{ padding:"4px 8px", color:"var(--muted)", whiteSpace:"nowrap" }}>{label}</td>
+                                      <td style={{ padding:"4px 8px", color:"#ef5350", textDecoration:"line-through", wordBreak:"break-all" }}>{ow[k] || '—'}</td>
+                                      <td style={{ padding:"4px 8px", color:"#66bb6a", fontWeight:600, wordBreak:"break-all" }}>{nw[k] || '—'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                    <div style={{ display:"flex", gap:8, marginTop:8 }}>
                       <button className="btn btn-sm btn-primary" onClick={async () => {
                         const newWaiverData = wu.waiverPending?.waiverData ?? wu.waiverPending;
                         const newExtraWaivers = wu.waiverPending?.extraWaivers !== undefined
@@ -390,11 +423,11 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                         });
                         logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Waiver changes approved", detail: wu.name });
                         showToast("Changes approved!"); setWaiverViewPlayer(null);
-                      }}>Approve Changes</button>
+                      }}>✓ Approve</button>
                       <button className="btn btn-sm btn-ghost" onClick={async () => {
                         await updateUserAndRefresh(wu.id, { waiverPending: null });
                         showToast("Changes rejected."); setWaiverViewPlayer(null);
-                      }}>Reject</button>
+                      }}>✕ Reject</button>
                     </div>
                   </>
                 )}
