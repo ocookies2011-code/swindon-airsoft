@@ -133,6 +133,21 @@ function AppInner() {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   // Reset product view when navigating away from shop
   useEffect(() => { if (page !== "shop") setSelectedProduct(null); }, [page]);
+
+  // Listen for NAVIGATE messages from the push notification service worker
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event) => {
+      if (event.data?.type === 'NAVIGATE') {
+        const path = event.data.url || '/';
+        const page = path.replace(/^\/|#/g, '') || 'home';
+        setPage(page);
+        window.scrollTo(0, 0);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
   // Track recently viewed products (max 4, no duplicates, most recent first)
   const trackRecentlyViewed = useCallback((item) => {
     setRecentlyViewed(prev => {
