@@ -1727,6 +1727,10 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
   });
 
   const existingData = editMode && existing ? existing : {};
+  // Track originals so we know which waivers were actually changed
+  const originalWaivers = editMode ? [cu.waiverData, ...(cu.extraWaivers || [])] : [];
+  const WAIVER_FIELDS = ['name','dob','addr1','addr2','city','county','postcode','country','emergencyName','emergencyPhone','medical','guardian'];
+
   const buildInitialWaivers = () => {
     if (addPlayerMode) {
       // Pre-load all existing waivers + one new blank for the new player
@@ -1734,8 +1738,8 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
       return [...existingWaivers, blankForm()];
     }
     if (editMode) {
-      // Load ALL waivers (primary + extras) for editing
-      return [cu.waiverData, ...(cu.extraWaivers || [])].map(w => blankForm(w));
+      // Pre-tick agreed=true — will be auto-unticked if any field changes
+      return [cu.waiverData, ...(cu.extraWaivers || [])].map(w => ({ ...blankForm(w), agreed: true }));
     }
     return [blankForm({
       name: existingData.name || cu?.name || "", dob: existingData.dob || "",
@@ -1751,7 +1755,19 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
 
-  const fw = (k, v) => setWaivers(ws => ws.map((w, i) => i === activeIdx ? { ...w, [k]: v } : w));
+  const fw = (k, v) => setWaivers(ws => ws.map((w, i) => {
+    if (i !== activeIdx) return w;
+    const updated = { ...w, [k]: v };
+    // In edit mode: auto-untick agreed when any real field changes from original
+    if (editMode && k !== 'agreed') {
+      const orig = originalWaivers[i] || {};
+      const anyChanged = WAIVER_FIELDS.some(fk =>
+        fk === k ? String(v||'') !== String(orig[fk]||'') : String(w[fk]||'') !== String(orig[fk]||'')
+      );
+      if (anyChanged) updated.agreed = false;
+    }
+    return updated;
+  }));
   const active = waivers[activeIdx];
 
   const addWaiver = () => { setWaivers(ws => [...ws, blankForm()]); setActiveIdx(waivers.length); };
@@ -1795,7 +1811,16 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
       if (!waiverItem.addr1 || !waiverItem.city || !waiverItem.postcode) { showToast(`Waiver ${waiverIdx+1}: Address required`, "red"); setActiveIdx(waiverIdx); return; }
       if (!waiverItem.emergencyName || !waiverItem.emergencyPhone) { showToast(`Waiver ${waiverIdx+1}: Emergency contact required`, "red"); setActiveIdx(waiverIdx); return; }
       if (!waiverItem.sigData) { showToast(`Waiver ${waiverIdx+1}: Signature required`, "red"); setActiveIdx(waiverIdx); return; }
-      if (!waiverItem.agreed) { showToast(`Waiver ${waiverIdx+1}: Please agree to the terms`, "red"); setActiveIdx(waiverIdx); return; }
+      if (editMode) {
+        const orig = originalWaivers[waiverIdx] || {};
+        const hasChanges = WAIVER_FIELDS.some(k => String(waiverItem[k]||'') !== String(orig[k]||''));
+        if (hasChanges && !waiverItem.agreed) {
+          showToast(`Waiver ${waiverIdx+1}: Please agree to the updated terms`, "red");
+          setActiveIdx(waiverIdx); return;
+        }
+      } else {
+        if (!waiverItem.agreed) { showToast(`Waiver ${waiverIdx+1}: Please agree to the terms`, "red"); setActiveIdx(waiverIdx); return; }
+      }
       if (waiverItem.isChild && !waiverItem.guardian) { showToast(`Waiver ${waiverIdx+1}: Guardian name required`, "red"); setActiveIdx(waiverIdx); return; }
     }
     const primary = { ...waivers[0], signed: true, date: new Date().toISOString() };
