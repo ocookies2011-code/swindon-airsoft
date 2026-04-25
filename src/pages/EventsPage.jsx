@@ -330,11 +330,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           }
         } catch { /* non-fatal */ }
 
-        // Deduct credits if used
+        // Deduct credits if used — uses a SECURITY DEFINER function to bypass
+        // the prevent_role_escalation trigger which blocks direct credits updates
         if (creditsApplied > 0) {
-          const newCredits = Math.max(0, availCredits - creditsApplied);
-          await supabase.from('profiles').update({ credits: newCredits }).eq('id', cu.id);
-          updateUser(cu.id, { credits: newCredits });
+          const { data: newCredits, error: credErr } = await supabase
+            .rpc('deduct_credits', { p_user_id: cu.id, p_amount: creditsApplied });
+          if (credErr) console.error('Credits deduction failed:', credErr.message);
+          else updateUser(cu.id, { credits: newCredits });
         }
 
         // Record discount code / gift voucher redemption
