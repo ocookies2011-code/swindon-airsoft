@@ -1790,13 +1790,16 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
   const submit = async () => {
     for (let waiverIdx = 0; waiverIdx < waivers.length; waiverIdx++) {
       const waiverItem = waivers[waiverIdx];
-      if (!waiverItem.name)  { showToast(`Waiver ${waiverIdx+1}: Full name required`, "red"); setActiveIdx(waiverIdx); return; }
-      if (!waiverItem.dob)   { showToast(`Waiver ${waiverIdx+1}: Date of birth required`, "red"); setActiveIdx(waiverIdx); return; }
-      if (!waiverItem.addr1 || !waiverItem.city || !waiverItem.postcode) { showToast(`Waiver ${waiverIdx+1}: Address required`, "red"); setActiveIdx(waiverIdx); return; }
-      if (!waiverItem.emergencyName || !waiverItem.emergencyPhone) { showToast(`Waiver ${waiverIdx+1}: Emergency contact required`, "red"); setActiveIdx(waiverIdx); return; }
-      if (!waiverItem.sigData) { showToast(`Waiver ${waiverIdx+1}: Signature required`, "red"); setActiveIdx(waiverIdx); return; }
       if (!waiverItem.agreed) { showToast(`Waiver ${waiverIdx+1}: Please agree to the terms`, "red"); setActiveIdx(waiverIdx); return; }
-      if (waiverItem.isChild && !waiverItem.guardian) { showToast(`Waiver ${waiverIdx+1}: Guardian name required`, "red"); setActiveIdx(waiverIdx); return; }
+      // Only validate full form fields on new waivers (not edits)
+      if (!editMode) {
+        if (!waiverItem.name)  { showToast(`Waiver ${waiverIdx+1}: Full name required`, "red"); setActiveIdx(waiverIdx); return; }
+        if (!waiverItem.dob)   { showToast(`Waiver ${waiverIdx+1}: Date of birth required`, "red"); setActiveIdx(waiverIdx); return; }
+        if (!waiverItem.addr1 || !waiverItem.city || !waiverItem.postcode) { showToast(`Waiver ${waiverIdx+1}: Address required`, "red"); setActiveIdx(waiverIdx); return; }
+        if (!waiverItem.emergencyName || !waiverItem.emergencyPhone) { showToast(`Waiver ${waiverIdx+1}: Emergency contact required`, "red"); setActiveIdx(waiverIdx); return; }
+        if (!waiverItem.sigData) { showToast(`Waiver ${waiverIdx+1}: Signature required`, "red"); setActiveIdx(waiverIdx); return; }
+        if (waiverItem.isChild && !waiverItem.guardian) { showToast(`Waiver ${waiverIdx+1}: Guardian name required`, "red"); setActiveIdx(waiverIdx); return; }
+      }
     }
     const primary = { ...waivers[0], signed: true, date: new Date().toISOString() };
     const extras = waivers.slice(1).map(w => ({ ...w, signed: true, date: new Date().toISOString() }));
@@ -1870,6 +1873,13 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
           </button>
         </div>
 
+        {/* In edit mode, only show T&C + agree — no need to re-enter all fields */}
+        {editMode && (
+          <div style={{ padding:"12px 16px", background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", borderRadius:4, marginBottom:16, fontSize:13, color:"var(--muted)" }}>
+            ✏️ You are requesting changes to your existing waiver. Simply agree to the current terms below — an admin will review and approve the update.
+          </div>
+        )}
+
         {/* T&C box */}
         <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:20, marginBottom:20 }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:14, letterSpacing:".12em", color:"var(--accent)", textTransform:"uppercase", marginBottom:12 }}>
@@ -1885,6 +1895,9 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
             ))}
           </div>
         </div>
+
+        {/* Form fields — hidden in edit mode */}
+        {!editMode && <>
 
         {/* Under 18 */}
         <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:4, padding:14, marginBottom:16, display:"flex", gap:12, alignItems:"flex-start" }}>
@@ -1973,6 +1986,8 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
             onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw} />
           <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>Draw your signature above using mouse or touch</div>
         </div>
+
+        </>}
 
         {/* Agree */}
         <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:20, padding:14, background:"#111", border:"1px solid #2a2a2a", borderRadius:4 }}>
