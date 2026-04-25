@@ -1,4 +1,4 @@
-// Swindon Airsoft — Push Notification Service Worker v2
+// Swindon Airsoft — Push Notification Service Worker v3
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
@@ -11,13 +11,13 @@ self.addEventListener('push', event => {
 
   event.waitUntil(
     self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/logo.png',
-      badge: '/logo.png',
-      tag: 'sa-' + Date.now(), // unique tag so each notification shows separately
-      data: { url: data.url },
+      body:      data.body,
+      icon:      '/src/logo_transparent.PNG',
+      badge:     '/src/logo_transparent.PNG',
+      tag:       'sa-' + Date.now(),
+      data:      { url: data.url },
       actions: [
-        { action: 'open', title: 'View' },
+        { action: 'open',  title: 'View' },
         { action: 'close', title: 'Dismiss' },
       ],
     })
@@ -28,21 +28,18 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   if (event.action === 'close') return;
 
-  const path = event.notification.data?.url || '/';
-  // Always use the origin, append the path (handles hash routes like /#events)
+  const path    = event.notification.data?.url || '/';
   const fullUrl = self.location.origin + (path.startsWith('/') ? path : '/' + path);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      // Look for an existing tab on our site
-      for (const client of clients) {
-        if (client.url.startsWith(self.location.origin)) {
-          client.focus();
-          client.postMessage({ type: 'NAVIGATE', url: path });
-          return;
-        }
+      // Find an existing tab on our site
+      const existing = clients.find(c => c.url.startsWith(self.location.origin));
+      if (existing) {
+        existing.focus();
+        existing.postMessage({ type: 'NAVIGATE', url: path });
+        return;
       }
-      // No existing tab — open a new one
       return self.clients.openWindow(fullUrl);
     })
   );
