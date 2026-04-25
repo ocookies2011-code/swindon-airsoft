@@ -49,7 +49,7 @@ function AdminSettings({ showToast, cu }) {
     } finally { setSavingSQ(false); }
   };
 
-  const [openSections, setOpenSections] = React.useState({});
+  const [openSections, setOpenSections] = React.useState({ push: true });
   const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   const sectionHead = (label, key) => {
