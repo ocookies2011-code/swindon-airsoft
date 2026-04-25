@@ -49,7 +49,7 @@ function AdminSettings({ showToast, cu }) {
     } finally { setSavingSQ(false); }
   };
 
-  const [openSections, setOpenSections] = React.useState({ push: true });
+  const [openSections, setOpenSections] = React.useState({});
   const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   const sectionHead = (label, key) => {
@@ -342,8 +342,16 @@ function PushNotificationPanel({ showToast }) {
         <textarea className="inp" rows={3} value={message} onChange={e => setMessage(e.target.value)} placeholder="New game day announced! Book your slot now." style={{ resize:"vertical" }} />
       </div>
       <div>
-        <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:4 }}>LINK (optional)</label>
+        <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:4 }}>LINK — where View takes the player</label>
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:6 }}>
+          {[["Home","/"],["Events","/#events"],["Shop","/#shop"],["News","/#news"],["VIP","/#vip"]].map(([label, val]) => (
+            <button key={label} className="btn btn-ghost btn-sm" style={{ fontSize:10, padding:"3px 10px", background: url===val ? "rgba(200,255,0,.15)" : undefined, borderColor: url===val ? "var(--accent)" : undefined }} onClick={() => setUrl(val)}>{label}</button>
+          ))}
+        </div>
         <input className="inp" value={url} onChange={e => setUrl(e.target.value)} placeholder="/" />
+      </div>
+      <div style={{ fontSize:11, color:"var(--muted)", background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.1)", padding:"8px 12px" }}>
+        💡 Tip: Set the message before sending. Players see the notification even with the browser closed.
       </div>
       <button className="btn btn-primary" onClick={send} disabled={sending || !message.trim()}>
         {sending ? "Sending…" : `🔔 Send to ${subCount ?? "all"} subscribers`}
