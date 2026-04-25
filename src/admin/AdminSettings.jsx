@@ -275,16 +275,7 @@ function AdminSettings({ showToast, cu }) {
       {/* EmailJS test */}
       <EmailTestCard showToast={showToast} sectionHead={sectionHead} />
 
-      {/* Push Notifications */}
-      <div className="card mb-2">
-        {sectionHead("🔔 Push Notifications", "push")}
-        {sectionBody("push", <PushNotificationPanel showToast={showToast} />)}
-      </div>
-    </div>
-  );
-}
-
-function PushNotificationPanel({ showToast }) {
+) {
   const [title, setTitle]       = React.useState("Swindon Airsoft");
   const [message, setMessage]   = React.useState("");
   const [url, setUrl]           = React.useState("/");
