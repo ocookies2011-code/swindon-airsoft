@@ -2463,78 +2463,88 @@ function HomePage({ data, setPage, onProductClick }) {
         return (
           <div style={{ background:"#0a0a0a", padding:"24px" }}>
             <div style={{ maxWidth:1100, margin:"0 auto" }}>
-              {/* Header bar */}
-              <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12, marginBottom:0 }}>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:".4em", color:"#000", fontWeight:800 }}>MISSION BRIEFING</span>
-                <span style={{ marginLeft:"auto", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"rgba(0,0,0,.6)", letterSpacing:".1em" }}>
-                  OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
-                </span>
-              </div>
-
-              {/* Two-column body */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0, border:"1px solid #2a2a2a", borderTop:"none", position:"relative" }}>
+              {/* Two-column layout — each column has its own header */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0, position:"relative" }}>
                 {/* Corner brackets */}
                 <div style={{ position:"absolute", bottom:0, left:0, width:16, height:16, borderBottom:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
                 <div style={{ position:"absolute", bottom:0, right:0, width:16, height:16, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
 
                 {/* LEFT — Countdown */}
-                <div style={{ background:"#111", padding:"24px", borderRight:"1px solid #2a2a2a", display:"flex", flexDirection:"column", gap:16 }}>
-                  <div>
-                    <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
-                    <div className="countdown-panel-title">{nextEvent.title}</div>
-                    <div className="countdown-panel-meta">
-                      📍 {nextEvent.location}<br />
-                      🗓 {fmtDate(nextEvent.date)} · {nextEvent.time} HRS GMT
-                    </div>
+                <div style={{ border:"1px solid #2a2a2a", borderRight:"none", display:"flex", flexDirection:"column" }}>
+                  {/* Left header */}
+                  <div style={{ background:"var(--accent)", padding:"6px 16px", display:"flex", alignItems:"center", gap:12 }}>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:".4em", color:"#000", fontWeight:800 }}>MISSION BRIEFING</span>
+                    <span style={{ marginLeft:"auto", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"rgba(0,0,0,.6)", letterSpacing:".1em" }}>
+                      OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
+                    </span>
                   </div>
-                  <div>
-                    <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
-                    <div className="countdown-panel-timer">
-                      <CountdownPanel target={target} />
+                  <div style={{ background:"#111", padding:"24px", display:"flex", flexDirection:"column", gap:16, flex:1 }}>
+                    <div>
+                      <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
+                      <div className="countdown-panel-title">{nextEvent.title}</div>
+                      <div className="countdown-panel-meta">
+                        📍 {nextEvent.location}<br />
+                        🗓 {fmtDate(nextEvent.date)} · {nextEvent.time} HRS GMT
+                      </div>
                     </div>
+                    <div>
+                      <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
+                      <div className="countdown-panel-timer">
+                        <CountdownPanel target={target} />
+                      </div>
+                    </div>
+                    <button className="btn btn-primary" style={{ padding:"9px 28px", letterSpacing:".2em", alignSelf:"flex-start" }} onClick={() => setPage("events")}>DEPLOY →</button>
                   </div>
-                  <button className="btn btn-primary" style={{ padding:"9px 28px", letterSpacing:".2em", alignSelf:"flex-start" }} onClick={() => setPage("events")}>DEPLOY →</button>
                 </div>
 
-                {/* RIGHT — Latest News */}
-                <div style={{ background:"#0d0d0d", padding:"24px", display:"flex", flexDirection:"column" }}>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"#3a5010", marginBottom:14 }}>◆ LATEST INTEL</div>
-                  {recentNews.length === 0 ? (
-                    <div style={{ fontSize:12, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>No dispatches yet.</div>
-                  ) : (
-                    <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
-                      {recentNews.map((post, i) => (
-                        <div key={post.id}
-                          onClick={() => setPage("news")}
-                          style={{ padding:"10px 0", borderBottom: i < recentNews.length - 1 ? "1px solid #1a2808" : "none", cursor:"pointer", display:"flex", flexDirection:"column", gap:4 }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = ".75"}
-                          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                        >
-                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".15em", color: CATEGORY_COLOURS[post.category] || "#3a5010", border:`1px solid ${CATEGORY_COLOURS[post.category] || "#3a5010"}`, padding:"1px 6px", flexShrink:0, textTransform:"uppercase" }}>
-                              {post.category}
-                            </span>
-                            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em" }}>
-                              {new Date(post.created_at).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" })}
-                            </span>
+                {/* RIGHT — Latest Intel */}
+                <div style={{ border:"1px solid #2a2a2a", display:"flex", flexDirection:"column" }}>
+                  {/* Right header */}
+                  <div style={{ background:"#1a2808", padding:"6px 16px", display:"flex", alignItems:"center", borderBottom:"1px solid #2a3a10" }}>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, letterSpacing:".4em", color:"var(--accent)", fontWeight:800 }}>LATEST INTEL</span>
+                  </div>
+                  <div style={{ background:"#0d0d0d", padding:"24px", display:"flex", flexDirection:"column", flex:1 }}>
+                    {recentNews.length === 0 ? (
+                      <div style={{ fontSize:12, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>No dispatches yet.</div>
+                    ) : (
+                      <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+                        {recentNews.map((post, i) => (
+                          <div key={post.id}
+                            onClick={() => setPage("news")}
+                            style={{ padding:"10px 0", borderBottom: i < recentNews.length - 1 ? "1px solid #1a2808" : "none", cursor:"pointer", display:"flex", flexDirection:"column", gap:3 }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = ".75"}
+                            onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                          >
+                            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                              <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".15em", color: CATEGORY_COLOURS[post.category] || "#3a5010", border:`1px solid ${CATEGORY_COLOURS[post.category] || "#3a5010"}`, padding:"1px 6px", flexShrink:0, textTransform:"uppercase" }}>
+                                {post.category}
+                              </span>
+                              <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em" }}>
+                                {new Date(post.created_at).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" })}
+                              </span>
+                            </div>
+                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:15, color:"#c0d8a0", letterSpacing:".04em", textTransform:"uppercase" }}>
+                              {post.title}
+                            </div>
+                            {post.body && (
+                              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5a20", lineHeight:1.5, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
+                                {post.body.replace(/<[^>]+>/g, '').slice(0, 120)}{post.body.replace(/<[^>]+>/g, '').length > 120 ? '…' : ''}
+                              </div>
+                            )}
                           </div>
-                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:15, color:"#c0d8a0", letterSpacing:".04em", textTransform:"uppercase" }}>
-                            {post.title}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button className="btn btn-ghost btn-sm" style={{ marginTop:"auto", paddingTop:16, letterSpacing:".15em", fontSize:10, alignSelf:"flex-start" }} onClick={() => setPage("news")}>
-                    ALL DISPATCHES →
-                  </button>
+                        ))}
+                      </div>
+                    )}
+                    <button className="btn btn-ghost btn-sm" style={{ marginTop:"auto", paddingTop:16, letterSpacing:".15em", fontSize:10, alignSelf:"flex-start" }} onClick={() => setPage("news")}>
+                      ALL DISPATCHES →
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Mobile: stack columns */}
               <style>{`@media(max-width:700px){
                 .mission-grid { grid-template-columns: 1fr !important; }
-                .mission-grid > div:first-child { border-right: none !important; border-bottom: 1px solid #2a2a2a; }
               }`}</style>
             </div>
           </div>
