@@ -382,7 +382,21 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                 </div>
               : <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>}
           </div>
-          {cu.waiverPending && <div className="alert alert-gold">⏳ Changes submitted — awaiting admin approval</div>}
+          {cu.waiverPending && (
+            <div className="alert alert-gold" style={{ marginBottom:12 }}>
+              <div style={{ fontWeight:700, marginBottom:4 }}>⏳ Changes pending admin approval</div>
+              {cu.waiverPending._removeExtra ? (
+                <div style={{ fontSize:12 }}>Requesting removal of player waiver: <strong>{cu.waiverPending._playerName}</strong></div>
+              ) : cu.waiverPending.waiverData ? (
+                <div style={{ fontSize:12 }}>
+                  Updated waiver submitted for <strong>{cu.waiverPending.waiverData.name}</strong>
+                  {cu.waiverPending.extraWaivers?.length > 0 && ` + ${cu.waiverPending.extraWaivers.length} additional player(s)`}
+                </div>
+              ) : (
+                <div style={{ fontSize:12 }}>Waiver changes submitted — awaiting review</div>
+              )}
+            </div>
+          )}
           {cu.waiverData && (() => {
             const allWaivers = [cu.waiverData, ...(cu.extraWaivers || [])];
             return (
