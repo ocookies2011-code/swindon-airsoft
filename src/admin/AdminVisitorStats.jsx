@@ -273,7 +273,7 @@ function AdminVisitorStats() {
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState(null);
   const [activeTab, setActiveTab]         = useState("overview");
-  const [dateRange, setDateRange]         = useState("7d");
+  const [dateRange, setDateRange]         = useState("30d");
 
   const rangeToDays = { "1d": 1, "7d": 7, "30d": 30, "90d": 90, "all": 0 };
 
