@@ -27,12 +27,21 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   if (event.action === 'close') return;
-  const url = event.notification.data?.url || '/';
+
+  const targetUrl = event.notification.data?.url || '/';
+  const fullUrl = self.location.origin + targetUrl;
+
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      const existing = clients.find(c => c.url.includes(self.location.origin));
-      if (existing) { existing.focus(); existing.navigate(self.location.origin + url); }
-      else self.clients.openWindow(self.location.origin + url);
+      // If site is already open, focus it and navigate to the right page
+      const existing = clients.find(c => c.url.startsWith(self.location.origin));
+      if (existing) {
+        existing.focus();
+        // Navigate to the hash route
+        return existing.navigate(fullUrl);
+      }
+      // Otherwise open a new window
+      return self.clients.openWindow(fullUrl);
     })
   );
 });
