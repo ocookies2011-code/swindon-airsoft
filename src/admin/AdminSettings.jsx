@@ -285,26 +285,43 @@ function AdminSettings({ showToast, cu }) {
 }
 
 function PushNotificationPanel({ showToast }) {
-  const [title, setTitle]     = React.useState("Swindon Airsoft");
-  const [message, setMessage] = React.useState("");
-  const [url, setUrl]         = React.useState("/");
-  const [sending, setSending] = React.useState(false);
+  const [title, setTitle]       = React.useState("Swindon Airsoft");
+  const [message, setMessage]   = React.useState("");
+  const [url, setUrl]           = React.useState("/");
+  const [sending, setSending]   = React.useState(false);
   const [subCount, setSubCount] = React.useState(null);
-  const { supabase: sb } = { supabase: null }; // fallback
+  const [subs, setSubs]         = React.useState([]);
 
   React.useEffect(() => {
     import("../supabaseClient").then(({ supabase }) => {
-      supabase.from("push_subscriptions").select("id", { count:"exact", head:true })
-        .then(({ count }) => setSubCount(count || 0));
+      supabase.from("push_subscriptions").select("*")
+        .then(({ data }) => {
+          setSubs(data || []);
+          setSubCount((data || []).length);
+        });
     });
   }, []);
 
-  const send = async () => {
-    if (!message.trim()) { showToast("Message is required", "red"); return; }
+  // Helpers for Web Push encryption
+  function b64ToUint8(b64) {
+    const b = b64.replace(/-/g,"+").replace(/_/g,"/");
+    const p = b.padEnd(b.length+(4-b.length%4)%4,"=");
+    return Uint8Array.from(atob(p),c=>c.charCodeAt(0));
+  }
+  function uint8ToB64(u8) {
+    return btoa(String.fromCharCode(...u8)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+  }
+
+  const sendDirect = async () => {
+    if (!message.trim()) { showToast("Message is required","red"); return; }
+    if (!subs.length) { showToast("No subscribers","red"); return; }
     setSending(true);
+    let sent = 0, failed = 0;
     try {
       const { supabase } = await import("../supabaseClient");
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // Send via edge function
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push`,
         {
@@ -312,17 +329,20 @@ function PushNotificationPanel({ showToast }) {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${session.access_token}`,
-            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({ title, message, url }),
         }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Send failed");
-      showToast(`✓ Sent to ${data.sent} of ${data.total} subscribers`, "green");
-      setMessage("");
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.sent !== undefined) {
+        showToast(`✓ Sent to ${json.sent} of ${json.total} subscribers`, "green");
+        setMessage("");
+        return;
+      }
+      throw new Error(json.error || `HTTP ${res.status}`);
     } catch (e) {
-      showToast("Send failed: " + e.message, "red");
+      showToast("Edge function error: " + e.message + " — is send-push deployed in Supabase?", "red");
     } finally {
       setSending(false);
     }
@@ -345,15 +365,15 @@ function PushNotificationPanel({ showToast }) {
         <label style={{ fontSize:11, color:"var(--muted)", display:"block", marginBottom:4 }}>LINK — where View takes the player</label>
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:6 }}>
           {[["Home","/"],["Events","/#events"],["Shop","/#shop"],["News","/#news"],["VIP","/#vip"]].map(([label, val]) => (
-            <button key={label} className="btn btn-ghost btn-sm" style={{ fontSize:10, padding:"3px 10px", background: url===val ? "rgba(200,255,0,.15)" : undefined, borderColor: url===val ? "var(--accent)" : undefined }} onClick={() => setUrl(val)}>{label}</button>
+            <button key={label} className="btn btn-ghost btn-sm" style={{ fontSize:10, padding:"3px 10px", background:url===val?"rgba(200,255,0,.15)":undefined, borderColor:url===val?"var(--accent)":undefined }} onClick={() => setUrl(val)}>{label}</button>
           ))}
         </div>
         <input className="inp" value={url} onChange={e => setUrl(e.target.value)} placeholder="/" />
       </div>
       <div style={{ fontSize:11, color:"var(--muted)", background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.1)", padding:"8px 12px" }}>
-        💡 Tip: Set the message before sending. Players see the notification even with the browser closed.
+        💡 The message you type will appear in the notification body. The link tells the app where to go when tapped.
       </div>
-      <button className="btn btn-primary" onClick={send} disabled={sending || !message.trim()}>
+      <button className="btn btn-primary" onClick={sendDirect} disabled={sending || !message.trim()}>
         {sending ? "Sending…" : `🔔 Send to ${subCount ?? "all"} subscribers`}
       </button>
     </div>
