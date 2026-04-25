@@ -1,20 +1,20 @@
-// Swindon Airsoft — Push Notification Service Worker
-const CACHE_NAME = 'sa-sw-v1';
-
+// Swindon Airsoft — Push Notification Service Worker v2
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('push', event => {
-  let data = { title: 'Swindon Airsoft', body: 'New update', url: '/' };
-  try { data = event.data?.json() || data; } catch {}
+  let data = { title: 'Swindon Airsoft', body: 'You have a new notification', url: '/' };
+  try {
+    const parsed = event.data?.json();
+    if (parsed) data = { ...data, ...parsed };
+  } catch {}
 
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/logo.png',
       badge: '/logo.png',
-      tag: 'sa-notification',
-      renotify: true,
+      tag: 'sa-' + Date.now(), // unique tag so each notification shows separately
       data: { url: data.url },
       actions: [
         { action: 'open', title: 'View' },
@@ -28,19 +28,21 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   if (event.action === 'close') return;
 
-  const targetUrl = event.notification.data?.url || '/';
-  const fullUrl = self.location.origin + targetUrl;
+  const path = event.notification.data?.url || '/';
+  // Always use the origin, append the path (handles hash routes like /#events)
+  const fullUrl = self.location.origin + (path.startsWith('/') ? path : '/' + path);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      // If site is already open, focus it and navigate to the right page
-      const existing = clients.find(c => c.url.startsWith(self.location.origin));
-      if (existing) {
-        existing.focus();
-        // Navigate to the hash route
-        return existing.navigate(fullUrl);
+      // Look for an existing tab on our site
+      for (const client of clients) {
+        if (client.url.startsWith(self.location.origin)) {
+          client.focus();
+          client.postMessage({ type: 'NAVIGATE', url: path });
+          return;
+        }
       }
-      // Otherwise open a new window
+      // No existing tab — open a new one
       return self.clients.openWindow(fullUrl);
     })
   );
