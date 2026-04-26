@@ -39,15 +39,17 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
 
   const loadSchedule = async (eventId) => {
     setLoading(p => ({ ...p, [eventId]:true }));
-    const { data: rows } = await supabase
+    const { data: rows, error } = await supabase
       .from("marshal_schedules")
-      .select("*, profile:profiles(id,name,callsign,profile_pic,can_marshal)")
+      .select("id,event_id,user_id,status,role,notes,admin_approved,updated_at,profile:profiles(id,name,callsign,profile_pic,can_marshal)")
       .eq("event_id", eventId);
+    if (error) console.error("loadSchedule error:", error.message);
     setSchedules(p => ({ ...p, [eventId]: rows||[] }));
     // Pre-fill my own status
+    const VALID_ROLES = ["marshal","referee","senior_marshal"];
     const mine = (rows||[]).find(r => r.user_id === cu?.id);
     if (mine) {
-      setMyStatus(p => ({ ...p, [eventId]:{ status:mine.status, role:mine.role, notes:mine.notes||"" }}));
+      setMyStatus(p => ({ ...p, [eventId]:{ status:mine.status, role:VALID_ROLES.includes(mine.role)?mine.role:"marshal", notes:mine.notes||"" }}));
       // Auto-expand notes if there's already a saved note
       if (mine.notes) setExpandedNotes(p => ({ ...p, [eventId]:true }));
     } else {
@@ -56,10 +58,11 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
     setLoading(p => ({ ...p, [eventId]:false }));
   };
 
-  // Load schedules for everyone so the public view has data
+  // Load schedules on mount and when events/user changes
   useEffect(() => {
+    if (!cu?.id) return; // wait until user is loaded
     upcomingEvents.forEach(e => loadSchedule(e.id));
-  }, [data.events]);
+  }, [data.events, cu?.id]); // eslint-disable-line
 
   const submit = async (eventId) => {
     if (!cu) return;
@@ -71,8 +74,10 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
         { onConflict:"event_id,user_id" }
       );
       if (upsertErr) throw upsertErr;
+      // Small delay to let DB propagate before reloading
+      await new Promise(r => setTimeout(r, 300));
       await loadSchedule(eventId);
-      showToast("Availability saved","green");
+      showToast("Availability saved ✓","green");
     } catch(e) { showToast(e.message,"red"); }
     finally { setSubmitting(false); }
   };
@@ -130,6 +135,7 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
                 <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                   <span style={{ ...MONO, fontSize:9, color:ACCENT, border:`1px solid rgba(200,255,0,.3)`, padding:"3px 10px" }}>{available.length} AVAILABLE</span>
                   {unavailable.length > 0 && <span style={{ ...MONO, fontSize:9, color:"#ef5350", border:`1px solid rgba(239,83,80,.3)`, padding:"3px 10px" }}>{unavailable.length} UNAVAILABLE</span>}
+                  <button onClick={() => loadSchedule(ev.id)} style={{ ...MONO, fontSize:9, color:MUTED, background:"none", border:`1px solid ${BORDER}`, padding:"3px 8px", cursor:"pointer" }} title="Refresh">↻</button>
                 </div>
               </div>
 
