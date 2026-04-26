@@ -65,9 +65,24 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
 
   // Load schedules on mount and when events/user changes
   useEffect(() => {
-    if (!cu?.id) return; // wait until user is loaded
+    if (!cu?.id) return;
     upcomingEvents.forEach(e => loadSchedule(e.id));
   }, [data.events, cu?.id]); // eslint-disable-line
+
+  // Re-enrich schedules when data.users loads (fixes "Unknown" names)
+  useEffect(() => {
+    if (!data.users?.length) return;
+    setSchedules(prev => {
+      const updated = {};
+      for (const [eventId, rows] of Object.entries(prev)) {
+        updated[eventId] = rows.map(r => ({
+          ...r,
+          profile: data.users.find(u => u.id === r.user_id) || r.profile || { name:"Unknown", callsign:"", profile_pic:null },
+        }));
+      }
+      return updated;
+    });
+  }, [data.users?.length]); // eslint-disable-line
 
   const submit = async (eventId) => {
     if (!cu) return;
