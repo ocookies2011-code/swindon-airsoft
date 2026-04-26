@@ -33,6 +33,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const [edit, setEdit] = useState({
     name: cu.name,
     callsign: cu.callsign || "",
+    nationality: cu.nationality || 'GB',
     email: cu.email || "",
     phone: cu.phone || "",
     ...parseAddress(cu.address),
@@ -182,10 +183,11 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const saveProfile = async () => {
     try {
       await updateUser(cu.id, {
-        name:     edit.name,
-        callsign: edit.callsign,
-        phone:    edit.phone,
-        address:  composeAddress(edit),
+        name:        edit.name,
+        callsign:    edit.callsign,
+        phone:       edit.phone,
+        address:     composeAddress(edit),
+        nationality: edit.nationality,
       });
       showToast("Profile updated!");
     } catch(e) {
@@ -331,6 +333,25 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               <label>Postcode</label>
               <input autoComplete="off" value={edit.postcode} onChange={e => setAddr("postcode", e.target.value.toUpperCase())} placeholder="SN1 1AA" style={{ maxWidth: 160 }} />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Nationality Flag <span style={{ color:"var(--muted)", fontWeight:400, letterSpacing:0, textTransform:"none" }}>(shown on leaderboard)</span></label>
+            <select value={edit.nationality} onChange={e => setEdit(p => ({ ...p, nationality: e.target.value }))} style={{ maxWidth:280 }}>
+              {[
+                ["GB","🇬🇧 United Kingdom"],["US","🇺🇸 United States"],["AU","🇦🇺 Australia"],
+                ["CA","🇨🇦 Canada"],["NZ","🇳🇿 New Zealand"],["IE","🇮🇪 Ireland"],
+                ["ZA","🇿🇦 South Africa"],["DE","🇩🇪 Germany"],["FR","🇫🇷 France"],
+                ["ES","🇪🇸 Spain"],["IT","🇮🇹 Italy"],["NL","🇳🇱 Netherlands"],
+                ["BE","🇧🇪 Belgium"],["SE","🇸🇪 Sweden"],["NO","🇳🇴 Norway"],
+                ["DK","🇩🇰 Denmark"],["FI","🇫🇮 Finland"],["PL","🇵🇱 Poland"],
+                ["PT","🇵🇹 Portugal"],["GR","🇬🇷 Greece"],["CH","🇨🇭 Switzerland"],
+                ["AT","🇦🇹 Austria"],["CZ","🇨🇿 Czech Republic"],["JP","🇯🇵 Japan"],
+                ["KR","🇰🇷 South Korea"],["SG","🇸🇬 Singapore"],["MY","🇲🇾 Malaysia"],
+                ["BR","🇧🇷 Brazil"],["MX","🇲🇽 Mexico"],["AR","🇦🇷 Argentina"],
+                ["IN","🇮🇳 India"],["PH","🇵🇭 Philippines"],["TH","🇹🇭 Thailand"],
+              ].map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+            </select>
           </div>
 
           <div className="gap-2">
