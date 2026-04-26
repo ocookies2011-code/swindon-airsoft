@@ -19,6 +19,7 @@ import { AdminRevenue }            from "./AdminRevenue";
 import { AdminGallery }            from "./AdminGallery";
 import { AdminQA }                 from "./AdminQA";
 import { AdminStaff }              from "./AdminStaff";
+import { AdminMarshalSchedule }    from "./AdminMarshalSchedule";
 import { AdminContactDepts }       from "./AdminContactDepts";
 import { AdminLeaderboard }        from "./AdminLeaderboard";
 import { AdminFailedPayments }     from "./AdminFailedPayments";
@@ -209,7 +210,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "contact-admin" && <AdminContactDepts showToast={showToast} save={save} cu={cu} />}
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "news-admin" && <AdminNews showToast={showToast} cu={cu} />}
-          {section === "marshal-admin" && <div className="page-content"><div className="page-title">Marshal Schedule</div><div className="page-sub" style={{marginTop:8,color:"var(--muted)"}}>Marshal scheduling is managed from the public-facing Marshal page. Direct players with can_marshal=true to the Marshal section in their profile.</div></div>}
+          {section === "marshal-admin" && <AdminMarshalSchedule data={data} cu={cu} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
