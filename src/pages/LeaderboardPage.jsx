@@ -46,23 +46,22 @@ function getPlayerRank(games) {
 }
 
 
-/* ── Nationality flag using emoji ── */
+/* ── Nationality flag image via flagcdn.com ── */
 function NationalityFlag({ code = "GB", size = 18 }) {
-  // Convert country code to regional indicator emoji (flag emoji)
-  const flag = code.toUpperCase().split('').map(c =>
-    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
-  ).join('');
+  const c = (code || "GB").toLowerCase();
+  const h = Math.round(size);
+  const w = Math.round(size * 1.5);
   return (
-    <span
+    <img
+      src={`https://flagcdn.com/${w}x${h}/${c}.png`}
+      srcSet={`https://flagcdn.com/${w*2}x${h*2}/${c}.png 2x`}
+      width={w}
+      height={h}
+      alt={code}
       title={code}
-      style={{
-        fontSize: size,
-        lineHeight: 1,
-        flexShrink: 0,
-        display: "inline-block",
-        filter: "drop-shadow(0 1px 2px rgba(0,0,0,.5))",
-      }}
-    >{flag}</span>
+      style={{ flexShrink:0, display:"inline-block", borderRadius:2, objectFit:"cover", boxShadow:"0 1px 3px rgba(0,0,0,.5)" }}
+      onError={e => { e.target.style.display="none"; }}
+    />
   );
 }
 

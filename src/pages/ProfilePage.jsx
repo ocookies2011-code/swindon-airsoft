@@ -351,36 +351,29 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                 ["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],
                 ["IN","India"],["PH","Philippines"],["TH","Thailand"],
               ];
-              const toFlag = code => code.toUpperCase().split('').map(c =>
-                String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
-              ).join('');
-              const current = NATIONS.find(([c]) => c === edit.nationality) || NATIONS[0];
+              const selected = NATIONS.find(([c]) => c === edit.nationality) || NATIONS[0];
               return (
-                <div style={{ display:"flex", flexWrap:"wrap", gap:6, maxWidth:420 }}>
-                  {NATIONS.map(([code, name]) => (
-                    <button
-                      key={code}
-                      type="button"
-                      onClick={() => setEdit(p => ({ ...p, nationality: code }))}
-                      title={name}
-                      style={{
-                        background: edit.nationality === code ? "rgba(200,255,0,.15)" : "transparent",
-                        border: `1px solid ${edit.nationality === code ? "var(--accent)" : "var(--border)"}`,
-                        borderRadius: 2,
-                        padding: "4px 8px",
-                        cursor: "pointer",
-                        fontSize: 20,
-                        lineHeight: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        transition: "all .12s",
-                      }}
-                    >
-                      <span>{toFlag(code)}</span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, maxWidth:460 }}>
+                    {NATIONS.map(([code, name]) => {
+                      const isSelected = edit.nationality === code;
+                      return (
+                        <button key={code} type="button" onClick={() => setEdit(p => ({ ...p, nationality: code }))} title={name}
+                          style={{ background:isSelected?"rgba(200,255,0,.12)":"transparent", border:`2px solid ${isSelected?"var(--accent)":"var(--border)"}`, borderRadius:3, padding:"3px 5px", cursor:"pointer", lineHeight:1, display:"inline-flex", alignItems:"center", transition:"all .12s" }}
+                        >
+                          <img src={`https://flagcdn.com/32x24/${code.toLowerCase()}.png`} srcSet={`https://flagcdn.com/64x48/${code.toLowerCase()}.png 2x`} width={32} height={24} alt={name} style={{ display:"block", borderRadius:1, objectFit:"cover" }}/>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize:12, color:"var(--muted)", marginTop:8, display:"flex", alignItems:"center", gap:8 }}>
+                    <img src={`https://flagcdn.com/32x24/${selected[0].toLowerCase()}.png`} width={24} height={18} alt={selected[1]} style={{ borderRadius:2, objectFit:"cover" }}/>
+                    <span>Selected: <strong style={{ color:"var(--text)" }}>{selected[1]}</strong></span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
               );
             })()}
             <div style={{ fontSize:11, color:"var(--muted)", marginTop:6 }}>
