@@ -46,17 +46,17 @@ function getPlayerRank(games) {
 }
 
 
-/* ── Nationality flag image via flagcdn.com ── */
+/* ── Nationality flag image via flagcdn.com (width-based URLs) ── */
 function NationalityFlag({ code = "GB", size = 18 }) {
   const c = (code || "GB").toLowerCase();
-  const h = Math.round(size);
-  const w = Math.round(size * 1.5);
+  // flagcdn standard widths: 20, 40, 80, 160, 320
+  const pw = size <= 20 ? 20 : size <= 40 ? 40 : 80;
   return (
     <img
-      src={`https://flagcdn.com/${w}x${h}/${c}.png`}
-      srcSet={`https://flagcdn.com/${w*2}x${h*2}/${c}.png 2x`}
-      width={w}
-      height={h}
+      src={`https://flagcdn.com/w${pw}/${c}.png`}
+      srcSet={`https://flagcdn.com/w${pw*2}/${c}.png 2x`}
+      width={Math.round(size * 1.5)}
+      height={size}
       alt={code}
       title={code}
       style={{ flexShrink:0, display:"inline-block", borderRadius:2, objectFit:"cover", boxShadow:"0 1px 3px rgba(0,0,0,.5)" }}

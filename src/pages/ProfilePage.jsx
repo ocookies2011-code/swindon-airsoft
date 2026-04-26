@@ -339,9 +339,9 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
             <label>Nationality Flag <span style={{ color:"var(--muted)", fontWeight:400, letterSpacing:0, textTransform:"none" }}>(shown on leaderboard)</span></label>
             <div style={{ display:"flex", alignItems:"center", gap:12 }}>
               <img
-                src={`https://flagcdn.com/40x30/${(edit.nationality||"GB").toLowerCase()}.png`}
-                srcSet={`https://flagcdn.com/80x60/${(edit.nationality||"GB").toLowerCase()}.png 2x`}
-                width={40} height={30} alt={edit.nationality}
+                src={`https://flagcdn.com/w40/${(edit.nationality||"GB").toLowerCase()}.png`}
+                srcSet={`https://flagcdn.com/w80/${(edit.nationality||"GB").toLowerCase()}.png 2x`}
+                width={40} height={27} alt={edit.nationality}
                 style={{ borderRadius:3, objectFit:"cover", boxShadow:"0 1px 4px rgba(0,0,0,.5)", flexShrink:0 }}
               />
               <select value={edit.nationality||"GB"} onChange={e => setEdit(p => ({ ...p, nationality: e.target.value }))} style={{ maxWidth:260 }}>
