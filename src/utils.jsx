@@ -922,7 +922,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .admin-form-row{display:flex;gap:12px;flex-wrap:wrap;}
 .admin-form-row > *{flex:1;min-width:140px;}
 .admin-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
-.modal-box{width:calc(100vw - 32px);max-width:700px;max-height:90vh;overflow-y:auto;}
+.modal-box{width:calc(100vw - 32px);max-width:700px;max-height:90vh;overflow-y:auto;box-sizing:border-box;}
 .modal-box.wide{max-width:900px;}
 @media(max-width:768px){
   .admin-topbar{padding:0 10px;height:48px;}
@@ -987,7 +987,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .hero-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
 .hero-stats{display:flex;gap:0;border-top:1px solid #1a2808;border-bottom:1px solid #1a2808;background:rgba(0,0,0,.8);}
 .hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;flex-wrap:wrap;}
-.hero-stat{flex:1;min-width:50%;padding:16px 8px;text-align:center;border-right:1px solid #1a2808;box-sizing:border-box;}
+.hero-stat{flex:1;min-width:50%;max-width:50%;padding:16px 8px;text-align:center;border-right:1px solid #1a2808;box-sizing:border-box;}
 .hero-stat:last-child{border-right:none;}
 .hero-stat-num{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--accent);}
 .hero-stat-label{font-size:10px;letter-spacing:.15em;color:var(--muted);margin-top:2px;text-transform:uppercase;}
@@ -1013,9 +1013,9 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .countdown-panel-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:.04em;color:#fff;text-transform:uppercase;}
 .countdown-panel-meta{font-size:12px;color:var(--muted);margin-top:4px;}
 .countdown-panel-timer{display:flex;gap:4px;}
-.countdown-panel-unit{text-align:center;padding:10px 14px;background:#0a0a0a;border:1px solid #2a2a2a;min-width:64px;position:relative;}
+.countdown-panel-unit{text-align:center;padding:10px 14px;background:#0a0a0a;border:1px solid #2a2a2a;min-width:56px;position:relative;}
 .countdown-panel-unit::after{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,.04);pointer-events:none;}
-.countdown-panel-num{font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:900;color:#fff;line-height:1;letter-spacing:.02em;font-variant-numeric:tabular-nums;}
+.countdown-panel-num{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,7vw,44px);font-weight:900;color:#fff;line-height:1;letter-spacing:.02em;font-variant-numeric:tabular-nums;}
 .countdown-panel-num.urgent{color:var(--accent);text-shadow:0 0 20px rgba(200,255,0,.4);}
 .countdown-panel-lbl{font-size:8px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-top:3px;}
 
@@ -1067,11 +1067,23 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .pub-nav-hamburger{display:flex;align-items:center;justify-content:center;}
   .bottom-nav{display:block;}
   .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + 16px);}
-  .hero-cta{flex-direction:column;}
+  .hero-cta{flex-direction:column;align-items:stretch;}
+  .hero-cta .btn{text-align:center;}
+  .hero-content{padding:24px 16px 20px;}
   .vip-banner{padding:32px 16px;}
-  .hero-stat-num{font-size:24px;}
-  .page-content{padding:24px 14px;}
-  .page-content-sm{padding:24px 14px;}
+  .hero-stat-num{font-size:22px;}
+  .hero-stat{padding:12px 6px;}
+  .hero-stat-label{font-size:9px;letter-spacing:.08em;}
+  .page-content{padding:20px 14px;}
+  .page-content-sm{padding:20px 14px;}
+  .countdown-panel{padding:16px;gap:16px;}
+  .countdown-panel-info{min-width:0;}
+  .countdown-panel-timer{flex-wrap:wrap;gap:3px;}
+  .countdown-panel-unit{min-width:48px;padding:8px 10px;}
+  .feature-item{padding:20px 16px;}
+  .countdown-wrap{gap:12px;}
+  .countdown-unit{min-width:52px;}
+  .countdown-num{font-size:36px;}
 }
 @media(max-width:700px){
   .feature-strip{grid-template-columns:1fr;}
@@ -2464,7 +2476,7 @@ function HomePage({ data, setPage, onProductClick }) {
           <div style={{ background:"#0a0a0a", padding:"24px" }}>
             <div style={{ maxWidth:1100, margin:"0 auto" }}>
               {/* Two-column layout — each column has its own header */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0, position:"relative" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,360px),1fr))", gap:0, position:"relative" }}>
                 {/* Corner brackets */}
                 <div style={{ position:"absolute", bottom:0, left:0, width:16, height:16, borderBottom:"2px solid var(--accent)", borderLeft:"2px solid var(--accent)", zIndex:2 }} />
                 <div style={{ position:"absolute", bottom:0, right:0, width:16, height:16, borderBottom:"2px solid var(--accent)", borderRight:"2px solid var(--accent)", zIndex:2 }} />
@@ -2699,7 +2711,7 @@ function HomePage({ data, setPage, onProductClick }) {
             ))}
             <div style={{ maxWidth:900, margin:"0 auto", position:"relative", zIndex:1 }}>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".35em", color:"rgba(200,255,0,.4)", marginBottom:14, textTransform:"uppercase", textAlign:"center" }}>◆ NEXT OPERATION ◆</div>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:28 }}>
+              <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:24 }}>
                 {/* Left: event info + book button */}
                 <div style={{ flex:"1 1 260px" }}>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(28px,5vw,48px)", letterSpacing:".06em", textTransform:"uppercase", color:"#fff", lineHeight:.95, marginBottom:12 }}>
