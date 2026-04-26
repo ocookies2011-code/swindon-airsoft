@@ -356,10 +356,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                 <>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6, maxWidth:460 }}>
                     {NATIONS.map(([code, name]) => {
-                      const isSelected = edit.nationality === code;
+                      const isSel = edit.nationality === code;
                       return (
                         <button key={code} type="button" onClick={() => setEdit(p => ({ ...p, nationality: code }))} title={name}
-                          style={{ background:isSelected?"rgba(200,255,0,.12)":"transparent", border:`2px solid ${isSelected?"var(--accent)":"var(--border)"}`, borderRadius:3, padding:"3px 5px", cursor:"pointer", lineHeight:1, display:"inline-flex", alignItems:"center", transition:"all .12s" }}
+                          style={{ background:isSel?"rgba(200,255,0,.12)":"transparent", border:`2px solid ${isSel?"var(--accent)":"var(--border)"}`, borderRadius:3, padding:"3px 5px", cursor:"pointer", display:"inline-flex", alignItems:"center", transition:"all .12s" }}
                         >
                           <img src={`https://flagcdn.com/32x24/${code.toLowerCase()}.png`} srcSet={`https://flagcdn.com/64x48/${code.toLowerCase()}.png 2x`} width={32} height={24} alt={name} style={{ display:"block", borderRadius:1, objectFit:"cover" }}/>
                         </button>
@@ -373,19 +373,6 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                 </>
               );
             })()}
-          </div>
-              );
-            })()}
-            <div style={{ fontSize:11, color:"var(--muted)", marginTop:6 }}>
-              Selected: {(() => {
-                const toFlag = code => code.toUpperCase().split('').map(c =>
-                  String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
-                ).join('');
-                const NATIONS = [["GB","United Kingdom"],["US","United States"],["AU","Australia"],["CA","Canada"],["NZ","New Zealand"],["IE","Ireland"],["ZA","South Africa"],["DE","Germany"],["FR","France"],["ES","Spain"],["IT","Italy"],["NL","Netherlands"],["BE","Belgium"],["SE","Sweden"],["NO","Norway"],["DK","Denmark"],["FI","Finland"],["PL","Poland"],["PT","Portugal"],["GR","Greece"],["CH","Switzerland"],["AT","Austria"],["CZ","Czech Republic"],["JP","Japan"],["KR","South Korea"],["SG","Singapore"],["MY","Malaysia"],["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],["IN","India"],["PH","Philippines"],["TH","Thailand"]];
-                const found = NATIONS.find(([c]) => c === edit.nationality);
-                return found ? `${toFlag(found[0])} ${found[1]}` : edit.nationality;
-              })()}
-            </div>
           </div>
 
           <div className="gap-2">
