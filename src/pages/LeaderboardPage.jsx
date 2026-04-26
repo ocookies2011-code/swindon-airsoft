@@ -45,6 +45,30 @@ function getPlayerRank(games) {
   return BRIT_RANKS.find(r => games >= r.min) || BRIT_RANKS[BRIT_RANKS.length - 1];
 }
 
+
+/* ── Union Jack flag ── */
+function GBFlag({ width = 28, height = 18 }) {
+  const w = width; const h = height;
+  return (
+    <svg width={w} height={h} viewBox="0 0 60 40" style={{ flexShrink:0, display:"block", borderRadius:2 }}>
+      {/* Blue background */}
+      <rect width="60" height="40" fill="#012169"/>
+      {/* White diagonals (St Andrew + St Patrick combined) */}
+      <line x1="0" y1="0" x2="60" y2="40" stroke="#fff" strokeWidth="12"/>
+      <line x1="60" y1="0" x2="0" y2="40" stroke="#fff" strokeWidth="12"/>
+      {/* Red diagonals (St Patrick) */}
+      <line x1="0" y1="0" x2="60" y2="40" stroke="#C8102E" strokeWidth="6"/>
+      <line x1="60" y1="0" x2="0" y2="40" stroke="#C8102E" strokeWidth="6"/>
+      {/* White cross (St George) */}
+      <rect x="22" y="0" width="16" height="40" fill="#fff"/>
+      <rect x="0" y="13" width="60" height="14" fill="#fff"/>
+      {/* Red cross (St George) */}
+      <rect x="25" y="0" width="10" height="40" fill="#C8102E"/>
+      <rect x="0" y="15" width="60" height="10" fill="#C8102E"/>
+    </svg>
+  );
+}
+
 /* ── Rank insignia SVG ── */
 function RankInsigniaIcon({ pip, tier, size }) {
   const s = size || 26;
@@ -212,6 +236,7 @@ function PodiumCard({ player, rank, isMe, onPlayerClick }) {
 
         {/* rank insignia */}
         <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"center", marginBottom:8, position:"relative", zIndex:1 }}>
+          <GBFlag width={24} height={16}/>
           <RankInsigniaIcon pip={rd.pip} tier={rd.tier} size={22}/>
           <span style={{ ...MONO, fontSize:8, color:rankCol, letterSpacing:".12em" }}>{rd.abbr} · {rd.rank}</span>
         </div>
@@ -393,6 +418,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                         {isMe && <span style={{ ...MONO, fontSize:7, color:ACCENT, background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", padding:"1px 5px", marginLeft:8 }}>← YOU</span>}
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:3 }}>
+                        <GBFlag width={20} height={13}/>
                         <RankInsigniaIcon pip={rd.pip} tier={rd.tier} size={18}/>
                         <span style={{ ...MONO, fontSize:8, color:rankCol, letterSpacing:".08em" }}>{rd.abbr} · {rd.rank}</span>
                       </div>
