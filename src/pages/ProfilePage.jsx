@@ -337,42 +337,29 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
           <div className="form-group">
             <label>Nationality Flag <span style={{ color:"var(--muted)", fontWeight:400, letterSpacing:0, textTransform:"none" }}>(shown on leaderboard)</span></label>
-            {(() => {
-              const NATIONS = [
-                ["GB","United Kingdom"],["US","United States"],["AU","Australia"],
-                ["CA","Canada"],["NZ","New Zealand"],["IE","Ireland"],
-                ["ZA","South Africa"],["DE","Germany"],["FR","France"],
-                ["ES","Spain"],["IT","Italy"],["NL","Netherlands"],
-                ["BE","Belgium"],["SE","Sweden"],["NO","Norway"],
-                ["DK","Denmark"],["FI","Finland"],["PL","Poland"],
-                ["PT","Portugal"],["GR","Greece"],["CH","Switzerland"],
-                ["AT","Austria"],["CZ","Czech Republic"],["JP","Japan"],
-                ["KR","South Korea"],["SG","Singapore"],["MY","Malaysia"],
-                ["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],
-                ["IN","India"],["PH","Philippines"],["TH","Thailand"],
-              ];
-              const selected = NATIONS.find(([c]) => c === edit.nationality) || NATIONS[0];
-              return (
-                <>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, maxWidth:460 }}>
-                    {NATIONS.map(([code, name]) => {
-                      const isSel = edit.nationality === code;
-                      return (
-                        <button key={code} type="button" onClick={() => setEdit(p => ({ ...p, nationality: code }))} title={name}
-                          style={{ background:isSel?"rgba(200,255,0,.12)":"transparent", border:`2px solid ${isSel?"var(--accent)":"var(--border)"}`, borderRadius:3, padding:"3px 5px", cursor:"pointer", display:"inline-flex", alignItems:"center", transition:"all .12s" }}
-                        >
-                          <img src={`https://flagcdn.com/32x24/${code.toLowerCase()}.png`} srcSet={`https://flagcdn.com/64x48/${code.toLowerCase()}.png 2x`} width={32} height={24} alt={name} style={{ display:"block", borderRadius:1, objectFit:"cover" }}/>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={{ fontSize:12, color:"var(--muted)", marginTop:8, display:"flex", alignItems:"center", gap:8 }}>
-                    <img src={`https://flagcdn.com/32x24/${selected[0].toLowerCase()}.png`} width={24} height={18} alt={selected[1]} style={{ borderRadius:2, objectFit:"cover" }}/>
-                    <span>Selected: <strong style={{ color:"var(--text)" }}>{selected[1]}</strong></span>
-                  </div>
-                </>
-              );
-            })()}
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <img
+                src={`https://flagcdn.com/40x30/${(edit.nationality||"GB").toLowerCase()}.png`}
+                srcSet={`https://flagcdn.com/80x60/${(edit.nationality||"GB").toLowerCase()}.png 2x`}
+                width={40} height={30} alt={edit.nationality}
+                style={{ borderRadius:3, objectFit:"cover", boxShadow:"0 1px 4px rgba(0,0,0,.5)", flexShrink:0 }}
+              />
+              <select value={edit.nationality||"GB"} onChange={e => setEdit(p => ({ ...p, nationality: e.target.value }))} style={{ maxWidth:260 }}>
+                {[
+                  ["GB","United Kingdom"],["US","United States"],["AU","Australia"],
+                  ["CA","Canada"],["NZ","New Zealand"],["IE","Ireland"],
+                  ["ZA","South Africa"],["DE","Germany"],["FR","France"],
+                  ["ES","Spain"],["IT","Italy"],["NL","Netherlands"],
+                  ["BE","Belgium"],["SE","Sweden"],["NO","Norway"],
+                  ["DK","Denmark"],["FI","Finland"],["PL","Poland"],
+                  ["PT","Portugal"],["GR","Greece"],["CH","Switzerland"],
+                  ["AT","Austria"],["CZ","Czech Republic"],["JP","Japan"],
+                  ["KR","South Korea"],["SG","Singapore"],["MY","Malaysia"],
+                  ["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],
+                  ["IN","India"],["PH","Philippines"],["TH","Thailand"],
+                ].map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="gap-2">
