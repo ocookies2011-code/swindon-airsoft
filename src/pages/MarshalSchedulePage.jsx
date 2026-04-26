@@ -41,13 +41,18 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
     setLoading(p => ({ ...p, [eventId]:true }));
     const { data: rows, error } = await supabase
       .from("marshal_schedules")
-      .select("id,event_id,user_id,status,role,notes,admin_approved,updated_at,profile:profiles(id,name,callsign,profile_pic,can_marshal)")
+      .select("id,event_id,user_id,status,role,notes,admin_approved,updated_at")
       .eq("event_id", eventId);
-    if (error) console.error("loadSchedule error:", error.message);
-    setSchedules(p => ({ ...p, [eventId]: rows||[] }));
+    if (error) console.error("loadSchedule error:", error?.message, error?.code);
+    // Enrich with profile data from data.users (avoids join RLS issues)
+    const enriched = (rows||[]).map(r => ({
+      ...r,
+      profile: (data.users||[]).find(u => u.id === r.user_id) || { name:"Unknown", callsign:"", profile_pic:null },
+    }));
+    setSchedules(p => ({ ...p, [eventId]: enriched }));
     // Pre-fill my own status
     const VALID_ROLES = ["marshal","referee","senior_marshal"];
-    const mine = (rows||[]).find(r => r.user_id === cu?.id);
+    const mine = enriched.find(r => r.user_id === cu?.id);
     if (mine) {
       setMyStatus(p => ({ ...p, [eventId]:{ status:mine.status, role:VALID_ROLES.includes(mine.role)?mine.role:"marshal", notes:mine.notes||"" }}));
       // Auto-expand notes if there's already a saved note
