@@ -10,9 +10,10 @@ const BORDER = "#1e2e12"; const BORDER2 = "#2a4018"; const MUTED = "#5a6e42";
 
 const STATUS_CFG = {
   available:   { label:"Available",   color:"#c8ff00", bg:"rgba(200,255,0,.08)",  border:"rgba(200,255,0,.3)"  },
-  confirmed:   { label:"Confirmed",   color:"#81c784", bg:"rgba(129,199,132,.08)", border:"rgba(129,199,132,.3)" },
   unavailable: { label:"Unavailable", color:"#ef5350", bg:"rgba(239,83,80,.08)",  border:"rgba(239,83,80,.3)"  },
 };
+// Admin-only display (not selectable by marshals)
+const APPROVED_CFG = { label:"Approved", color:"#81c784", bg:"rgba(129,199,132,.08)", border:"rgba(129,199,132,.3)" };
 const ROLE_CFG = {
   marshal:        { label:"Marshal",        icon:"🟢" },
   referee:        { label:"Referee",        icon:"🟡" },
@@ -65,10 +66,11 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
     const s = myStatus[eventId] || { status:"available", role:"marshal", notes:"" };
     setSubmitting(true);
     try {
-      await supabase.from("marshal_schedules").upsert(
-        { event_id:eventId, user_id:cu.id, status:s.status, role:s.role, notes:s.notes, updated_at:new Date().toISOString() },
+      const { error: upsertErr } = await supabase.from("marshal_schedules").upsert(
+        { event_id:eventId, user_id:cu.id, status:s.status, role:s.role, notes:s.notes||"", updated_at:new Date().toISOString() },
         { onConflict:"event_id,user_id" }
       );
+      if (upsertErr) throw upsertErr;
       await loadSchedule(eventId);
       showToast("Availability saved","green");
     } catch(e) { showToast(e.message,"red"); }
