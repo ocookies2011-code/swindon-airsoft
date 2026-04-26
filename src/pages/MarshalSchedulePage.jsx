@@ -134,7 +134,12 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
               <div style={{ padding:"16px 20px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
                 {/* My availability */}
                 <div>
-                  <div style={{ ...MONO, fontSize:9, letterSpacing:".2em", color:MUTED, marginBottom:12 }}>MY AVAILABILITY</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                    <div style={{ ...MONO, fontSize:9, letterSpacing:".2em", color:MUTED }}>MY AVAILABILITY</div>
+                    {schedules[ev.id]?.find(r => r.user_id === cu?.id)?.admin_approved && (
+                      <span style={{ ...MONO, fontSize:8, letterSpacing:".1em", color:"#81c784", border:"1px solid rgba(129,199,132,.4)", padding:"1px 8px", background:"rgba(129,199,132,.06)" }}>✓ YOU'RE APPROVED</span>
+                    )}
+                  </div>
                   {/* Status buttons */}
                   <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
                     {Object.entries(STATUS_CFG).map(([val,cfg]) => (
@@ -191,6 +196,9 @@ export function MarshalSchedulePage({ data, cu, showToast }) {
                               <div style={{ ...MONO, fontSize:8, color:MUTED }}>{rc.icon} {rc.label}</div>
                             </div>
                             <span style={{ ...MONO, fontSize:8, letterSpacing:".1em", color:sc.color, border:`1px solid ${sc.border}`, padding:"1px 6px", flexShrink:0 }}>{sc.label}</span>
+                            {r.admin_approved && (
+                              <span style={{ ...MONO, fontSize:8, letterSpacing:".1em", color:"#81c784", border:"1px solid rgba(129,199,132,.4)", padding:"1px 6px", background:"rgba(129,199,132,.06)", flexShrink:0 }}>✓ APPROVED</span>
+                            )}
                             {cu.role === "admin" && (
                               <button onClick={() => removeEntry(r.id,ev.id)} style={{ background:"none", border:"none", color:"#ef5350", cursor:"pointer", fontSize:12, flexShrink:0 }}>✕</button>
                             )}
