@@ -337,29 +337,55 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
           <div className="form-group">
             <label>Nationality Flag <span style={{ color:"var(--muted)", fontWeight:400, letterSpacing:0, textTransform:"none" }}>(shown on leaderboard)</span></label>
-            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-              <img
-                src={`https://flagcdn.com/w40/${(edit.nationality||"GB").toLowerCase()}.png`}
-                srcSet={`https://flagcdn.com/w80/${(edit.nationality||"GB").toLowerCase()}.png 2x`}
-                width={40} height={27} alt={edit.nationality}
-                style={{ borderRadius:3, objectFit:"cover", boxShadow:"0 1px 4px rgba(0,0,0,.5)", flexShrink:0 }}
-              />
-              <select value={edit.nationality||"GB"} onChange={e => setEdit(p => ({ ...p, nationality: e.target.value }))} style={{ maxWidth:260 }}>
-                {[
-                  ["GB","United Kingdom"],["US","United States"],["AU","Australia"],
-                  ["CA","Canada"],["NZ","New Zealand"],["IE","Ireland"],
-                  ["ZA","South Africa"],["DE","Germany"],["FR","France"],
-                  ["ES","Spain"],["IT","Italy"],["NL","Netherlands"],
-                  ["BE","Belgium"],["SE","Sweden"],["NO","Norway"],
-                  ["DK","Denmark"],["FI","Finland"],["PL","Poland"],
-                  ["PT","Portugal"],["GR","Greece"],["CH","Switzerland"],
-                  ["AT","Austria"],["CZ","Czech Republic"],["JP","Japan"],
-                  ["KR","South Korea"],["SG","Singapore"],["MY","Malaysia"],
-                  ["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],
-                  ["IN","India"],["PH","Philippines"],["TH","Thailand"],
-                ].map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-              </select>
-            </div>
+            {(() => {
+              const NATIONS = [
+                ["GB","United Kingdom"],["US","United States"],["AU","Australia"],
+                ["CA","Canada"],["NZ","New Zealand"],["IE","Ireland"],
+                ["ZA","South Africa"],["DE","Germany"],["FR","France"],
+                ["ES","Spain"],["IT","Italy"],["NL","Netherlands"],
+                ["BE","Belgium"],["SE","Sweden"],["NO","Norway"],
+                ["DK","Denmark"],["FI","Finland"],["PL","Poland"],
+                ["PT","Portugal"],["GR","Greece"],["CH","Switzerland"],
+                ["AT","Austria"],["CZ","Czech Republic"],["JP","Japan"],
+                ["KR","South Korea"],["SG","Singapore"],["MY","Malaysia"],
+                ["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],
+                ["IN","India"],["PH","Philippines"],["TH","Thailand"],
+              ];
+              const [open, setOpen] = React.useState(false);
+              const selected = NATIONS.find(([c]) => c === edit.nationality) || NATIONS[0];
+              return (
+                <div style={{ position:"relative", maxWidth:280 }}>
+                  {/* Trigger button — looks like a select */}
+                  <button
+                    type="button"
+                    onClick={() => setOpen(o => !o)}
+                    style={{ width:"100%", display:"flex", alignItems:"center", gap:10, background:"#1a1a1a", border:"1px solid #2a2a2a", color:"var(--text)", padding:"10px 14px", fontSize:14, cursor:"pointer", textAlign:"left" }}
+                  >
+                    <img src={`https://flagcdn.com/w40/${selected[0].toLowerCase()}.png`} srcSet={`https://flagcdn.com/w80/${selected[0].toLowerCase()}.png 2x`} width={28} height={19} alt={selected[0]} style={{ borderRadius:2, objectFit:"cover", flexShrink:0 }}/>
+                    <span style={{ flex:1 }}>{selected[1]}</span>
+                    <span style={{ color:"var(--muted)", fontSize:10 }}>▾</span>
+                  </button>
+                  {/* Dropdown list */}
+                  {open && (
+                    <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:999, background:"#1a1a1a", border:"1px solid #2a2a2a", borderTop:"none", maxHeight:240, overflowY:"auto" }}>
+                      {NATIONS.map(([code, name]) => (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => { setEdit(p => ({ ...p, nationality: code })); setOpen(false); }}
+                          style={{ width:"100%", display:"flex", alignItems:"center", gap:10, background: edit.nationality===code ? "rgba(200,255,0,.08)" : "transparent", border:"none", borderBottom:"1px solid #111", color: edit.nationality===code ? "var(--accent)" : "var(--text)", padding:"8px 14px", fontSize:13, cursor:"pointer", textAlign:"left" }}
+                          onMouseEnter={e => { if(edit.nationality!==code) e.currentTarget.style.background="rgba(255,255,255,.04)"; }}
+                          onMouseLeave={e => { if(edit.nationality!==code) e.currentTarget.style.background="transparent"; }}
+                        >
+                          <img src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`} srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`} width={24} height={16} alt={code} style={{ borderRadius:2, objectFit:"cover", flexShrink:0 }}/>
+                          <span>{name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="gap-2">
