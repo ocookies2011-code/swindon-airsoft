@@ -53,13 +53,13 @@ export function AdminMarshalSchedule({ data, cu, showToast }) {
     }));
     setSchedules(p => ({ ...p, [eventId]: enriched }));
     setLoading(p => ({ ...p, [eventId]:false }));
-  }, []);
+  }, [data.users]);
 
   useEffect(() => {
     upcomingEvents.forEach(e => loadSchedule(e.id));
     // Auto-expand first upcoming event
     if (upcomingEvents.length > 0) setExpanded({ [upcomingEvents[0].id]: true });
-  }, [data.events]);
+  }, [data.events, data.users?.length]);
 
   const toggleApprove = async (row, eventId) => {
     setApproving(p => ({ ...p, [row.id]:true }));
