@@ -2602,7 +2602,7 @@ function HomePage({ data, setPage, onProductClick }) {
       <div className="page-content">
 
         {/* UPCOMING EVENTS */}
-        {data.events.filter(e => e.published).length > 0 && (
+        {data.events.filter(e => e.published && new Date(e.date + "T" + (e.time || "23:59")) > now).length > 0 && (
           <div style={{ marginBottom:48 }}>
             <div className="section-header">
               <div>
@@ -2612,7 +2612,7 @@ function HomePage({ data, setPage, onProductClick }) {
               <button className="section-link" onClick={() => setPage("events")}>VIEW ALL →</button>
             </div>
             <div className="grid-3">
-              {data.events.filter(e => e.published).slice(0, 3).map(ev => {
+              {data.events.filter(e => e.published && new Date(e.date + "T" + (e.time || "23:59")) > now).sort((a,b) => new Date(a.date) - new Date(b.date)).slice(0, 3).map(ev => {
                 const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
                 const total  = ev.walkOnSlots + ev.rentalSlots;
                 const spotsLeft = total - booked;
