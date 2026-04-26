@@ -42,10 +42,16 @@ export function AdminMarshalSchedule({ data, cu, showToast }) {
     setLoading(p => ({ ...p, [eventId]:true }));
     const { data: rows, error } = await supabase
       .from("marshal_schedules")
-      .select("*, profile:profiles(id,name,callsign,profile_pic)")
+      .select("id,event_id,user_id,status,role,notes,admin_approved,approved_by,approved_at,created_at,updated_at")
       .eq("event_id", eventId)
       .order("created_at", { ascending: true });
-    if (!error) setSchedules(p => ({ ...p, [eventId]: rows||[] }));
+    if (error) console.error("AdminMarshalSchedule loadSchedule error:", error?.message);
+    // Enrich with profile from data.users
+    const enriched = (rows||[]).map(r => ({
+      ...r,
+      profile: (data.users||[]).find(u => u.id === r.user_id) || { name:"Unknown", callsign:"", profile_pic:null },
+    }));
+    setSchedules(p => ({ ...p, [eventId]: enriched }));
     setLoading(p => ({ ...p, [eventId]:false }));
   }, []);
 
