@@ -1110,22 +1110,28 @@ export const visits = wrapWithTimeout({
   async track({ page, userId, userName, sessionId }) {
     try {
       const now = new Date().toISOString();
-      const conflictKey = userId ? { col: 'user_id',   val: userId    }
-                                 : { col: 'session_id', val: sessionId };
-      if (!conflictKey.val) return;
+      if (!page) return;
 
-      // Check if a row already exists for this user/session
-      const { data: existing } = await supabase
+      // One row per (user_id, page) for logged-in users,
+      // or one row per (session_id, page) for anonymous visitors.
+      // This ensures per-page visit counts are accurate.
+      let existingQuery = supabase
         .from('page_visits')
-        .select('id, country, city, lat, lon, visit_count')
-        .eq(conflictKey.col, conflictKey.val)
-        .maybeSingle();
+        .select('id, country, city, lat, lon, visit_count');
+
+      if (userId) {
+        existingQuery = existingQuery.eq('user_id', userId).eq('page', page);
+      } else if (sessionId) {
+        existingQuery = existingQuery.eq('session_id', sessionId).eq('page', page).is('user_id', null);
+      } else {
+        return;
+      }
+
+      const { data: existing } = await existingQuery.maybeSingle();
 
       if (existing) {
-        // Row exists — update non-geo fields plus always refresh geo
-        // (always overwrite so bad cached coords get corrected on next visit)
+        // Row exists for this user+page — increment counter and refresh geo
         await supabase.from('page_visits').update({
-          page,
           last_seen_at: now,
           user_agent:   navigator.userAgent || null,
           ...(userId ? { user_name: userName || null, session_id: sessionId || null } : {}),
@@ -1169,35 +1175,44 @@ export const visits = wrapWithTimeout({
     } catch { /* never break the site */ }
   },
 
-  // Backfill user_id + user_name on the anonymous session row when auth resolves.
-  // Also merges the anon session row into the user row (deletes anon, updates user).
+  // Backfill user_id + user_name on anonymous session rows when auth resolves.
+  // With per-page tracking there are multiple anon rows per session (one per page visited).
+  // We promote each one to the user, merging with any existing user+page row.
   async backfillUser({ sessionId, userId, userName }) {
     if (!sessionId || !userId) return;
     try {
-      // Fetch both rows
-      const [{ data: userRow }, { data: anonRow }] = await Promise.all([
-        supabase.from('page_visits').select('id, visit_count').eq('user_id', userId).maybeSingle(),
-        supabase.from('page_visits').select('id, visit_count, country, city, page, last_seen_at').eq('session_id', sessionId).is('user_id', null).maybeSingle(),
-      ]);
+      const { data: anonRows } = await supabase
+        .from('page_visits')
+        .select('id, visit_count, country, city, page, last_seen_at')
+        .eq('session_id', sessionId)
+        .is('user_id', null);
 
-      if (anonRow && userRow) {
-        // Both exist — merge anon into user row, then delete the anon row
-        const mergedCount = (userRow.visit_count || 1) + (anonRow.visit_count || 1);
-        await supabase.from('page_visits').update({
-          user_name:    userName || null,
-          visit_count:  mergedCount,
-          // Keep geo from anon row if user row has none
-          ...(anonRow.country ? { country: anonRow.country, city: anonRow.city } : {}),
-        }).eq('user_id', userId);
-        await supabase.from('page_visits').delete().eq('id', anonRow.id);
-      } else if (anonRow && !userRow) {
-        // Only anon row — promote it to a user row
-        await supabase.from('page_visits').update({
-          user_id:   userId,
-          user_name: userName || null,
-        }).eq('id', anonRow.id);
+      if (!anonRows?.length) return;
+
+      for (const anonRow of anonRows) {
+        const { data: userRow } = await supabase
+          .from('page_visits')
+          .select('id, visit_count, country, city')
+          .eq('user_id', userId)
+          .eq('page', anonRow.page)
+          .maybeSingle();
+
+        if (userRow) {
+          // Merge: add anon count into existing user+page row, then delete anon row
+          await supabase.from('page_visits').update({
+            user_name:   userName || null,
+            visit_count: (userRow.visit_count || 1) + (anonRow.visit_count || 1),
+            ...(!userRow.country && anonRow.country ? { country: anonRow.country, city: anonRow.city } : {}),
+          }).eq('id', userRow.id);
+          await supabase.from('page_visits').delete().eq('id', anonRow.id);
+        } else {
+          // No existing user row for this page — promote the anon row
+          await supabase.from('page_visits').update({
+            user_id:   userId,
+            user_name: userName || null,
+          }).eq('id', anonRow.id);
+        }
       }
-      // If only user row exists, nothing to do
     } catch { /* non-fatal */ }
   },
 
