@@ -27,7 +27,7 @@ function resetSquareConfig() {
   _squareConfigLoaded = false;
 }
 
-function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
+function SquareCheckoutButton({ amount, description, onSuccess, disabled, onOpen }) {
   const [sqReady, setSqReady] = useState(false);
   const [sqError, setSqError] = useState(null);
   const [isLive, setIsLive] = useState(false);
@@ -95,6 +95,7 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 
   const handlePay = async () => {
     if (!cardInstance.current || !paymentsRef.current) return;
+    if (onOpen) onOpen();
     setPaying(true);
     setSqError(null);
     setPayStage("tokenising");
