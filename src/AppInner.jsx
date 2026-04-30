@@ -89,6 +89,21 @@ function AppInner() {
     });
   }, [page, cu?.id]);
 
+  // ── Funnel tracking helper (passed to child pages) ───────
+  // Call this from any page when the visitor reaches a deeper funnel step
+  // e.g. "event:basket", "event:checkout", "shop:basket", "shop:checkout"
+  const trackFunnel = useCallback((funnelPage) => {
+    if (page === "admin") return;
+    const sid = sessionStorage.getItem("sa_sid");
+    if (!sid) return;
+    api.visits.track({
+      page:      funnelPage,
+      userId:    cu?.id   || null,
+      userName:  cu?.name || null,
+      sessionId: sid,
+    });
+  }, [cu?.id, page]);
+
   // ── Backfill user info on anonymous visit rows ────────────
   // When auth resolves after the initial page track (e.g. returning player
   // whose session loads asynchronously), patch all rows for this tab session
@@ -523,7 +538,7 @@ function AppInner() {
 
       <div className="pub-page-wrap">
         {page === "home"        && <HomePage data={data} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; window.scrollTo({ top:0, behavior:"instant" }); }} />}
-        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} />}
+        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} trackFunnel={trackFunnel} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />
         )}
