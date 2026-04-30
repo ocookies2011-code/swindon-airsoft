@@ -5,7 +5,7 @@ import * as api from "../api";
 import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "../api";
 import { QRCode, SkeletonCard, SquareCheckoutButton, TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtDate, gmtShort, loadSquareConfig, renderMd, sendAdminBookingNotification, sendCancellationEmail, sendEmail, sendOrderEmail, sendTicketEmail, sendWaitlistNotifyEmail, stockLabel, uid, useMobile } from "../utils";
 
-function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage }) {
+function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage, trackFunnel }) {
   const getInitDetail = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="events" && p[1] ? p[1] : null;
@@ -216,6 +216,15 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, Math.max(0, walkOnLeft))) }));
     const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
+
+    // ── Event funnel tracking ─────────────────────────────
+    // Fire when visitor adds items to event basket
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+      if (!trackFunnel) return;
+      const totalItems = bCart.walkOn + bCart.rental + Object.values(bCart.extras).reduce((s, v) => s + v, 0);
+      if (totalItems > 0) trackFunnel("event:basket");
+    }, [bCart.walkOn, bCart.rental, JSON.stringify(bCart.extras)]); // eslint-disable-line
 
 
 
@@ -1081,6 +1090,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
                   onSuccess={confirmBookingAfterPayment}
                   disabled={bookingBusy}
+                  onOpen={() => trackFunnel && trackFunnel("event:checkout")}
                 />
               )}
               {!bookingBlocked && payTotal === 0 && !cartEmpty && (
