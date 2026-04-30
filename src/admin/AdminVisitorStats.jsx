@@ -344,13 +344,14 @@ function AdminVisitorStats() {
   );
 
   // ── Derived stats ──
-  // Each row now represents one user/session — visit_count holds their total visits.
+  // Each row = one user+page pair. Sum visit_count for totals; deduplicate for unique visitors.
   const totalVisits    = (dateRange === "all" && allTimeCounts)
     ? allTimeCounts.totalRows
     : filtered.reduce((s, r) => s + (r.visit_count || 1), 0);
+  // Deduplicate: count distinct user_ids + distinct session_ids (for anon)
   const uniqueSessions = (dateRange === "all" && allTimeCounts)
     ? allTimeCounts.uniqueSessions
-    : filtered.length; // one row per user/session now, so row count = unique visitors
+    : new Set(filtered.map(r => r.user_id || r.session_id).filter(Boolean)).size;
   const uniqueUsers    = new Set(filtered.map(row => row.user_id).filter(Boolean)).size;
   const loggedInVisits = filtered.filter(row => row.user_id).reduce((s, r) => s + (r.visit_count || 1), 0);
   const anonVisits     = filtered.filter(row => !row.user_id).reduce((s, r) => s + (r.visit_count || 1), 0);
@@ -404,17 +405,19 @@ function AdminVisitorStats() {
   const cityRows = Object.entries(cityCounts).sort((aa, bb) => bb[1].count - aa[1].count).slice(0, 12)
     .map(([city, { count, country }]) => ({ flag: country || null, label: city, count }));
 
-  // Logged-in user breakdown — each row IS one user, visit_count is their total
+  // Logged-in user breakdown — now multiple rows per user (one per page visited).
+  // Aggregate: sum visit_count across all their page rows, find most-visited page and last seen.
   const userVisitMap = {};
   filtered.filter(row => row.user_id).forEach(row => {
     const ts = row.last_seen_at || row.created_at;
-    userVisitMap[row.user_id] = {
-      name:     row.user_name || row.user_id,
-      count:    row.visit_count || 1,
-      pages:    { [row.page]: row.visit_count || 1 },
-      last:     ts,
-      lastPage: row.page,
-    };
+    if (!userVisitMap[row.user_id]) {
+      userVisitMap[row.user_id] = { name: row.user_name || row.user_id, count: 0, pages: {}, last: ts, lastPage: row.page };
+    }
+    const u = userVisitMap[row.user_id];
+    u.count += (row.visit_count || 1);
+    u.pages[row.page] = (u.pages[row.page] || 0) + (row.visit_count || 1);
+    // Track most recently seen page
+    if (ts && (!u.last || ts > u.last)) { u.last = ts; u.lastPage = row.page; }
   });
   const userRows = Object.values(userVisitMap).sort((aa, bb) => bb.count - aa.count).slice(0, 20);
 
