@@ -21,6 +21,13 @@ function AdminGiftVouchers({ showToast, cu }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const isMounted = useRef(true);
 
+  // Release stuck saving state if user switches tabs mid-save
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setSaving(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   const load = useCallback(async () => {
     if (!isMounted.current) return;
     try {

@@ -21,7 +21,16 @@ function AdminOrdersInline({ showToast, cu }) {
     setLoading(true); setError(null);
     try {
       const result = await api.shopOrders.getAll();
-      if (isMounted.current) setOrders(result);
+      if (isMounted.current) {
+        // Sort: pending & return_requested first, then by date descending
+        const priority = { pending: 0, return_requested: 1, processing: 2, dispatched: 3, return_approved: 4, return_received: 5, completed: 6, cancelled: 7 };
+        result.sort((a, b) => {
+          const pa = priority[a.status] ?? 99, pb = priority[b.status] ?? 99;
+          if (pa !== pb) return pa - pb;
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+        setOrders(result);
+      }
     } catch (e) {
       if (isMounted.current) setError(e.message);
     } finally {
@@ -32,10 +41,12 @@ function AdminOrdersInline({ showToast, cu }) {
   useEffect(() => {
     isMounted.current = true;
     fetchOrders();
-    // Re-fetch automatically when user returns to this tab after backgrounding
+    // Poll every 30 seconds for new orders
+    const interval = setInterval(fetchOrders, 30000);
+    // Re-fetch immediately when user returns to this tab
     const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) fetchOrders(); };
     document.addEventListener("visibilitychange", onVisible);
-    return () => { isMounted.current = false; document.removeEventListener("visibilitychange", onVisible); };
+    return () => { isMounted.current = false; clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchOrders]);
 
   const doDispatch = async (id, tracking, isUpdate = false) => {

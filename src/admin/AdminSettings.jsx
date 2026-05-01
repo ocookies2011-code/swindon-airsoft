@@ -26,6 +26,19 @@ function AdminSettings({ showToast, cu }) {
   const [savingSQ, setSavingSQ] = useState(false);
   const [showAppId, setShowAppId] = useState(false);
 
+  // Release stuck saving states if user switches tabs mid-save
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        setSavingTrack(false);
+        setSavingSQ(false);
+        setSavingShopClosed(false);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   // Shop closed toggle
   const [shopClosedSetting, setShopClosedSetting] = useState(false);
   const [savingShopClosed, setSavingShopClosed] = useState(false);

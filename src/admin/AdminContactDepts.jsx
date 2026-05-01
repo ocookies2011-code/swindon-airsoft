@@ -13,6 +13,13 @@ function AdminContactDepts({ showToast, save, cu }) {
   const [form, setForm]      = useState({ name:"", email:"", description:"" });
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
+  // Release stuck saving state if user switches tabs mid-save
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") setSaving(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   useEffect(() => {
     api.settings.get("contact_departments")
       .then(raw => { try { setDepts(JSON.parse(raw || "[]")); } catch { setDepts([]); } })

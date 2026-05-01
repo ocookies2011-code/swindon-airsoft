@@ -66,12 +66,15 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const [pendingOrders, setPendingOrders] = useState(0);
   useEffect(() => {
     const fetchPending = () =>
-      api.shopOrders.getAll()
-        .then(orders => setPendingOrders(orders.filter(o => o.status === "pending" || o.status === "return_requested").length))
+      supabase.from("shop_orders").select("id", { count: "exact", head: true })
+        .in("status", ["pending", "return_requested"])
+        .then(({ count }) => setPendingOrders(count || 0))
         .catch(() => {});
     fetchPending();
-    const interval = setInterval(fetchPending, 120000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchPending, 30000);
+    const onVisible = () => { if (document.visibilityState === "visible") fetchPending(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
   const [pendingReports, setPendingReports] = useState(0);
