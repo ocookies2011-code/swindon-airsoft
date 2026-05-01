@@ -225,15 +225,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, Math.max(0, walkOnLeft))) }));
     const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
 
-    // ── Event funnel tracking ─────────────────────────────
-    // Fire when visitor adds items to event basket
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      if (!trackFunnel) return;
-      const totalItems = bCart.walkOn + bCart.rental + Object.values(bCart.extras).reduce((s, v) => s + v, 0);
-      if (totalItems > 0) trackFunnel("event:basket");
-    }, [bCart.walkOn, bCart.rental, JSON.stringify(bCart.extras)]); // eslint-disable-line
-
 
 
 
