@@ -13,6 +13,21 @@ function AdminShop({ data, save, showToast, cu }) {
   };
   const [tab, setTabState] = useState(getInitTab);
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
+
+  // Live pending order count for the Orders tab badge
+  const [orderCount, setOrderCount] = useState(0);
+  useEffect(() => {
+    const fetch = () =>
+      supabase.from("shop_orders").select("id", { count: "exact", head: true })
+        .not("status", "in", "(completed,cancelled)")
+        .then(({ count }) => setOrderCount(count || 0))
+        .catch(() => {});
+    fetch();
+    const interval = setInterval(fetch, 30000);
+    const onVisible = () => { if (document.visibilityState === "visible") fetch(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
+  }, []);
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
   const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, costPrice: null, category: "", supplierCode: "", variants: [] };
@@ -332,10 +347,35 @@ function AdminShop({ data, save, showToast, cu }) {
         </div>
       </div>
 
-      <div className="nav-tabs">
-        <button className={`nav-tab ${tab === "products" ? "active" : ""}`} onClick={() => setTab("products")}>Products</button>
-        <button className={`nav-tab ${tab === "postage" ? "active" : ""}`} onClick={() => setTab("postage")}>Postage Options</button>
-        <button className={`nav-tab ${tab === "orders" ? "active" : ""}`} onClick={() => setTab("orders")}>Orders</button>
+      <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
+        {[
+          { id:"products", label:"Products" },
+          { id:"postage", label:"Postage Options" },
+          { id:"orders", label:"Orders", count: orderCount },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            display:"flex", alignItems:"center", gap:8,
+            padding:"8px 16px", borderRadius:6, cursor:"pointer",
+            fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700,
+            fontSize:12, letterSpacing:".1em", textTransform:"uppercase",
+            transition:"all .15s",
+            background: tab === t.id ? "var(--accent)" : "rgba(255,255,255,.07)",
+            color: tab === t.id ? "#000" : "var(--muted)",
+            border: tab === t.id ? "1px solid var(--accent)" : "1px solid rgba(255,255,255,.1)",
+          }}
+          onMouseEnter={e => { if (tab !== t.id) { e.currentTarget.style.background="rgba(255,255,255,.12)"; e.currentTarget.style.color="#fff"; } }}
+          onMouseLeave={e => { if (tab !== t.id) { e.currentTarget.style.background="rgba(255,255,255,.07)"; e.currentTarget.style.color="var(--muted)"; } }}
+          >
+            {t.label}
+            {t.count > 0 && (
+              <span style={{
+                background: tab === t.id ? "rgba(0,0,0,.3)" : "#ef5350",
+                color: tab === t.id ? "#000" : "#fff",
+                borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:800, lineHeight:"16px",
+              }}>{t.count}</span>
+            )}
+          </button>
+        ))}
       </div>
 
       {tab === "products" && (
