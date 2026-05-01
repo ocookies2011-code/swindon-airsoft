@@ -71,7 +71,9 @@ function UKVisitorMap({ visitData }) {
       const key  = latR + ',' + lonR;
       if (!pinMap[key]) pinMap[key] = { lat:latR, lon:lonR, count:0, city:row.city, country:row.country, users:new Map(), sessions:new Set() };
       pinMap[key].count++;
-      pinMap[key].sessions.add(row.session_id);
+      // Deduplicate by user_id for logged-in users, session_id for anonymous.
+      // Without this, one user with multiple page rows (one per page) inflates the session count.
+      pinMap[key].sessions.add(row.user_id || row.session_id);
       if (row.user_name) {
         // Normalise to lowercase key to deduplicate case variants (e.g. "Matt kane" vs "Matt Kane")
         // Store the most recently seen casing for display
@@ -298,13 +300,17 @@ function AdminVisitorStats() {
         const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { data } = await supabase
           .from('page_visits')
-          .select('session_id, user_name, page')
+          .select('session_id, user_id, user_name, page')
           .gte('created_at', since)
           .order('created_at', { ascending: false });
         if (!data) return;
-        // Deduplicate by session_id — keep most recent row per session
+        // Deduplicate by user_id for logged-in users, session_id for anon
+        // to avoid counting one person multiple times (one row per page visited)
         const seen = new Map();
-        data.forEach(row => { if (!seen.has(row.session_id)) seen.set(row.session_id, row); });
+        data.forEach(row => {
+          const key = row.user_id || row.session_id;
+          if (!seen.has(key)) seen.set(key, row);
+        });
         const sessions = [...seen.values()];
         setLiveCount(sessions.length);
         setLiveNames(sessions.map(s => ({ name: s.user_name, page: s.page })));
