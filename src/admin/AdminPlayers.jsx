@@ -137,6 +137,9 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const saveEdit = async () => {
     setSavingEdit(true);
     try {
+      // Refresh the Supabase session before saving — prevents silent hangs
+      // when JWT has expired after the user was away on another tab
+      await supabase.auth.getSession();
       // Determine vip_applied and vip_expires_at based on status change
       let vipApplied = edit.vipApplied ?? false;
       let vipExpiresAt = edit.vipExpiresAt || null;

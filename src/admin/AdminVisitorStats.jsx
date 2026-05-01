@@ -326,18 +326,17 @@ function AdminVisitorStats() {
     setLoading(true);
     setError(null);
     const days = rangeToDays[dateRange] ?? 7;
-    Promise.all([
-      api.visits.getStats(days),
-      // Always fetch all-time counts so the headline total is always accurate
-      // regardless of the 10k row fetch cap on getStats
-      api.visits.getAllTimeCounts(),
-    ])
-      .then(([rows, counts]) => {
+    // Load main stats first — show data immediately without waiting for all-time counts
+    api.visits.getStats(days)
+      .then(rows => {
         setVisitData(rows);
-        if (counts) setAllTimeCounts(counts);
         setLoading(false);
       })
       .catch(err => { setError(err.message); setLoading(false); });
+    // Load all-time counts in background — updates headline numbers when ready
+    api.visits.getAllTimeCounts()
+      .then(counts => { if (counts) setAllTimeCounts(counts); })
+      .catch(() => {});
   }, [dateRange]); // eslint-disable-line
 
   // Data arrives pre-filtered from the server

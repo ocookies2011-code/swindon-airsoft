@@ -1239,20 +1239,14 @@ export const visits = wrapWithTimeout({
   // Two cheap queries for the all-time headline numbers.
   // Uses server-side COUNT — not affected by row fetch limits.
   async getAllTimeCounts() {
-    const [totalRes, uniqueRes] = await Promise.all([
-      supabase.from('page_visits').select('*', { count: 'exact', head: true }),
-      supabase.from('page_visits').select('*', { count: 'exact', head: true }).not('session_id', 'is', null),
-    ]);
-    // For unique sessions we do a lightweight fetch to count distinct session_ids
-    // (PostgREST doesn't support COUNT DISTINCT natively via the JS client)
-    const { data: sessionData } = await supabase
-      .from('page_visits')
-      .select('session_id')
-      .not('session_id', 'is', null)
-      .limit(100000);
-    const uniqueSessions = new Set((sessionData || []).map(r => r.session_id)).size;
-    const totalRows = totalRes.count ?? 0;
-    return { totalRows, uniqueSessions };
+    // Use a single SQL RPC for all counts — much faster than fetching rows client-side
+    const { data, error } = await supabase.rpc('get_visit_counts');
+    if (!error && data) {
+      return { totalRows: data.total_rows, uniqueSessions: data.unique_sessions };
+    }
+    // Fallback: simple row count only
+    const { count } = await supabase.from('page_visits').select('*', { count: 'exact', head: true });
+    return { totalRows: count ?? 0, uniqueSessions: 0 };
   },
 
   // Legacy — kept for backwards compat; main stats use getStats() now

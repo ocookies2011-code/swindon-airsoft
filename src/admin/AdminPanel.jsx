@@ -67,7 +67,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   useEffect(() => {
     const fetchPending = () =>
       supabase.from("shop_orders").select("id", { count: "exact", head: true })
-        .in("status", ["pending", "return_requested"])
+        .not("status", "in", "(completed,cancelled)")
         .then(({ count }) => setPendingOrders(count || 0))
         .catch(() => {});
     fetchPending();
