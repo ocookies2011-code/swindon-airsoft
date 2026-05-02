@@ -438,178 +438,190 @@ function AdminShop({ data, save, showToast, cu }) {
             </span>
           </div>
           <p style={{fontSize:12,color:"var(--muted)",marginBottom:12}}>
-            ☰ Drag rows to reorder. Variants can be reordered inside the edit modal.
+            ☰ Drag to reorder · Click item name to quick-edit stock
           </p>
-          <div style={{overflowX:"auto", width:"100%", WebkitOverflowScrolling:"touch"}}>
-          <table className="data-table" style={{minWidth:900, tableLayout:"auto"}}>
-            <thead><tr>
-              <th style={{width:28}}></th>
-              <th style={{minWidth:120}}>Product</th>
-              <th style={{width:80}}>Price</th>
-              <th style={{width:80}}>Cost</th>
-              <th style={{width:100}}>Margin</th>
-              <th style={{width:80}}>Variants</th>
-              <th style={{width:80}}>Stock</th>
-              <th style={{width:60}}>Sale</th>
-              <th style={{width:70}}>No Post</th>
-              <th style={{width:60}}>Game+</th>
-              <th style={{width:60}}>Hidden</th>
-              <th style={{width:110, whiteSpace:"nowrap"}}></th>
-            </tr></thead>
-            <tbody>
-              {(() => {
-                const renderRow = (item) => {
-                  const idx = shopOrder.findIndex(p => p.id === item.id);
+
+          {(() => {
+            const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); };
+
+            // Stock summary for a product
+            const stockSummary = (item) => {
+              if (item.variants?.length > 0) {
+                const total = item.variants.reduce((s, v) => s + Number(v.stock), 0);
+                const outOf = item.variants.length;
+                const zeroCount = item.variants.filter(v => Number(v.stock) === 0).length;
+                const lowCount = item.variants.filter(v => Number(v.stock) > 0 && Number(v.stock) <= 5).length;
+                const color = zeroCount > 0 ? "var(--red)" : lowCount > 0 ? "var(--gold)" : "var(--accent)";
+                return { total, label: `${total} units across ${outOf} variants`, color, zeroCount, lowCount };
+              }
+              const s = Number(item.stock);
+              const color = s === 0 ? "var(--red)" : s <= 5 ? "var(--gold)" : "var(--accent)";
+              return { total: s, label: `${s} in stock`, color, zeroCount: s === 0 ? 1 : 0, lowCount: s > 0 && s <= 5 ? 1 : 0 };
+            };
+
+            // Price summary
+            const priceSummary = (item) => {
+              if (item.variants?.length > 0) {
+                const prices = item.variants.map(v => Number(v.price)).filter(p => p > 0);
+                if (!prices.length) return null;
+                const min = Math.min(...prices), max = Math.max(...prices);
+                return min === max ? `£${min.toFixed(2)}` : `£${min.toFixed(2)} – £${max.toFixed(2)}`;
+              }
+              const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
+              return `£${Number(sell).toFixed(2)}`;
+            };
+
+            // Best margin for display
+            const marginSummary = (item) => {
+              if (item.variants?.length > 0) {
+                const margins = item.variants.filter(v => v.costPrice && v.price > 0).map(v => ({ m: v.price - v.costPrice, pct: ((v.price - v.costPrice) / v.price * 100) }));
+                if (!margins.length) return null;
+                const avg = margins.reduce((s, m) => s + m.pct, 0) / margins.length;
+                return { pct: avg.toFixed(0), color: avg >= 0 ? "var(--accent)" : "var(--red)" };
+              }
+              if (!item.costPrice || !item.price) return null;
+              const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
+              const pct = ((sell - item.costPrice) / sell * 100);
+              return { pct: pct.toFixed(0), color: pct >= 0 ? "var(--accent)" : "var(--red)" };
+            };
+
+            const renderCard = (item) => {
+              const idx = shopOrder.findIndex(p => p.id === item.id);
+              const stock = stockSummary(item);
+              const price = priceSummary(item);
+              const margin = marginSummary(item);
+              const img = item.images?.[0] || item.image || null;
+              const isLowStock = stock.zeroCount > 0 || stock.lowCount > 0;
+
+              return (
+                <div key={item.id}
+                  draggable
+                  onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragProductIdx.current = idx; }}
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect="move"; }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    const from = dragProductIdx.current;
+                    if (from === idx) return;
+                    const next = [...shopOrder];
+                    const [moved] = next.splice(from, 1);
+                    next.splice(idx, 0, moved);
+                    setShopOrder(next);
+                    dragProductIdx.current = null;
+                    api.shop.reorder(next.map(p => p.id)).then(() => save({ shop: next })).catch(() => showToast("Reorder failed", "red"));
+                  }}
+                  style={{
+                    background: "#111", border: `1px solid ${isLowStock ? stock.zeroCount > 0 ? "rgba(239,68,68,.3)" : "rgba(245,158,11,.3)" : "#1e1e1e"}`,
+                    borderLeft: `3px solid ${isLowStock ? stock.color : "rgba(200,255,0,.2)"}`,
+                    padding: "12px 14px", marginBottom: 6, display: "flex", alignItems: "center", gap: 12, cursor: "grab",
+                    transition: "border-color .15s",
+                  }}
+                >
+                  {/* Drag handle */}
+                  <span style={{ color:"var(--muted)", fontSize:14, userSelect:"none", flexShrink:0 }}>☰</span>
+
+                  {/* Thumbnail */}
+                  {img
+                    ? <img src={img} alt="" style={{ width:44, height:44, objectFit:"cover", flexShrink:0, border:"1px solid #2a2a2a" }} />
+                    : <div style={{ width:44, height:44, flexShrink:0, background:"#1a1a1a", border:"1px dashed #2a2a2a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, color:"#333" }}>📦</div>
+                  }
+
+                  {/* Name + flags */}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginBottom:4 }}>
+                      <span style={{ fontWeight:700, fontSize:14, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.name}</span>
+                      {item.hiddenFromShop && <span className="tag tag-red" style={{fontSize:9,padding:"1px 6px"}}>🔒 HIDDEN</span>}
+                      {item.onSale && <span className="tag tag-orange" style={{fontSize:9,padding:"1px 6px"}}>SALE £{item.salePrice}</span>}
+                      {item.noPost && <span className="tag tag-gold" style={{fontSize:9,padding:"1px 6px"}}>NO POST</span>}
+                      {item.gameExtra && <span className="tag tag-green" style={{fontSize:9,padding:"1px 6px"}}>GAME+</span>}
+                      {item.variants?.length > 0 && <span className="tag tag-blue" style={{fontSize:9,padding:"1px 6px"}}>{item.variants.length} VARIANTS</span>}
+                    </div>
+                    {item.category && <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{item.category.toUpperCase()}</div>}
+                  </div>
+
+                  {/* Price */}
+                  <div style={{ textAlign:"right", flexShrink:0, minWidth:70 }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>{price || "—"}</div>
+                    {margin && <div style={{ fontSize:10, color:margin.color, fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>{margin.pct}% margin</div>}
+                  </div>
+
+                  {/* Stock */}
+                  <div style={{ flexShrink:0, minWidth:80, textAlign:"right" }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:stock.color, fontFamily:"'Share Tech Mono',monospace" }}>{stock.total}</div>
+                    <div style={{ fontSize:9, color:"var(--muted)", marginTop:2, letterSpacing:".05em" }}>
+                      {stock.zeroCount > 0 ? `${stock.zeroCount} OUT OF STOCK` : stock.lowCount > 0 ? `${stock.lowCount} LOW` : "IN STOCK"}
+                    </div>
+                    {/* Stock bar */}
+                    <div style={{ width:60, height:3, background:"#1a1a1a", marginTop:4, marginLeft:"auto" }}>
+                      <div style={{ height:"100%", width:`${Math.min(100, (stock.total / 50) * 100)}%`, background:stock.color, transition:"width .3s" }} />
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                    <button className="btn btn-sm btn-ghost" onClick={() => openEdit(item)} style={{fontSize:11}}>Edit</button>
+                    <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)} style={{fontSize:11}}>Del</button>
+                  </div>
+                </div>
+              );
+            };
+
+            if (filteredShopOrder.length === 0) {
+              return <div style={{textAlign:"center",color:"var(--muted)",padding:"30px 0"}}>{productSearch || categoryFilter ? "No matching products" : "No products yet"}</div>;
+            }
+
+            // Flat list when searching; grouped by category otherwise
+            if (productSearch.trim() || categoryFilter) {
+              return filteredShopOrder.map(item => renderCard(item));
+            }
+
+            const uncategorised = filteredShopOrder.filter(p => !p.category);
+            const groups = {};
+            filteredShopOrder.filter(p => p.category).forEach(p => {
+              (groups[p.category] = groups[p.category] || []).push(p);
+            });
+            const sortedCats = Object.keys(groups).sort();
+
+            return (
+              <>
+                {sortedCats.map(cat => {
+                  const isCatCollapsed = !!collapsedCats[cat];
                   return (
-                    <tr key={item.id}
-                      draggable
-                      onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragProductIdx.current = idx; }}
-                      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect="move"; }}
-                      onDrop={e => {
-                        e.preventDefault();
-                        const from = dragProductIdx.current;
-                        if (from === idx) return;
-                        const next = [...shopOrder];
-                        const [moved] = next.splice(from, 1);
-                        next.splice(idx, 0, moved);
-                        setShopOrder(next);
-                        dragProductIdx.current = null;
-                        api.shop.reorder(next.map(p => p.id))
-                          .then(() => save({ shop: next }))
-                          .catch(() => showToast("Reorder failed", "red"));
-                      }}
-                      style={{cursor:"grab"}}
-                    >
-                      <td style={{color:"var(--muted)",fontSize:16,textAlign:"center",userSelect:"none"}}>☰</td>
-                      <td style={{ fontWeight:600 }}>{item.name}</td>
-                      <td className="text-green">{item.variants?.length > 0 ? <span style={{color:"var(--muted)",fontSize:11}}>see variants</span> : `£${Number(item.price).toFixed(2)}`}</td>
-                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,verticalAlign:"top"}}>
-                        {item.variants?.length > 0
-                          ? item.variants.some(v => v.costPrice)
-                            ? item.variants.map(v => (
-                                <div key={v.id} style={{whiteSpace:"nowrap"}}>
-                                  {v.name}: {v.costPrice ? `£${Number(v.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>}
-                                </div>
-                              ))
-                            : <span style={{color:"var(--muted)"}}>—</span>
-                          : item.costPrice ? `£${Number(item.costPrice).toFixed(2)}` : <span style={{color:"var(--muted)"}}>—</span>
-                        }
-                      </td>
-                      <td style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,verticalAlign:"top"}}>
-                        {item.variants?.length > 0
-                          ? item.variants.some(v => v.costPrice && v.price > 0)
-                            ? item.variants.filter(v => v.costPrice && v.price > 0).map(v => {
-                                const m = v.price - v.costPrice;
-                                const pct = ((m / v.price) * 100).toFixed(0);
-                                return (
-                                  <div key={v.id} style={{whiteSpace:"nowrap",color: m >= 0 ? "var(--accent)" : "var(--red)"}}>
-                                    {v.name}: £{m.toFixed(2)} ({pct}%)
-                                  </div>
-                                );
-                              })
-                            : <span style={{color:"var(--muted)"}}>—</span>
-                          : item.costPrice && item.price > 0 ? (() => {
-                              const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
-                              const m = sell - item.costPrice;
-                              const pct = ((m / sell) * 100).toFixed(0);
-                              return <span style={{color: m >= 0 ? "var(--accent)" : "var(--red)"}}>£{m.toFixed(2)} ({pct}%)</span>;
-                            })()
-                          : <span style={{color:"var(--muted)"}}>—</span>
-                        }
-                      </td>
-                      <td style={{verticalAlign:"top"}}>
-                        {item.variants?.length > 0
-                          ? <span className="tag tag-blue">{item.variants.length} variants</span>
-                          : <span style={{color:"var(--muted)"}}>—</span>
-                        }
-                      </td>
-                      <td style={{verticalAlign:"top"}}>
-                        {item.variants?.length > 0
-                          ? item.variants.map(v => (
-                              <div key={v.id} style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>
-                                {v.name}: <span style={{color:Number(v.stock)>0?"var(--accent)":"var(--red)"}}>{v.stock}</span>
-                              </div>
-                            ))
-                          : item.stock
-                        }
-                      </td>
-                      <td>{item.onSale ? <span className="tag tag-red">£{item.salePrice}</span> : "—"}</td>
-                      <td>{item.noPost ? <span className="tag tag-gold">Yes</span> : "—"}</td>
-                      <td>{item.gameExtra ? <span className="tag tag-green">✓</span> : "—"}</td>
-                      <td>{item.hiddenFromShop ? <span className="tag tag-red" title="Hidden from public shop">🔒</span> : "—"}</td>
-                      <td style={{whiteSpace:"nowrap"}}>
-                        <div style={{display:"flex",gap:6,flexWrap:"nowrap"}}>
-                          <button className="btn btn-sm btn-ghost" onClick={() => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>Edit</button>
-                          <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)}>Del</button>
+                    <React.Fragment key={cat}>
+                      <div style={{ userSelect:"none", cursor:"pointer", background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px", marginBottom: isCatCollapsed ? 6 : 0 }} onClick={() => toggleCat(cat)}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>
+                            {isCatCollapsed ? "▶" : "▼"} {cat}
+                          </span>
+                          <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{groups[cat].length} item{groups[cat].length !== 1 ? "s" : ""}</span>
+                          <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(200,255,0,.35)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{isCatCollapsed ? "▸ EXPAND" : "▾ COLLAPSE"}</span>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                      {!isCatCollapsed && <div style={{ marginBottom: 8 }}>{groups[cat].map(item => renderCard(item))}</div>}
+                    </React.Fragment>
                   );
-                };
-
-                if (filteredShopOrder.length === 0) {
-                  return <tr><td colSpan={11} style={{textAlign:"center",color:"var(--muted)",padding:30}}>{productSearch || categoryFilter ? "No matching products" : "No products yet"}</td></tr>;
-                }
-
-                // When filtering/searching show flat list; otherwise group by category
-                if (productSearch.trim() || categoryFilter) {
-                  return filteredShopOrder.map(item => renderRow(item));
-                }
-
-                const uncategorised = filteredShopOrder.filter(p => !p.category);
-                const groups = {};
-                filteredShopOrder.filter(p => p.category).forEach(p => {
-                  (groups[p.category] = groups[p.category] || []).push(p);
-                });
-                const sortedCats = Object.keys(groups).sort();
-
-                return (
-                  <>
-                    {sortedCats.map(cat => {
-                      const isCatCollapsed = !!collapsedCats[cat];
-                      return (
-                        <React.Fragment key={cat}>
-                          <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat(cat)}>
-                            <td colSpan={11} style={{ background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px" }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>
-                                  {isCatCollapsed ? "▶" : "▼"} {cat}
-                                </span>
-                                <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{groups[cat].length} item{groups[cat].length !== 1 ? "s" : ""}</span>
-                                <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(200,255,0,.3)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{isCatCollapsed ? "▸ EXPAND" : "▾ COLLAPSE"}</span>
-                              </div>
-                            </td>
-                          </tr>
-                          {!isCatCollapsed && groups[cat].map(item => renderRow(item))}
-                        </React.Fragment>
-                      );
-                    })}
-                    {uncategorised.length > 0 && (() => {
-                      const isUncatCollapsed = !!collapsedCats["__none"];
-                      return (
-                        <React.Fragment key="__none">
-                          {sortedCats.length > 0 && (
-                            <tr style={{userSelect:"none", cursor:"pointer"}} onClick={() => toggleCat("__none")}>
-                              <td colSpan={11} style={{ background:"rgba(120,120,120,.05)", borderTop:"2px solid rgba(150,150,150,.14)", borderBottom:"1px solid rgba(150,150,150,.08)", padding:"7px 12px" }}>
-                                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                  <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>
-                                    {isUncatCollapsed ? "▶" : "▼"} Uncategorised
-                                  </span>
-                                  <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{uncategorised.length} item{uncategorised.length !== 1 ? "s" : ""}</span>
-                                  <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(150,150,150,.4)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{isUncatCollapsed ? "▸ EXPAND" : "▾ COLLAPSE"}</span>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                          {!isUncatCollapsed && uncategorised.map(item => renderRow(item))}
-                        </React.Fragment>
-                      );
-                    })()}
-                  </>
-                );
-              })()}
-            </tbody>
-          </table></div>
+                })}
+                {uncategorised.length > 0 && (() => {
+                  const isUncatCollapsed = !!collapsedCats["__none"];
+                  return (
+                    <React.Fragment key="__none">
+                      {sortedCats.length > 0 && (
+                        <div style={{ userSelect:"none", cursor:"pointer", background:"rgba(120,120,120,.05)", borderTop:"2px solid rgba(150,150,150,.14)", borderBottom:"1px solid rgba(150,150,150,.08)", padding:"7px 12px", marginBottom: isUncatCollapsed ? 6 : 0 }} onClick={() => toggleCat("__none")}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--muted)" }}>
+                              {isUncatCollapsed ? "▶" : "▼"} Uncategorised
+                            </span>
+                            <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{uncategorised.length} item{uncategorised.length !== 1 ? "s" : ""}</span>
+                            <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(150,150,150,.4)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{isUncatCollapsed ? "▸ EXPAND" : "▾ COLLAPSE"}</span>
+                          </div>
+                        </div>
+                      )}
+                      {!isUncatCollapsed && <div style={{ marginBottom: 8 }}>{uncategorised.map(item => renderCard(item))}</div>}
+                    </React.Fragment>
+                  );
+                })()}
+              </>
+            );
+          })()}
         </div>
       )}
 
