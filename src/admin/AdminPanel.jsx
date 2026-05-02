@@ -22,7 +22,6 @@ import { AdminStaff }              from "./AdminStaff";
 import { AdminMarshalSchedule }    from "./AdminMarshalSchedule";
 import { AdminContactDepts }       from "./AdminContactDepts";
 import { AdminLeaderboard }        from "./AdminLeaderboard";
-import { AdminFailedPayments }     from "./AdminFailedPayments";
 import { AdminMessages }           from "./AdminMessages";
 import { AdminCash }               from "./AdminCash";
 import { AdminSettings }           from "./AdminSettings";
@@ -120,7 +119,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "shop",              label: "Shop",              icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>, badge: pendingOrders, badgeColor: "red", group: "COMMERCE" },
     { id: "discount-codes",    label: "Discount Codes",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>, group: "COMMERCE" },
     { id: "gift-vouchers",      label: "Gift Vouchers",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8a000" strokeWidth="2"><rect x="2" y="9" width="20" height="13" rx="1"/><path d="M12 9V22M2 14h20M7 9c0-2.8 2.2-5 5-5s5 2.2 5 5" strokeLinecap="round"/></svg>, group: "COMMERCE" },
-    { id: "failed-payments",   label: "Failed Payments",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, group: "COMMERCE" },
 
     // ── CONTENT ──────────────────────────────────────────
     { id: "gallery-admin",     label: "Gallery",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, group: "CONTENT" },
@@ -204,7 +202,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "visitor-stats" && <AdminVisitorStats />}
-          {section === "failed-payments" && <AdminFailedPayments showToast={showToast} cu={cu} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}

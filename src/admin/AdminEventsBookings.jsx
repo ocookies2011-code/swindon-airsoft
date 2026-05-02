@@ -65,7 +65,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
-    return p[0]==="admin" && p[1]==="events" && ["events","checkin"].includes(p[2]) ? p[2] : "events";
+    return p[0]==="admin" && p[1]==="events" && ["events","bookings","checkin"].includes(p[2]) ? p[2] : "events";
   };
   const [tab, setTabState] = useState(getInitTab);
   const setTab = (t) => { setTabState(t); window.location.hash = "admin/events/" + t; };
@@ -519,9 +519,30 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         </div>
       </div>
 
-      <div className="nav-tabs">
-        <button className={`nav-tab ${tab === "events" ? "active" : ""}`} onClick={() => setTab("events")}>📅 Events</button>
-        <button className={`nav-tab ${tab === "checkin" ? "active" : ""}`} onClick={() => setTab("checkin")}>✅ Check-In</button>
+      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
+        {[
+          { id:"events",   label:"📅 Events" },
+          { id:"bookings", label:"📋 All Bookings", count: allBookings.length },
+          { id:"checkin",  label:"✅ Check-In" },
+        ].map(t => {
+          const isActive = tab === t.id;
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              display:"flex", alignItems:"center", gap:8, padding:"8px 16px", cursor:"pointer",
+              fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12,
+              letterSpacing:".1em", textTransform:"uppercase", transition:"all .15s",
+              background: isActive ? "var(--accent)" : "rgba(255,255,255,.07)",
+              color: isActive ? "#000" : "var(--muted)",
+              border: isActive ? "1px solid var(--accent)" : "1px solid rgba(255,255,255,.1)",
+              clipPath:"polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)",
+            }}>
+              {t.label}
+              {t.count > 0 && (
+                <span style={{ background: isActive ? "rgba(0,0,0,.25)" : "rgba(255,255,255,.1)", borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:800 }}>{t.count}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── EVENTS TAB ── */}
@@ -598,6 +619,81 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           </tbody>
         </table></div>
       )}
+
+      {/* ── ALL BOOKINGS TAB ── */}
+      {tab === "bookings" && (() => {
+        // Local state using a closure trick — use component-level state defined above
+        const eventsWithBookings = data.events.filter(e => e.bookings?.length > 0)
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+        const allEvIds = ["", ...eventsWithBookings.map(e => e.id)];
+        return (
+          <div>
+            {/* Event selector */}
+            <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:16, flexWrap:"wrap" }}>
+              <div style={{ flex:1, minWidth:260 }}>
+                <select value={evId} onChange={e => setEvId(e.target.value)}
+                  style={{ width:"100%", fontSize:13, padding:"9px 12px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)" }}>
+                  <option value="">— All events ({allBookings.length} bookings) —</option>
+                  {eventsWithBookings.map(e => (
+                    <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.length} bookings)</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", flexShrink:0 }}>
+                {evId
+                  ? `${(data.events.find(e=>e.id===evId)?.bookings||[]).length} bookings`
+                  : `${allBookings.length} total`
+                }
+              </div>
+            </div>
+
+            {/* Bookings table */}
+            <div className="card" style={{ padding:0 }}>
+              <div className="table-wrap"><table className="data-table">
+                <thead><tr>
+                  <th>Player</th><th>Event</th><th>Type</th><th>Qty</th><th>Total</th><th>Booked</th><th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                  {(() => {
+                    const rows = evId
+                      ? (data.events.find(e=>e.id===evId)?.bookings || [])
+                      : allBookings;
+                    const sorted = [...rows].sort((a,b) => new Date(b.date||b.created_at) - new Date(a.date||a.created_at));
+                    if (sorted.length === 0) return (
+                      <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No bookings found</td></tr>
+                    );
+                    return sorted.map(b => {
+                      const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
+                      return (
+                        <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
+                          <td style={{ fontWeight:600 }}>{b.userName}</td>
+                          <td style={{ fontSize:12, color:"var(--muted)" }}>{bookingEv?.title || "—"}</td>
+                          <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+                          <td>{b.qty}</td>
+                          <td className="text-green">£{Number(b.total||0).toFixed(2)}</td>
+                          <td className="mono" style={{ fontSize:11 }}>{gmtShort(b.date||b.created_at)}</td>
+                          <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                          <td>
+                            <div style={{ display:"flex", gap:5, flexWrap:"wrap", alignItems:"center" }}>
+                              <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => setViewBooking({ ...b, eventObj: bookingEv, eventTitle: bookingEv?.title })}>View</button>
+                              <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => openEdit({ ...b, eventTitle: bookingEv?.title, eventObj: bookingEv })}>Edit</button>
+                              {b.squareOrderId && Number(b.total) > 0 && (
+                                <button style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
+                                  onClick={() => { setRefundModal({ booking: b }); setRefundAmt(Number(b.total).toFixed(2)); setRefundNote(""); }}>£ Refund</button>
+                              )}
+                              <button className="btn btn-sm btn-danger" style={{fontSize:10}} onClick={() => setDelConfirm(b)}>Del</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── CHECK-IN TAB ── */}
       {tab === "checkin" && (
