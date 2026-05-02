@@ -92,6 +92,9 @@ function AdminShop({ data, save, showToast, cu }) {
     });
     return out.sort((a, b) => a.stock - b.stock);
   }, [shopOrder]);
+
+  // Expanded variant detail state — click a product card to toggle
+  const [expandedProduct, setExpandedProduct] = useState(null);
   const dragVariantIdx = useRef(null);
   const [form, setForm] = useState(blank);
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
@@ -494,7 +497,8 @@ function AdminShop({ data, save, showToast, cu }) {
               const isLowStock = stock.zeroCount > 0 || stock.lowCount > 0;
 
               return (
-                <div key={item.id}
+                <div key={item.id}>
+                <div
                   draggable
                   onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragProductIdx.current = idx; }}
                   onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect="move"; }}
@@ -509,10 +513,14 @@ function AdminShop({ data, save, showToast, cu }) {
                     dragProductIdx.current = null;
                     api.shop.reorder(next.map(p => p.id)).then(() => save({ shop: next })).catch(() => showToast("Reorder failed", "red"));
                   }}
+                  onClick={() => item.variants?.length > 0 && setExpandedProduct(expandedProduct === item.id ? null : item.id)}
                   style={{
-                    background: "#111", border: `1px solid ${isLowStock ? stock.zeroCount > 0 ? "rgba(239,68,68,.3)" : "rgba(245,158,11,.3)" : "#1e1e1e"}`,
-                    borderLeft: `3px solid ${isLowStock ? stock.color : "rgba(200,255,0,.2)"}`,
-                    padding: "12px 14px", marginBottom: 6, display: "flex", alignItems: "center", gap: 12, cursor: "grab",
+                    background: "#111", border: `1px solid ${isLowStock ? stock.zeroCount > 0 ? "rgba(239,68,68,.3)" : "rgba(245,158,11,.3)" : expandedProduct === item.id ? "rgba(200,255,0,.25)" : "#1e1e1e"}`,
+                    borderLeft: `3px solid ${isLowStock ? stock.color : expandedProduct === item.id ? "var(--accent)" : "rgba(200,255,0,.2)"}`,
+                    borderBottom: expandedProduct === item.id ? "none" : undefined,
+                    padding: "12px 14px", marginBottom: expandedProduct === item.id ? 0 : 6,
+                    display: "flex", alignItems: "center", gap: 12,
+                    cursor: item.variants?.length > 0 ? "pointer" : "grab",
                     transition: "border-color .15s",
                   }}
                 >
@@ -558,9 +566,73 @@ function AdminShop({ data, save, showToast, cu }) {
 
                   {/* Actions */}
                   <div style={{ display:"flex", gap:4, flexShrink:0 }}>
-                    <button className="btn btn-sm btn-ghost" onClick={() => openEdit(item)} style={{fontSize:11}}>Edit</button>
-                    <button className="btn btn-sm btn-danger" onClick={() => setDelProductConfirm(item)} style={{fontSize:11}}>Del</button>
+                    <button className="btn btn-sm btn-ghost" onClick={e => { e.stopPropagation(); openEdit(item); }} style={{fontSize:11}}>Edit</button>
+                    <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); setDelProductConfirm(item); }} style={{fontSize:11}}>Del</button>
                   </div>
+
+                  {/* Expand chevron for variant products */}
+                  {item.variants?.length > 0 && (
+                    <span style={{ color: expandedProduct === item.id ? "var(--accent)" : "var(--muted)", fontSize: 12, flexShrink: 0, transition: "transform .2s", display: "inline-block", transform: expandedProduct === item.id ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                  )}
+                </div>
+
+                {/* ── Variant breakdown panel ── */}
+                {expandedProduct === item.id && item.variants?.length > 0 && (
+                  <div style={{
+                    background: "#0d0d0d", border: "1px solid rgba(200,255,0,.25)", borderTop: "none",
+                    borderLeft: "3px solid var(--accent)", marginBottom: 6, overflow: "hidden",
+                  }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 70px 80px 90px", gap: 0, borderBottom: "1px solid #1a1a1a", padding: "6px 14px" }}>
+                      {["VARIANT", "SELL", "COST", "MARGIN", "STOCK"].map(h => (
+                        <div key={h} style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".15em", color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>{h}</div>
+                      ))}
+                    </div>
+                    {item.variants.map((v, i) => {
+                      const margin = v.costPrice && v.price > 0 ? ((v.price - v.costPrice) / v.price * 100) : null;
+                      const stockNum = Number(v.stock);
+                      const stockColor = stockNum === 0 ? "var(--red)" : stockNum <= 5 ? "var(--gold)" : "var(--accent)";
+                      return (
+                        <div key={v.id} style={{
+                          display: "grid", gridTemplateColumns: "1fr 70px 70px 80px 90px", gap: 0,
+                          padding: "8px 14px", borderBottom: i < item.variants.length - 1 ? "1px solid #1a1a1a" : "none",
+                          background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,.015)",
+                        }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                            {v.image && <img src={v.image} alt="" style={{ width: 20, height: 20, objectFit: "cover", border: "1px solid #2a2a2a", flexShrink: 0 }} />}
+                            {v.name}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--accent)", fontFamily: "'Share Tech Mono',monospace", fontWeight: 700 }}>
+                            £{Number(v.price).toFixed(2)}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>
+                            {v.costPrice ? `£${Number(v.costPrice).toFixed(2)}` : "—"}
+                          </div>
+                          <div style={{ fontSize: 12, fontFamily: "'Share Tech Mono',monospace", color: margin === null ? "var(--muted)" : margin >= 0 ? "var(--accent)" : "var(--red)" }}>
+                            {margin === null ? "—" : `${margin.toFixed(0)}%`}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: stockColor, fontFamily: "'Share Tech Mono',monospace", minWidth: 24 }}>{v.stock}</span>
+                            <div style={{ flex: 1, height: 3, background: "#1a1a1a" }}>
+                              <div style={{ height: "100%", width: `${Math.min(100, (stockNum / 30) * 100)}%`, background: stockColor }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Totals row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 70px 80px 90px", gap: 0, padding: "7px 14px", borderTop: "1px solid rgba(200,255,0,.15)", background: "rgba(200,255,0,.03)" }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".1em", color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif" }}>TOTAL</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                        £{Math.min(...item.variants.map(v => Number(v.price))).toFixed(2)}–£{Math.max(...item.variants.map(v => Number(v.price))).toFixed(2)}
+                      </div>
+                      <div />
+                      <div />
+                      <div style={{ fontSize: 12, fontWeight: 700, color: stock.color, fontFamily: "'Share Tech Mono',monospace" }}>
+                        {item.variants.reduce((s, v) => s + Number(v.stock), 0)} units
+                      </div>
+                    </div>
+                  </div>
+                )}
                 </div>
               );
             };
