@@ -301,8 +301,8 @@ function AdminVisitorStats() {
         const { data } = await supabase
           .from('page_visits')
           .select('session_id, user_id, user_name, page')
-          .gte('created_at', since)
-          .order('created_at', { ascending: false });
+          .gte('last_seen_at', since)
+          .order('last_seen_at', { ascending: false });
         if (!data) return;
         // Deduplicate by user_id for logged-in users, session_id for anon
         // to avoid counting one person multiple times (one row per page visited)
