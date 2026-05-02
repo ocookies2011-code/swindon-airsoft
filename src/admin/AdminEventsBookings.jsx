@@ -522,7 +522,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
         {[
           { id:"events",   label:"📅 Events" },
-          { id:"bookings", label:"📋 All Bookings", count: allBookings.length },
+          { id:"bookings", label:"📋 All Bookings", count: (() => { const now = new Date(); return data.events.filter(e => new Date(e.date + "T23:59:00") > now).reduce((s, e) => s + (e.bookings?.length || 0), 0); })() },
           { id:"checkin",  label:"✅ Check-In" },
         ].map(t => {
           const isActive = tab === t.id;
