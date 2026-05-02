@@ -33,6 +33,8 @@ function ContactPage({ data, cu, showToast }) {
         toEmail: selectedDept.email,
         toName:  selectedDept.name,
         subject: `[${selectedDept.name}] ${form.subject}`,
+        replyTo: form.email,
+        replyToName: form.name,
         htmlContent: `
           <div style="font-family:sans-serif;max-width:600px">
             <h2 style="color:#c8ff00;font-family:'Oswald','Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">

@@ -6,7 +6,7 @@ import { fmtDate } from "./helpers";
 const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID  || "";
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "";
 const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY  || "";
-async function sendEmail({ toEmail, toName, subject, htmlContent }) {
+async function sendEmail({ toEmail, toName, subject, htmlContent, replyTo, replyToName }) {
   if (!toEmail) throw new Error("No email address");
   if (!window.emailjs) {
     await new Promise((res, rej) => {
@@ -22,6 +22,8 @@ async function sendEmail({ toEmail, toName, subject, htmlContent }) {
     to_name:      toName || "",
     subject:      subject,
     html_content: htmlContent,
+    reply_to:     replyTo || "",
+    reply_to_name: replyToName || "",
   });
 }
 
