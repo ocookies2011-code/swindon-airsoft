@@ -139,6 +139,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   });
   const [manual, setManual] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [checkinConfirm, setCheckinConfirm] = useState(null); // { booking, evObj, resolvedExtras }
 
   // ── Booking action state (edit / view / delete / refund) ──
   const [editBooking, setEditBooking] = useState(null);
@@ -229,15 +230,41 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   );
 
   // ── Check-in logic ──
-  const doCheckin = async (booking, evObj) => {
-    if (!booking?.id || !booking?.userId) {
-      showToast("Invalid booking data", "red"); return;
-    }
-    // Block check-in before event date
+  // Resolve booking extras into labelled list for the confirm modal
+  const resolveExtras = (booking, evObj) => {
+    const out = [];
+    if (!booking?.extras || typeof booking.extras !== "object") return out;
+    Object.entries(booking.extras).filter(([,v]) => v > 0).forEach(([key, qty]) => {
+      const [baseId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+      let exDef    = evObj?.extras?.find(e => e.id === baseId);
+      let shopProd = exDef
+        ? (data.shop || []).find(p => p.id === exDef.productId)
+        : (data.shop || []).find(p => p.id === baseId);
+      if (!shopProd && variantId)
+        shopProd = (data.shop || []).find(p => (p.variants || []).some(vv => vv.id === variantId));
+      if (!exDef && shopProd) exDef = evObj?.extras?.find(e => e.productId === shopProd.id);
+      const varDef = variantId && shopProd ? (shopProd.variants || []).find(vv => vv.id === variantId) : null;
+      const name  = exDef?.name || shopProd?.name || baseId;
+      const label = varDef ? `${name} — ${varDef.name}` : name;
+      out.push({ key, label, qty });
+    });
+    return out;
+  };
+
+  // Show confirm modal first, then actually check in
+  const requestCheckin = (booking, evObj) => {
+    if (!booking?.id || !booking?.userId) { showToast("Invalid booking data", "red"); return; }
     const today = new Date().toISOString().slice(0, 10);
     if (evObj?.date && today < evObj.date) {
       showToast(`❌ Check-in not open yet — event is on ${fmtDate(evObj.date)}`, "red"); return;
     }
+    const resolvedExtras = resolveExtras(booking, evObj);
+    setCheckinConfirm({ booking, evObj, resolvedExtras });
+  };
+
+  const doCheckin = async (booking, evObj) => {
+    if (!booking?.id || !booking?.userId) { showToast("Invalid booking data", "red"); return; }
+    setCheckinConfirm(null);
     try {
       const actualCount = await api.bookings.checkIn(booking.id, booking.userId);
       const evList = await api.events.getAll();
@@ -257,7 +284,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     );
     if (!foundBooking) { showToast("Booking not found", "red"); return; }
     if (foundBooking.checkedIn) { showToast("Already checked in", "gold"); return; }
-    doCheckin(foundBooking, ev); setManual("");
+    requestCheckin(foundBooking, ev); setManual("");
   };
 
   const onQRScan = (code) => {
@@ -266,7 +293,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       const scannedBooking = evObj.bookings.find(x => x.id === code);
       if (scannedBooking) {
         if (scannedBooking.checkedIn) { showToast(`${scannedBooking.userName} already checked in`, "gold"); return; }
-        doCheckin(scannedBooking, evObj); return;
+        requestCheckin(scannedBooking, evObj); return;
       }
     }
     showToast("QR code not recognised", "red");
@@ -925,7 +952,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <td>
                           <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                             {!b.checkedIn
-                              ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ In</button>
+                              ? <button className="btn btn-sm btn-primary" onClick={() => requestCheckin(b, ev)}>✓ In</button>
                               : <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>✓ CHECKED IN</span>
                             }
                           </div>
@@ -1377,6 +1404,71 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           </div>
         </div>
       )}
+
+      {/* ── Check-In Confirm Modal ── */}
+      {checkinConfirm && (() => {
+        const { booking, evObj, resolvedExtras } = checkinConfirm;
+        const hasExtras = resolvedExtras.length > 0;
+        return (
+          <div className="overlay" onClick={() => setCheckinConfirm(null)}>
+            <div className="modal-box" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ marginBottom: 16 }}>
+                <div className="hazard-stripe" style={{ marginBottom: 12 }} />
+                <div className="modal-title" style={{ margin: 0 }}>Confirm Check-In</div>
+              </div>
+
+              {/* Player info */}
+              <div style={{ background: "#0a0f05", border: "1px solid rgba(200,255,0,.2)", padding: "12px 16px", marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: ".04em", textTransform: "uppercase" }}>{booking.userName}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", marginTop: 3 }}>
+                      {booking.type === "walkOn" ? "Walk-On" : "Rental"} × {booking.qty} · £{Number(booking.total || 0).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace", marginTop: 2 }}>{evObj?.title}</div>
+                  </div>
+                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: "var(--accent)", lineHeight: 1 }}>
+                    {booking.qty}×
+                  </div>
+                </div>
+              </div>
+
+              {/* Extras checklist */}
+              {hasExtras && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <div className="hazard-stripe gold" />
+                    <div style={{ background: "rgba(245,158,11,.06)", border: "1px solid rgba(245,158,11,.2)", borderTop: "none", padding: "8px 14px" }}>
+                      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".18em", color: "var(--gold)", fontFamily: "'Share Tech Mono',monospace", marginBottom: 8 }}>⚠ HAND OVER EXTRAS BEFORE CONFIRMING</div>
+                      {resolvedExtras.map((ex, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < resolvedExtras.length - 1 ? "1px solid rgba(245,158,11,.1)" : "none" }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="var(--gold)" strokeWidth="1.5"/></svg>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{ex.label}</div>
+                            <div style={{ fontSize: 10, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>QTY: {ex.qty}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic", marginTop: 6 }}>
+                    Confirm only after extras have been physically handed to the player.
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button className="btn btn-ghost" onClick={() => setCheckinConfirm(null)}>Cancel</button>
+                <button className="btn btn-primary" style={{ minWidth: 140 }} onClick={() => doCheckin(booking, evObj)}>
+                  {hasExtras ? "✓ Extras Given — Check In" : "✓ Confirm Check-In"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
 
