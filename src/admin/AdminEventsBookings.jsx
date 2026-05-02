@@ -221,7 +221,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   };
 
   const ev = data.events.find(e => e.id === evId);
-  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
+  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).reduce((s,b) => s+(b.qty||1), 0) : 0;
+  const totalTickets   = ev ? ev.bookings.reduce((s,b) => s+(b.qty||1), 0) : 0;
 
   const allBookings = data.events.flatMap(ev =>
     ev.bookings.map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))
@@ -558,7 +559,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       <div className="page-header">
         <div>
           <div className="page-title">Events &amp; Bookings</div>
-          <div className="page-sub">{data.events.length} events · {allBookings.length} bookings · {allBookings.filter(b => b.checkedIn).length} checked in</div>
+          <div className="page-sub">{data.events.length} events · {allBookings.reduce((s,b) => s + (b.qty||1), 0)} tickets sold · {allBookings.filter(b => b.checkedIn).length} checked in</div>
         </div>
         <div className="gap-2">
           {tab === "events" && <button className="btn btn-primary" onClick={() => { setForm(blank); bannerFileRef.current = null; setModal("new"); }}>+ New Event</button>}
@@ -572,7 +573,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
         {[
           { id:"events",   label:"📅 Events" },
-          { id:"bookings", label:"📋 All Bookings", count: (() => { const now = new Date(); return data.events.filter(e => new Date(e.date + "T23:59:00") > now).reduce((s, e) => s + (e.bookings?.length || 0), 0); })() },
+          { id:"bookings", label:"📋 All Bookings", count: (() => { const now = new Date(); return data.events.filter(e => new Date(e.date + "T23:59:00") > now).reduce((s, e) => s + (e.bookings || []).reduce((qs, b) => qs + (b.qty||1), 0), 0); })() },
           { id:"checkin",  label:"✅ Check-In" },
         ].map(t => {
           const isActive = tab === t.id;
@@ -684,20 +685,20 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               <div style={{ flex:1, minWidth:260 }}>
                 <select value={evId} onChange={e => setEvId(e.target.value)}
                   style={{ width:"100%", fontSize:13, padding:"9px 12px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)" }}>
-                  <option value="">— All events ({allBookings.length} bookings) —</option>
+                  <option value="">— All events ({allBookings.reduce((s,b) => s+(b.qty||1),0)} tickets) —</option>
                   {upcomingEvs.map(e => (
-                    <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.length} bookings)</option>
+                    <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
                   {pastEvs.length > 0 && <option disabled>── Past Events ──────────────</option>}
                   {pastEvs.map(e => (
-                    <option key={e.id} value={e.id} style={{ color:"#ef5350" }}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.length} bookings)</option>
+                    <option key={e.id} value={e.id} style={{ color:"#ef5350" }}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
                 </select>
               </div>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", flexShrink:0 }}>
                 {evId
-                  ? `${(data.events.find(e=>e.id===evId)?.bookings||[]).length} bookings`
-                  : `${allBookings.length} total`
+                  ? `${(data.events.find(e=>e.id===evId)?.bookings||[]).reduce((s,b)=>s+(b.qty||1),0)} tickets`
+                  : `${allBookings.reduce((s,b)=>s+(b.qty||1),0)} tickets total`
                 }
               </div>
             </div>
@@ -804,10 +805,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{ev.title} — {fmtDate(ev.date)}</div>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <span className="text-green" style={{ fontSize: 13, fontWeight: 700 }}>
-                    {checkedInCount} / {ev.bookings.length} checked in
+                    {checkedInCount} / {totalTickets} tickets checked in
                   </span>
                   <div className="progress-bar" style={{ width: 100 }}>
-                    <div className="progress-fill" style={{ width: ev.bookings.length ? (checkedInCount / ev.bookings.length * 100) + "%" : "0%" }} />
+                    <div className="progress-fill" style={{ width: totalTickets ? (checkedInCount / totalTickets * 100) + "%" : "0%" }} />
                   </div>
                   <button className="btn btn-primary btn-sm" onClick={() => { setAddBookingForm({ userId: "", type: "walkOn", qty: 1, extras: {} }); setAddBookingModal(true); }}>+ Add Booking</button>
                 </div>
