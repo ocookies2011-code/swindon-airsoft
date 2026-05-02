@@ -161,6 +161,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
           <div className="pub-nav-drawer-logo" style={{ display:"flex", alignItems:"center" }}>
             <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:52, width:"auto", objectFit:"contain" }} />
           </div>
+
+          {/* Mobile search */}
+          <div style={{ padding:"8px 16px 12px", borderBottom:"1px solid #1a2808" }}>
+            <SiteSearch data={data} setPage={(p) => { setPage(p); setDrawerOpen(false); }} />
+          </div>
           {allLinks.map(l => (
             l.children ? (
               <div key={l.id}>

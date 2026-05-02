@@ -1066,6 +1066,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
   .pub-nav-logo{margin-right:0;}
   .pub-nav-links{display:none;}
   .pub-nav-actions{display:none;}
+  .pub-nav-search{display:none;}
   .pub-nav-hamburger{display:flex;align-items:center;justify-content:center;}
   .bottom-nav{display:block;}
   .pub-page-wrap{padding-bottom:calc(var(--bottom-nav-h) + 16px);}
