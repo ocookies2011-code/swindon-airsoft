@@ -638,9 +638,7 @@ function normaliseProduct(p) {
     noPost:         p.no_post,
     gameExtra:      p.game_extra || false,
     hiddenFromShop: p.hidden_from_shop || false,
-    costPrice:   p.cost_price ? Number(p.cost_price) : null,
     category:    p.category || '',
-    supplierCode: p.supplier_code || '',
     variants,
   }
 }
@@ -723,10 +721,8 @@ function toSnakeProduct(p) {
     no_post:          p.noPost,
     game_extra:       p.gameExtra || false,
     hidden_from_shop: p.hiddenFromShop || false,
-    cost_price:  p.costPrice ?? null,
     category:     p.category || '',
-    supplier_code: p.supplierCode || '',
-    variants:    (p.variants || []).map(v => ({ ...v, supplier_code: v.supplierCode || '' })),
+    variants:    p.variants || [],
     // Note: _descTab is a UI-only field, never saved
   }
 }
@@ -805,121 +801,6 @@ export const shopOrders = wrapWithTimeout({
 })
 
 // ── Suppliers ────────────────────────────────────────────────
-export const suppliers = wrapWithTimeout({
-  async getAll() {
-    const { data, error } = await supabase
-      .from('suppliers').select('*').order('name')
-    if (error) throw error
-    return data || []
-  },
-  async create(s) {
-    const { data, error } = await supabase.from('suppliers').insert({
-      name:    s.name,
-      contact: s.contact || '',
-      email:   s.email || '',
-      phone:   s.phone || '',
-      notes:   s.notes || '',
-    }).select().single()
-    if (error) throw error
-    return data
-  },
-  async update(id, s) {
-    const { error } = await supabase.from('suppliers').update({
-      name:    s.name,
-      contact: s.contact || '',
-      email:   s.email || '',
-      phone:   s.phone || '',
-      notes:   s.notes || '',
-    }).eq('id', id)
-    if (error) throw error
-  },
-  async delete(id) {
-    const { error } = await supabase.from('suppliers').delete().eq('id', id)
-    if (error) throw error
-  },
-})
-
-// ── Purchase Orders ───────────────────────────────────────────
-export const purchaseOrders = wrapWithTimeout({
-  async getAll() {
-    const { data, error } = await supabase
-      .from('purchase_orders')
-      .select('*, purchase_order_items(*)')
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return (data || []).map(po => ({
-      ...po,
-      items: po.purchase_order_items || [],
-    }))
-  },
-  async create(po) {
-    const { data, error } = await supabase.from('purchase_orders').insert({
-      supplier_id:   po.supplierId || null,
-      supplier_name: po.supplierName || '',
-      status:        po.status || 'draft',
-      notes:         po.notes || '',
-      total:         po.total || 0,
-    }).select().single()
-    if (error) throw error
-    // Insert items
-    if (po.items?.length) {
-      const rows = po.items.map(item => ({
-        purchase_order_id: data.id,
-        product_id:        item.productId || null,
-        product_name:      item.productName || '',
-        supplier_code:     item.supplierCode || '',
-        qty_ordered:       Number(item.qtyOrdered) || 0,
-        qty_received:      0,
-        unit_cost:         Number(item.unitCost) || 0,
-      }))
-      const { error: itemErr } = await supabase.from('purchase_order_items').insert(rows)
-      if (itemErr) throw itemErr
-    }
-    return data
-  },
-  async updateStatus(id, status) {
-    const { error } = await supabase.from('purchase_orders').update({ status }).eq('id', id)
-    if (error) throw error
-  },
-  async receiveItem(itemId, qtyReceived, productId, variantId, qtyPreviouslyReceived) {
-    // 1. Update the PO item received qty
-    const { error } = await supabase.from('purchase_order_items')
-      .update({ qty_received: qtyReceived }).eq('id', itemId)
-    if (error) throw error
-
-    // 2. Work out how many NEW units are being added this time
-    const delta = qtyReceived - (qtyPreviouslyReceived || 0)
-    if (delta <= 0 || !productId) return
-
-    // 3. Add to shop stock
-    if (variantId) {
-      // Variant product — fetch current variants JSON, bump the matching variant's stock
-      const { data: prod, error: fetchErr } = await supabase
-        .from('shop_products').select('variants').eq('id', productId).single()
-      if (fetchErr) throw fetchErr
-      const variants = (prod.variants || []).map(v =>
-        v.id === variantId ? { ...v, stock: (Number(v.stock) || 0) + delta } : v
-      )
-      const { error: updErr } = await supabase
-        .from('shop_products').update({ variants }).eq('id', productId)
-      if (updErr) throw updErr
-    } else {
-      // Simple product — use rpc increment or plain update with addition
-      const { data: prod, error: fetchErr } = await supabase
-        .from('shop_products').select('stock').eq('id', productId).single()
-      if (fetchErr) throw fetchErr
-      const { error: updErr } = await supabase
-        .from('shop_products').update({ stock: (Number(prod.stock) || 0) + delta }).eq('id', productId)
-      if (updErr) throw updErr
-    }
-  },
-  async delete(id) {
-    const { error: itemErr } = await supabase.from('purchase_order_items').delete().eq('purchase_order_id', id)
-    if (itemErr) throw itemErr
-    const { error } = await supabase.from('purchase_orders').delete().eq('id', id)
-    if (error) throw error
-  },
-})
 
 // ── Square Refunds ────────────────────────────────────────
 // Calls the square-refund Supabase Edge Function (server-side).

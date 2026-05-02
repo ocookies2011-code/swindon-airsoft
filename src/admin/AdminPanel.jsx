@@ -28,7 +28,6 @@ import { AdminCash }               from "./AdminCash";
 import { AdminSettings }           from "./AdminSettings";
 import { AdminVisitorStats }       from "./AdminVisitorStats";
 import { AdminAuditLog }           from "./AdminAuditLog";
-import { AdminPurchaseOrders }     from "./AdminPurchaseOrders";
 import { AdminCheatReports }       from "./AdminCheatReports";
 import { AdminNews }              from "./AdminNews";
 import { EmailTestCard }           from "./EmailTestCard";
@@ -47,7 +46,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","news-admin","marshal-admin","cash","purchase-orders","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
+      "contact-admin","messages","news-admin","marshal-admin","cash","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -119,7 +118,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
     // ── COMMERCE ─────────────────────────────────────────
     { id: "shop",              label: "Shop",              icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>, badge: pendingOrders, badgeColor: "red", group: "COMMERCE" },
-    { id: "purchase-orders",   label: "Purchase Orders",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, group: "COMMERCE" },
     { id: "discount-codes",    label: "Discount Codes",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>, group: "COMMERCE" },
     { id: "gift-vouchers",      label: "Gift Vouchers",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8a000" strokeWidth="2"><rect x="2" y="9" width="20" height="13" rx="1"/><path d="M12 9V22M2 14h20M7 9c0-2.8 2.2-5 5-5s5 2.2 5 5" strokeLinecap="round"/></svg>, group: "COMMERCE" },
     { id: "failed-payments",   label: "Failed Payments",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, group: "COMMERCE" },
@@ -215,7 +213,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "news-admin" && <AdminNews showToast={showToast} cu={cu} />}
           {section === "marshal-admin" && <AdminMarshalSchedule data={data} cu={cu} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
-          {section === "purchase-orders" && <AdminPurchaseOrders data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
           {section === "gift-vouchers" && <AdminGiftVouchers showToast={showToast} cu={cu} />}
           {section === "settings" && <AdminSettings showToast={showToast} cu={cu} />}

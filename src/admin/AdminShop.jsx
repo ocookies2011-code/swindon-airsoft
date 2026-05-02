@@ -30,7 +30,7 @@ function AdminShop({ data, save, showToast, cu }) {
   }, []);
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, costPrice: null, category: "", supplierCode: "", variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", variants: [] };
 
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
@@ -100,13 +100,13 @@ function AdminShop({ data, save, showToast, cu }) {
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   // Variant editor state
-  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "", costPrice: "", supplierCode: "" });
+  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "" });
 
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
-    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, costPrice: newVariant.costPrice !== "" ? Number(newVariant.costPrice) : null, image: "", supplierCode: newVariant.supplierCode || "" };
+    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, image: "" };
     setField("variants", [...(form.variants || []), newVar]);
-    setNewVariant({ name: "", price: "", stock: "", costPrice: "", supplierCode: "" });
+    setNewVariant({ name: "", price: "", stock: "" });
   };
   const removeVariant = (id) => setField("variants", form.variants.filter(varItem => varItem.id !== id));
   const updateVariant = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
@@ -299,9 +299,9 @@ function AdminShop({ data, save, showToast, cu }) {
       if (modal === "new") {
         logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Product created", detail: `Name: ${form.name} | Price: £${Number(form.price || 0).toFixed(2)} | Stock: ${form.stock ?? "?"}` });
       } else {
-        const PLABELS = { name: "Name", price: "Price", stock: "Stock", category: "Category", description: "Description", active: "Active", costPrice: "Cost price" };
-        const before = { name: origProduct?.name, price: origProduct?.price, stock: origProduct?.stock, category: origProduct?.category, description: origProduct?.description, active: origProduct?.active, costPrice: origProduct?.costPrice };
-        const after  = { name: form.name, price: form.price, stock: form.stock, category: form.category, description: form.description, active: form.active, costPrice: form.costPrice };
+        const PLABELS = { name: "Name", price: "Price", stock: "Stock", category: "Category", description: "Description", active: "Active" };
+        const before = { name: origProduct?.name, price: origProduct?.price, stock: origProduct?.stock, category: origProduct?.category, description: origProduct?.description, active: origProduct?.active };
+        const after  = { name: form.name, price: form.price, stock: form.stock, category: form.category, description: form.description, active: form.active };
         const diff = diffFields(before, after, PLABELS);
         logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Product updated", detail: `${form.name}${diff ? ` | ${diff}` : " (no changes)"}` });
       }
@@ -361,7 +361,7 @@ function AdminShop({ data, save, showToast, cu }) {
               {bulkSyncing ? "⏳ Syncing…" : "🔄 Sync All to Square"}
             </button>
           )}
-          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
           {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
         </div>
       </div>
@@ -409,7 +409,7 @@ function AdminShop({ data, save, showToast, cu }) {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", marginTop: 6 }}>
                     {lowStockItems.map((item, i) => (
                       <span key={i} style={{ fontSize: 12, fontFamily: "'Share Tech Mono',monospace", color: item.stock === 0 ? "var(--red)" : "var(--gold)", cursor: "pointer" }}
-                        onClick={() => { setForm({ ...shopOrder.find(p => p.id === item.id), variants: shopOrder.find(p => p.id === item.id)?.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>
+                        onClick={() => { setForm({ ...shopOrder.find(p => p.id === item.id), variants: shopOrder.find(p => p.id === item.id)?.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal(item.id); }}>
                         {item.stock === 0 ? "🔴" : "🟡"} {item.name}{item.variant ? ` (${item.variant})` : ""}: <strong>{item.stock}</strong>
                       </span>
                     ))}
@@ -445,7 +445,7 @@ function AdminShop({ data, save, showToast, cu }) {
           </p>
 
           {(() => {
-            const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); };
+            const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal(item.id); };
 
             // Stock summary for a product
             const stockSummary = (item) => {
@@ -474,25 +474,10 @@ function AdminShop({ data, save, showToast, cu }) {
               return `£${Number(sell).toFixed(2)}`;
             };
 
-            // Best margin for display
-            const marginSummary = (item) => {
-              if (item.variants?.length > 0) {
-                const margins = item.variants.filter(v => v.costPrice && v.price > 0).map(v => ({ m: v.price - v.costPrice, pct: ((v.price - v.costPrice) / v.price * 100) }));
-                if (!margins.length) return null;
-                const avg = margins.reduce((s, m) => s + m.pct, 0) / margins.length;
-                return { pct: avg.toFixed(0), color: avg >= 0 ? "var(--accent)" : "var(--red)" };
-              }
-              if (!item.costPrice || !item.price) return null;
-              const sell = item.onSale && item.salePrice ? item.salePrice : item.price;
-              const pct = ((sell - item.costPrice) / sell * 100);
-              return { pct: pct.toFixed(0), color: pct >= 0 ? "var(--accent)" : "var(--red)" };
-            };
-
             const renderCard = (item) => {
               const idx = shopOrder.findIndex(p => p.id === item.id);
               const stock = stockSummary(item);
               const price = priceSummary(item);
-              const margin = marginSummary(item);
               const img = item.images?.[0] || item.image || null;
               const isLowStock = stock.zeroCount > 0 || stock.lowCount > 0;
 
@@ -549,7 +534,6 @@ function AdminShop({ data, save, showToast, cu }) {
                   {/* Price */}
                   <div style={{ textAlign:"right", flexShrink:0, minWidth:70 }}>
                     <div style={{ fontSize:15, fontWeight:800, color:"var(--accent)", fontFamily:"'Barlow Condensed',sans-serif" }}>{price || "—"}</div>
-                    {margin && <div style={{ fontSize:10, color:margin.color, fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>{margin.pct}% margin</div>}
                   </div>
 
                   {/* Stock */}
@@ -582,18 +566,17 @@ function AdminShop({ data, save, showToast, cu }) {
                     background: "#0d0d0d", border: "1px solid rgba(200,255,0,.25)", borderTop: "none",
                     borderLeft: "3px solid var(--accent)", marginBottom: 6, overflow: "hidden",
                   }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 70px 80px 90px", gap: 0, borderBottom: "1px solid #1a1a1a", padding: "6px 14px" }}>
-                      {["VARIANT", "SELL", "COST", "MARGIN", "STOCK"].map(h => (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 90px", gap: 0, borderBottom: "1px solid #1a1a1a", padding: "6px 14px" }}>
+                      {["VARIANT", "SELL", "STOCK"].map(h => (
                         <div key={h} style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".15em", color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>{h}</div>
                       ))}
                     </div>
                     {item.variants.map((v, i) => {
-                      const margin = v.costPrice && v.price > 0 ? ((v.price - v.costPrice) / v.price * 100) : null;
                       const stockNum = Number(v.stock);
                       const stockColor = stockNum === 0 ? "var(--red)" : stockNum <= 5 ? "var(--gold)" : "var(--accent)";
                       return (
                         <div key={v.id} style={{
-                          display: "grid", gridTemplateColumns: "1fr 70px 70px 80px 90px", gap: 0,
+                          display: "grid", gridTemplateColumns: "1fr 70px 90px", gap: 0,
                           padding: "8px 14px", borderBottom: i < item.variants.length - 1 ? "1px solid #1a1a1a" : "none",
                           background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,.015)",
                         }}>
@@ -603,12 +586,6 @@ function AdminShop({ data, save, showToast, cu }) {
                           </div>
                           <div style={{ fontSize: 12, color: "var(--accent)", fontFamily: "'Share Tech Mono',monospace", fontWeight: 700 }}>
                             £{Number(v.price).toFixed(2)}
-                          </div>
-                          <div style={{ fontSize: 12, color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>
-                            {v.costPrice ? `£${Number(v.costPrice).toFixed(2)}` : "—"}
-                          </div>
-                          <div style={{ fontSize: 12, fontFamily: "'Share Tech Mono',monospace", color: margin === null ? "var(--muted)" : margin >= 0 ? "var(--accent)" : "var(--red)" }}>
-                            {margin === null ? "—" : `${margin.toFixed(0)}%`}
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: stockColor, fontFamily: "'Share Tech Mono',monospace", minWidth: 24 }}>{v.stock}</span>
@@ -620,13 +597,11 @@ function AdminShop({ data, save, showToast, cu }) {
                       );
                     })}
                     {/* Totals row */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 70px 80px 90px", gap: 0, padding: "7px 14px", borderTop: "1px solid rgba(200,255,0,.15)", background: "rgba(200,255,0,.03)" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 90px", gap: 0, padding: "7px 14px", borderTop: "1px solid rgba(200,255,0,.15)", background: "rgba(200,255,0,.03)" }}>
                       <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".1em", color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif" }}>TOTAL</div>
                       <div style={{ fontSize: 11, color: "var(--muted)" }}>
                         £{Math.min(...item.variants.map(v => Number(v.price))).toFixed(2)}–£{Math.max(...item.variants.map(v => Number(v.price))).toFixed(2)}
                       </div>
-                      <div />
-                      <div />
                       <div style={{ fontSize: 12, fontWeight: 700, color: stock.color, fontFamily: "'Share Tech Mono',monospace" }}>
                         {item.variants.reduce((s, v) => s + Number(v.stock), 0)} units
                       </div>
@@ -742,10 +717,6 @@ function AdminShop({ data, save, showToast, cu }) {
                 </datalist>
               </div>
             </div>
-            <div className="form-group">
-              <label>Supplier Code <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(optional — used on purchase orders)</span></label>
-              <input value={form.supplierCode || ""} onChange={e => setField("supplierCode", e.target.value)} placeholder="e.g. SKU-12345 or supplier part number" style={{fontFamily:"'Share Tech Mono',monospace"}} />
-            </div>
 
             {/* Rich description editor */}
             <div className="form-group">
@@ -826,35 +797,6 @@ function AdminShop({ data, save, showToast, cu }) {
               </>
             )}
 
-            {/* Cost price — admin only, never shown to public */}
-            <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:3,padding:"10px 14px",marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:".12em",color:"var(--muted)",marginBottom:8,fontFamily:"'Oswald','Barlow Condensed',sans-serif",textTransform:"uppercase"}}>🔒 Admin Only — Cost &amp; Margin</div>
-              <div className="form-row" style={{marginBottom:0}}>
-                <div className="form-group" style={{marginBottom:0}}>
-                  <label>Your Cost Price (£) <span style={{fontWeight:400,color:"var(--muted)"}}>— not shown to customers</span></label>
-                  <input type="number" step="0.01" min="0" value={form.costPrice ?? ""} onChange={e => setField("costPrice", e.target.value === "" ? null : +e.target.value)} placeholder="0.00" />
-                </div>
-                {form.costPrice != null && form.costPrice > 0 && (() => {
-                  const sellPrice = form.onSale && form.salePrice ? form.salePrice : form.price;
-                  const margin = sellPrice - form.costPrice;
-                  const pct = sellPrice > 0 ? ((margin / sellPrice) * 100).toFixed(0) : 0;
-                  const colour = margin > 0 ? "var(--accent)" : "var(--red)";
-                  return (
-                    <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",paddingBottom:2}}>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,color:colour}}>
-                        Margin: <strong>£{margin.toFixed(2)}</strong> ({pct}%)
-                      </div>
-                      {!hasVariants && form.costPrice > 0 && (
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:10,color:"var(--muted)",marginTop:3}}>
-                          Break-even sell: £{(form.costPrice * 1.0).toFixed(2)} · 2× cost: £{(form.costPrice * 2).toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
             <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
               <input type="checkbox" checked={form.noPost} onChange={e => setField("noPost", e.target.checked)} />
               <label style={{fontSize:13}}>No Post — Collection Only (e.g. Pyro)</label>
@@ -894,27 +836,13 @@ function AdminShop({ data, save, showToast, cu }) {
                     }}
                     style={{marginBottom:10,background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:2,padding:"10px 12px",cursor:"grab"}}
                   >
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,120px),1fr))",gap:8,alignItems:"center",marginBottom:4}}>
+                    <div style={{display:"grid",gridTemplateColumns:"auto 1fr 100px 100px auto",gap:8,alignItems:"center",marginBottom:4}}>
                       <span style={{color:"var(--muted)",fontSize:14,textAlign:"center",userSelect:"none",cursor:"grab"}}>☰</span>
                       <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
-                      <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Sell £" style={{fontSize:12}} />
-                      <input type="number" step="0.01" value={v.costPrice ?? ""} onChange={e => updateVariantRaw(v.id, "costPrice", e.target.value === "" ? null : Number(e.target.value))} placeholder="Cost £" style={{fontSize:12,borderColor:"#2a2a2a"}} title="Your cost price (admin only)" />
+                      <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Price £" style={{fontSize:12}} />
                       <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
                       <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
                     </div>
-                    <div style={{paddingLeft:28,marginBottom:4}}>
-                      <input value={v.supplierCode || ""} onChange={e => updateVariantRaw(v.id, "supplierCode", e.target.value)}
-                        placeholder="Supplier code (optional)" style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",width:"100%",borderColor:"#1e2e0e",background:"#0a0f06",color:"var(--muted)"}} />
-                    </div>
-                    {v.costPrice != null && v.costPrice > 0 && v.price > 0 && (() => {
-                      const margin = v.price - v.costPrice;
-                      const pct = ((margin / v.price) * 100).toFixed(0);
-                      return (
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:10,color: margin >= 0 ? "var(--accent)" : "var(--red)",marginBottom:6,paddingLeft:28}}>
-                          Margin: £{margin.toFixed(2)} ({pct}%) · 2× cost: £{(v.costPrice * 2).toFixed(2)}
-                        </div>
-                      );
-                    })()}
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       {v.image && <img src={v.image} style={{width:52,height:52,objectFit:"cover",border:"1px solid #333",flexShrink:0}} alt="" />}
                       <label style={{cursor:"pointer",flex:1}}>
@@ -928,16 +856,11 @@ function AdminShop({ data, save, showToast, cu }) {
                   </div>
                 ))}
                 {/* Add new variant row */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,120px),1fr))",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px auto",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
                   <input value={newVariant.name} onChange={e => setNewVariant(p => ({...p, name: e.target.value}))} placeholder="New variant name" style={{fontSize:12}} />
-                  <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="Sell £" style={{fontSize:12}} />
-                  <input type="number" step="0.01" value={newVariant.costPrice} onChange={e => setNewVariant(p => ({...p, costPrice: e.target.value}))} placeholder="Cost £" style={{fontSize:12,borderColor:"#2a2a2a"}} title="Your cost price (admin only)" />
+                  <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="Price £" style={{fontSize:12}} />
                   <input type="number" value={newVariant.stock} onChange={e => setNewVariant(p => ({...p, stock: e.target.value}))} placeholder="Stock" style={{fontSize:12}} />
                   <button className="btn btn-sm btn-primary" onClick={addVariant} style={{whiteSpace:"nowrap"}}>+ Add</button>
-                </div>
-                <div style={{marginTop:4}}>
-                  <input value={newVariant.supplierCode} onChange={e => setNewVariant(p => ({...p, supplierCode: e.target.value}))}
-                    placeholder="Supplier code for new variant (optional)" style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",width:"100%",borderColor:"#1e2e0e",background:"#0a0f06",color:"var(--muted)"}} />
                 </div>
               </div>
             </div>
