@@ -166,11 +166,25 @@ function AdminOrdersInline({ showToast, cu }) {
     } finally { setRefunding(false); }
   };
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
-  const [statusTab, setStatusTab] = useState("pending");
-  const STATUS_TABS = ["pending","processing","dispatched","completed","terminal","cancelled","return_requested","return_approved","return_received","all","refunded"];
+  const [statusTab, setStatusTab] = useState("action");
+
+  // Smart grouped tabs — most admins only care about 4 views
+  const SMART_TABS = [
+    { id: "action",     label: "Needs Action",  statuses: ["pending", "return_requested"],                       color: "var(--red)" },
+    { id: "progress",   label: "In Progress",   statuses: ["processing", "dispatched", "return_approved", "return_received"], color: "var(--gold)" },
+    { id: "completed",  label: "Completed",     statuses: ["completed", "cancelled", "refunded"],                color: "var(--accent)" },
+    { id: "all",        label: "All Orders",    statuses: null,                                                  color: "var(--muted)" },
+  ];
+
   const isTerminalOrder = (o) => o.postage_name === null && Number(o.postage) === 0 && o.square_order_id;
-  const visibleOrders = statusTab === "all" ? orders : statusTab === "terminal" ? orders.filter(isTerminalOrder) : orders.filter(o => o.status === statusTab);
+  const visibleOrders = useMemo(() => {
+    const tab = SMART_TABS.find(t => t.id === statusTab);
+    if (!tab || tab.statuses === null) return orders;
+    return orders.filter(o => tab.statuses.includes(o.status));
+  }, [orders, statusTab]);
+
   const returnCount = orders.filter(o => o.status === "return_requested").length;
+  const actionCount = orders.filter(o => ["pending","return_requested"].includes(o.status)).length;
 
   return (
     <div>
@@ -179,17 +193,24 @@ function AdminOrdersInline({ showToast, cu }) {
         <button className="btn btn-ghost btn-sm" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
       </div>
       {returnCount > 0 && (
-        <div className="alert alert-gold" style={{ marginBottom:12, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }} onClick={() => setStatusTab("return_requested")}>
-          <span>⚠️ {returnCount} return request{returnCount > 1 ? "s" : ""} awaiting action</span>
-          <span style={{ fontSize:11, opacity:.7 }}>Click to view →</span>
+        <div style={{ marginBottom: 12 }}>
+          <div className="hazard-stripe red" />
+          <div className="alert-hazard red" style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+            onClick={() => setStatusTab("action")}>
+            <div>
+              <div className="alert-hazard-label">⚠ ACTION REQUIRED</div>
+              <div style={{ fontSize: 12, color: "#fca5a5", marginTop: 2 }}>{returnCount} return request{returnCount > 1 ? "s" : ""} awaiting your decision</div>
+            </div>
+            <span style={{ fontSize: 11, color: "var(--red)", fontFamily: "'Share Tech Mono',monospace" }}>VIEW →</span>
+          </div>
         </div>
       )}
       <div className="grid-4 mb-2">
         {[
           { label: "Total Orders", val: orders.length, color: "" },
-          { label: "Pending", val: orders.filter(o => o.status === "pending").length, color: "blue" },
-          { label: "Dispatched", val: orders.filter(o => o.status === "dispatched").length, color: "gold" },
-          { label: "Returns", val: returnCount, color: returnCount > 0 ? "red" : "", onClick: () => setStatusTab("return_requested") },
+          { label: "Needs Action", val: actionCount, color: actionCount > 0 ? "red" : "", onClick: () => setStatusTab("action") },
+          { label: "Dispatched",   val: orders.filter(o => o.status === "dispatched").length, color: "gold" },
+          { label: "Returns",      val: returnCount, color: returnCount > 0 ? "red" : "", onClick: () => setStatusTab("action") },
         ].map(s => (
           <div key={s.label} className={`stat-card ${s.color}`} style={{ cursor: s.onClick ? "pointer" : "default" }} onClick={s.onClick}>
             <div className="stat-val">{s.val}</div>
@@ -197,14 +218,29 @@ function AdminOrdersInline({ showToast, cu }) {
           </div>
         ))}
       </div>
-      <div className="nav-tabs" style={{ marginBottom:12 }}>
-        {STATUS_TABS.map(t => {
-          const cnt = t === "all" ? orders.length : orders.filter(o => o.status === t).length;
-          const tabLabel = t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-          const isReturnTab = t === "return_requested";
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        {SMART_TABS.map(t => {
+          const cnt = t.statuses === null ? orders.length : orders.filter(o => t.statuses.includes(o.status)).length;
+          const isActive = statusTab === t.id;
+          const urgent = t.id === "action" && actionCount > 0;
           return (
-            <button key={t} className={`nav-tab${statusTab === t ? " active" : ""}`} onClick={() => setStatusTab(t)}>
-              {tabLabel}{cnt > 0 && <span style={{ marginLeft:5, background: isReturnTab && statusTab !== t ? "var(--red)" : statusTab===t ? "rgba(0,0,0,.3)" : "var(--border)", color: isReturnTab && statusTab !== t ? "#fff" : "inherit", borderRadius:10, padding:"1px 6px", fontSize:10, fontWeight:700 }}>{cnt}</span>}
+            <button key={t.id} onClick={() => setStatusTab(t.id)} style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", cursor: "pointer",
+              fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 12,
+              letterSpacing: ".1em", textTransform: "uppercase", transition: "all .15s",
+              background: isActive ? (urgent ? "var(--red)" : t.id === "completed" ? "rgba(200,255,0,.15)" : "rgba(255,255,255,.1)") : "rgba(255,255,255,.05)",
+              color: isActive ? (urgent ? "#fff" : t.id === "completed" ? "var(--accent)" : "#fff") : urgent ? "var(--red)" : "var(--muted)",
+              border: isActive ? `1px solid ${urgent ? "var(--red)" : t.id === "completed" ? "var(--accent)" : "rgba(255,255,255,.2)"}` : `1px solid ${urgent ? "rgba(239,68,68,.3)" : "rgba(255,255,255,.08)"}`,
+              clipPath: "polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)",
+            }}>
+              {t.label}
+              {cnt > 0 && (
+                <span style={{
+                  background: urgent && !isActive ? "var(--red)" : isActive ? "rgba(0,0,0,.25)" : "rgba(255,255,255,.1)",
+                  color: urgent && !isActive ? "#fff" : "inherit",
+                  borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 800,
+                }}>{cnt}</span>
+              )}
             </button>
           );
         })}
@@ -224,8 +260,12 @@ function AdminOrdersInline({ showToast, cu }) {
               {visibleOrders.length === 0 && <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No {statusTab === "all" ? "" : statusTab + " "}orders yet</td></tr>}
               {visibleOrders.map(o => {
                 const items = Array.isArray(o.items) ? o.items : [];
+                const isPending = o.status === "pending";
+                const isReturn = o.status === "return_requested";
+                const rowAccent = isPending ? "rgba(59,130,246,.06)" : isReturn ? "rgba(239,68,68,.06)" : "transparent";
+                const rowBorder = isPending ? "rgba(59,130,246,.15)" : isReturn ? "rgba(239,68,68,.15)" : "transparent";
                 return (
-                  <tr key={o.id}>
+                  <tr key={o.id} style={{ background: rowAccent, borderLeft: `3px solid ${rowBorder}` }}>
                     <td className="mono" style={{ fontSize:10, color:"var(--muted)" }}>#{(o.id||"").slice(-8).toUpperCase()}</td>
                     <td className="mono" style={{ fontSize:11 }}>{gmtShort(o.created_at)}</td>
                     <td style={{ fontWeight:600 }}>
@@ -263,10 +303,30 @@ function AdminOrdersInline({ showToast, cu }) {
                       }
                     </td>
                     <td>
-                      <select value={o.status} onChange={e => setStatus(o.id, e.target.value)}
-                        style={{ fontSize:12, padding:"4px 8px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:4 }}>
-                        {["pending","processing","dispatched","completed","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+                        {o.status === "pending" && (
+                          <button className="btn btn-sm btn-primary" style={{ fontSize: 10, padding: "4px 10px" }}
+                            onClick={() => setStatus(o.id, "processing")}>▶ Process</button>
+                        )}
+                        {(o.status === "pending" || o.status === "processing") && (
+                          <button className="btn btn-sm" style={{ fontSize: 10, padding: "4px 10px", background: "rgba(200,255,0,.12)", border: "1px solid rgba(200,255,0,.3)", color: "var(--accent)" }}
+                            onClick={() => setTrackingModal({ id: o.id, tracking: "" })}>📦 Dispatch</button>
+                        )}
+                        {o.status === "return_requested" && (
+                          <>
+                            <button className="btn btn-sm" style={{ fontSize: 10, padding: "4px 8px", background: "rgba(200,255,0,.1)", border: "1px solid rgba(200,255,0,.3)", color: "var(--accent)" }}
+                              onClick={() => { setReturnModal({ order: o }); setReturnAction("approve"); }}>✓ Approve</button>
+                            <button className="btn btn-sm" style={{ fontSize: 10, padding: "4px 8px", background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)", color: "var(--red)" }}
+                              onClick={() => { setReturnModal({ order: o }); setReturnAction("reject"); }}>✗ Reject</button>
+                          </>
+                        )}
+                        {o.status === "dispatched" && (
+                          <button className="btn btn-sm btn-ghost" style={{ fontSize: 10, padding: "4px 10px" }}
+                            onClick={() => setStatus(o.id, "completed")}>✓ Complete</button>
+                        )}
+                        <button className="btn btn-sm btn-ghost" style={{ fontSize: 10, padding: "4px 10px" }}
+                          onClick={() => setDetail(o)}>Details</button>
+                      </div>
                     </td>
                   </tr>
                 );

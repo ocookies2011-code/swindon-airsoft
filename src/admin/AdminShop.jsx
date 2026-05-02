@@ -76,6 +76,22 @@ function AdminShop({ data, save, showToast, cu }) {
     });
   }, [allCatKeys]);
   const toggleCat = (cat) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
+
+  // Low stock alert — items (or variants) at or below 5 units
+  const lowStockItems = useMemo(() => {
+    const out = [];
+    shopOrder.forEach(p => {
+      if (p.hiddenFromShop) return;
+      if (p.variants?.length > 0) {
+        p.variants.forEach(v => {
+          if (Number(v.stock) <= 5) out.push({ id: p.id, name: p.name, variant: v.name, stock: Number(v.stock) });
+        });
+      } else {
+        if (Number(p.stock) <= 5) out.push({ id: p.id, name: p.name, variant: null, stock: Number(p.stock) });
+      }
+    });
+    return out.sort((a, b) => a.stock - b.stock);
+  }, [shopOrder]);
   const dragVariantIdx = useRef(null);
   const [form, setForm] = useState(blank);
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
@@ -380,6 +396,25 @@ function AdminShop({ data, save, showToast, cu }) {
 
       {tab === "products" && (
         <div className="card">
+          {/* ── Low stock banner ── */}
+          {lowStockItems.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div className="hazard-stripe gold" />
+              <div className="alert-hazard gold" style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div className="alert-hazard-label">⚠ LOW STOCK — {lowStockItems.length} item{lowStockItems.length !== 1 ? "s" : ""} need restocking</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", marginTop: 6 }}>
+                    {lowStockItems.map((item, i) => (
+                      <span key={i} style={{ fontSize: 12, fontFamily: "'Share Tech Mono',monospace", color: item.stock === 0 ? "var(--red)" : "var(--gold)", cursor: "pointer" }}
+                        onClick={() => { setForm({ ...shopOrder.find(p => p.id === item.id), variants: shopOrder.find(p => p.id === item.id)?.variants || [] }); setNewVariant({ name:"", price:"", stock:"", costPrice:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); }}>
+                        {item.stock === 0 ? "🔴" : "🟡"} {item.name}{item.variant ? ` (${item.variant})` : ""}: <strong>{item.stock}</strong>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12, flexWrap:"wrap" }}>
             <input
               value={productSearch}
