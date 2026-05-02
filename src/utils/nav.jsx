@@ -2,8 +2,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { SA_LOGO_SRC } from "../assets/logoImage";
+import { SiteSearch } from "./SiteSearch";
 
-function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
+function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef = useRef(null);
@@ -92,6 +93,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed }) {
                 </button>
               )
             ))}
+          </div>
+
+          {/* Global search */}
+          <div className="pub-nav-search" style={{ flex:"1 1 auto", maxWidth:280, margin:"0 16px" }}>
+            <SiteSearch data={data} setPage={setPage} />
           </div>
 
           {/* Desktop actions */}
