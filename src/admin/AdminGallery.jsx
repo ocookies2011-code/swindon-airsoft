@@ -138,6 +138,16 @@ function AdminGallery({ data, save, showToast }) {
                 onMouseEnter={e => e.currentTarget.style.borderColor="rgba(200,255,0,.3)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor="#1e1e1e"}>
 
+                {/* Album title — above the mosaic */}
+                <div style={{ padding:"10px 14px 8px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid #1a1a1a" }}>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>{album.title}</div>
+                    <div style={{ fontSize:10, color:"var(--muted)", marginTop:2, fontFamily:"'Share Tech Mono',monospace" }}>{album.images.length} PHOTO{album.images.length !== 1 ? "S" : ""}</div>
+                  </div>
+                  <button onClick={() => setDelConfirm(album.id)}
+                    style={{ background:"rgba(239,68,68,.1)", border:"1px solid rgba(239,68,68,.3)", color:"var(--red)", fontSize:12, width:26, height:26, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
+                </div>
+
                 {/* Cover mosaic */}
                 <div style={{ height:160, display:"grid", gridTemplateColumns: cover2 ? "2fr 1fr" : "1fr", gridTemplateRows: cover3 ? "1fr 1fr" : "1fr", gap:2, background:"#0a0a0a", cursor:"pointer" }}
                   onClick={() => toggleExpand(album.id)}>
@@ -155,16 +165,8 @@ function AdminGallery({ data, save, showToast }) {
                   )}
                 </div>
 
-                {/* Album info */}
-                <div style={{ padding:"12px 14px" }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                    <div>
-                      <div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>{album.title}</div>
-                      <div style={{ fontSize:11, color:"var(--muted)", marginTop:2, fontFamily:"'Share Tech Mono',monospace" }}>{album.images.length} PHOTO{album.images.length !== 1 ? "S" : ""}</div>
-                    </div>
-                    <button onClick={() => setDelConfirm(album.id)}
-                      style={{ background:"rgba(239,68,68,.1)", border:"1px solid rgba(239,68,68,.3)", color:"var(--red)", fontSize:12, width:28, height:28, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
-                  </div>
+                {/* Album actions */}
+                <div style={{ padding:"10px 14px" }}>
 
                   {/* Upload progress */}
                   {upState && (
