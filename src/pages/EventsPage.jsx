@@ -619,7 +619,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
               </div>
               <div style={{ position:"relative", zIndex:1, padding:"16px 18px" }}>
 
-              {isEventPast && <div className="alert alert-red mb-2" style={{ textAlign:"center", letterSpacing:".08em", fontWeight:700 }}>✕ This event has ended — booking is closed.</div>}
+              {isEventPast && <><div className="hazard-stripe red" /><div className="alert-hazard red mb-2"><div className="alert-hazard-label">⚠ EVENT CLOSED</div><div style={{fontSize:12,color:"#fca5a5"}}>This event has ended — booking is closed.</div></div></>}
               {!isEventPast && !cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
               {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
               {ev.vipOnly && cu?.vipStatus !== "active" && (

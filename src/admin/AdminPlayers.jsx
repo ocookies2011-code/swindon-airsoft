@@ -826,10 +826,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               })()}
             </div>
             {/* Admin Notes — internal only, never visible to player */}
-            <div style={{ background: "rgba(200,150,0,.06)", border: "1px solid rgba(200,150,0,.25)", padding: "12px 14px", marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                🔒 Admin Notes <span style={{ fontWeight: 400, color: "var(--muted)", textTransform: "none", letterSpacing: "normal", fontSize: 10 }}>— internal only, never shown to player</span>
-              </div>
+            <div className="stencil-box gold" data-label="🔒 CLASSIFIED — ADMIN ONLY" style={{ marginBottom: 14 }}>
               <textarea
                 value={edit.adminNotes || ""}
                 onChange={e => setEdit(p => ({ ...p, adminNotes: e.target.value }))}
@@ -913,7 +910,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               )}
             </div>
             {/* Marshal permission — admin only, never visible to player */}
-            <div style={{ background: "rgba(0,180,100,.06)", border: "1px solid rgba(0,180,100,.25)", padding: "12px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div className="stencil-box" data-label="MARSHAL ACCESS" style={{ marginBottom: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
               <input
                 type="checkbox"
                 id="canMarshalChk"

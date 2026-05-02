@@ -37,6 +37,7 @@ function HomePage({ data, setPage, onProductClick }) {
       {/* HERO */}
       <div className="hero-bg">
         <div className="hero-bg-img" style={{ backgroundImage:"url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&q=80&auto=format&fit=crop')" }} />
+        <div className="hero-bg-grid" />
         <div className="hero-bg-grad" />
         <div style={{ maxWidth:1280, margin:"0 auto", width:"100%", position:"relative", zIndex:1, padding:"0 24px" }}>
           <div className="hero-content">

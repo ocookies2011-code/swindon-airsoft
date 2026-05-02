@@ -541,12 +541,11 @@ function AdminVisitorStats() {
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
               {/* Live viewers card */}
               <div style={{ background:"#0a0f05", border:"1px solid #1a2808", padding:"18px 20px", position:"relative", overflow:"hidden" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                  <span style={{ width:8, height:8, borderRadius:"50%", background: liveCount > 0 ? "#c8ff00" : "#2a3a10",
-                    boxShadow: liveCount > 0 ? "0 0 8px #c8ff00" : "none",
-                    animation: liveCount > 0 ? "livePulse 1.5s ease-in-out infinite" : "none",
-                    flexShrink:0, display:"inline-block" }} />
-                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#3a5010", textTransform:"uppercase" }}>Live Now</span>
+                <div style={{ marginBottom:10 }}>
+                  <span className={`live-badge${liveCount > 0 ? "" : ""}`} style={{ opacity: liveCount > 0 ? 1 : 0.4 }}>
+                    <span className={`pulse-dot${liveCount > 0 ? "" : " offline"}`} />
+                    {liveCount > 0 ? "LIVE" : "IDLE"}
+                  </span>
                 </div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:38, color:"#c8ff00", lineHeight:1 }}>
                   {liveCount === null ? "—" : liveCount}
