@@ -717,11 +717,11 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 .pub-nav-logo-box{background:var(--accent);width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:#000;letter-spacing:.05em;border-radius:2px;flex-shrink:0;}
 .pub-nav-logo-text{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:.12em;color:#fff;text-transform:uppercase;white-space:nowrap;}
 .pub-nav-logo-text span{color:var(--accent);}
-.pub-nav-links{display:flex;gap:0;flex:1;}
-.pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:0 16px;height:var(--nav-h);cursor:pointer;white-space:nowrap;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:color .15s;position:relative;}
+.pub-nav-links{display:flex;gap:0;flex:0 0 auto;}
+.pub-nav-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:0 10px;height:var(--nav-h);cursor:pointer;white-space:nowrap;letter-spacing:.12em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;transition:color .15s;position:relative;}
 .pub-nav-link:hover{color:#fff;}
 .pub-nav-link.active{color:var(--accent);}
-.pub-nav-link.active::after{content:'';position:absolute;bottom:0;left:16px;right:16px;height:2px;background:var(--accent);border-radius:1px 1px 0 0;}
+.pub-nav-link.active::after{content:'';position:absolute;bottom:0;left:10px;right:10px;height:2px;background:var(--accent);border-radius:1px 1px 0 0;}
 .pub-nav-link-wrap{position:relative;display:flex;align-items:center;}
 .pub-nav-link-wrap:hover .pub-nav-dropdown{display:block;}
 .pub-nav-dropdown{display:none;position:absolute;top:100%;left:0;background:#0d0d0d;border:1px solid #1a1a1a;border-top:2px solid var(--accent);min-width:160px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.7);}
