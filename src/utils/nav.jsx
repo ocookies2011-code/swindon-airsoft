@@ -7,11 +7,14 @@ import { SiteSearch } from "./SiteSearch";
 function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const dropdownRef = useRef(null);
+  const dropdownRef  = useRef(null);
+  const staffMenuRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpenDropdown(null);
+      const inLinks = dropdownRef.current?.contains(e.target);
+      const inStaff = staffMenuRef.current?.contains(e.target);
+      if (!inLinks && !inStaff) setOpenDropdown(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -106,7 +109,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
               <>
                 {/* Staff/Marshal dropdown — shown to admins and marshals */}
                 {(cu.role === "admin" || cu.canMarshal) && (
-                  <div style={{ position:"relative" }} ref={node => { if (node) node._isStaffMenu = true; }}>
+                  <div style={{ position:"relative" }} ref={staffMenuRef}>
                     <button
                       className="btn btn-sm"
                       style={{ background:"rgba(165,214,167,.12)", border:"1px solid rgba(165,214,167,.4)", color:"#a5d6a7", display:"inline-flex", alignItems:"center", gap:5 }}
