@@ -68,7 +68,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
           </div>
 
           {/* Desktop links */}
-          <div className="pub-nav-links" ref={dropdownRef} style={{ flex:"0 1 auto", minWidth:0, overflow:"visible" }}>
+          <div className="pub-nav-links" ref={dropdownRef} style={{ flex:"0 0 auto", overflow:"visible" }}>
             {allLinks.map(l => (
               l.children ? (
                 <div key={l.id} className="pub-nav-link-wrap">
@@ -95,13 +95,13 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
             ))}
           </div>
 
-          {/* Global search */}
-          <div className="pub-nav-search" style={{ flex:"1 1 auto", maxWidth:260, minWidth:120 }}>
+          {/* Global search — takes remaining space between links and auth buttons */}
+          <div className="pub-nav-search" style={{ flex:"1 1 auto", maxWidth:280, minWidth:120, margin:"0 12px" }}>
             <SiteSearch data={data} setPage={setPage} />
           </div>
 
           {/* Desktop actions */}
-          <div style={{ marginLeft:"auto", flexShrink:0, display:"flex", gap:8, alignItems:"center" }}>
+          <div style={{ flex:"0 0 auto", display:"flex", gap:8, alignItems:"center" }}>
             {cu ? (
               <>
                 {/* Staff/Marshal dropdown — shown to admins and marshals */}
