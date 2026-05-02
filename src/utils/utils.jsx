@@ -3880,7 +3880,7 @@ export {
   // Helpers / constants
   renderMd, stockLabel, fmtErr,
   gmtNow, gmtDate, gmtShort, fmtDate, uid,
-  CSS, tabBtn,
+  CSS,
   // Square
   loadSquareConfig, resetSquareConfig, SquareCheckoutButton,
   ShopifyCheckoutButton, loadShopifyConfig,
