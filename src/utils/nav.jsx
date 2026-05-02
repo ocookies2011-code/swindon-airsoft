@@ -121,20 +121,20 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
                     {openDropdown === "staff-menu" && (
                       <div style={{ position:"absolute", top:"calc(100% + 6px)", right:0, background:"#0d1209", border:"1px solid #2a4018", minWidth:200, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,.8)" }}>
                         {cu.role === "admin" && (
-                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10 }} onClick={() => { go("admin"); setOpenDropdown(null); }}>
-                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#c8d8f8" }} onClick={() => { go("admin"); setOpenDropdown(null); }}>
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="#4fc3f7" strokeWidth="1.4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" stroke="#4fc3f7" strokeWidth="1.4" strokeLinecap="round"/></svg>
                             Admin Panel
                           </button>
                         )}
                         {(cu.canMarshal || cu.role === "admin") && (
-                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10 }} onClick={() => { go("marshal-schedule"); setOpenDropdown(null); }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>
+                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#a5d6a7" }} onClick={() => { go("marshal-schedule"); setOpenDropdown(null); }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>
                             Marshal Schedule
                           </button>
                         )}
                         {(cu.canMarshal || cu.role === "admin") && (
-                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10 }} onClick={() => { go("marshal"); setOpenDropdown(null); }}>
-                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#a5d6a7" }} onClick={() => { go("marshal"); setOpenDropdown(null); }}>
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="#00c864" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="#00c864" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="#00c864" strokeWidth="1.4" strokeLinecap="round"/></svg>
                             Marshal Check-In
                           </button>
                         )}
