@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtDate, sendAdminUkaraNotification, sendUkaraDecisionEmail, useMobile } from "../utils";
+import { fmtDate, sendAdminUkaraNotification, sendUkaraDecisionEmail, tabBtn, useMobile } from "../utils";
 import { logAction } from "./adminHelpers";
 
 function AdminUkaraApplications({ showToast, cu }) {
@@ -225,13 +225,16 @@ function AdminUkaraApplications({ showToast, cu }) {
       </div>
 
       {/* Tabs */}
-      <div className="nav-tabs" style={{ marginBottom: 16 }}>
-        <button className={`nav-tab ${tab === "pending" ? "active" : ""}`} onClick={() => setTab("pending")}>
-          ⏳ Pending {apps.filter(a => a.status === "pending").length > 0 && <span style={{ background: "#ffb74d", color: "#0a0e07", borderRadius: 10, padding: "1px 7px", fontSize: 10, fontWeight: 900, marginLeft: 6 }}>{apps.filter(a => a.status === "pending").length}</span>}
-        </button>
-        <button className={`nav-tab ${tab === "approved" ? "active" : ""}`} onClick={() => setTab("approved")}>
-          ✅ Approved ({apps.filter(a => a.status === "approved").length})
-        </button>
+      <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+        {[
+          { id:"pending",  label:"⏳ Pending",  count: apps.filter(a=>a.status==="pending").length },
+          { id:"approved", label:"✅ Approved", count: apps.filter(a=>a.status==="approved").length },
+        ].map(t => (
+          <button key={t.id} style={tabBtn(tab===t.id)} onClick={() => setTab(t.id)}>
+            {t.label}
+            {t.count > 0 && <span style={{ background: tab===t.id ? "rgba(0,0,0,.25)" : t.id==="pending" ? "#ffb74d" : "rgba(255,255,255,.1)", color: tab===t.id ? (t.id==="pending" ? "#000":"#000") : t.id==="pending" ? "#0a0e07" : "inherit", borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:800 }}>{t.count}</span>}
+          </button>
+        ))}
       </div>
 
       {/* Search (approved tab only) */}

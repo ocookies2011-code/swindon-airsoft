@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtErr, fmtDate } from "../utils";
+import { fmtErr, fmtDate, tabBtn } from "../utils";
 import { diffFields, logAction } from "./adminHelpers";
 
 function AdminDiscountCodes({ data, showToast, cu }) {
@@ -174,11 +174,16 @@ function AdminDiscountCodes({ data, showToast, cu }) {
       </div>
 
       {/* Tabs */}
-      <div className="nav-tabs" style={{ marginBottom: 20 }}>
-        <button className={`nav-tab ${activeTab === 'codes' ? 'active' : ''}`} onClick={() => setActiveTab('codes')}>Codes</button>
-        <button className={`nav-tab ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-          Redemption History {redemptions.length > 0 && <span style={{ marginLeft: 6, background: 'var(--accent)', color: '#000', borderRadius: 20, padding: '0 7px', fontSize: 11, fontWeight: 900 }}>{redemptions.length}</span>}
-        </button>
+      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
+        {[
+          { id:"codes",   label:"Codes" },
+          { id:"history", label:"Redemption History", count: redemptions.length },
+        ].map(t => (
+          <button key={t.id} style={tabBtn(activeTab===t.id)} onClick={() => setActiveTab(t.id)}>
+            {t.label}
+            {t.count > 0 && <span style={{ background: activeTab===t.id ? "rgba(0,0,0,.25)" : "rgba(255,255,255,.1)", borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:800 }}>{t.count}</span>}
+          </button>
+        ))}
       </div>
 
       {/* ── Form ── */}

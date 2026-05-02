@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { AdminTrackStatusCell, DesignationInsignia, GmtClock, QRScanner, RankInsignia, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtShort, renderMd, resetSquareConfig, sendEmail, stockLabel, uid, useMobile } from "../utils";
+import { AdminTrackStatusCell, DesignationInsignia, GmtClock, QRScanner, RankInsignia, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtShort, renderMd, resetSquareConfig, sendEmail, stockLabel, tabBtn, uid, useMobile } from "../utils";
 import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
 import { diffFields, logAction } from "./adminHelpers";
@@ -462,8 +462,8 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         </button>
       </div>
 
-      <div className="nav-tabs">
-        <button className={`nav-tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>All Players</button>
+      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
+        <button style={tabBtn(tab === "all")} onClick={() => setTab("all")}>All Players</button>
       </div>
 
       {tab === "all" && (
@@ -472,17 +472,14 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
           {/* Role filter tabs */}
           <div style={{ display:"flex", gap:4, marginBottom:10 }}>
             {[
-              { key:"all",    label:"ALL",     count: allUsers.length },
-              { key:"player", label:"PLAYERS", count: allUsers.filter(u=>u.role!=="admin").length },
-              { key:"admin",  label:"ADMINS",  count: allUsers.filter(u=>u.role==="admin").length },
+              { key:"all",    label:"All",     count: allUsers.length },
+              { key:"player", label:"Players", count: allUsers.filter(u=>u.role!=="admin").length },
+              { key:"admin",  label:"Admins",  count: allUsers.filter(u=>u.role==="admin").length },
             ].map(({ key, label, count }) => (
               <button key={key} onClick={() => { setRoleFilter(key); setSelectedPlayerIds(new Set()); }}
-                style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".18em",
-                  padding:"5px 14px", border:"1px solid", cursor:"pointer", transition:"all .15s",
-                  background: roleFilter===key ? "rgba(200,255,0,.12)" : "transparent",
-                  borderColor: roleFilter===key ? "rgba(200,255,0,.5)" : "var(--border)",
-                  color: roleFilter===key ? "#c8ff00" : "var(--muted)" }}>
-                {label} <span style={{ opacity:.7 }}>({count})</span>
+                style={tabBtn(roleFilter === key)}>
+                {label}
+                <span style={{ background: roleFilter===key ? "rgba(0,0,0,.25)" : "rgba(255,255,255,.1)", borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:800 }}>{count}</span>
               </button>
             ))}
           </div>
