@@ -75,6 +75,17 @@ function AdminShop({ data, save, showToast, cu }) {
       return next;
     });
   }, [allCatKeys]);
+  // Category display order — drag to reorder in the category header
+  const [catOrder, setCatOrder] = useState([]);
+  const dragCatIdx = useRef(null);
+  useEffect(() => {
+    const allCats = [...new Set(shopOrder.map(p => p.category).filter(Boolean))];
+    setCatOrder(prev => {
+      const existing = prev.filter(c => allCats.includes(c));
+      const newCats  = allCats.filter(c => !prev.includes(c));
+      return [...existing, ...newCats.sort()];
+    });
+  }, [shopOrder]);
   const toggleCat = (cat) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
 
   // Low stock alert — items (or variants) at or below 5 units
@@ -626,16 +637,33 @@ function AdminShop({ data, save, showToast, cu }) {
             filteredShopOrder.filter(p => p.category).forEach(p => {
               (groups[p.category] = groups[p.category] || []).push(p);
             });
-            const sortedCats = Object.keys(groups).sort();
+            // Use saved catOrder; filter to only cats that exist in current products
+            const sortedCats = catOrder.filter(c => groups[c]);
 
             return (
               <>
-                {sortedCats.map(cat => {
+                {sortedCats.map((cat, catIdx) => {
                   const isCatCollapsed = !!collapsedCats[cat];
                   return (
                     <React.Fragment key={cat}>
-                      <div style={{ userSelect:"none", cursor:"pointer", background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px", marginBottom: isCatCollapsed ? 6 : 0 }} onClick={() => toggleCat(cat)}>
+                      <div
+                        draggable
+                        onDragStart={e => { e.dataTransfer.effectAllowed="move"; dragCatIdx.current = catIdx; e.stopPropagation(); }}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={e => {
+                          e.preventDefault(); e.stopPropagation();
+                          const from = dragCatIdx.current;
+                          if (from === catIdx || from === null) return;
+                          const next = [...catOrder];
+                          const [moved] = next.splice(from, 1);
+                          next.splice(catIdx, 0, moved);
+                          setCatOrder(next);
+                          dragCatIdx.current = null;
+                        }}
+                        style={{ userSelect:"none", cursor:"grab", background:"rgba(200,255,0,.06)", borderTop:"2px solid rgba(200,255,0,.18)", borderBottom:"1px solid rgba(200,255,0,.1)", padding:"7px 12px", marginBottom: isCatCollapsed ? 6 : 0 }}
+                        onClick={() => toggleCat(cat)}>
                         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <span style={{ color:"var(--muted)", fontSize:12, userSelect:"none" }}>☰</span>
                           <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:12, letterSpacing:".2em", textTransform:"uppercase", color:"var(--accent)" }}>
                             {isCatCollapsed ? "▶" : "▼"} {cat}
                           </span>

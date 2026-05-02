@@ -870,9 +870,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                       const hasVariants = lp?.variants?.length > 0;
                       return (
                         <div key={ex.id} style={{ padding:"12px 0", borderBottom:"1px solid #111a0a" }}>
-                          {/* Extra name header */}
+                          {/* Extra name header — use live product name if linked, else fall back to saved name */}
                           <div style={{ fontSize:13, fontWeight:600, color:"#fff", marginBottom:8 }}>
-                            {ex.name}
+                            {lp?.name || ex.name}
                             {liveNoPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
                           </div>
                           {hasVariants ? (

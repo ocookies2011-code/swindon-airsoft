@@ -623,9 +623,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       {/* ── ALL BOOKINGS TAB ── */}
       {tab === "bookings" && (() => {
         // Local state using a closure trick — use component-level state defined above
-        const eventsWithBookings = data.events.filter(e => e.bookings?.length > 0)
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
-        const allEvIds = ["", ...eventsWithBookings.map(e => e.id)];
+        const now = new Date();
+        const eventsWithBookings = data.events.filter(e => e.bookings?.length > 0);
+        const upcomingEvs = eventsWithBookings.filter(e => new Date(e.date + "T23:59:00") > now).sort((a,b) => new Date(a.date)-new Date(b.date));
+        const pastEvs     = eventsWithBookings.filter(e => new Date(e.date + "T23:59:00") <= now).sort((a,b) => new Date(b.date)-new Date(a.date));
         return (
           <div>
             {/* Event selector */}
@@ -634,8 +635,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 <select value={evId} onChange={e => setEvId(e.target.value)}
                   style={{ width:"100%", fontSize:13, padding:"9px 12px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)" }}>
                   <option value="">— All events ({allBookings.length} bookings) —</option>
-                  {eventsWithBookings.map(e => (
+                  {upcomingEvs.map(e => (
                     <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.length} bookings)</option>
+                  ))}
+                  {pastEvs.length > 0 && <option disabled>── Past Events ──────────────</option>}
+                  {pastEvs.map(e => (
+                    <option key={e.id} value={e.id} style={{ color:"#ef5350" }}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.length} bookings)</option>
                   ))}
                 </select>
               </div>
@@ -708,11 +713,19 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                   const upcoming = data.events
                     .filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") > now)
                     .sort((a, b) => new Date(a.date) - new Date(b.date));
-                  if (upcoming.length === 0)
-                    return <option value="">— No upcoming events —</option>;
-                  return upcoming.map(ev => (
-                    <option key={ev.id} value={ev.id}>{ev.title} — {fmtDate(ev.date)}</option>
-                  ));
+                  const past = data.events
+                    .filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= now)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+                  return <>
+                    {upcoming.length === 0 && past.length === 0 && <option value="">— No events —</option>}
+                    {upcoming.map(ev => (
+                      <option key={ev.id} value={ev.id}>{ev.title} — {fmtDate(ev.date)}</option>
+                    ))}
+                    {past.length > 0 && <option disabled>── Past Events ──────────────</option>}
+                    {past.map(ev => (
+                      <option key={ev.id} value={ev.id} style={{ color:"#ef5350" }}>⬛ {ev.title} — {fmtDate(ev.date)}</option>
+                    ))}
+                  </>;
                 })()}
               </select>
             </div>
@@ -743,7 +756,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               </div>
               <div className="table-wrap"><table className="data-table">
                 <thead>
-                  <tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Booked</th><th>Status</th><th>Action</th></tr>
+                  <tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Booked</th><th>Status</th><th style={{width:120}}>Check In</th></tr>
                 </thead>
                 <tbody>
                   {ev.bookings.length === 0 && (
@@ -851,28 +864,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
                         <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
                         <td>
-                          <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                             {!b.checkedIn
                               ? <button className="btn btn-sm btn-primary" onClick={() => doCheckin(b, ev)}>✓ In</button>
-                              : <span className="text-muted" style={{ fontSize: 11 }}>✓ Done</span>
+                              : <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>✓ CHECKED IN</span>
                             }
-                            <button className="btn btn-sm btn-ghost" onClick={() => setViewBooking({ ...b, eventObj: ev, eventTitle: ev.title })}>View</button>
-                            <button className="btn btn-sm btn-ghost" onClick={() => openEdit({ ...b, eventTitle: ev.title, eventObj: ev })}>Edit</button>
-                            {b.squareOrderId && b.total > 0 && (
-                              <button className="btn btn-sm" style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", borderRadius:2, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
-                                onClick={() => { setRefundModal({ booking: b }); setRefundAmt(b.total.toFixed(2)); setRefundNote(""); }}>£ Refund</button>
-                            )}
-                            <button className="btn btn-sm btn-danger" onClick={() => setDelConfirm(b)}>Del</button>
-                            <button onClick={downloadTicket} style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", borderRadius:2, whiteSpace:"nowrap" }}>
-                              ⬇ Ticket
-                            </button>
-                            <button
-                              onClick={() => resendTicket(b, ev)}
-                              disabled={resendBusy[b.id]}
-                              style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.25)", color: resendBusy[b.id] ? "#555" : "#4fc3f7", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id] ? "default" : "pointer", borderRadius:2, whiteSpace:"nowrap" }}
-                            >
-                              {resendBusy[b.id] ? "…" : "📧 Resend"}
-                            </button>
                           </div>
                         </td>
                       </tr>

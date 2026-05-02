@@ -1,5 +1,6 @@
 // pages/NewsPage.jsx — public news & updates feed
 import React, { useState } from "react";
+import { renderMd } from "../utils";
 
 const MIL  = { fontFamily:"'Oswald','Barlow Condensed',sans-serif" };
 const MONO = { fontFamily:"'Share Tech Mono',monospace" };
@@ -50,10 +51,15 @@ function NewsCard({ post, full, onClick }) {
           {post.title}
         </div>
         {/* Body */}
-        <div style={{ fontSize:14, color:"#8aaa60", lineHeight:1.75,
-          ...(full ? {} : { display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden" }) }}>
-          {post.body}
-        </div>
+        {full ? (
+          <div style={{ fontSize:14, color:"#8aaa60", lineHeight:1.75 }}
+            dangerouslySetInnerHTML={{ __html: renderMd(post.body) }} />
+        ) : (
+          <div style={{ fontSize:14, color:"#8aaa60", lineHeight:1.75,
+            display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+            {post.body}
+          </div>
+        )}
         {!full && onClick && (
           <div style={{ ...MONO, fontSize:9, color:ACCENT, letterSpacing:".12em", marginTop:12 }}>READ MORE ▸</div>
         )}
