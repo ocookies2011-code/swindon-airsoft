@@ -2,7 +2,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtErr, fmtDate, tabBtn } from "../utils";
+import { fmtErr, fmtDate } from "../utils";
+import { tabBtn } from "./tabBtn";
 import { diffFields, logAction } from "./adminHelpers";
 
 function AdminDiscountCodes({ data, showToast, cu }) {

@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { fmtDate, sendAdminUkaraNotification, sendUkaraDecisionEmail, tabBtn, useMobile } from "../utils";
+import { fmtDate, sendAdminUkaraNotification, sendUkaraDecisionEmail, useMobile } from "../utils";
+import { tabBtn } from "./tabBtn";
 import { logAction } from "./adminHelpers";
 
 function AdminUkaraApplications({ showToast, cu }) {
