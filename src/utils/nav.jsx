@@ -9,12 +9,14 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef  = useRef(null);
   const staffMenuRef = useRef(null);
+  const userMenuRef  = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
       const inLinks = dropdownRef.current?.contains(e.target);
       const inStaff = staffMenuRef.current?.contains(e.target);
-      if (!inLinks && !inStaff) setOpenDropdown(null);
+      const inUser  = userMenuRef.current?.contains(e.target);
+      if (!inLinks && !inStaff && !inUser) setOpenDropdown(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -108,42 +110,52 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
             {cu ? (
               <>
                 {/* Staff/Marshal dropdown — shown to admins and marshals */}
-                {(cu.role === "admin" || cu.canMarshal) && (
-                  <div style={{ position:"relative" }} ref={staffMenuRef}>
-                    <button
-                      className="btn btn-sm"
-                      style={{ background:"rgba(165,214,167,.12)", border:"1px solid rgba(165,214,167,.4)", color:"#a5d6a7", display:"inline-flex", alignItems:"center", gap:5 }}
-                      onClick={() => setOpenDropdown(v => v === "staff-menu" ? null : "staff-menu")}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                      Staff <span style={{ fontSize:9, opacity:.6 }}>{openDropdown === "staff-menu" ? "▴" : "▾"}</span>
-                    </button>
-                    {openDropdown === "staff-menu" && (
-                      <div style={{ position:"absolute", top:"calc(100% + 6px)", right:0, background:"#0d1209", border:"1px solid #2a4018", minWidth:200, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,.8)" }}>
-                        {cu.role === "admin" && (
-                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#c8d8f8" }} onClick={() => { go("admin"); setOpenDropdown(null); }}>
-                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="#4fc3f7" strokeWidth="1.4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" stroke="#4fc3f7" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                            Admin Panel
-                          </button>
-                        )}
-                        {(cu.canMarshal || cu.role === "admin") && (
-                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#a5d6a7" }} onClick={() => { go("marshal-schedule"); setOpenDropdown(null); }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>
-                            Marshal Schedule
-                          </button>
-                        )}
-                        {(cu.canMarshal || cu.role === "admin") && (
-                          <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#a5d6a7" }} onClick={() => { go("marshal"); setOpenDropdown(null); }}>
-                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="#00c864" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="#00c864" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="#00c864" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                            Marshal Check-In
-                          </button>
-                        )}
+                {/* User profile dropdown */}
+                <div style={{ position:"relative" }} ref={userMenuRef}>
+                  <button
+                    onClick={() => setOpenDropdown(v => v === "user-menu" ? null : "user-menu")}
+                    style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"var(--accent)", display:"inline-flex", alignItems:"center", gap:6, padding:"5px 12px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:12, letterSpacing:".1em", textTransform:"uppercase" }}>
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                    {cu.name.split(" ")[0]}
+                    <span style={{ fontSize:9, opacity:.6 }}>{openDropdown === "user-menu" ? "▴" : "▾"}</span>
+                  </button>
+                  {openDropdown === "user-menu" && (
+                    <div style={{ position:"absolute", top:"calc(100% + 6px)", right:0, background:"#0d1209", border:"1px solid #2a4018", minWidth:180, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,.8)" }}>
+                      <div style={{ padding:"10px 16px 8px", borderBottom:"1px solid #1a2808" }}>
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, color:"#fff", letterSpacing:".06em" }}>{cu.name}</div>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", marginTop:2 }}>{cu.email}</div>
                       </div>
-                    )}
-                  </div>
-                )}
-                <button className="btn btn-sm btn-ghost" onClick={() => go("profile")}>{cu.name.split(" ")[0]}</button>
-                <button className="btn btn-sm btn-ghost" onClick={signOut}>Sign Out</button>
+                      <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#c8d8f8" }} onClick={() => { go("profile"); setOpenDropdown(null); }}>
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="#4fc3f7" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="#4fc3f7" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                        My Profile
+                      </button>
+                      {cu.role === "admin" && (
+                        <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#c8d8f8" }} onClick={() => { go("admin"); setOpenDropdown(null); }}>
+                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="#4fc3f7" strokeWidth="1.4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" stroke="#4fc3f7" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                          Admin Panel
+                        </button>
+                      )}
+                      {(cu.canMarshal || cu.role === "admin") && (
+                        <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#a5d6a7" }} onClick={() => { go("marshal-schedule"); setOpenDropdown(null); }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>
+                          Marshal Schedule
+                        </button>
+                      )}
+                      {(cu.canMarshal || cu.role === "admin") && (
+                        <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#a5d6a7" }} onClick={() => { go("marshal"); setOpenDropdown(null); }}>
+                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="1.5" stroke="#00c864" strokeWidth="1.4"/><circle cx="10" cy="11" r="3" stroke="#00c864" strokeWidth="1.4"/><path d="M7 5l1-2h4l1 2" stroke="#00c864" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                          Marshal Check-In
+                        </button>
+                      )}
+                      <div style={{ borderTop:"1px solid #1a2808", marginTop:4, paddingTop:4 }}>
+                        <button className="pub-nav-dropdown-item" style={{ width:"100%", display:"flex", alignItems:"center", gap:10, color:"#ef5350" }} onClick={signOut}>
+                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M13 3h4v14h-4M9 14l4-4-4-4M13 10H4" stroke="#ef5350" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>
