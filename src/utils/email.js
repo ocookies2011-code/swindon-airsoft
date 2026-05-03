@@ -23,10 +23,12 @@ async function sendEmail({ toEmail, toName, subject, htmlContent, replyTo, reply
     to_name:      toName || "",
     subject:      subject,
     html_content: htmlContent,
+    reply_to:     replyTo || "",
+    reply_to_name: replyToName || "",
   };
 
-  // EmailJS v4: pass replyTo directly in the send options object
-  // This sets the actual Reply-To email header, not a template variable
+  // Pass replyTo both as template variable (for {{reply_to}} in template)
+  // AND as the fourth options argument (for programmatic header setting)
   const options = replyTo ? { replyTo: replyToName ? `${replyToName} <${replyTo}>` : replyTo } : {};
 
   await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params, options);
