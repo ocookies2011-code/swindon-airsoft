@@ -409,19 +409,36 @@ function AdminShop({ data, save, showToast, cu }) {
       </div>
 
       {tab === "products" && (
-        <div className="card">
+        <div>
+          {/* ── Stats bar ── */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:8, marginBottom:16 }}>
+            {[
+              { label:"Total Products", val:shopOrder.length, color:"var(--accent)" },
+              { label:"Total Stock", val:shopOrder.reduce((s,p) => s + (p.variants?.length > 0 ? p.variants.reduce((vs,v)=>vs+Number(v.stock),0) : Number(p.stock||0)), 0), color:"var(--accent)" },
+              { label:"Out of Stock", val:shopOrder.filter(p => p.variants?.length > 0 ? p.variants.every(v=>Number(v.stock)===0) : Number(p.stock||0)===0).length, color:"var(--red)" },
+              { label:"Low Stock", val:lowStockItems.length, color:"var(--gold)" },
+              { label:"Hidden", val:shopOrder.filter(p=>p.hiddenFromShop).length, color:"var(--muted)" },
+              { label:"On Sale", val:shopOrder.filter(p=>p.onSale).length, color:"#ce93d8" },
+            ].map(s => (
+              <div key={s.label} style={{ background:"#111", border:"1px solid #1e1e1e", padding:"10px 14px", borderLeft:`3px solid ${s.color}` }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:s.color, lineHeight:1 }}>{s.val}</div>
+                <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em", marginTop:3 }}>{s.label.toUpperCase()}</div>
+              </div>
+            ))}
+          </div>
+
           {/* ── Low stock banner ── */}
           {lowStockItems.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom:16 }}>
               <div className="hazard-stripe gold" />
-              <div className="alert-hazard gold" style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
+              <div className="alert-hazard gold" style={{ display:"flex", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:200 }}>
                   <div className="alert-hazard-label">⚠ LOW STOCK — {lowStockItems.length} item{lowStockItems.length !== 1 ? "s" : ""} need restocking</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", marginTop: 6 }}>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 12px", marginTop:6 }}>
                     {lowStockItems.map((item, i) => (
-                      <span key={i} style={{ fontSize: 12, fontFamily: "'Share Tech Mono',monospace", color: item.stock === 0 ? "var(--red)" : "var(--gold)", cursor: "pointer" }}
-                        onClick={() => { setForm({ ...shopOrder.find(p => p.id === item.id), variants: shopOrder.find(p => p.id === item.id)?.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal(item.id); }}>
-                        {item.stock === 0 ? "🔴" : "🟡"} {item.name}{item.variant ? ` (${item.variant})` : ""}: <strong>{item.stock}</strong>
+                      <span key={i} style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:item.stock===0?"var(--red)":"var(--gold)", cursor:"pointer" }}
+                        onClick={() => { setForm({ ...shopOrder.find(p=>p.id===item.id), variants:shopOrder.find(p=>p.id===item.id)?.variants||[] }); setNewVariant({name:"",price:"",stock:""}); setSavingProduct(false); setModal(item.id); }}>
+                        {item.stock===0?"🔴":"🟡"} {item.name}{item.variant?` (${item.variant})`:""}: <strong>{item.stock}</strong>
                       </span>
                     ))}
                   </div>
@@ -429,31 +446,30 @@ function AdminShop({ data, save, showToast, cu }) {
               </div>
             </div>
           )}
-          <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12, flexWrap:"wrap" }}>
-            <input
-              value={productSearch}
-              onChange={e => setProductSearch(e.target.value)}
-              placeholder="🔍 Search products…"
-              style={{ flex:1, minWidth:160, fontSize:13 }}
-            />
-            <select
-              value={categoryFilter}
-              onChange={e => setCategoryFilter(e.target.value)}
-              style={{ fontSize:13, padding:"7px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:4, minWidth:140 }}
-            >
+
+          {/* ── Search + filter toolbar ── */}
+          <div style={{ background:"#111", border:"1px solid #1e1e1e", padding:"12px 14px", marginBottom:16, display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+            <div style={{ position:"relative", flex:1, minWidth:180 }}>
+              <svg style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", opacity:.4 }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input value={productSearch} onChange={e=>setProductSearch(e.target.value)} placeholder="Search products…"
+                style={{ width:"100%", paddingLeft:30, fontSize:13, background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", padding:"7px 10px 7px 30px", boxSizing:"border-box" }} />
+            </div>
+            <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}
+              style={{ fontSize:13, padding:"7px 10px", background:"var(--bg4)", border:"1px solid var(--border)", color:categoryFilter?"var(--accent)":"var(--text)", minWidth:160 }}>
               <option value="">All categories</option>
               {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             {(productSearch || categoryFilter) && (
               <button className="btn btn-ghost btn-sm" onClick={() => { setProductSearch(""); setCategoryFilter(""); }}>✕ Clear</button>
             )}
-            <span style={{ fontSize:11, color:"var(--muted)", whiteSpace:"nowrap" }}>
-              {filteredShopOrder.length} / {shopOrder.length}
-            </span>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", flexShrink:0, borderLeft:"1px solid #2a2a2a", paddingLeft:12 }}>
+              <span style={{ color:filteredShopOrder.length===shopOrder.length?"var(--muted)":"var(--accent)", fontWeight:700 }}>{filteredShopOrder.length}</span>
+              <span style={{ color:"#333" }}> / </span>{shopOrder.length} products
+            </div>
+            <div style={{ fontSize:11, color:"#444", fontFamily:"'Share Tech Mono',monospace", flexShrink:0, borderLeft:"1px solid #2a2a2a", paddingLeft:12 }}>
+              ☰ drag to reorder
+            </div>
           </div>
-          <p style={{fontSize:12,color:"var(--muted)",marginBottom:12}}>
-            ☰ Drag to reorder · Click item name to quick-edit stock
-          </p>
 
           {(() => {
             const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal(item.id); };
