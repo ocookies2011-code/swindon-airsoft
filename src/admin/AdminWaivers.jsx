@@ -6,9 +6,53 @@ import { WaiverModal, fmtDate, gmtShort, sendEmail, useMobile } from "../utils";
 import { logAction } from "./adminHelpers";
 
 function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, cu }) {
-  const [view, setView] = useState(null);
-  const [localUsers, setLocalUsers] = useState(null);
+  const [view, setView]                     = useState(null);
+  const [localUsers, setLocalUsers]         = useState(null);
   const [sendingReminderFor, setSendingReminderFor] = useState(null);
+  const [deleteConfirm, setDeleteConfirm]   = useState(null); // user to delete
+  const [deleting, setDeleting]             = useState(false);
+
+  const deleteAccount = async (u) => {
+    setDeleting(true);
+    try {
+      await supabase.functions.invoke("delete-user", { body: { userId: u.id } });
+      showToast(`${u.name}'s account deleted`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Account deleted (unsigned waiver)", detail: `${u.name} <${u.email}>` });
+      setDeleteConfirm(null);
+      // Refresh user list
+      api.profiles.getAll().then(list => setLocalUsers(list.map(normaliseProfile))).catch(() => {});
+    } catch(e) {
+      showToast("Delete failed: " + (e.message || String(e)), "red");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Days since account was created
+  const daysSince = (u) => {
+    const created = u.createdAt || u.created_at;
+    if (!created) return null;
+    return Math.floor((Date.now() - new Date(created).getTime()) / 86400000);
+  };
+
+  const daysBadge = (u) => {
+    const d = daysSince(u);
+    if (d === null) return null;
+    const daysLeft = 60 - d;
+    const color = d >= 60 ? "var(--red)" : d >= 30 ? "var(--gold)" : "var(--accent)";
+    const bg    = d >= 60 ? "rgba(239,68,68,.1)" : d >= 30 ? "rgba(245,158,11,.1)" : "rgba(200,255,0,.08)";
+    const border= d >= 60 ? "rgba(239,68,68,.3)" : d >= 30 ? "rgba(245,158,11,.3)" : "rgba(200,255,0,.2)";
+    return (
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, color, lineHeight:1 }}>{d}</div>
+        <div style={{ fontSize:9, color, fontFamily:"'Share Tech Mono',monospace", letterSpacing:".08em" }}>DAYS</div>
+        {daysLeft > 0
+          ? <div style={{ fontSize:9, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginTop:2 }}>{daysLeft}d left</div>
+          : <div style={{ fontSize:9, color:"var(--red)", fontFamily:"'Share Tech Mono',monospace", marginTop:2, fontWeight:800 }}>OVERDUE</div>
+        }
+      </div>
+    );
+  };
 
   const sendWaiverReminder = async (u) => {
     if (!u.email) { showToast("No email address on file for this player.", "red"); return; }
@@ -100,36 +144,60 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
   return (
     <div>
       {!embedded && <div className="page-header"><div><div className="page-title">{filterUnsigned ? "Unsigned Waivers" : "Waivers"}</div><div className="page-sub">{filterUnsigned ? `${displayUsers.length} player(s) without a signed waiver` : `Valid for ${new Date().getFullYear()} calendar year`}</div></div></div>}
-      <div className="card">
+      <div className="card" style={{ padding:0 }}>
         <div className="table-wrap"><table className="data-table">
-          <thead><tr><th>Player</th><th>Signed</th><th>Year</th><th>Players</th><th>Pending</th><th></th>{filterUnsigned && <th></th>}</tr></thead>
+          <thead><tr>
+            <th>Player</th>
+            <th>Email</th>
+            <th>Joined</th>
+            {filterUnsigned && <th style={{ textAlign:"center" }}>Days Without Waiver</th>}
+            <th>Signed</th>
+            <th>Year</th>
+            <th>Pending</th>
+            <th></th>
+            {filterUnsigned && <><th></th><th></th></>}
+          </tr></thead>
           <tbody>
             {displayUsers.map(u => {
               const totalWaivers = 1 + (u.extraWaivers?.length || 0);
+              const d = daysSince(u);
               return (
-                <tr key={u.id}>
+                <tr key={u.id} style={{ background: d !== null && d >= 60 ? "rgba(239,68,68,.04)" : d >= 30 ? "rgba(245,158,11,.03)" : "transparent" }}>
                   <td style={{ fontWeight: 600 }}>{u.name}</td>
+                  <td style={{ fontSize:12, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{u.email}</td>
+                  <td style={{ fontSize:12, color:"var(--muted)" }}>{u.createdAt ? fmtDate(u.createdAt.slice(0,10)) : "—"}</td>
+                  {filterUnsigned && <td style={{ textAlign:"center" }}>{daysBadge(u)}</td>}
                   <td>{u.waiverSigned ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
                   <td>{u.waiverYear || "—"}</td>
-                  <td>{totalWaivers > 1 ? <span className="tag tag-blue">{totalWaivers} players</span> : <span style={{ color:"var(--muted)", fontSize:12 }}>1</span>}</td>
                   <td>{u.waiverPending ? (u.waiverPending._removeExtra ? <span className="tag tag-red">🗑 Removal</span> : <span className="tag tag-gold">⚠ Pending</span>) : "—"}</td>
                   <td><button className="btn btn-sm btn-ghost" onClick={() => setView(u.id)}>View</button></td>
                   {filterUnsigned && (
-                    <td>
-                      <button
-                        className="btn btn-sm"
-                        disabled={sendingReminderFor === u.id}
-                        onClick={() => sendWaiverReminder(u)}
-                        style={{ background:"rgba(200,160,0,.12)", border:"1px solid rgba(200,160,0,.35)", color:"var(--gold)", whiteSpace:"nowrap" }}
-                      >
-                        {sendingReminderFor === u.id ? "⏳ Sending…" : "📧 Remind"}
-                      </button>
-                    </td>
+                    <>
+                      <td>
+                        <button
+                          className="btn btn-sm"
+                          disabled={sendingReminderFor === u.id}
+                          onClick={() => sendWaiverReminder(u)}
+                          style={{ background:"rgba(200,160,0,.12)", border:"1px solid rgba(200,160,0,.35)", color:"var(--gold)", whiteSpace:"nowrap" }}
+                        >
+                          {sendingReminderFor === u.id ? "⏳ Sending…" : "📧 Remind"}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => setDeleteConfirm(u)}
+                          style={{ whiteSpace:"nowrap" }}
+                        >
+                          🗑 Delete
+                        </button>
+                      </td>
+                    </>
                   )}
                 </tr>
               );
             })}
-            {displayUsers.length === 0 && <tr><td colSpan={filterUnsigned ? 7 : 6} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>{filterUnsigned ? "All players have signed waivers ✓" : "No waivers on file"}</td></tr>}
+            {displayUsers.length === 0 && <tr><td colSpan={filterUnsigned ? 9 : 7} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>{filterUnsigned ? "All players have signed waivers ✓" : "No waivers on file"}</td></tr>}
           </tbody>
         </table></div>
       </div>
@@ -232,6 +300,35 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
           </div>
         );
       })()}
+      {/* ── Delete Account Confirm ── */}
+      {deleteConfirm && (
+        <div className="overlay" onClick={() => !deleting && setDeleteConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div style={{ marginBottom:12 }}>
+              <div className="hazard-stripe red" />
+            </div>
+            <div className="modal-title" style={{ color:"var(--red)" }}>Delete Account?</div>
+            <div style={{ background:"rgba(239,68,68,.06)", border:"1px solid rgba(239,68,68,.2)", padding:"12px 16px", margin:"12px 0 16px" }}>
+              <div style={{ fontWeight:700, fontSize:15, color:"#fff", marginBottom:4 }}>{deleteConfirm.name}</div>
+              <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{deleteConfirm.email}</div>
+              {daysSince(deleteConfirm) !== null && (
+                <div style={{ fontSize:11, color:"var(--red)", fontFamily:"'Share Tech Mono',monospace", marginTop:6, fontWeight:700 }}>
+                  {daysSince(deleteConfirm)} days without a signed waiver
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize:13, color:"var(--muted)", marginBottom:20, lineHeight:1.6 }}>
+              This will <strong style={{ color:"#fff" }}>permanently delete</strong> this player's account, all their bookings, profile data, and login credentials. <strong style={{ color:"var(--red)" }}>This cannot be undone.</strong>
+            </p>
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button className="btn btn-ghost" onClick={() => setDeleteConfirm(null)} disabled={deleting}>Cancel</button>
+              <button className="btn btn-danger" onClick={() => deleteAccount(deleteConfirm)} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete Account Permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

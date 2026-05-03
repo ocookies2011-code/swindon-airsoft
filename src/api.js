@@ -682,6 +682,7 @@ export function normaliseProfile(p) {
     birthDate:          p.birth_date     || null,
     birthdayCreditYear: p.birthday_credit_year || null,
     nationality:        p.nationality || 'GB',
+    createdAt:          p.created_at  || null,
   }
 }
 
