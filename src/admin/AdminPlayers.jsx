@@ -19,18 +19,26 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [playerSpend, setPlayerSpend] = useState(null); // { bookings, shopOrders, total }
   const [waiverViewPlayer, setWaiverViewPlayer] = useState(null); // inline waiver panel
 
-  // Fetch total spend for the viewed player whenever the modal opens
+  // Fetch total spend + full shop order rows whenever the modal opens
   useEffect(() => {
     if (!viewPlayer) { setPlayerSpend(null); return; }
     setPlayerSpend(null); // reset while loading
     Promise.all([
       supabase.from('bookings').select('total').eq('user_id', viewPlayer.id),
-      supabase.from('shop_orders').select('total').eq('user_id', viewPlayer.id),
+      supabase.from('shop_orders')
+        .select('id, created_at, total, status, items, discount_code, discount_saving')
+        .eq('user_id', viewPlayer.id)
+        .order('created_at', { ascending: false }),
     ]).then(([{ data: bRows }, { data: oRows }]) => {
       const bookingTotal = (bRows || []).reduce((s, r) => s + Number(r.total || 0), 0);
       const orderTotal   = (oRows  || []).reduce((s, r) => s + Number(r.total || 0), 0);
-      setPlayerSpend({ bookings: bookingTotal, shopOrders: orderTotal, total: bookingTotal + orderTotal });
-    }).catch(() => setPlayerSpend({ bookings: 0, shopOrders: 0, total: 0 }));
+      setPlayerSpend({
+        bookings: bookingTotal,
+        shopOrders: orderTotal,
+        total: bookingTotal + orderTotal,
+        orders: oRows || [],
+      });
+    }).catch(() => setPlayerSpend({ bookings: 0, shopOrders: 0, total: 0, orders: [] }));
   }, [viewPlayer?.id]);
   const [contactPlayer, setContactPlayer] = useState(null);
   const [contactSubject, setContactSubject] = useState("");
@@ -1213,6 +1221,44 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   </div>
                 )
               }
+              {/* Shop order history */}
+              <div style={{ borderTop:"1px solid var(--border)", margin:"16px 0 12px" }} />
+              <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:8 }}>
+                Shop Orders ({playerSpend ? playerSpend.orders.length : "…"})
+              </div>
+              {!playerSpend
+                ? <div style={{ color:"var(--muted)", fontSize:13, marginBottom:12 }}>Loading…</div>
+                : playerSpend.orders.length === 0
+                  ? <div style={{ color:"var(--muted)", fontSize:13, marginBottom:12 }}>No shop orders on record.</div>
+                  : (
+                    <div className="table-wrap" style={{ marginBottom:16 }}>
+                      <table className="data-table">
+                        <thead>
+                          <tr><th>Date</th><th>Items</th><th>Discount</th><th>Total</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                          {playerSpend.orders.map(o => {
+                            const items = Array.isArray(o.items) ? o.items : [];
+                            const itemSummary = items.length > 0
+                              ? items.map(i => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ""}`).join(", ")
+                              : "—";
+                            const statusColors = { pending:"var(--gold)", paid:"var(--accent)", dispatched:"#5ab4ff", delivered:"var(--accent)", refunded:"var(--red)", cancelled:"var(--muted)" };
+                            return (
+                              <tr key={o.id}>
+                                <td className="mono" style={{ fontSize:11, whiteSpace:"nowrap" }}>{fmtDate(o.created_at)}</td>
+                                <td style={{ fontSize:12, maxWidth:240, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={itemSummary}>{itemSummary}</td>
+                                <td style={{ fontSize:12 }}>{o.discount_code ? <span style={{ color:"var(--gold)" }}>{o.discount_code} {o.discount_saving ? `(-£${Number(o.discount_saving).toFixed(2)})` : ""}</span> : <span style={{ color:"var(--muted)" }}>—</span>}</td>
+                                <td className="text-green">£{Number(o.total).toFixed(2)}</td>
+                                <td><span style={{ background:`rgba(0,0,0,.3)`, color: statusColors[o.status] || "var(--muted)", padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:700, textTransform:"capitalize" }}>{o.status || "—"}</span></td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+              }
+
               <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, display:"flex", justifyContent:"flex-end" }}>
                 <button className="btn btn-ghost" onClick={() => setViewPlayer(null)}>Close</button>
               </div>
