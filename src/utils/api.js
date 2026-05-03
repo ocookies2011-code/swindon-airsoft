@@ -1419,7 +1419,7 @@ function generateVoucherCode() {
 }
 
 export const giftVouchers = wrapWithTimeout({
-  async purchase({ amount, purchaserId, purchaserName, purchaserEmail, recipientEmail, recipientName, message, squarePaymentId }) {
+  async purchase({ amount, purchaserId, purchaserName, purchaserEmail, recipientEmail, recipientName, message, squarePaymentId, squareReceiptUrl }) {
     const code = generateVoucherCode()
     const { data, error } = await supabase
       .from('gift_vouchers')
@@ -1433,7 +1433,8 @@ export const giftVouchers = wrapWithTimeout({
         recipient_email: recipientEmail.toLowerCase().trim(),
         recipient_name:  recipientName || null,
         message:         message || null,
-        square_payment_id: squarePaymentId,
+        square_payment_id:   squarePaymentId,
+        square_receipt_url:  squareReceiptUrl || null,
       })
       .select()
       .single()
@@ -1701,7 +1702,7 @@ export const ukaraApplications = wrapWithTimeout({
     if (error) throw error;
   },
 
-  async processRenewal(id, squarePaymentId) {
+  async processRenewal(id, squarePaymentId, squareReceiptUrl) {
     const now = new Date();
     const expiresAt = new Date(now);
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -1713,7 +1714,8 @@ export const ukaraApplications = wrapWithTimeout({
         approved_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),
         status: 'approved',
-        renewal_square_payment_id: squarePaymentId || null,
+        renewal_square_payment_id:   squarePaymentId   || null,
+        renewal_square_receipt_url:  squareReceiptUrl  || null,
       })
       .eq('id', id);
     if (error) throw error;

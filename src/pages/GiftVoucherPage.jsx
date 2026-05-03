@@ -66,7 +66,8 @@ function GiftVoucherPage({ cu, showToast, setAuthModal }) {
         recipientEmail: recipientEmailFinal,
         recipientName:  recipientNameFinal || null,
         message:        message.trim() || null,
-        squarePaymentId: squarePayment.id,
+        squarePaymentId:  squarePayment.id,
+        squareReceiptUrl: squarePayment.receiptUrl || null,
       });
 
       const isForSelf = forSelf || recipientEmailFinal === (cu.email || '').toLowerCase();

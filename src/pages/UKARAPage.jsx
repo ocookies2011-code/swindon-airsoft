@@ -111,7 +111,9 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         proof_description: `${gamesAtSwindon} games verified at Swindon Airsoft`,
         declaration_signed: true,
         status:            "pending",
-        payment_id:        sqPayment.id,
+        payment_id:         sqPayment.id,
+        square_payment_id:  sqPayment.id,
+        square_receipt_url: sqPayment.receiptUrl || null,
       });
 
       const [govIdUrl, faceUrl] = await Promise.all([
@@ -137,7 +139,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const handleRenewalPaid = async (sqPayment) => {
     setRenewalPaying(true);
     try {
-      await api.ukaraApplications.processRenewal(existingApp.id, sqPayment.id);
+      await api.ukaraApplications.processRenewal(existingApp.id, sqPayment.id, sqPayment.receiptUrl || null);
       api.settings.get("contact_email").then(adminEmail => {
         if (adminEmail) sendAdminUkaraNotification({ adminEmail, app: existingApp, isRenewal: true }).catch(() => {});
       }).catch(() => {});

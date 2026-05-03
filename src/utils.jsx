@@ -647,6 +647,7 @@ function useData() {
       publicProfile: "public_profile", bio: "bio", customRank: "custom_rank", designation: "designation",
       birthDate: "birth_date", birthdayCreditYear: "birthday_credit_year",
       cardStatus: "card_status", cardReason: "card_reason", cardIssuedAt: "card_issued_at",
+      vipSquarePaymentId: "vip_square_payment_id", vipSquareReceiptUrl: "vip_square_receipt_url",
       nationality: "nationality",
     };
     Object.entries(patch).forEach(([k, v]) => {

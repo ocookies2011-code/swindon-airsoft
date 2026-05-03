@@ -180,7 +180,7 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled, onOpen
       }
 
       setPayStage("idle");
-      onSuccess({ id: payData.paymentId, status: "COMPLETED" });
+      onSuccess({ id: payData.paymentId, status: "COMPLETED", receiptUrl: payData.receiptUrl || null, receiptNumber: payData.receiptNumber || null });
 
     } catch (e) {
       const errMsg = e.message || "Payment failed. Please try again.";

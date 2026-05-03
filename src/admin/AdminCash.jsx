@@ -109,6 +109,7 @@ function AdminCash({ data, cu, showToast }) {
         total,
         status:           "completed",
         square_order_id:  squarePaymentId,
+        square_payment_id: squarePaymentId,
         customer_address: player?.address || null,
       };
       const insertPromise  = supabase.from("shop_orders").insert(orderPayload).select();

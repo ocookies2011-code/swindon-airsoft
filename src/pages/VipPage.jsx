@@ -72,7 +72,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
     setApplying(true);
     setVipPayError(null);
     try {
-      await updateUser(cu.id, { vipApplied: true });
+      await updateUser(cu.id, { vipApplied: true, vipSquarePaymentId: squarePayment.id, vipSquareReceiptUrl: squarePayment.receiptUrl || null });
       setShowPayment(false);
       showToast("🎉 Payment received! VIP application submitted — admin will activate your status shortly.");
     } catch (e) {
