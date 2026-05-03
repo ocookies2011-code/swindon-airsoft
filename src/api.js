@@ -638,6 +638,7 @@ function normaliseProduct(p) {
     noPost:         p.no_post,
     gameExtra:      p.game_extra || false,
     hiddenFromShop: p.hidden_from_shop || false,
+    costPrice:   p.cost_price ? Number(p.cost_price) : null,
     category:    p.category || '',
     supplierCode: p.supplier_code || '',
     variants,
@@ -682,8 +683,6 @@ export function normaliseProfile(p) {
     designation:        p.designation    || null,
     birthDate:          p.birth_date     || null,
     birthdayCreditYear: p.birthday_credit_year || null,
-    nationality:        p.nationality || 'GB',
-    createdAt:          p.created_at  || null,
   }
 }
 
@@ -723,9 +722,10 @@ function toSnakeProduct(p) {
     no_post:          p.noPost,
     game_extra:       p.gameExtra || false,
     hidden_from_shop: p.hiddenFromShop || false,
+    cost_price:  p.costPrice ?? null,
     category:     p.category || '',
     supplier_code: p.supplierCode || '',
-    variants:    p.variants || [],
+    variants:    (p.variants || []).map(v => ({ ...v, supplier_code: v.supplierCode || '' })),
     // Note: _descTab is a UI-only field, never saved
   }
 }
@@ -804,6 +804,121 @@ export const shopOrders = wrapWithTimeout({
 })
 
 // ── Suppliers ────────────────────────────────────────────────
+export const suppliers = wrapWithTimeout({
+  async getAll() {
+    const { data, error } = await supabase
+      .from('suppliers').select('*').order('name')
+    if (error) throw error
+    return data || []
+  },
+  async create(s) {
+    const { data, error } = await supabase.from('suppliers').insert({
+      name:    s.name,
+      contact: s.contact || '',
+      email:   s.email || '',
+      phone:   s.phone || '',
+      notes:   s.notes || '',
+    }).select().single()
+    if (error) throw error
+    return data
+  },
+  async update(id, s) {
+    const { error } = await supabase.from('suppliers').update({
+      name:    s.name,
+      contact: s.contact || '',
+      email:   s.email || '',
+      phone:   s.phone || '',
+      notes:   s.notes || '',
+    }).eq('id', id)
+    if (error) throw error
+  },
+  async delete(id) {
+    const { error } = await supabase.from('suppliers').delete().eq('id', id)
+    if (error) throw error
+  },
+})
+
+// ── Purchase Orders ───────────────────────────────────────────
+export const purchaseOrders = wrapWithTimeout({
+  async getAll() {
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .select('*, purchase_order_items(*)')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data || []).map(po => ({
+      ...po,
+      items: po.purchase_order_items || [],
+    }))
+  },
+  async create(po) {
+    const { data, error } = await supabase.from('purchase_orders').insert({
+      supplier_id:   po.supplierId || null,
+      supplier_name: po.supplierName || '',
+      status:        po.status || 'draft',
+      notes:         po.notes || '',
+      total:         po.total || 0,
+    }).select().single()
+    if (error) throw error
+    // Insert items
+    if (po.items?.length) {
+      const rows = po.items.map(item => ({
+        purchase_order_id: data.id,
+        product_id:        item.productId || null,
+        product_name:      item.productName || '',
+        supplier_code:     item.supplierCode || '',
+        qty_ordered:       Number(item.qtyOrdered) || 0,
+        qty_received:      0,
+        unit_cost:         Number(item.unitCost) || 0,
+      }))
+      const { error: itemErr } = await supabase.from('purchase_order_items').insert(rows)
+      if (itemErr) throw itemErr
+    }
+    return data
+  },
+  async updateStatus(id, status) {
+    const { error } = await supabase.from('purchase_orders').update({ status }).eq('id', id)
+    if (error) throw error
+  },
+  async receiveItem(itemId, qtyReceived, productId, variantId, qtyPreviouslyReceived) {
+    // 1. Update the PO item received qty
+    const { error } = await supabase.from('purchase_order_items')
+      .update({ qty_received: qtyReceived }).eq('id', itemId)
+    if (error) throw error
+
+    // 2. Work out how many NEW units are being added this time
+    const delta = qtyReceived - (qtyPreviouslyReceived || 0)
+    if (delta <= 0 || !productId) return
+
+    // 3. Add to shop stock
+    if (variantId) {
+      // Variant product — fetch current variants JSON, bump the matching variant's stock
+      const { data: prod, error: fetchErr } = await supabase
+        .from('shop_products').select('variants').eq('id', productId).single()
+      if (fetchErr) throw fetchErr
+      const variants = (prod.variants || []).map(v =>
+        v.id === variantId ? { ...v, stock: (Number(v.stock) || 0) + delta } : v
+      )
+      const { error: updErr } = await supabase
+        .from('shop_products').update({ variants }).eq('id', productId)
+      if (updErr) throw updErr
+    } else {
+      // Simple product — use rpc increment or plain update with addition
+      const { data: prod, error: fetchErr } = await supabase
+        .from('shop_products').select('stock').eq('id', productId).single()
+      if (fetchErr) throw fetchErr
+      const { error: updErr } = await supabase
+        .from('shop_products').update({ stock: (Number(prod.stock) || 0) + delta }).eq('id', productId)
+      if (updErr) throw updErr
+    }
+  },
+  async delete(id) {
+    const { error: itemErr } = await supabase.from('purchase_order_items').delete().eq('purchase_order_id', id)
+    if (itemErr) throw itemErr
+    const { error } = await supabase.from('purchase_orders').delete().eq('id', id)
+    if (error) throw error
+  },
+})
 
 // ── Square Refunds ────────────────────────────────────────
 // Calls the square-refund Supabase Edge Function (server-side).
@@ -894,6 +1009,17 @@ let _geoCache     = undefined;
 let _geoFailCount = 0;
 const GEO_MAX_RETRIES = 3;
 
+async function _getBrowserCoords(): Promise<{lat:number,lon:number}|null> {
+  if (!navigator.geolocation) return null;
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => resolve(null),
+      { timeout: 3000, maximumAge: 60000 }
+    );
+  });
+}
+
 async function _lookupGeo() {
   if (_geoCache !== undefined && _geoCache !== null) return _geoCache;
   if (_geoCache === null && _geoFailCount >= GEO_MAX_RETRIES) return null;
@@ -928,13 +1054,21 @@ async function _lookupGeo() {
   try {
     // Call our Supabase edge function — runs server-side so no browser CSP blocks it,
     // and the real client IP is forwarded via x-forwarded-for headers.
-    const res = await fetch(
-      `${supabase.supabaseUrl}/functions/v1/geo-lookup`,
-      {
+    // Try to get browser GPS coords first (most accurate, especially on mobile)
+    // Don't await this separately - race it with a timeout
+    let geoUrl = `${supabase.supabaseUrl}/functions/v1/geo-lookup`;
+    try {
+      const browserCoords = await Promise.race([
+        _getBrowserCoords(),
+        new Promise<null>(r => setTimeout(() => r(null), 1500))
+      ]);
+      if (browserCoords) geoUrl += `?lat=${browserCoords.lat}&lon=${browserCoords.lon}`;
+    } catch {}
+
+    const res = await fetch(geoUrl, {
         headers: { 'apikey': supabase.supabaseKey },
         signal: AbortSignal.timeout(8000),
-      }
-    )
+      })
     if (!res.ok) throw new Error(`geo-lookup ${res.status}`)
     const g = await res.json()
     if (g.error || !g.country) throw new Error(g.error || 'no country')
@@ -993,36 +1127,34 @@ export const visits = wrapWithTimeout({
   //
   async track({ page, userId, userName, sessionId }) {
     try {
+      if (!sessionId) return;
       const now = new Date().toISOString();
-      if (!page) return;
 
-      // One row per (user_id, page) for logged-in users,
-      // or one row per (session_id, page) for anonymous visitors.
-      // This ensures per-page visit counts are accurate.
-      let existingQuery = supabase
+      // Key is ALWAYS session_id + page — one row per page per browser session.
+      // This means every page a visitor browses gets its own row, whether they
+      // are anonymous or logged in. User identity is stamped on the row immediately
+      // if known, or backfilled later via backfillUser() when auth resolves.
+      const { data: existing } = await supabase
         .from('page_visits')
-        .select('id, country, city, lat, lon, visit_count');
-
-      if (userId) {
-        existingQuery = existingQuery.eq('user_id', userId).eq('page', page);
-      } else if (sessionId) {
-        existingQuery = existingQuery.eq('session_id', sessionId).eq('page', page).is('user_id', null);
-      } else {
-        return;
-      }
-
-      const { data: existing } = await existingQuery.maybeSingle();
+        .select('id, user_id, visit_count')
+        .eq('session_id', sessionId)
+        .eq('page', page)
+        .maybeSingle();
 
       if (existing) {
-        // Row exists for this user+page — increment counter and refresh geo
-        await supabase.from('page_visits').update({
+        // Row exists for this session+page — increment count and update identity
+        // if the visitor has since logged in (user_id was null when row was created).
+        const updates = {
           last_seen_at: now,
           user_agent:   navigator.userAgent || null,
-          ...(userId ? { user_name: userName || null, session_id: sessionId || null } : {}),
           visit_count:  (existing.visit_count || 1) + 1,
-        }).eq('id', existing.id);
+          ...(userId && !existing.user_id
+            ? { user_id: userId, user_name: userName || null }
+            : {}),
+        };
+        await supabase.from('page_visits').update(updates).eq('id', existing.id);
 
-        // Always re-run geo and overwrite — fixes stale/bad coords from old API
+        // Re-run geo in background (fixes stale coords)
         _lookupGeo().then(geo => {
           if (!geo) return;
           supabase.from('page_visits').update({
@@ -1033,11 +1165,12 @@ export const visits = wrapWithTimeout({
           }).eq('id', existing.id).then(() => {}).catch(() => {});
         }).catch(() => {});
       } else {
-        // New row — insert with geo filled in once lookup resolves
+        // New session+page combination — insert a fresh row
         const { data: newRow } = await supabase.from('page_visits').insert({
-          ...(userId ? { user_id: userId, user_name: userName || null, session_id: sessionId || null }
-                     : { session_id: sessionId, user_id: null, user_name: null }),
+          session_id: sessionId,
           page,
+          user_id:    userId    || null,
+          user_name:  userName  || null,
           last_seen_at: now,
           visit_count:  1,
           user_agent:   navigator.userAgent || null,
@@ -1059,43 +1192,26 @@ export const visits = wrapWithTimeout({
     } catch { /* never break the site */ }
   },
 
-  // Backfill user_id + user_name on anonymous session rows when auth resolves.
-  // With per-page tracking there are multiple anon rows per session (one per page visited).
-  // We promote each one to the user, merging with any existing user+page row.
+  // Backfill user_id + user_name on the anonymous session row when auth resolves.
+  // Claims all anonymous rows for this session when the user logs in.
+  // Each page the visitor browsed before logging in gets their identity stamped on it.
   async backfillUser({ sessionId, userId, userName }) {
     if (!sessionId || !userId) return;
     try {
+      // Fetch ALL anonymous rows for this session (one per page visited before login)
       const { data: anonRows } = await supabase
         .from('page_visits')
-        .select('id, visit_count, country, city, page, last_seen_at')
+        .select('id')
         .eq('session_id', sessionId)
         .is('user_id', null);
 
-      if (!anonRows?.length) return;
-
-      for (const anonRow of anonRows) {
-        const { data: userRow } = await supabase
-          .from('page_visits')
-          .select('id, visit_count, country, city')
-          .eq('user_id', userId)
-          .eq('page', anonRow.page)
-          .maybeSingle();
-
-        if (userRow) {
-          // Merge: add anon count into existing user+page row, then delete anon row
-          await supabase.from('page_visits').update({
-            user_name:   userName || null,
-            visit_count: (userRow.visit_count || 1) + (anonRow.visit_count || 1),
-            ...(!userRow.country && anonRow.country ? { country: anonRow.country, city: anonRow.city } : {}),
-          }).eq('id', userRow.id);
-          await supabase.from('page_visits').delete().eq('id', anonRow.id);
-        } else {
-          // No existing user row for this page — promote the anon row
-          await supabase.from('page_visits').update({
-            user_id:   userId,
-            user_name: userName || null,
-          }).eq('id', anonRow.id);
-        }
+      if (anonRows && anonRows.length > 0) {
+        // Claim every anonymous row by stamping the user's identity on them
+        const ids = anonRows.map(r => r.id);
+        await supabase.from('page_visits').update({
+          user_id:   userId,
+          user_name: userName || null,
+        }).in('id', ids);
       }
     } catch { /* non-fatal */ }
   },
@@ -1123,14 +1239,20 @@ export const visits = wrapWithTimeout({
   // Two cheap queries for the all-time headline numbers.
   // Uses server-side COUNT — not affected by row fetch limits.
   async getAllTimeCounts() {
-    // Use a single SQL RPC for all counts — much faster than fetching rows client-side
-    const { data, error } = await supabase.rpc('get_visit_counts');
-    if (!error && data) {
-      return { totalRows: data.total_rows, uniqueSessions: data.unique_sessions };
-    }
-    // Fallback: simple row count only
-    const { count } = await supabase.from('page_visits').select('*', { count: 'exact', head: true });
-    return { totalRows: count ?? 0, uniqueSessions: 0 };
+    const [totalRes, uniqueRes] = await Promise.all([
+      supabase.from('page_visits').select('*', { count: 'exact', head: true }),
+      supabase.from('page_visits').select('*', { count: 'exact', head: true }).not('session_id', 'is', null),
+    ]);
+    // For unique sessions we do a lightweight fetch to count distinct session_ids
+    // (PostgREST doesn't support COUNT DISTINCT natively via the JS client)
+    const { data: sessionData } = await supabase
+      .from('page_visits')
+      .select('session_id')
+      .not('session_id', 'is', null)
+      .limit(100000);
+    const uniqueSessions = new Set((sessionData || []).map(r => r.session_id)).size;
+    const totalRows = totalRes.count ?? 0;
+    return { totalRows, uniqueSessions };
   },
 
   // Legacy — kept for backwards compat; main stats use getStats() now
