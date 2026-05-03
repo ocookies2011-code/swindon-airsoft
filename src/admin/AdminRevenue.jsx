@@ -6,7 +6,7 @@ import * as api from "../api";
 import { fmtDate, gmtShort } from "../utils";
 import { logAction } from "./adminHelpers";
 
-function AdminRevenue({ data, save, showToast, cu }) {
+function AdminRevenue({ data, save, showToast, cu, goToPlayer }) {
   const [cashSales, setCashSales] = useState([]);
   const [shopOrders, setShopOrders] = useState([]);
   const [selected, setSelected] = useState(null); // selected transaction for detail modal

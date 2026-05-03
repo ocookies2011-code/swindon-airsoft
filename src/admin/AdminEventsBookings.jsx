@@ -8,7 +8,7 @@ import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
 import { diffFields, logAction } from "./adminHelpers";
 
-function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
+function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu, goToPlayer }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [resendBusy, setResendBusy] = useState({}); // bookingId -> true while sending

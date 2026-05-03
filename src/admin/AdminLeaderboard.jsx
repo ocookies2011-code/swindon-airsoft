@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 
-function AdminLeaderboard({ data, updateUser, showToast }) {
+function AdminLeaderboard({ data, updateUser, showToast, goToPlayer }) {
   const board = data.users.filter(u => u.role === "player").sort((a, b) => b.gamesAttended - a.gamesAttended);
   return (
     <div>

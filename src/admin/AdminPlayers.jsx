@@ -9,7 +9,7 @@ import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
 import { diffFields, logAction } from "./adminHelpers";
 
-function AdminPlayers({ data, save, updateUser, showToast, cu }) {
+function AdminPlayers({ data, save, updateUser, showToast, cu, goToPlayer }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";

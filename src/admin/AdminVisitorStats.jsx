@@ -270,7 +270,7 @@ function UKVisitorMap({ visitData }) {
 
 
 // ── Admin Visitor Stats ───────────────────────────────────
-function AdminVisitorStats() {
+function AdminVisitorStats({ goToPlayer }) {
   const [visitData, setVisitData]         = useState([]);
   const [allTimeCounts, setAllTimeCounts] = useState(null);
   const [loading, setLoading]             = useState(true);
