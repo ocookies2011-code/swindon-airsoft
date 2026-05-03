@@ -14,39 +14,33 @@ function AdminOrdersInline({ showToast, cu }) {
   const [detail, setDetail] = useState(null);
   const [trackingModal, setTrackingModal] = useState(null);
   const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red", return_requested: "gold", return_approved: "blue", return_received: "teal" };
-  const isMounted = useRef(true);
+  const mounted = useRef(false);
 
   const fetchOrders = useCallback(async () => {
-    if (!isMounted.current) return;
     setLoading(true); setError(null);
     try {
       const result = await api.shopOrders.getAll();
-      if (isMounted.current) {
-        // Sort: pending & return_requested first, then by date descending
-        const priority = { pending: 0, return_requested: 1, processing: 2, dispatched: 3, return_approved: 4, return_received: 5, completed: 6, cancelled: 7 };
-        result.sort((a, b) => {
-          const pa = priority[a.status] ?? 99, pb = priority[b.status] ?? 99;
-          if (pa !== pb) return pa - pb;
-          return new Date(b.created_at) - new Date(a.created_at);
-        });
-        setOrders(result);
-      }
+      const priority = { pending: 0, return_requested: 1, processing: 2, dispatched: 3, return_approved: 4, return_received: 5, completed: 6, cancelled: 7 };
+      result.sort((a, b) => {
+        const pa = priority[a.status] ?? 99, pb = priority[b.status] ?? 99;
+        if (pa !== pb) return pa - pb;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      if (mounted.current) setOrders(result);
     } catch (e) {
-      if (isMounted.current) setError(e.message);
+      if (mounted.current) setError(e.message);
     } finally {
-      if (isMounted.current) setLoading(false);
+      if (mounted.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    isMounted.current = true;
+    mounted.current = true;
     fetchOrders();
-    // Poll every 30 seconds for new orders
     const interval = setInterval(fetchOrders, 30000);
-    // Re-fetch immediately when user returns to this tab
-    const onVisible = () => { if (document.visibilityState === "visible" && isMounted.current) fetchOrders(); };
+    const onVisible = () => { if (document.visibilityState === "visible") fetchOrders(); };
     document.addEventListener("visibilitychange", onVisible);
-    return () => { isMounted.current = false; clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
+    return () => { mounted.current = false; clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchOrders]);
 
   const doDispatch = async (id, tracking, isUpdate = false) => {
