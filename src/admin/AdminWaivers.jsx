@@ -1,11 +1,12 @@
 // admin/AdminWaivers.jsx — waiver review panel
+import { PlayerLink } from '../utils/PlayerLink';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { WaiverModal, fmtDate, gmtShort, sendEmail, useMobile } from "../utils";
 import { logAction } from "./adminHelpers";
 
-function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, cu }) {
+function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, cu, goToPlayer }) {
   const [view, setView]                     = useState(null);
   const [localUsers, setLocalUsers]         = useState(null);
   const [sendingReminderFor, setSendingReminderFor] = useState(null);
@@ -162,7 +163,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
               const d = daysSince(u);
               return (
                 <tr key={u.id} style={{ background: d !== null && d >= 60 ? "rgba(239,68,68,.04)" : d >= 30 ? "rgba(245,158,11,.03)" : "transparent" }}>
-                  <td style={{ fontWeight: 600 }}>{u.name}</td>
+                  <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></td>
                   <td style={{ fontSize:12, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{u.email}</td>
                   <td style={{ fontSize:12, color:"var(--muted)" }}>{u.createdAt ? fmtDate(u.createdAt.slice(0,10)) : "—"}</td>
                   {filterUnsigned && <td style={{ textAlign:"center" }}>{daysBadge(u)}</td>}

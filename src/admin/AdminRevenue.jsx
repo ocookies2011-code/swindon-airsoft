@@ -1,4 +1,5 @@
 // admin/AdminRevenue.jsx — revenue charts and summaries
+import { PlayerLink } from '../utils/PlayerLink';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
@@ -421,7 +422,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                 {pageRows.map(t => (
                   <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => openTransaction(t)}>
                     <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
-                    <td style={{ fontWeight: 600 }}>{t.userName}</td>
+                    <td style={{ fontWeight: 600 }}><PlayerLink id={t.userId} name={t.userName} goToPlayer={goToPlayer} /></td>
                     <td style={{ maxWidth: 260 }}>
                       {t.source === "cash" || t.source === "terminal" || t.source === "shop"
                         ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
@@ -640,7 +641,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                 {monthDetail.bookings.map(t => (
                   <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => { setMonthDetail(null); openTransaction(t); }}>
                     <td style={{ fontSize: 12, color: "var(--muted)" }}>{gmtFull(t.date)}</td>
-                    <td>{t.userName}</td>
+                    <td><PlayerLink id={t.userId} name={t.userName} goToPlayer={goToPlayer} /></td>
                     <td style={{ maxWidth: 240 }}>
                       {t.source === "cash" || t.source === "terminal" || t.source === "shop"
                         ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>

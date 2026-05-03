@@ -55,6 +55,13 @@ function AppInner() {
     return parts[0] === "player" ? (parts[1] || null) : null;
   });
   const [prevPage, setPrevPage] = useState("leaderboard");
+  const goToPlayer = (id) => {
+    setPrevPage(page === "admin" ? "admin" : page);
+    setPublicProfileId(id);
+    setPageState("player");
+    window.location.hash = "player/" + id;
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
 
   // setPage writes the hash AND updates state
   const setPage = (p) => {
@@ -517,7 +524,7 @@ function AppInner() {
         <AdminPanel
           data={data} cu={cu} save={save}
           updateUser={updateUserAndRefresh} updateEvent={updateEvent}
-          showToast={showToast} setPage={setPage} refresh={refresh}
+          showToast={showToast} setPage={setPage} refresh={refresh} goToPlayer={goToPlayer}
         />
       </>
     );

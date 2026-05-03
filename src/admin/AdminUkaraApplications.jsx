@@ -1,4 +1,5 @@
 // admin/AdminUkaraApplications.jsx
+import { PlayerLink } from '../utils/PlayerLink';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
@@ -6,7 +7,7 @@ import { fmtDate, sendAdminUkaraNotification, sendUkaraDecisionEmail, useMobile 
 import { tabBtn } from "./tabBtn";
 import { logAction } from "./adminHelpers";
 
-function AdminUkaraApplications({ showToast, cu }) {
+function AdminUkaraApplications({ showToast, cu, goToPlayer }) {
   const [apps, setApps] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const getInitTab = () => {
@@ -279,7 +280,7 @@ function AdminUkaraApplications({ showToast, cu }) {
             <tbody>
               {filtered.map(app => (
                 <tr key={app.id} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background="#0d1209"} onMouseLeave={e => e.currentTarget.style.background=""}>
-                  <td style={tdS}><strong style={{ color: "#e8f0d0" }}>{app.name}</strong></td>
+                  <td style={tdS}><strong style={{ color: "#e8f0d0" }}><PlayerLink id={app.id} name={app.name} goToPlayer={goToPlayer} style={{ color:"#e8f0d0" }} /></strong></td>
                   <td style={tdS}>{app.email}</td>
                   <td style={{ ...tdS, display: tab === "approved" ? "table-cell" : "none", fontFamily: "monospace", color: "#c8ff00", fontWeight: 700 }}>{app.ukara_id || "—"}</td>
                   <td style={{ ...tdS, fontSize: 12, color: "#7a9a60", maxWidth: 180 }}>{app.address || "—"}</td>

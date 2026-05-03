@@ -1,4 +1,5 @@
 // admin/AdminPlayers.jsx — player management, VIP, UKARA, cards
+import { PlayerLink } from '../utils/PlayerLink';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
@@ -624,7 +625,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                 <React.Fragment key={u.id}>
                 <tr style={{ background: selectedPlayerIds.has(u.id) ? "rgba(200,255,0,.03)" : "" }}>
                   <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
-                  <td style={{ fontWeight: 600 }}>{u.name}</td>
+                  <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></td>
                   <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
                   <td>{u.gamesAttended}</td>
                   <td>
@@ -678,7 +679,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               {vipApps.map(u => (
                 <div key={u.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", padding:"10px 0", borderBottom:"1px solid rgba(200,160,0,.1)" }}>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:13 }}>{u.name}</div>
+                    <div style={{ fontWeight:700, fontSize:13 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></div>
                     <div style={{ fontSize:11, color:"var(--muted)" }}>{u.email} · {u.gamesAttended} games</div>
                     {u.vipIdImages?.length > 0 && (
                       <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
@@ -716,7 +717,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               {allUsers.filter(u => u.deleteRequest).map(u => (
                 <div key={u.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", padding:"10px 0", borderBottom:"1px solid rgba(220,30,30,.1)" }}>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:13 }}>{u.name}</div>
+                    <div style={{ fontWeight:700, fontSize:13 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></div>
                     <div style={{ fontSize:11, color:"var(--muted)" }}>{u.email}</div>
                   </div>
                   <div style={{ display:"flex", gap:6 }}>

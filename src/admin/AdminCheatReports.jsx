@@ -1,11 +1,12 @@
 // admin/AdminCheatReports.jsx
+import { PlayerLink } from '../utils/PlayerLink';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { fmtDate, gmtShort, useMobile } from "../utils";
 import { logAction } from "./adminHelpers";
 
-function AdminCheatReports({ data, showToast, cu }) {
+function AdminCheatReports({ data, showToast, cu, goToPlayer }) {
   const [reports, setReports]         = useState([]);
   const [loading, setLoading]         = useState(true);
   const [selected, setSelected]       = useState(null);
@@ -214,7 +215,7 @@ function AdminCheatReports({ data, showToast, cu }) {
                         <div key={p.id} onClick={() => linkPlayer(p)} style={{ padding:"8px 12px", cursor:"pointer", fontSize:13, borderBottom:"1px solid var(--border)" }}
                           onMouseEnter={e => e.currentTarget.style.background="var(--bg4)"}
                           onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                          <strong>{p.name}</strong> <span style={{ color:"var(--muted)", fontSize:11 }}>{p.email}</span>
+                          <strong><PlayerLink id={p.id} name={p.name} goToPlayer={goToPlayer} /></strong> <span style={{ color:"var(--muted)", fontSize:11 }}>{p.email}</span>
                         </div>
                       ))}
                     </div>
