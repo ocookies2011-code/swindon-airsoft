@@ -1009,7 +1009,7 @@ let _geoCache     = undefined;
 let _geoFailCount = 0;
 const GEO_MAX_RETRIES = 3;
 
-async function _getBrowserCoords(): Promise<{lat:number,lon:number}|null> {
+async function _getBrowserCoords() {
   if (!navigator.geolocation) return null;
   return new Promise(resolve => {
     navigator.geolocation.getCurrentPosition(
@@ -1060,7 +1060,7 @@ async function _lookupGeo() {
     try {
       const browserCoords = await Promise.race([
         _getBrowserCoords(),
-        new Promise<null>(r => setTimeout(() => r(null), 1500))
+        new Promise(r => setTimeout(() => r(null), 1500))
       ]);
       if (browserCoords) geoUrl += `?lat=${browserCoords.lat}&lon=${browserCoords.lon}`;
     } catch {}
