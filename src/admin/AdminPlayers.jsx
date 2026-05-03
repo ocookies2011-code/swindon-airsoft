@@ -16,7 +16,22 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   };
   const [edit, setEdit] = useState(null);
   const [viewPlayer, setViewPlayer] = useState(null);
+  const [playerSpend, setPlayerSpend] = useState(null); // { bookings, shopOrders, total }
   const [waiverViewPlayer, setWaiverViewPlayer] = useState(null); // inline waiver panel
+
+  // Fetch total spend for the viewed player whenever the modal opens
+  useEffect(() => {
+    if (!viewPlayer) { setPlayerSpend(null); return; }
+    setPlayerSpend(null); // reset while loading
+    Promise.all([
+      supabase.from('bookings').select('total').eq('user_id', viewPlayer.id),
+      supabase.from('shop_orders').select('total').eq('user_id', viewPlayer.id),
+    ]).then(([{ data: bRows }, { data: oRows }]) => {
+      const bookingTotal = (bRows || []).reduce((s, r) => s + Number(r.total || 0), 0);
+      const orderTotal   = (oRows  || []).reduce((s, r) => s + Number(r.total || 0), 0);
+      setPlayerSpend({ bookings: bookingTotal, shopOrders: orderTotal, total: bookingTotal + orderTotal });
+    }).catch(() => setPlayerSpend({ bookings: 0, shopOrders: 0, total: 0 }));
+  }, [viewPlayer?.id]);
   const [contactPlayer, setContactPlayer] = useState(null);
   const [contactSubject, setContactSubject] = useState("");
   const [contactMsg, setContactMsg] = useState("");
@@ -1126,6 +1141,24 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   <div key={label} style={{ background:"var(--bg4)", padding:"10px 12px", borderRadius:3 }}>
                     <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:4 }}>{label}</div>
                     <div style={{ fontSize:13, fontWeight:600 }}>{String(val)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total spend */}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:16 }}>
+                {[
+                  ["Event Bookings",  playerSpend ? `£${playerSpend.bookings.toFixed(2)}`  : "…"],
+                  ["Shop Orders",     playerSpend ? `£${playerSpend.shopOrders.toFixed(2)}` : "…"],
+                  ["Total Spent",     playerSpend ? `£${playerSpend.total.toFixed(2)}`      : "…"],
+                ].map(([label, val], i) => (
+                  <div key={label} style={{
+                    background: i === 2 ? "rgba(176,192,144,.08)" : "var(--bg4)",
+                    border: i === 2 ? "1px solid rgba(176,192,144,.25)" : "1px solid transparent",
+                    padding:"10px 12px", borderRadius:3,
+                  }}>
+                    <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:4 }}>{label}</div>
+                    <div style={{ fontSize: i === 2 ? 18 : 14, fontWeight: i === 2 ? 800 : 600, color: i === 2 ? "var(--accent)" : "var(--text)", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>{val}</div>
                   </div>
                 ))}
               </div>
