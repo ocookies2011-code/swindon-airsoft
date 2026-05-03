@@ -1053,6 +1053,23 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || evObj?.title}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
+                    {cb.squareOrderId && (
+                      <div style={{ gridColumn:"1/-1", borderTop:"1px solid #1a1a1a", paddingTop:10, marginTop:4 }}>
+                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em", textTransform:"uppercase", marginBottom:6, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>Square Reference</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
+                          <div>
+                            <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Transaction ID</div>
+                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00", letterSpacing:".06em", wordBreak:"break-all" }}>{cb.squareOrderId}</div>
+                          </div>
+                          {cb.squareReceiptUrl && (
+                            <div>
+                              <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Receipt</div>
+                              <a href={cb.squareReceiptUrl} target="_blank" rel="noreferrer" style={{ fontSize:11, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
                     <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>

@@ -591,6 +591,31 @@ function AdminRevenue({ data, save, showToast, cu }) {
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <button className="btn btn-danger btn-sm" onClick={() => { setDelConfirm(selected); }}>🗑 Delete Transaction</button>
+              {(selected.squareOrderId || selected.squarePaymentId) && (
+                <div style={{ background:"rgba(0,0,0,.3)", border:"1px solid #2a2a2a", padding:"10px 14px", borderRadius:3, marginTop:12, marginBottom:4 }}>
+                  <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em", textTransform:"uppercase", marginBottom:8, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>Square Reference</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
+                    {selected.squareOrderId && (
+                      <div>
+                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Transaction ID</div>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00", letterSpacing:".05em", wordBreak:"break-all" }}>{selected.squareOrderId}</div>
+                      </div>
+                    )}
+                    {selected.squarePaymentId && selected.squarePaymentId !== selected.squareOrderId && (
+                      <div>
+                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Payment ID</div>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00", letterSpacing:".05em", wordBreak:"break-all" }}>{selected.squarePaymentId}</div>
+                      </div>
+                    )}
+                    {selected.squareReceiptUrl && (
+                      <div>
+                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Receipt</div>
+                        <a href={selected.squareReceiptUrl} target="_blank" rel="noreferrer" style={{ fontSize:12, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
                 <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
                 <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>

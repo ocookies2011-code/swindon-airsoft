@@ -220,6 +220,8 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
         subtotal: subTotal, postage: postageTotal,
         postageName: hasNoPost ? "Collection Only" : (postage?.name || ""),
         total: grandTotal, squareOrderId: squarePayment.id,
+        squarePaymentId: squarePayment.id,
+        squareReceiptUrl: squarePayment.receiptUrl || null,
         validDefence: validDefence.trim() || null,
         discountCode: shopAppliedDiscount ? shopAppliedDiscount.code : null,
         discountSaving: shopDiscountSaving > 0 ? shopDiscountSaving : null,

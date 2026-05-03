@@ -280,7 +280,9 @@ export const bookings = wrapWithTimeout({
       qty:            booking.qty,
       extras:         booking.extras,
       total:          booking.total,
-      square_order_id: booking.squareOrderId || null,
+      square_order_id:     booking.squareOrderId    || null,
+      square_payment_id:   booking.squarePaymentId  || null,
+      square_receipt_url:  booking.squareReceiptUrl || null,
     }).select().single()
     if (error) throw error
     return data
@@ -751,8 +753,10 @@ export const shopOrders = wrapWithTimeout({
       total:            order.total,
       postage_name:     order.postageName || '',
       status:           'pending',
-      square_order_id:  order.squareOrderId || null,
-      valid_defence:    order.validDefence  || null,
+      square_order_id:     order.squareOrderId    || null,
+      square_payment_id:   order.squarePaymentId  || null,
+      square_receipt_url:  order.squareReceiptUrl || null,
+      valid_defence:       order.validDefence     || null,
       discount_code:    order.discountCode  || null,
       discount_saving:  order.discountSaving != null ? Number(order.discountSaving) : null,
     }).select().single()

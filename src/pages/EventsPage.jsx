@@ -309,7 +309,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             type: "walkOn", qty: bCart.walkOn,
             extras: extrasSnapshot,
             total: Math.round(walkOnPaid * 100) / 100,
-            squareOrderId: squarePayment.id,
+            squareOrderId:    squarePayment.id,
+            squarePaymentId:  squarePayment.id,
+            squareReceiptUrl: squarePayment.receiptUrl || null,
           }));
         }
         if (bCart.rental > 0) {
@@ -318,7 +320,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             type: "rental", qty: bCart.rental,
             extras: bCart.walkOn > 0 ? {} : extrasSnapshot,
             total: Math.round(rentalPaid * 100) / 100,
-            squareOrderId: squarePayment.id,
+            squareOrderId:    squarePayment.id,
+            squarePaymentId:  squarePayment.id,
+            squareReceiptUrl: squarePayment.receiptUrl || null,
           }));
         }
         await Promise.all(bookingPromises);
