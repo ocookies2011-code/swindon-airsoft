@@ -411,21 +411,35 @@ function AdminShop({ data, save, showToast, cu }) {
       {tab === "products" && (
         <div>
           {/* ── Stats bar ── */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:8, marginBottom:16 }}>
-            {[
-              { label:"Total Products", val:shopOrder.length, color:"var(--accent)" },
-              { label:"Total Stock", val:shopOrder.reduce((s,p) => s + (p.variants?.length > 0 ? p.variants.reduce((vs,v)=>vs+Number(v.stock),0) : Number(p.stock||0)), 0), color:"var(--accent)" },
-              { label:"Out of Stock", val:shopOrder.filter(p => p.variants?.length > 0 ? p.variants.every(v=>Number(v.stock)===0) : Number(p.stock||0)===0).length, color:"var(--red)" },
-              { label:"Low Stock", val:lowStockItems.length, color:"var(--gold)" },
-              { label:"Hidden", val:shopOrder.filter(p=>p.hiddenFromShop).length, color:"var(--muted)" },
-              { label:"On Sale", val:shopOrder.filter(p=>p.onSale).length, color:"#ce93d8" },
-            ].map(s => (
-              <div key={s.label} style={{ background:"#111", border:"1px solid #1e1e1e", padding:"10px 14px", borderLeft:`3px solid ${s.color}` }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:22, color:s.color, lineHeight:1 }}>{s.val}</div>
-                <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em", marginTop:3 }}>{s.label.toUpperCase()}</div>
+          {(() => {
+            const totalStock = shopOrder.reduce((s,p) =>
+              s + (p.variants?.length > 0
+                ? p.variants.reduce((vs,v) => vs + Number(v.stock||0), 0)
+                : Number(p.stock||0)), 0);
+            const outOfStock = shopOrder.reduce((s,p) => {
+              if (p.variants?.length > 0) {
+                return s + p.variants.filter(v => Number(v.stock||0) === 0).length;
+              }
+              return s + (Number(p.stock||0) === 0 ? 1 : 0);
+            }, 0);
+            return (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:1, marginBottom:16, background:"#1a1a1a", border:"1px solid #1a1a1a", overflow:"hidden" }}>
+                {[
+                  { label:"Products",    val:shopOrder.length,                                          color:"var(--accent)" },
+                  { label:"Total Stock", val:totalStock,                                                color:"var(--accent)" },
+                  { label:"Out of Stock",val:outOfStock,                                                color:outOfStock>0?"var(--red)":"var(--muted)" },
+                  { label:"Low Stock",   val:lowStockItems.length,                                      color:lowStockItems.length>0?"var(--gold)":"var(--muted)" },
+                  { label:"Hidden",      val:shopOrder.filter(p=>p.hiddenFromShop).length,              color:"var(--muted)" },
+                  { label:"On Sale",     val:shopOrder.filter(p=>p.onSale).length,                      color:shopOrder.filter(p=>p.onSale).length>0?"#ce93d8":"var(--muted)" },
+                ].map(s => (
+                  <div key={s.label} style={{ background:"#111", padding:"12px 16px", display:"flex", flexDirection:"column", gap:4 }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:26, color:s.color, lineHeight:1 }}>{s.val}</div>
+                    <div style={{ fontSize:9, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".12em" }}>{s.label.toUpperCase()}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
 
           {/* ── Low stock banner ── */}
           {lowStockItems.length > 0 && (
