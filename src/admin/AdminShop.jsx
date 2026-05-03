@@ -907,11 +907,17 @@ function AdminShop({ data, save, showToast, cu }) {
                     }}
                     style={{marginBottom:10,background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:2,padding:"10px 12px",cursor:"grab"}}
                   >
-                    <div style={{display:"grid",gridTemplateColumns:"auto 1fr 100px 100px auto",gap:8,alignItems:"center",marginBottom:4}}>
+                    <div style={{display:"grid",gridTemplateColumns:"auto 1fr 110px 110px auto",gap:8,alignItems:"center",marginBottom:4}}>
                       <span style={{color:"var(--muted)",fontSize:14,textAlign:"center",userSelect:"none",cursor:"grab"}}>☰</span>
                       <input value={v.name} onChange={e => updateVariant(v.id, "name", e.target.value)} placeholder="Variant name (e.g. Red, Large)" style={{fontSize:12}} />
-                      <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="Price £" style={{fontSize:12}} />
-                      <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
+                      <div style={{position:"relative"}}>
+                        <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:10,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace",pointerEvents:"none"}}>£</span>
+                        <input type="number" step="0.01" value={v.price} onChange={e => updateVariant(v.id, "price", e.target.value)} placeholder="0.00" style={{fontSize:12,paddingLeft:18,width:"100%",boxSizing:"border-box"}} title="Sell price" />
+                      </div>
+                      <div style={{position:"relative"}}>
+                        <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:9,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace",pointerEvents:"none",letterSpacing:".05em"}}>QTY</span>
+                        <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="0" style={{fontSize:12,paddingLeft:30,width:"100%",boxSizing:"border-box"}} title="Stock quantity" />
+                      </div>
                       <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
                     </div>
                     <div style={{marginBottom:6}}>
@@ -931,10 +937,16 @@ function AdminShop({ data, save, showToast, cu }) {
                   </div>
                 ))}
                 {/* Add new variant row */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px auto",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 110px 110px auto",gap:8,alignItems:"center",marginTop:8,paddingTop:8,borderTop:"1px solid #1e1e1e"}}>
                   <input value={newVariant.name} onChange={e => setNewVariant(p => ({...p, name: e.target.value}))} placeholder="New variant name" style={{fontSize:12}} />
-                  <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="Price £" style={{fontSize:12}} />
-                  <input type="number" value={newVariant.stock} onChange={e => setNewVariant(p => ({...p, stock: e.target.value}))} placeholder="Stock" style={{fontSize:12}} />
+                  <div style={{position:"relative"}}>
+                    <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:10,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace",pointerEvents:"none"}}>£</span>
+                    <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="0.00" style={{fontSize:12,paddingLeft:18,width:"100%",boxSizing:"border-box"}} title="Sell price" />
+                  </div>
+                  <div style={{position:"relative"}}>
+                    <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:9,color:"var(--muted)",fontFamily:"'Share Tech Mono',monospace",pointerEvents:"none",letterSpacing:".05em"}}>QTY</span>
+                    <input type="number" value={newVariant.stock} onChange={e => setNewVariant(p => ({...p, stock: e.target.value}))} placeholder="0" style={{fontSize:12,paddingLeft:30,width:"100%",boxSizing:"border-box"}} title="Stock quantity" />
+                  </div>
                   <button className="btn btn-sm btn-primary" onClick={addVariant} style={{whiteSpace:"nowrap"}}>+ Add</button>
                 </div>
                 <div style={{marginTop:4}}>
