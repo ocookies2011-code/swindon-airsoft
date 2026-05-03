@@ -608,8 +608,8 @@ function AdminShop({ data, save, showToast, cu }) {
                     background: "#0d0d0d", border: "1px solid rgba(200,255,0,.25)", borderTop: "none",
                     borderLeft: "3px solid var(--accent)", marginBottom: 6, overflow: "hidden",
                   }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 90px", gap: 0, borderBottom: "1px solid #1a1a1a", padding: "6px 14px" }}>
-                      {["VARIANT", "SELL", "STOCK"].map(h => (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 90px 110px", gap: 0, borderBottom: "1px solid #1a1a1a", padding: "6px 14px" }}>
+                      {["VARIANT", "SELL", "STOCK", "PRODUCT CODE"].map(h => (
                         <div key={h} style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".15em", color: "var(--muted)", fontFamily: "'Share Tech Mono',monospace" }}>{h}</div>
                       ))}
                     </div>
@@ -618,7 +618,7 @@ function AdminShop({ data, save, showToast, cu }) {
                       const stockColor = stockNum === 0 ? "var(--red)" : stockNum <= 5 ? "var(--gold)" : "var(--accent)";
                       return (
                         <div key={v.id} style={{
-                          display: "grid", gridTemplateColumns: "1fr 70px 90px", gap: 0,
+                          display: "grid", gridTemplateColumns: "1fr 70px 90px 110px", gap: 0,
                           padding: "8px 14px", borderBottom: i < item.variants.length - 1 ? "1px solid #1a1a1a" : "none",
                           background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,.015)",
                         }}>
@@ -635,11 +635,14 @@ function AdminShop({ data, save, showToast, cu }) {
                               <div style={{ height: "100%", width: `${Math.min(100, (stockNum / 30) * 100)}%`, background: stockColor }} />
                             </div>
                           </div>
+                          <div style={{ fontSize: 11, fontFamily: "'Share Tech Mono',monospace", color: v.supplierCode ? "rgba(200,255,0,.5)" : "#333", letterSpacing: ".04em", alignSelf: "center" }}>
+                            {v.supplierCode ? `#${v.supplierCode}` : "—"}
+                          </div>
                         </div>
                       );
                     })}
                     {/* Totals row */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 90px", gap: 0, padding: "7px 14px", borderTop: "1px solid rgba(200,255,0,.15)", background: "rgba(200,255,0,.03)" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 90px 110px", gap: 0, padding: "7px 14px", borderTop: "1px solid rgba(200,255,0,.15)", background: "rgba(200,255,0,.03)" }}>
                       <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".1em", color: "var(--accent)", fontFamily: "'Barlow Condensed',sans-serif" }}>TOTAL</div>
                       <div style={{ fontSize: 11, color: "var(--muted)" }}>
                         £{Math.min(...item.variants.map(v => Number(v.price))).toFixed(2)}–£{Math.max(...item.variants.map(v => Number(v.price))).toFixed(2)}
@@ -647,6 +650,7 @@ function AdminShop({ data, save, showToast, cu }) {
                       <div style={{ fontSize: 12, fontWeight: 700, color: stock.color, fontFamily: "'Share Tech Mono',monospace" }}>
                         {item.variants.reduce((s, v) => s + Number(v.stock), 0)} units
                       </div>
+                      <div />
                     </div>
                   </div>
                 )}
