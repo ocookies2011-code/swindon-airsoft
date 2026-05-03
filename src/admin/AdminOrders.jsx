@@ -14,34 +14,37 @@ function AdminOrdersInline({ showToast, cu }) {
   const [detail, setDetail] = useState(null);
   const [trackingModal, setTrackingModal] = useState(null);
   const STATUS_COLORS = { pending: "blue", processing: "gold", dispatched: "green", completed: "teal", cancelled: "red", return_requested: "gold", return_approved: "blue", return_received: "teal" };
-  const mounted = useRef(false);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const result = await api.shopOrders.getAll();
-      const priority = { pending: 0, return_requested: 1, processing: 2, dispatched: 3, return_approved: 4, return_received: 5, completed: 6, cancelled: 7 };
-      result.sort((a, b) => {
-        const pa = priority[a.status] ?? 99, pb = priority[b.status] ?? 99;
-        if (pa !== pb) return pa - pb;
-        return new Date(b.created_at) - new Date(a.created_at);
+  // Simple ref to hold latest fetch trigger — no isMounted complexity
+  const fetchRef = useRef(null);
+
+  const runFetch = () => {
+    setLoading(true);
+    setError(null);
+    const priority = { pending: 0, return_requested: 1, processing: 2, dispatched: 3, return_approved: 4, return_received: 5, completed: 6, cancelled: 7 };
+    api.shopOrders.getAll()
+      .then(result => {
+        result.sort((a, b) => {
+          const pa = priority[a.status] ?? 99, pb = priority[b.status] ?? 99;
+          if (pa !== pb) return pa - pb;
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+        setOrders(result);
+        setLoading(false);
+      })
+      .catch(e => {
+        setError(e.message);
+        setLoading(false);
       });
-      if (mounted.current) setOrders(result);
-    } catch (e) {
-      if (mounted.current) setError(e.message);
-    } finally {
-      if (mounted.current) setLoading(false);
-    }
-  }, []);
+  };
 
   useEffect(() => {
-    mounted.current = true;
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 30000);
-    const onVisible = () => { if (document.visibilityState === "visible") fetchOrders(); };
+    runFetch();
+    const interval = setInterval(runFetch, 30000);
+    const onVisible = () => { if (document.visibilityState === "visible") runFetch(); };
     document.addEventListener("visibilitychange", onVisible);
-    return () => { mounted.current = false; clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
-  }, [fetchOrders]);
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
+  }, []); // eslint-disable-line
 
   const doDispatch = async (id, tracking, isUpdate = false) => {
     try {
@@ -184,7 +187,7 @@ function AdminOrdersInline({ showToast, cu }) {
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
         <div style={{ fontSize:13, color:"var(--muted)" }}>{orders.length} orders · <span style={{ color:"var(--accent)" }}>£{totalRevenue.toFixed(2)}</span> total</div>
-        <button className="btn btn-ghost btn-sm" onClick={fetchOrders} disabled={loading}>🔄 Refresh</button>
+        <button className="btn btn-ghost btn-sm" onClick={runFetch} disabled={loading}>🔄 Refresh</button>
       </div>
       {returnCount > 0 && (
         <div style={{ marginBottom: 12 }}>
@@ -244,7 +247,7 @@ function AdminOrdersInline({ showToast, cu }) {
       ) : error ? (
         <div className="card" style={{ textAlign:"center", padding:40 }}>
           <div style={{ color:"var(--red)", marginBottom:12 }}>Failed: {error}</div>
-          <button className="btn btn-ghost" onClick={fetchOrders}>Retry</button>
+          <button className="btn btn-ghost" onClick={runFetch}>Retry</button>
         </div>
       ) : (
         <div className="card">

@@ -30,7 +30,7 @@ function AdminShop({ data, save, showToast, cu }) {
   }, []);
   const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", variants: [] };
+  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", supplierCode: "", variants: [] };
 
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
@@ -111,13 +111,13 @@ function AdminShop({ data, save, showToast, cu }) {
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   // Variant editor state
-  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "" });
+  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "", supplierCode: "" });
 
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
-    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, image: "" };
+    const newVar = { id: uid(), name: newVariant.name, price: Number(newVariant.price) || 0, stock: Number(newVariant.stock) || 0, supplierCode: newVariant.supplierCode || "", image: "" };
     setField("variants", [...(form.variants || []), newVar]);
-    setNewVariant({ name: "", price: "", stock: "" });
+    setNewVariant({ name: "", price: "", stock: "", supplierCode: "" });
   };
   const removeVariant = (id) => setField("variants", form.variants.filter(varItem => varItem.id !== id));
   const updateVariant = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
@@ -372,7 +372,7 @@ function AdminShop({ data, save, showToast, cu }) {
               {bulkSyncing ? "⏳ Syncing…" : "🔄 Sync All to Square"}
             </button>
           )}
-          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
           {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
         </div>
       </div>
@@ -451,7 +451,7 @@ function AdminShop({ data, save, showToast, cu }) {
                   <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 12px", marginTop:6 }}>
                     {lowStockItems.map((item, i) => (
                       <span key={i} style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:item.stock===0?"var(--red)":"var(--gold)", cursor:"pointer" }}
-                        onClick={() => { setForm({ ...shopOrder.find(p=>p.id===item.id), variants:shopOrder.find(p=>p.id===item.id)?.variants||[] }); setNewVariant({name:"",price:"",stock:""}); setSavingProduct(false); setModal(item.id); }}>
+                        onClick={() => { setForm({ ...shopOrder.find(p=>p.id===item.id), variants:shopOrder.find(p=>p.id===item.id)?.variants||[] }); setNewVariant({name:"",price:"",stock:"",supplierCode:""}); setSavingProduct(false); setModal(item.id); }}>
                         {item.stock===0?"🔴":"🟡"} {item.name}{item.variant?` (${item.variant})`:""}: <strong>{item.stock}</strong>
                       </span>
                     ))}
@@ -486,7 +486,7 @@ function AdminShop({ data, save, showToast, cu }) {
           </div>
 
           {(() => {
-            const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"" }); setSavingProduct(false); setModal(item.id); };
+            const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); };
 
             // Stock summary for a product
             const stockSummary = (item) => {
@@ -570,6 +570,7 @@ function AdminShop({ data, save, showToast, cu }) {
                       {item.variants?.length > 0 && <span className="tag tag-blue" style={{fontSize:9,padding:"1px 6px"}}>{item.variants.length} VARIANTS</span>}
                     </div>
                     {item.category && <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>{item.category.toUpperCase()}</div>}
+                    {item.supplierCode && <div style={{ fontSize:10, color:"rgba(200,255,0,.4)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".06em", marginTop:2 }}>#{item.supplierCode}</div>}
                   </div>
 
                   {/* Price */}
@@ -776,6 +777,14 @@ function AdminShop({ data, save, showToast, cu }) {
               </div>
             </div>
 
+            {/* Supplier / Product Code */}
+            <div className="form-group">
+              <label>Supplier / Product Code <span style={{ fontWeight:400, color:"var(--muted)", fontSize:11 }}>(optional — for reordering stock)</span></label>
+              <input value={form.supplierCode || ""} onChange={e => setField("supplierCode", e.target.value)}
+                placeholder="e.g. NR-0.20-3500 or SKU-12345"
+                style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13 }} />
+            </div>
+
             {/* Rich description editor */}
             <div className="form-group">
               <label>Description</label>
@@ -901,6 +910,10 @@ function AdminShop({ data, save, showToast, cu }) {
                       <input type="number" value={v.stock} onChange={e => updateVariant(v.id, "stock", e.target.value)} placeholder="Stock" style={{fontSize:12}} />
                       <button className="btn btn-sm btn-danger" onClick={() => removeVariant(v.id)} style={{padding:"6px 10px"}}>✕</button>
                     </div>
+                    <div style={{marginBottom:6}}>
+                      <input value={v.supplierCode || ""} onChange={e => updateVariantRaw(v.id, "supplierCode", e.target.value)}
+                        placeholder="Supplier/product code (optional)" style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",width:"100%",borderColor:"#2a2a2a",background:"#0d0d0d",color:"var(--muted)"}} />
+                    </div>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       {v.image && <img src={v.image} style={{width:52,height:52,objectFit:"cover",border:"1px solid #333",flexShrink:0}} alt="" />}
                       <label style={{cursor:"pointer",flex:1}}>
@@ -919,6 +932,10 @@ function AdminShop({ data, save, showToast, cu }) {
                   <input type="number" step="0.01" value={newVariant.price} onChange={e => setNewVariant(p => ({...p, price: e.target.value}))} placeholder="Price £" style={{fontSize:12}} />
                   <input type="number" value={newVariant.stock} onChange={e => setNewVariant(p => ({...p, stock: e.target.value}))} placeholder="Stock" style={{fontSize:12}} />
                   <button className="btn btn-sm btn-primary" onClick={addVariant} style={{whiteSpace:"nowrap"}}>+ Add</button>
+                </div>
+                <div style={{marginTop:4}}>
+                  <input value={newVariant.supplierCode || ""} onChange={e => setNewVariant(p => ({...p, supplierCode: e.target.value}))}
+                    placeholder="Supplier/product code for new variant (optional)" style={{fontSize:11,fontFamily:"'Share Tech Mono',monospace",width:"100%",borderColor:"#1e2e0e",background:"#0a0f06",color:"var(--muted)"}} />
                 </div>
               </div>
             </div>

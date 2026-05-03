@@ -639,6 +639,7 @@ function normaliseProduct(p) {
     gameExtra:      p.game_extra || false,
     hiddenFromShop: p.hidden_from_shop || false,
     category:    p.category || '',
+    supplierCode: p.supplier_code || '',
     variants,
   }
 }
@@ -723,6 +724,7 @@ function toSnakeProduct(p) {
     game_extra:       p.gameExtra || false,
     hidden_from_shop: p.hiddenFromShop || false,
     category:     p.category || '',
+    supplier_code: p.supplierCode || '',
     variants:    p.variants || [],
     // Note: _descTab is a UI-only field, never saved
   }
