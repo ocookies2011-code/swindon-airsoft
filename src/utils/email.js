@@ -17,14 +17,19 @@ async function sendEmail({ toEmail, toName, subject, htmlContent, replyTo, reply
     });
   }
   window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-  await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+
+  const params = {
     to_email:     toEmail,
     to_name:      toName || "",
     subject:      subject,
     html_content: htmlContent,
-    reply_to:     replyTo || "",
-    reply_to_name: replyToName || "",
-  });
+  };
+
+  // EmailJS v4: pass replyTo directly in the send options object
+  // This sets the actual Reply-To email header, not a template variable
+  const options = replyTo ? { replyTo: replyToName ? `${replyToName} <${replyTo}>` : replyTo } : {};
+
+  await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params, options);
 }
 
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
