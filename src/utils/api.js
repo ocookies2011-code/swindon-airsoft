@@ -1127,30 +1127,34 @@ export const visits = wrapWithTimeout({
   //
   async track({ page, userId, userName, sessionId }) {
     try {
+      if (!sessionId) return;
       const now = new Date().toISOString();
-      const conflictKey = userId ? { col: 'user_id',   val: userId    }
-                                 : { col: 'session_id', val: sessionId };
-      if (!conflictKey.val) return;
 
-      // Check if a row already exists for this user/session
+      // Key is ALWAYS session_id + page — one row per page per browser session.
+      // This means every page a visitor browses gets its own row, whether they
+      // are anonymous or logged in. User identity is stamped on the row immediately
+      // if known, or backfilled later via backfillUser() when auth resolves.
       const { data: existing } = await supabase
         .from('page_visits')
-        .select('id, country, city, lat, lon, visit_count')
-        .eq(conflictKey.col, conflictKey.val)
+        .select('id, user_id, visit_count')
+        .eq('session_id', sessionId)
+        .eq('page', page)
         .maybeSingle();
 
       if (existing) {
-        // Row exists — update non-geo fields plus always refresh geo
-        // (always overwrite so bad cached coords get corrected on next visit)
-        await supabase.from('page_visits').update({
-          page,
+        // Row exists for this session+page — increment count and update identity
+        // if the visitor has since logged in (user_id was null when row was created).
+        const updates = {
           last_seen_at: now,
           user_agent:   navigator.userAgent || null,
-          ...(userId ? { user_name: userName || null, session_id: sessionId || null } : {}),
           visit_count:  (existing.visit_count || 1) + 1,
-        }).eq('id', existing.id);
+          ...(userId && !existing.user_id
+            ? { user_id: userId, user_name: userName || null }
+            : {}),
+        };
+        await supabase.from('page_visits').update(updates).eq('id', existing.id);
 
-        // Always re-run geo and overwrite — fixes stale/bad coords from old API
+        // Re-run geo in background (fixes stale coords)
         _lookupGeo().then(geo => {
           if (!geo) return;
           supabase.from('page_visits').update({
@@ -1161,11 +1165,12 @@ export const visits = wrapWithTimeout({
           }).eq('id', existing.id).then(() => {}).catch(() => {});
         }).catch(() => {});
       } else {
-        // New row — insert with geo filled in once lookup resolves
+        // New session+page combination — insert a fresh row
         const { data: newRow } = await supabase.from('page_visits').insert({
-          ...(userId ? { user_id: userId, user_name: userName || null, session_id: sessionId || null }
-                     : { session_id: sessionId, user_id: null, user_name: null }),
+          session_id: sessionId,
           page,
+          user_id:    userId    || null,
+          user_name:  userName  || null,
           last_seen_at: now,
           visit_count:  1,
           user_agent:   navigator.userAgent || null,
@@ -1188,34 +1193,26 @@ export const visits = wrapWithTimeout({
   },
 
   // Backfill user_id + user_name on the anonymous session row when auth resolves.
-  // Also merges the anon session row into the user row (deletes anon, updates user).
+  // Claims all anonymous rows for this session when the user logs in.
+  // Each page the visitor browsed before logging in gets their identity stamped on it.
   async backfillUser({ sessionId, userId, userName }) {
     if (!sessionId || !userId) return;
     try {
-      // Fetch both rows
-      const [{ data: userRow }, { data: anonRow }] = await Promise.all([
-        supabase.from('page_visits').select('id, visit_count').eq('user_id', userId).maybeSingle(),
-        supabase.from('page_visits').select('id, visit_count, country, city, page, last_seen_at').eq('session_id', sessionId).is('user_id', null).maybeSingle(),
-      ]);
+      // Fetch ALL anonymous rows for this session (one per page visited before login)
+      const { data: anonRows } = await supabase
+        .from('page_visits')
+        .select('id')
+        .eq('session_id', sessionId)
+        .is('user_id', null);
 
-      if (anonRow && userRow) {
-        // Both exist — merge anon into user row, then delete the anon row
-        const mergedCount = (userRow.visit_count || 1) + (anonRow.visit_count || 1);
-        await supabase.from('page_visits').update({
-          user_name:    userName || null,
-          visit_count:  mergedCount,
-          // Keep geo from anon row if user row has none
-          ...(anonRow.country ? { country: anonRow.country, city: anonRow.city } : {}),
-        }).eq('user_id', userId);
-        await supabase.from('page_visits').delete().eq('id', anonRow.id);
-      } else if (anonRow && !userRow) {
-        // Only anon row — promote it to a user row
+      if (anonRows && anonRows.length > 0) {
+        // Claim every anonymous row by stamping the user's identity on them
+        const ids = anonRows.map(r => r.id);
         await supabase.from('page_visits').update({
           user_id:   userId,
           user_name: userName || null,
-        }).eq('id', anonRow.id);
+        }).in('id', ids);
       }
-      // If only user row exists, nothing to do
     } catch { /* non-fatal */ }
   },
 
