@@ -6,7 +6,7 @@ import * as api from "../api";
 import { fmtDate, gmtShort } from "../utils";
 import { logAction } from "./adminHelpers";
 
-function AdminRevenue({ data, save, showToast, cu, goToPlayer }) {
+function AdminRevenue({ data, save, showToast, cu }) {
   const [cashSales, setCashSales] = useState([]);
   const [shopOrders, setShopOrders] = useState([]);
   const [selected, setSelected] = useState(null); // selected transaction for detail modal
@@ -422,7 +422,7 @@ function AdminRevenue({ data, save, showToast, cu, goToPlayer }) {
                 {pageRows.map(t => (
                   <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => openTransaction(t)}>
                     <td style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>{gmtFull(t.date)}</td>
-                    <td style={{ fontWeight: 600 }}><PlayerLink id={t.userId} name={t.userName} goToPlayer={goToPlayer} /></td>
+                    <td style={{ fontWeight: 600 }}><PlayerLink id={t.userId} name={t.userName} onNameClick={() => setSelected(t)} /></td>
                     <td style={{ maxWidth: 260 }}>
                       {t.source === "cash" || t.source === "terminal" || t.source === "shop"
                         ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
@@ -641,7 +641,7 @@ function AdminRevenue({ data, save, showToast, cu, goToPlayer }) {
                 {monthDetail.bookings.map(t => (
                   <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => { setMonthDetail(null); openTransaction(t); }}>
                     <td style={{ fontSize: 12, color: "var(--muted)" }}>{gmtFull(t.date)}</td>
-                    <td><PlayerLink id={t.userId} name={t.userName} goToPlayer={goToPlayer} /></td>
+                    <td><PlayerLink id={t.userId} name={t.userName} onNameClick={() => setSelected(t)} /></td>
                     <td style={{ maxWidth: 240 }}>
                       {t.source === "cash" || t.source === "terminal" || t.source === "shop"
                         ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>

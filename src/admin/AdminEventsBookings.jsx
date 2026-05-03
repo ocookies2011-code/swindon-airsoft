@@ -8,7 +8,7 @@ import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
 import { diffFields, logAction } from "./adminHelpers";
 
-function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu, goToPlayer }) {
+function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [resendBusy, setResendBusy] = useState({}); // bookingId -> true while sending
@@ -750,7 +750,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
                       return (
                         <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
-                          <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} goToPlayer={goToPlayer} /></td>
+                          <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: bookingEv || data.events?.find(e => e.id === b.eventId), eventTitle: (bookingEv || data.events?.find(e => e.id === b.eventId))?.title })} /></td>
                           <td style={{ fontSize:12, color:"var(--muted)" }}>{bookingEv?.title || "—"}</td>
                           <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                           <td>{b.qty}</td>
@@ -934,7 +934,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
                     return (
                       <tr key={b.id} style={{ background: b.checkedIn ? "#1a0e08" : "transparent" }}>
-                        <td style={{ fontWeight: 600 }}><PlayerLink id={b.userId} name={b.userName} goToPlayer={goToPlayer} /></td>
+                        <td style={{ fontWeight: 600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: data.events?.find(e => e.id === b.eventId), eventTitle: data.events?.find(e => e.id === b.eventId)?.title })} /></td>
                         <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                         <td>{b.qty}</td>
                         <td style={{ fontSize: 11 }}>
@@ -1049,7 +1049,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 <div className="modal-box wide" onClick={e => e.stopPropagation()}>
                   <div className="modal-title">🎟 Booking Details</div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
-                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}><PlayerLink id={cb.userId} name={cb.userName} goToPlayer={goToPlayer} /></div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.userName}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || evObj?.title}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
@@ -1171,7 +1171,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               <tbody>
                 {[...viewEv.bookings].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => (
                   <tr key={b.id}>
-                    <td><PlayerLink id={b.userId} name={b.userName} goToPlayer={goToPlayer} /></td>
+                    <td><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: data.events?.find(e => e.id === b.eventId), eventTitle: data.events?.find(e => e.id === b.eventId)?.title })} /></td>
                     <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                     <td>{b.qty}</td>
                     <td style={{fontSize:11}}>
@@ -1491,7 +1491,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     {waitlistView.entries.map((w, i) => (
                       <tr key={w.id}>
                         <td style={{ color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{i + 1}</td>
-                        <td style={{ fontWeight:600 }}><PlayerLink id={w.user_id} name={w.user_name} goToPlayer={goToPlayer} /></td>
+                        <td style={{ fontWeight:600 }}>{w.user_name}</td>
                         <td style={{ fontSize:11 }}>{w.user_email}</td>
                         <td>{w.ticket_type === "walkOn" ? "🎯 Walk-On" : "🪖 Rental"}</td>
                         <td style={{ fontSize:11, fontFamily:"'Share Tech Mono',monospace" }}>{new Date(w.created_at).toLocaleDateString("en-GB")}</td>

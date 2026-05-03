@@ -1,5 +1,4 @@
 // admin/AdminVisitorStats.jsx — visitor map + stats
-import { PlayerLink } from '../utils/PlayerLink';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
@@ -270,7 +269,7 @@ function UKVisitorMap({ visitData }) {
 
 
 // ── Admin Visitor Stats ───────────────────────────────────
-function AdminVisitorStats({ goToPlayer }) {
+function AdminVisitorStats() {
   const [visitData, setVisitData]         = useState([]);
   const [allTimeCounts, setAllTimeCounts] = useState(null);
   const [loading, setLoading]             = useState(true);
@@ -680,7 +679,7 @@ function AdminVisitorStats({ goToPlayer }) {
                 const lastPage = userRow.lastPage || "—";
                 return (
                   <div key={userIdx} style={{ borderBottom:"1px solid #0f1a08", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8, alignItems:"center" }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}><PlayerLink id={userRow.id} name={userRow.name} goToPlayer={goToPlayer} style={{ color:'#b0c090' }} /></div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}>{userRow.name}</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, fontWeight:900, color:"#c8ff00" }}>{userRow.count}</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#3a5010", textTransform:"uppercase" }}>{PAGE_ICONS[lastPage] || "▸"} {lastPage}</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>{new Date(userRow.last).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}</div>

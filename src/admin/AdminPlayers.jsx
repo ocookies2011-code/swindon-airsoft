@@ -9,7 +9,7 @@ import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
 import { diffFields, logAction } from "./adminHelpers";
 
-function AdminPlayers({ data, save, updateUser, showToast, cu, goToPlayer }) {
+function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
@@ -625,7 +625,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu, goToPlayer }) {
                 <React.Fragment key={u.id}>
                 <tr style={{ background: selectedPlayerIds.has(u.id) ? "rgba(200,255,0,.03)" : "" }}>
                   <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
-                  <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></td>
+                  <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} /></td>
                   <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
                   <td>{u.gamesAttended}</td>
                   <td>
@@ -679,7 +679,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu, goToPlayer }) {
               {vipApps.map(u => (
                 <div key={u.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", padding:"10px 0", borderBottom:"1px solid rgba(200,160,0,.1)" }}>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:13 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></div>
+                    <div style={{ fontWeight:700, fontSize:13 }}><PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} /></div>
                     <div style={{ fontSize:11, color:"var(--muted)" }}>{u.email} · {u.gamesAttended} games</div>
                     {u.vipIdImages?.length > 0 && (
                       <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
@@ -717,7 +717,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu, goToPlayer }) {
               {allUsers.filter(u => u.deleteRequest).map(u => (
                 <div key={u.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", padding:"10px 0", borderBottom:"1px solid rgba(220,30,30,.1)" }}>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:13 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></div>
+                    <div style={{ fontWeight:700, fontSize:13 }}><PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} /></div>
                     <div style={{ fontSize:11, color:"var(--muted)" }}>{u.email}</div>
                   </div>
                   <div style={{ display:"flex", gap:6 }}>

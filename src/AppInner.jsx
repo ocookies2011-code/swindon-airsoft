@@ -524,7 +524,7 @@ function AppInner() {
         <AdminPanel
           data={data} cu={cu} save={save}
           updateUser={updateUserAndRefresh} updateEvent={updateEvent}
-          showToast={showToast} setPage={setPage} refresh={refresh} goToPlayer={goToPlayer}
+          showToast={showToast} setPage={setPage} refresh={refresh}
         />
       </>
     );

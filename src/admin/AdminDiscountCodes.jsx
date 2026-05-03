@@ -1,5 +1,4 @@
 // admin/AdminDiscountCodes.jsx
-import { PlayerLink } from '../utils/PlayerLink';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
@@ -7,7 +6,7 @@ import { fmtErr, fmtDate } from "../utils";
 import { tabBtn } from "./tabBtn";
 import { diffFields, logAction } from "./adminHelpers";
 
-function AdminDiscountCodes({ data, showToast, cu, goToPlayer }) {
+function AdminDiscountCodes({ data, showToast, cu }) {
   const EMPTY = { code: '', type: 'percent', value: '', maxUses: '', maxUsesPerUser: '', expiresAt: '', assignedUserIds: [], scope: 'all', active: true };
   const [codes, setCodes] = useState([]);
   const [redemptions, setRedemptions] = useState([]);
@@ -270,7 +269,7 @@ function AdminDiscountCodes({ data, showToast, cu, goToPlayer }) {
                       borderBottom: '1px solid var(--border)' }}>
                     <span style={{ fontSize: 16 }}>{form.assignedUserIds.includes(u.id) ? '✅' : '⬜'}</span>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 13 }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></div>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name}</div>
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{u.email}</div>
                     </div>
                   </div>
@@ -335,7 +334,7 @@ function AdminDiscountCodes({ data, showToast, cu, goToPlayer }) {
                           ? <span style={{ color: 'var(--muted)', fontSize: 12 }}>Anyone</span>
                           : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                               {assigned.map(u => (
-                                <span key={u.id} style={{ background: 'rgba(200,255,0,.15)', color: 'var(--accent)', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}><PlayerLink id={u.id} name={u.name} goToPlayer={goToPlayer} /></span>
+                                <span key={u.id} style={{ background: 'rgba(200,255,0,.15)', color: 'var(--accent)', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{u.name}</span>
                               ))}
                             </div>
                         }
@@ -382,7 +381,7 @@ function AdminDiscountCodes({ data, showToast, cu, goToPlayer }) {
                     <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '10px', fontSize: 12, color: 'var(--muted)' }}>{new Date(r.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       <td style={{ padding: '10px', fontWeight: 800, ...cs, fontSize: 15, color: 'var(--accent)' }}>{matchedCode?.code || r.code_id?.slice(0,8)}</td>
-                      <td style={{ padding: '10px', fontWeight: 600 }}>{r.user_id ? <PlayerLink id={r.user_id} name={r.user_name} goToPlayer={goToPlayer} /> : <span style={{ color: 'var(--muted)' }}>Guest</span>}</td>
+                      <td style={{ padding: '10px', fontWeight: 600 }}>{r.user_name || <span style={{ color: 'var(--muted)' }}>Guest</span>}</td>
                       <td style={{ padding: '10px' }}>
                         <span style={{
                           fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', padding: '2px 8px', borderRadius: 20,

@@ -40,7 +40,7 @@ import { TermsPage }       from "../pages/TermsPage";
 
 const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
 
-function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh, goToPlayer }) {
+function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
   const getInitialSection = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","players","shop",
@@ -193,15 +193,15 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         </div>
         <div className="admin-content">
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} isSuperAdmin={isSuperAdmin} />}
-          <div style={{ display: section === "events" ? "block" : "none" }}><AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} goToPlayer={goToPlayer} /></div>
-          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} goToPlayer={goToPlayer} />}
-          {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} goToPlayer={goToPlayer} />}
-          <div style={{ display: section === "players" ? "block" : "none" }}><AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} cu={cu} goToPlayer={goToPlayer} /></div>
-          {section === "cheat-reports" && <AdminCheatReports data={data} showToast={showToast} cu={cu} goToPlayer={goToPlayer} />}
+          <div style={{ display: section === "events" ? "block" : "none" }}><AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} /></div>
+          {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
+          {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
+          <div style={{ display: section === "players" ? "block" : "none" }}><AdminPlayers data={data} save={save} updateUser={updateUser} showToast={showToast} cu={cu} /></div>
+          {section === "cheat-reports" && <AdminCheatReports data={data} showToast={showToast} cu={cu} />}
           <div style={{ display: section === "shop" ? "block" : "none" }}><AdminShop data={data} save={save} showToast={showToast} cu={cu} /></div>
-          {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} goToPlayer={goToPlayer} />}
-          {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} goToPlayer={goToPlayer} />}
-          {section === "visitor-stats" && <AdminVisitorStats goToPlayer={goToPlayer} />}
+          {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
+          {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
+          {section === "visitor-stats" && <AdminVisitorStats />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}
@@ -210,11 +210,11 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "news-admin" && <AdminNews showToast={showToast} cu={cu} />}
           {section === "marshal-admin" && <AdminMarshalSchedule data={data} cu={cu} showToast={showToast} />}
           {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
-          {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} goToPlayer={goToPlayer} />}
+          {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
           {section === "gift-vouchers" && <AdminGiftVouchers showToast={showToast} cu={cu} />}
           {section === "settings" && <AdminSettings showToast={showToast} cu={cu} />}
           {section === "audit-log" && isSuperAdmin && <AdminAuditLog />}
-          {section === "ukara-admin" && <AdminUkaraApplications showToast={showToast} cu={cu} goToPlayer={goToPlayer} />}
+          {section === "ukara-admin" && <AdminUkaraApplications showToast={showToast} cu={cu} />}
         </div>
       </div>
     </div>

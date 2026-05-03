@@ -1,10 +1,9 @@
 // admin/AdminLeaderboard.jsx
-import { PlayerLink } from '../utils/PlayerLink';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
 
-function AdminLeaderboard({ data, updateUser, showToast, goToPlayer }) {
+function AdminLeaderboard({ data, updateUser, showToast }) {
   const board = data.users.filter(u => u.role === "player").sort((a, b) => b.gamesAttended - a.gamesAttended);
   return (
     <div>
@@ -15,7 +14,7 @@ function AdminLeaderboard({ data, updateUser, showToast, goToPlayer }) {
           <tbody>
             {board.map((boardPlayer, i) => (
               <tr key={boardPlayer.id}>
-                <td>{i + 1}</td><td style={{ fontWeight: 600 }}><PlayerLink id={boardPlayer.id} name={boardPlayer.name} goToPlayer={goToPlayer} /></td><td>{boardPlayer.gamesAttended}</td>
+                <td>{i + 1}</td><td style={{ fontWeight: 600 }}>{boardPlayer.name}</td><td>{boardPlayer.gamesAttended}</td>
                 <td>{boardPlayer.vipStatus === "active" ? <span className="tag tag-gold">⭐</span> : "—"}</td>
                 <td>{boardPlayer.leaderboardOptOut ? <span className="tag tag-red">Hidden</span> : <span className="tag tag-green">Visible</span>}</td>
               </tr>
