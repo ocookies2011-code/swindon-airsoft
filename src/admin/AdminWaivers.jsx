@@ -151,8 +151,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
             <th>Email</th>
             <th>Joined</th>
             {filterUnsigned && <th style={{ textAlign:"center" }}>Days Without Waiver</th>}
-            <th>Signed</th>
-            <th>Year</th>
+            {!filterUnsigned && <><th>Signed</th><th>Year</th></>}
             <th>Pending</th>
             <th></th>
             {filterUnsigned && <><th></th><th></th></>}
@@ -167,8 +166,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
                   <td style={{ fontSize:12, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>{u.email}</td>
                   <td style={{ fontSize:12, color:"var(--muted)" }}>{u.createdAt ? fmtDate(u.createdAt.slice(0,10)) : "—"}</td>
                   {filterUnsigned && <td style={{ textAlign:"center" }}>{daysBadge(u)}</td>}
-                  <td>{u.waiverSigned ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td>
-                  <td>{u.waiverYear || "—"}</td>
+                  {!filterUnsigned && <><td>{u.waiverSigned ? <span className="tag tag-green">✓</span> : <span className="tag tag-red">✗</span>}</td><td>{u.waiverYear || "—"}</td></>}
                   <td>{u.waiverPending ? (u.waiverPending._removeExtra ? <span className="tag tag-red">🗑 Removal</span> : <span className="tag tag-gold">⚠ Pending</span>) : "—"}</td>
                   <td><button className="btn btn-sm btn-ghost" onClick={() => setView(u.id)}>View</button></td>
                   {filterUnsigned && (
@@ -197,7 +195,7 @@ function AdminWaivers({ data, updateUser, showToast, embedded, filterUnsigned, c
                 </tr>
               );
             })}
-            {displayUsers.length === 0 && <tr><td colSpan={filterUnsigned ? 9 : 7} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>{filterUnsigned ? "All players have signed waivers ✓" : "No waivers on file"}</td></tr>}
+            {displayUsers.length === 0 && <tr><td colSpan={filterUnsigned ? 7 : 9} style={{ textAlign: "center", color: "var(--muted)", padding: 30 }}>{filterUnsigned ? "All players have signed waivers ✓" : "No waivers on file"}</td></tr>}
           </tbody>
         </table></div>
       </div>
