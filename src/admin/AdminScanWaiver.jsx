@@ -2,6 +2,7 @@
 // review/correct, then save as additional waiver on any player profile.
 import React, { useState, useRef, useCallback } from "react";
 import * as api from "../api";
+import { supabase } from "../supabaseClient";
 import { normaliseProfile } from "../api";
 
 const NATIONS = [
@@ -65,55 +66,14 @@ export function AdminScanWaiver({ data, updateUser, showToast }) {
     setScanError(null);
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: "image/jpeg",
-                  data: imageBase64,
-                }
-              },
-              {
-                type: "text",
-                text: `This is a scanned airsoft waiver form. Extract all the fields you can read and return ONLY a JSON object with these exact keys (use empty string if unreadable):
-{
-  "name": "full name of the participant",
-  "dob": "date of birth in YYYY-MM-DD format if possible, otherwise as written",
-  "addr1": "address line 1",
-  "addr2": "address line 2",
-  "city": "city/town",
-  "county": "county",
-  "postcode": "postcode",
-  "country": "country (default United Kingdom)",
-  "emergencyName": "emergency contact name",
-  "emergencyPhone": "emergency contact phone",
-  "medical": "any medical conditions or allergies listed (empty string if none or 'None')",
-  "isChild": false,
-  "guardian": "guardian name if minor"
-}
-Return ONLY the JSON, no explanation.`
-              }
-            ]
-          }]
-        })
+      // Call via Supabase edge function (keeps API key server-side)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("scan-waiver", {
+        body: { imageBase64, mediaType: "image/jpeg" },
       });
 
-      if (!res.ok) throw new Error("API request failed: " + res.status);
-      const json = await res.json();
-      const text = json.content?.[0]?.text || "";
-
-      // Parse the JSON from Claude's response
-      const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      const parsed = JSON.parse(cleaned);
+      if (fnError) throw new Error(fnError.message || "Edge function error");
+      if (!fnData?.ok) throw new Error(fnData?.error || "Extraction failed");
+      const parsed = fnData.data;
 
       setForm({
         ...blank(),
