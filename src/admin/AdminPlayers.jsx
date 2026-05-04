@@ -18,28 +18,13 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [viewPlayer, setViewPlayer] = useState(null);
   const [playerSpend, setPlayerSpend] = useState(null); // { bookings, shopOrders, total }
   const [waiverViewPlayer, setWaiverViewPlayer] = useState(null); // inline waiver panel
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [delAccountConfirm, setDelAccountConfirm] = useState(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [vipApproveModal, setVipApproveModal] = useState(null);
+  const [vipUkara, setVipUkara] = useState("");
+  const [vipApproveBusy, setVipApproveBusy] = useState(false);
 
-  // Fetch total spend + full shop order rows whenever the modal opens
-  useEffect(() => {
-    if (!viewPlayer) { setPlayerSpend(null); return; }
-    setPlayerSpend(null); // reset while loading
-    Promise.all([
-      supabase.from('bookings').select('total').eq('user_id', viewPlayer.id),
-      supabase.from('shop_orders')
-        .select('id, created_at, total, status, items, discount_code, discount_saving')
-        .eq('user_id', viewPlayer.id)
-        .order('created_at', { ascending: false }),
-    ]).then(([{ data: bRows }, { data: oRows }]) => {
-      const bookingTotal = (bRows || []).reduce((s, r) => s + Number(r.total || 0), 0);
-      const orderTotal   = (oRows  || []).reduce((s, r) => s + Number(r.total || 0), 0);
-      setPlayerSpend({
-        bookings: bookingTotal,
-        shopOrders: orderTotal,
-        total: bookingTotal + orderTotal,
-        orders: oRows || [],
-      });
-    }).catch(() => setPlayerSpend({ bookings: 0, shopOrders: 0, total: 0, orders: [] }));
-  }, [viewPlayer?.id]);
   const [contactPlayer, setContactPlayer] = useState(null);
   const [contactSubject, setContactSubject] = useState("");
   const [contactMsg, setContactMsg] = useState("");
@@ -131,18 +116,29 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
     return 0;
   });
 
-  const [savingEdit, setSavingEdit] = useState(false);
-
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") setSavingEdit(false); };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
-  const [delAccountConfirm, setDelAccountConfirm] = useState(null);
-  const [deletingAccount, setDeletingAccount] = useState(false);
-  const [vipApproveModal, setVipApproveModal] = useState(null); // user being approved
-  const [vipUkara, setVipUkara] = useState("");
-  const [vipApproveBusy, setVipApproveBusy] = useState(false);
+
+  // Fetch total spend + full shop order rows whenever the modal opens
+  useEffect(() => {
+    if (!viewPlayer) { setPlayerSpend(null); return; }
+    setPlayerSpend(null);
+    Promise.all([
+      supabase.from('bookings').select('total').eq('user_id', viewPlayer.id),
+      supabase.from('shop_orders')
+        .select('id, created_at, total, status, items, discount_code, discount_saving')
+        .eq('user_id', viewPlayer.id)
+        .order('created_at', { ascending: false }),
+    ]).then(([{ data: bRows }, { data: oRows }]) => {
+      const bookingTotal = (bRows || []).reduce((s, r) => s + Number(r.total || 0), 0);
+      const orderTotal   = (oRows  || []).reduce((s, r) => s + Number(r.total || 0), 0);
+      setPlayerSpend({ bookings: bookingTotal, shopOrders: orderTotal, total: bookingTotal + orderTotal, orders: oRows || [] });
+    }).catch(() => setPlayerSpend({ bookings: 0, shopOrders: 0, total: 0, orders: [] }));
+  }, [viewPlayer?.id]);
+
   const confirmDeleteAccount = async () => {
     setDeletingAccount(true);
     try {

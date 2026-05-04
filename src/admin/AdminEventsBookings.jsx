@@ -313,8 +313,14 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     showToast("Player list downloaded!");
   };
 
+  const [addBookingModal, setAddBookingModal] = useState(false);
+  const [addBookingForm, setAddBookingForm] = useState({ userId: "", type: "walkOn", qty: 1, extras: {} });
+  const [addBookingBusy, setAddBookingBusy] = useState(false);
+
   // ── Events logic ──
   const [savingEvent, setSavingEvent] = useState(false);
+  const [delEventConfirm, setDelEventConfirm] = useState(null);
+  const [deletingEvent, setDeletingEvent] = useState(false);
 
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") setSavingEvent(false); };
@@ -470,9 +476,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   };
 
   // ── Add Booking (admin) ──
-  const [addBookingModal, setAddBookingModal] = useState(false);
-  const [addBookingForm, setAddBookingForm] = useState({ userId: "", type: "walkOn", qty: 1, extras: {} });
-  const [addBookingBusy, setAddBookingBusy] = useState(false);
   const abf = (k, v) => setAddBookingForm(p => ({ ...p, [k]: v }));
 
   const submitAddBooking = async () => {
@@ -562,9 +565,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       showToast("Clone failed: " + (e.message || String(e)), "red");
     }
   };
-
-  const [delEventConfirm, setDelEventConfirm] = useState(null);
-  const [deletingEvent, setDeletingEvent] = useState(false);
 
   useEffect(() => {
     const payId = viewBooking?.squareOrderId;

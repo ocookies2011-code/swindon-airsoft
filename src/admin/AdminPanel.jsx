@@ -62,6 +62,9 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const pendingWaivers = data.users.filter(u => u.waiverPending).length;
   const pendingVip = data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length;  const deleteReqs = data.users.filter(u => u.deleteRequest).length;
   const [pendingOrders, setPendingOrders] = useState(0);
+  const [pendingReports, setPendingReports] = useState(0);
+  const [pendingUkara, setPendingUkara] = React.useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
     const fetchPending = () =>
       supabase.from("shop_orders").select("id", { count: "exact", head: true })
@@ -75,7 +78,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
-  const [pendingReports, setPendingReports] = useState(0);
   useEffect(() => {
     const fetchReports = () => {
       supabase.from("cheat_reports").select("id", { count: "exact", head: true }).eq("status", "pending")
@@ -88,7 +90,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
-  const [pendingUkara, setPendingUkara] = React.useState(0);
   React.useEffect(() => {
     const fetch = () => supabase.from("ukara_applications").select("id", { count: "exact", head: true }).eq("status", "pending")
       .then(({ count }) => setPendingUkara(count || 0)).catch(() => {});
@@ -139,7 +140,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     ...(isSuperAdmin ? [{ id: "audit-log", label: "Audit Log", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef9a9a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>, group: "SYSTEM" }] : []),
   ];
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="admin-shell">
