@@ -27,6 +27,8 @@ const ALLOWED_COUNTRY_CODES = new Set([
   "PL","PT","RO","SK","SI","ES","SE",
 ]);
 
+const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule"];
+
 const getInitialPage = () => {
   const parts = window.location.hash.replace("#","").split("/");
   const p = parts[0];
@@ -58,7 +60,6 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule"];
   const [publicProfileId, setPublicProfileId] = useState(() => {
     const parts = window.location.hash.replace("#","").split("/");
     return parts[0] === "player" ? (parts[1] || null) : null;
