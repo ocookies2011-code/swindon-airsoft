@@ -168,6 +168,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const canApplyVip = gamesAttended >= 3 && cu.vipStatus === "none" && !cu.vipApplied;
 
   const [picUploading, setPicUploading] = useState(false);
+  const [natOpen, setNatOpen] = useState(false); // nationality dropdown
   const handlePic = async (e) => {
     const file = e.target.files[0]; if (!file) return;
     setPicUploading(true);
@@ -432,14 +433,13 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
                 ["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],
                 ["IN","India"],["PH","Philippines"],["TH","Thailand"],
               ];
-              const [open, setOpen] = React.useState(false);
               const selected = NATIONS.find(([c]) => c === edit.nationality) || NATIONS[0];
               return (
                 <div style={{ position:"relative", maxWidth:280 }}>
                   {/* Trigger button — looks like a select */}
                   <button
                     type="button"
-                    onClick={() => setOpen(o => !o)}
+                    onClick={() => setNatOpen(o => !o)}
                     style={{ width:"100%", display:"flex", alignItems:"center", gap:10, background:"#1a1a1a", border:"1px solid #2a2a2a", color:"var(--text)", padding:"10px 14px", fontSize:14, cursor:"pointer", textAlign:"left" }}
                   >
                     <img src={`https://flagcdn.com/w40/${selected[0].toLowerCase()}.png`} srcSet={`https://flagcdn.com/w80/${selected[0].toLowerCase()}.png 2x`} width={28} height={19} alt={selected[0]} style={{ borderRadius:2, objectFit:"cover", flexShrink:0 }}/>
@@ -447,13 +447,13 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
                     <span style={{ color:"var(--muted)", fontSize:10 }}>▾</span>
                   </button>
                   {/* Dropdown list */}
-                  {open && (
+                  {natOpen && (
                     <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:999, background:"#1a1a1a", border:"1px solid #2a2a2a", borderTop:"none", maxHeight:240, overflowY:"auto" }}>
                       {NATIONS.map(([code, name]) => (
                         <button
                           key={code}
                           type="button"
-                          onClick={() => { setEdit(p => ({ ...p, nationality: code })); setOpen(false); }}
+                          onClick={() => { setEdit(p => ({ ...p, nationality: code })); setNatOpen(false); }}
                           style={{ width:"100%", display:"flex", alignItems:"center", gap:10, background: edit.nationality===code ? "rgba(200,255,0,.08)" : "transparent", border:"none", borderBottom:"1px solid #111", color: edit.nationality===code ? "var(--accent)" : "var(--text)", padding:"8px 14px", fontSize:13, cursor:"pointer", textAlign:"left" }}
                           onMouseEnter={e => { if(edit.nationality!==code) e.currentTarget.style.background="rgba(255,255,255,.04)"; }}
                           onMouseLeave={e => { if(edit.nationality!==code) e.currentTarget.style.background="transparent"; }}
