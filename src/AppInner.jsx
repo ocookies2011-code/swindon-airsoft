@@ -593,7 +593,8 @@ function AppInner() {
         {page === "qa"          && <QAPage data={data} />}
         {page === "gift-vouchers" && <GiftVoucherPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
-        {page === "profile"     && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
+        {page === "profile"     && cu  && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
+        {page === "profile"     && !cu && <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Please log in to view your profile.</div>}
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
         {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "about"       && <AboutPage setPage={setPage} />}
