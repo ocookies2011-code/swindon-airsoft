@@ -1053,21 +1053,49 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || evObj?.title}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
-                    {cb.squareOrderId && (
+                    {cb.squareOrderId && !cb.squareOrderId.startsWith('ADMIN-MANUAL-') && (
                       <div style={{ gridColumn:"1/-1", borderTop:"1px solid #1a1a1a", paddingTop:10, marginTop:4 }}>
-                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em", textTransform:"uppercase", marginBottom:6, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>Square Reference</div>
-                        <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
-                          <div>
-                            <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Transaction ID</div>
-                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00", letterSpacing:".06em", wordBreak:"break-all" }}>{cb.squareOrderId}</div>
-                          </div>
-                          {cb.squareReceiptUrl && (
+                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em", textTransform:"uppercase", marginBottom:8, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>Square Reference</div>
+                        {squareDetail?.loading && (
+                          <div style={{ color:"var(--muted)", fontSize:11 }}>Loading payment details…</div>
+                        )}
+                        {squareDetail?.error && (
+                          <div style={{ color:"var(--muted)", fontSize:11 }}>Could not load Square details — {squareDetail.error}</div>
+                        )}
+                        {squareDetail?.data && (
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
+                            {squareDetail.data.receiptNumber && (
+                              <div>
+                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Receipt No.</div>
+                                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"#c8ff00", fontWeight:700, letterSpacing:".06em" }}>{squareDetail.data.receiptNumber}</div>
+                              </div>
+                            )}
+                            {(squareDetail.data.cardBrand || squareDetail.data.last4) && (
+                              <div>
+                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Payment Method</div>
+                                <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>
+                                  {squareDetail.data.cardBrand ? squareDetail.data.cardBrand.charAt(0) + squareDetail.data.cardBrand.slice(1).toLowerCase() : ""}{squareDetail.data.last4 ? ` ${squareDetail.data.last4}` : ""}
+                                </div>
+                              </div>
+                            )}
+                            {squareDetail.data.entryMethod && (
+                              <div>
+                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Entry</div>
+                                <div style={{ fontSize:12, color:"var(--text)", textTransform:"capitalize" }}>{squareDetail.data.entryMethod.toLowerCase()}</div>
+                              </div>
+                            )}
                             <div>
-                              <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Receipt</div>
-                              <a href={cb.squareReceiptUrl} target="_blank" rel="noreferrer" style={{ fontSize:11, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
+                              <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Transaction ID</div>
+                              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".04em", wordBreak:"break-all" }}>{cb.squareOrderId}</div>
                             </div>
-                          )}
-                        </div>
+                            {squareDetail.data.receiptUrl && (
+                              <div style={{ alignSelf:"flex-end" }}>
+                                <a href={squareDetail.data.receiptUrl} target="_blank" rel="noreferrer"
+                                   style={{ fontSize:12, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

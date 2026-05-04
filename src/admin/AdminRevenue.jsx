@@ -9,7 +9,8 @@ import { logAction } from "./adminHelpers";
 function AdminRevenue({ data, save, showToast, cu }) {
   const [cashSales, setCashSales] = useState([]);
   const [shopOrders, setShopOrders] = useState([]);
-  const [selected, setSelected] = useState(null); // selected transaction for detail modal
+  const [selected, setSelected]       = useState(null);
+  const [squareDetail, setSquareDetail] = useState(null); // selected transaction for detail modal
   const [monthDetail, setMonthDetail] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null); // { t: transaction, busy: false }
   const [delBusy, setDelBusy] = useState(false);
@@ -594,26 +595,41 @@ function AdminRevenue({ data, save, showToast, cu }) {
               {(selected.squareOrderId || selected.squarePaymentId) && (
                 <div style={{ background:"rgba(0,0,0,.3)", border:"1px solid #2a2a2a", padding:"10px 14px", borderRadius:3, marginTop:12, marginBottom:4 }}>
                   <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em", textTransform:"uppercase", marginBottom:8, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>Square Reference</div>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
-                    {selected.squareOrderId && (
+                  {squareDetail?.loading && <div style={{ color:"var(--muted)", fontSize:11 }}>Loading payment details…</div>}
+                  {squareDetail?.error && <div style={{ color:"var(--muted)", fontSize:11 }}>Could not load — {squareDetail.error}</div>}
+                  {squareDetail?.data && (
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
+                      {squareDetail.data.receiptNumber && (
+                        <div>
+                          <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Receipt No.</div>
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:"#c8ff00", fontWeight:700, letterSpacing:".06em" }}>{squareDetail.data.receiptNumber}</div>
+                        </div>
+                      )}
+                      {(squareDetail.data.cardBrand || squareDetail.data.last4) && (
+                        <div>
+                          <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Payment Method</div>
+                          <div style={{ fontSize:14, fontWeight:700, color:"var(--text)" }}>
+                            {squareDetail.data.cardBrand ? squareDetail.data.cardBrand.charAt(0) + squareDetail.data.cardBrand.slice(1).toLowerCase() : ""}{squareDetail.data.last4 ? ` ${squareDetail.data.last4}` : ""}
+                          </div>
+                        </div>
+                      )}
+                      {squareDetail.data.entryMethod && (
+                        <div>
+                          <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Entry</div>
+                          <div style={{ fontSize:12, color:"var(--text)", textTransform:"capitalize" }}>{squareDetail.data.entryMethod.toLowerCase()}</div>
+                        </div>
+                      )}
                       <div>
                         <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Transaction ID</div>
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00", letterSpacing:".05em", wordBreak:"break-all" }}>{selected.squareOrderId}</div>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".04em", wordBreak:"break-all" }}>{selected.squareOrderId}</div>
                       </div>
-                    )}
-                    {selected.squarePaymentId && selected.squarePaymentId !== selected.squareOrderId && (
-                      <div>
-                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Payment ID</div>
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#c8ff00", letterSpacing:".05em", wordBreak:"break-all" }}>{selected.squarePaymentId}</div>
-                      </div>
-                    )}
-                    {selected.squareReceiptUrl && (
-                      <div>
-                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:3 }}>Receipt</div>
-                        <a href={selected.squareReceiptUrl} target="_blank" rel="noreferrer" style={{ fontSize:12, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
-                      </div>
-                    )}
-                  </div>
+                      {squareDetail.data.receiptUrl && (
+                        <div style={{ alignSelf:"flex-end" }}>
+                          <a href={squareDetail.data.receiptUrl} target="_blank" rel="noreferrer" style={{ fontSize:12, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
