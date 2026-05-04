@@ -46,6 +46,8 @@ export function AdminScanWaiver({ data, updateUser, showToast }) {
 
   const fw = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  const [mediaType, setMediaType] = useState("image/jpeg");
+
   const loadFile = (file) => {
     if (!file || !file.type.startsWith("image/")) {
       showToast("Please upload an image file (JPG, PNG, etc.)", "red");
@@ -55,7 +57,20 @@ export function AdminScanWaiver({ data, updateUser, showToast }) {
     reader.onload = (e) => {
       const dataUrl = e.target.result;
       setImagePreview(dataUrl);
-      setImageBase64(dataUrl.split(",")[1]);
+      // Compress to JPEG at 85% quality, max 1600px wide — keeps file size manageable
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxW = 1600;
+        const scale = img.width > maxW ? maxW / img.width : 1;
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.85);
+        setImageBase64(compressed.split(",")[1]);
+        setMediaType("image/jpeg");
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -68,7 +83,7 @@ export function AdminScanWaiver({ data, updateUser, showToast }) {
     try {
       // Call via Supabase edge function (keeps API key server-side)
       const { data: fnData, error: fnError } = await supabase.functions.invoke("scan-waiver", {
-        body: { imageBase64, mediaType: "image/jpeg" },
+        body: { imageBase64, mediaType },
       });
 
       if (fnError) throw new Error(fnError.message || "Edge function error");
