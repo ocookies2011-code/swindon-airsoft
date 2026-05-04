@@ -773,13 +773,13 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 .stat-sub.green{color:var(--accent);}
 
 /* ── CLIPPED CORNERS — tactical mil-spec aesthetic ── */
-.btn{padding:10px 24px;font-size:13px;border-radius:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);display:inline-block;cursor:pointer;font-family:inherit;letter-spacing:.1em;text-transform:uppercase;text-align:center;text-decoration:none;line-height:1;box-sizing:border-box;vertical-align:middle;}
-.btn-primary{background:var(--accent);color:#000;font-weight:800;}
+.btn{padding:10px 24px;font-size:13px;border-radius:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);display:inline-block;cursor:pointer;font-family:inherit;letter-spacing:.1em;text-transform:uppercase;text-align:center;text-decoration:none;line-height:1;box-sizing:border-box;vertical-align:middle;color:inherit;}
+.btn-primary{background:var(--accent);color:#000!important;font-weight:800;}
 .btn-primary:hover{background:var(--accent-pale);}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
 .btn-danger{background:var(--red);color:#fff;border-radius:0;}
 .btn-danger:hover{background:#dc2626;}
-.btn-ghost{background:transparent;border:1px solid #333;color:var(--text);border-radius:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
+.btn-ghost{background:transparent;border:1px solid #333;color:var(--text)!important;border-radius:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
 .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
 .btn-sm{padding:6px 14px;font-size:11px;}
 .btn-gold{background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
@@ -1030,7 +1030,7 @@ input[type=file]{padding:6px;font-family:'Barlow',sans-serif;}
 .hero-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
 .hero-stats{display:flex;gap:0;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f;background:rgba(0,0,0,.8);}
 .hero-stats-inner{max-width:1100px;margin:0 auto;display:flex;width:100%;flex-wrap:wrap;}
-.hero-stat{flex:1;min-width:50%;padding:16px 8px;text-align:center;border-right:1px solid #1f1f1f;box-sizing:border-box;vertical-align:middle;}
+.hero-stat{flex:1;min-width:50%;padding:16px 8px;text-align:center;border-right:1px solid #1f1f1f;box-sizing:border-box;vertical-align:middle;color:inherit;}
 .hero-stat:last-child{border-right:none;}
 .hero-stat-num{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--accent);}
 .hero-stat-label{font-size:10px;letter-spacing:.15em;color:var(--muted);margin-top:2px;text-transform:uppercase;}
