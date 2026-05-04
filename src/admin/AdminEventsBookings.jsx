@@ -750,7 +750,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
                       return (
                         <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
-                          <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: bookingEv || data.events?.find(e => e.id === b.eventId), eventTitle: (bookingEv || data.events?.find(e => e.id === b.eventId))?.title })} /></td>
+                          <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: b.eventObj || bookingEv, eventTitle: b.eventTitle || bookingEv?.title })} /></td>
                           <td style={{ fontSize:12, color:"var(--muted)" }}>{bookingEv?.title || "—"}</td>
                           <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                           <td>{b.qty}</td>
@@ -934,7 +934,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
                     return (
                       <tr key={b.id} style={{ background: b.checkedIn ? "#1a0e08" : "transparent" }}>
-                        <td style={{ fontWeight: 600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: data.events?.find(e => e.id === b.eventId), eventTitle: data.events?.find(e => e.id === b.eventId)?.title })} /></td>
+                        <td style={{ fontWeight: 600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking(b)} /></td>
                         <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                         <td>{b.qty}</td>
                         <td style={{ fontSize: 11 }}>
@@ -1216,7 +1216,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               <tbody>
                 {[...viewEv.bookings].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => (
                   <tr key={b.id}>
-                    <td><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: data.events?.find(e => e.id === b.eventId), eventTitle: data.events?.find(e => e.id === b.eventId)?.title })} /></td>
+                    <td><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking(b)} /></td>
                     <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                     <td>{b.qty}</td>
                     <td style={{fontSize:11}}>
