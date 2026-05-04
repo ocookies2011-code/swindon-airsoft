@@ -10,9 +10,6 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
   const checkins = allBookings.filter(b => b.checkedIn).length;
   const players = data.users.filter(u => u.role === "player").length;
   const [pendingUkara, setPendingUkara] = React.useState(0);
-  const [failedPayCount, setFailedPayCount] = React.useState(0);
-  const [reminderBusy, setReminderBusy] = useState(false);
-  const [reminderResult, setReminderResult] = useState(null);
   React.useEffect(() => {
     const fetch = () => supabase.from("ukara_applications").select("id", { count: "exact", head: true }).eq("status", "pending")
       .then(({ count }) => setPendingUkara(count || 0)).catch(() => {});
@@ -42,6 +39,7 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
   const lowStockVariants = shopProducts.filter(p => p.variants?.length > 0 && p.variants.some(v => Number(v.stock) > 0 && Number(v.stock) <= LOW_STOCK_THRESHOLD));
 
   // Failed payments count for dashboard alert
+  const [failedPayCount, setFailedPayCount] = React.useState(0);
   React.useEffect(() => {
     supabase.from('failed_payments').select('id', { count: 'exact', head: true })
       .then(({ count }) => { if (count) setFailedPayCount(count); })
@@ -62,6 +60,8 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
   ].filter(Boolean);
 
   // Quick action state
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderResult, setReminderResult] = useState(null);
 
   // Find next upcoming event (for quick reminder)
   const nextEvent = data.events

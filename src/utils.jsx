@@ -346,9 +346,6 @@ const uid = () => crypto.randomUUID();
 // ── QR Code component using qrcode-svg ───────────────────────
 function QRCode({ value, size = 120 }) {
   const ref = useRef(null);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(null);
   useEffect(() => {
     if (!ref.current || !value) return;
     // Load QRCode library dynamically from CDN
@@ -376,6 +373,9 @@ function QRCode({ value, size = 120 }) {
 }
 
 function useData() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   // Guard: prevent concurrent loadAll calls from racing each other.
   // If one is already running, the next call is a no-op until it finishes.
@@ -1406,7 +1406,6 @@ function Toast({ msg, type }) {
 
 function useMobile(bp = 640) {
   const [mobile, setMobile] = useState(() => window.innerWidth <= bp);
-  const [toast, setToast] = useState(null);
   useEffect(() => {
     const fn = () => setMobile(window.innerWidth <= bp);
     window.addEventListener("resize", fn);
@@ -1416,6 +1415,7 @@ function useMobile(bp = 640) {
 }
 
 function useToast() {
+  const [toast, setToast] = useState(null);
   const show = (msg, type = "green") => {
     setToast({ msg, type });
     const duration = type === "red" ? 5000 : msg.length > 60 ? 5000 : 3000;
@@ -1793,7 +1793,6 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     setActiveIdx(prev => Math.max(0, prev >= idx ? prev - 1 : prev));
   };
 
-  const [submitting, setSubmitting] = useState(false);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1818,6 +1817,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
   const endDraw = () => { if (!drawing) return; setDrawing(false); fw("sigData", canvasRef.current.toDataURL()); };
   const clearSig = () => { canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); fw("sigData", ""); };
 
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
     for (let waiverIdx = 0; waiverIdx < waivers.length; waiverIdx++) {

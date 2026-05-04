@@ -133,11 +133,6 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
 
   const postageOptions = data.postageOptions || [];
   const [postageId, setPostageId] = useState(() => postageOptions[0]?.id || "");
-  const [reviewSummary, setReviewSummary] = useState(new Map());
-  const [shopCatFilter, setShopCatFilter] = useState("");
-  const [shopSearch, setShopSearch] = useState("");
-  const [shopSort, setShopSort] = useState("default");
-  const [shopPage, setShopPage] = useState(1);
   useEffect(() => {
     if (!postageId && postageOptions.length > 0) setPostageId(postageOptions[0].id);
   }, [postageOptions.length]);
@@ -293,6 +288,7 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   // Review summaries: Map<product_id, { avg: number, count: number }>
+  const [reviewSummary, setReviewSummary] = useState(new Map());
   useEffect(() => {
     supabase
       .from("product_reviews")
@@ -311,6 +307,10 @@ function ShopPage({ data, cu, showToast, save, onProductClick, cart, setCart, ca
       });
   }, []);
 
+  const [shopCatFilter, setShopCatFilter] = useState("");
+  const [shopSearch, setShopSearch] = useState("");
+  const [shopSort, setShopSort] = useState("default");
+  const [shopPage, setShopPage] = useState(1);
   const SHOP_PAGE_SIZE = 12;
   const allShopCategories = useMemo(() => {
     const visibleProducts = (data.shop || []).filter(p => !p.hiddenFromShop);
