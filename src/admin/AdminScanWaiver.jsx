@@ -87,7 +87,7 @@ export function AdminScanWaiver({ data, updateUser, showToast }) {
       });
 
       if (fnError) throw new Error(fnError.message || "Edge function error");
-      if (!fnData?.ok) throw new Error(fnData?.error || "Extraction failed");
+      if (!fnData?.ok) throw new Error((fnData?.detail ? fnData.detail.slice(0,200) : fnData?.error) || "Extraction failed");
       const parsed = fnData.data;
 
       setForm({
