@@ -530,12 +530,8 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
                   <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
                   <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("addPlayer")}>+ Add Player Waiver</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => downloadWaiver(0)}>⬇ Download Waiver</button>
-                  <a href="/waiver.pdf" download="swindon-airsoft-waiver.pdf" className="btn btn-ghost btn-sm" style={{ textDecoration:"none", display:"inline-block" }}>🖨 Print Blank Waiver</a>
                 </div>
-              : <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>
-                  <a href="/waiver.pdf" download="swindon-airsoft-waiver.pdf" className="btn btn-ghost btn-sm" style={{ textDecoration:"none", display:"inline-block" }}>🖨 Download Blank Waiver</a>
-                </div>}
+              : <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>}
           </div>
           {cu.waiverPending && (
             <div className="alert alert-gold" style={{ marginBottom:12 }}>
@@ -579,7 +575,6 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
                         </div>
                       )}
                       <div style={{ display:"flex", gap:6, marginLeft:"auto" }}>
-                        <button onClick={() => downloadWaiver(i)} className="btn btn-ghost btn-sm">⬇ Download PDF</button>
                       {i > 0 && (
                         <button onClick={async () => {
                           if (!window.confirm("Request removal of this additional player waiver? An admin will need to approve before it's deleted.")) return;
