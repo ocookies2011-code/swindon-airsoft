@@ -30,14 +30,14 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const composeAddress = (a) =>
     [a.line1, a.line2, a.city, a.county, a.postcode].map(s => s.trim()).filter(Boolean).join("\n");
 
-  const [edit, setEdit] = useState({
+  const [edit, setEdit] = useState(() => cu ? {
     name: cu.name,
     callsign: cu.callsign || "",
     nationality: cu.nationality || 'GB',
     email: cu.email || "",
     phone: cu.phone || "",
     ...parseAddress(cu.address),
-  });
+  } : { name:"", callsign:"", nationality:'GB', email:"", phone:"", line1:"", line2:"", city:"", county:"", postcode:"" });
   const [emailSaving, setEmailSaving] = useState(false);
 
   const changeEmail = async () => {
@@ -56,8 +56,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
-  const waiverValid = (cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin";
-  const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev })));
+  const waiverValid = cu && ((cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin");
+  const myBookings = cu ? data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))) : [];
 
   // Count actual checked-in games from booking records — source of truth
   const actualGamesAttended = myBookings.filter(b => b.checkedIn).length;
@@ -273,6 +273,8 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
     win.document.write(html);
     win.document.close();
   };
+
+  if (!cu) return null;
 
   return (
     <div className="page-content">

@@ -1835,7 +1835,9 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
           setActiveIdx(waiverIdx); return;
         }
       } else {
-        if (!waiverItem.agreed) { showToast(`Waiver ${waiverIdx+1}: Please agree to the terms`, "red"); setActiveIdx(waiverIdx); return; }
+        // In addPlayerMode, only the new (last) waiver needs the agree checkbox ticked
+        const isExistingWaiver = addPlayerMode && waiverIdx < waivers.length - 1;
+        if (!isExistingWaiver && !waiverItem.agreed) { showToast(`Waiver ${waiverIdx+1}: Please agree to the terms`, "red"); setActiveIdx(waiverIdx); return; }
       }
       if (waiverItem.isChild && !waiverItem.guardian) { showToast(`Waiver ${waiverIdx+1}: Guardian name required`, "red"); setActiveIdx(waiverIdx); return; }
     }
