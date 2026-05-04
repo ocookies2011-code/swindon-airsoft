@@ -505,6 +505,20 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
       )}
 
       {tab === "waiver" && (
+        <>
+        <div style={{ background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.15)", borderRadius:3, padding:"12px 16px", marginBottom:16, fontSize:13 }}>
+          <div style={{ fontWeight:700, color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", letterSpacing:".08em", marginBottom:6, fontSize:14 }}>
+            📋 PREFER PAPER? DOWNLOAD THE OFFLINE WAIVER
+          </div>
+          <div style={{ color:"var(--muted)", lineHeight:1.6 }}>
+            Download the blank waiver and either:
+            <ul style={{ margin:"6px 0 8px 18px", padding:0 }}>
+              <li>Fill it in digitally with a PDF editor, then email to <a href="mailto:swindonairsoftfield@gmail.com" style={{ color:"var(--accent)" }}>swindonairsoftfield@gmail.com</a></li>
+              <li>Print it, fill in by hand, and bring it on the day — or photograph/scan and email to <a href="mailto:swindonairsoftfield@gmail.com" style={{ color:"var(--accent)" }}>swindonairsoftfield@gmail.com</a></li>
+            </ul>
+          </div>
+          <a href="/waiver.pdf" download="swindon-airsoft-waiver.pdf" className="btn btn-ghost btn-sm" style={{ textDecoration:"none", display:"inline-block", marginTop:4 }}>🖨 Download Blank Waiver</a>
+        </div>
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
             <div>
@@ -602,6 +616,7 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
             return updateUser(id, patch);
           }} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} addPlayerMode={waiverModal === "addPlayer"} existing={cu.waiverData} />}
         </div>
+        </>
       )}
 
       {tab === "bookings" && (() => {
