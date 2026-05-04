@@ -195,6 +195,85 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
     }
   };
 
+  const downloadWaiver = (waiverIndex) => {
+    const allWaivers = [cu.waiverData, ...(cu.extraWaivers || [])];
+    const w = allWaivers[waiverIndex];
+    if (!w) return;
+    const isPrimary = waiverIndex === 0;
+    const TERMS = [
+      "I understand that airsoft is a physical activity that carries inherent risks of injury.",
+      "I will wear appropriate eye protection at all times during gameplay.",
+      "I agree to follow all safety rules and marshal instructions.",
+      "I confirm that I am at least 18 years of age or have parental/guardian consent.",
+      "I will not consume alcohol or drugs before or during gameplay.",
+      "I release Swindon Airsoft and its staff from liability for any injuries sustained during play.",
+      "I understand that my participation is voluntary and at my own risk.",
+      "I agree to treat all participants with respect and follow the site's code of conduct.",
+      "I confirm that any replica firearms I bring to the site are legal to own in the UK.",
+      "I understand that failure to comply with safety rules may result in removal from the site.",
+    ];
+    const address = [w.addr1, w.addr2, w.city, w.county, w.postcode, w.country].filter(Boolean).join(', ');
+    const signedDate = w.date ? new Date(w.date).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }) : '—';
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Swindon Airsoft Waiver — ${w.name}</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; }
+  .logo-bar { display:flex; align-items:center; gap:16px; border-bottom:3px solid #8cc200; padding-bottom:16px; margin-bottom:24px; }
+  .logo-bar h1 { font-size:22px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; margin:0; color:#1a1a1a; }
+  .logo-bar .sub { font-size:12px; color:#555; margin-top:3px; }
+  h2 { font-size:16px; text-transform:uppercase; letter-spacing:.1em; border-bottom:1px solid #ccc; padding-bottom:6px; margin-top:28px; }
+  .field-row { display:flex; gap:8px; padding:6px 0; border-bottom:1px solid #eee; font-size:13px; }
+  .field-label { min-width:160px; font-weight:600; color:#444; }
+  .terms-list { margin:0; padding-left:20px; }
+  .terms-list li { margin-bottom:8px; font-size:13px; }
+  .sig-box { margin-top:16px; }
+  .sig-img { max-width:300px; max-height:100px; border:1px solid #ccc; padding:4px; display:block; }
+  .sig-line { border-bottom:1px solid #333; margin-top:40px; width:300px; }
+  .footer { margin-top:40px; font-size:11px; color:#888; border-top:1px solid #eee; padding-top:12px; }
+  .badge { display:inline-block; background:#8cc200; color:#fff; font-size:11px; font-weight:700; padding:2px 10px; border-radius:3px; letter-spacing:.08em; text-transform:uppercase; }
+  @media print { body { margin:20px; } button { display:none; } }
+</style></head><body>
+<div class="logo-bar">
+  <div>
+    <h1>Swindon Airsoft</h1>
+    <div class="sub">Participant Liability Waiver &amp; Safety Agreement</div>
+  </div>
+  <div style="margin-left:auto">
+    <div class="badge">${isPrimary ? 'Primary Player' : 'Additional Player'}</div>
+  </div>
+</div>
+
+<h2>Player Details</h2>
+<div class="field-row"><span class="field-label">Full Name:</span><span>${w.name || '—'}</span></div>
+<div class="field-row"><span class="field-label">Date of Birth:</span><span>${w.dob || '—'}</span></div>
+<div class="field-row"><span class="field-label">Address:</span><span>${address || '—'}</span></div>
+<div class="field-row"><span class="field-label">Emergency Contact:</span><span>${w.emergencyName || '—'}</span></div>
+<div class="field-row"><span class="field-label">Emergency Phone:</span><span>${w.emergencyPhone || '—'}</span></div>
+<div class="field-row"><span class="field-label">Medical Notes:</span><span>${w.medical || 'None'}</span></div>
+${w.isChild ? `<div class="field-row"><span class="field-label">Minor (Under 18):</span><span>Yes — Guardian: ${w.guardian || '—'}</span></div>` : ''}
+<div class="field-row"><span class="field-label">Date Signed:</span><span>${signedDate}</span></div>
+
+<h2>Terms &amp; Conditions Agreed</h2>
+<ol class="terms-list">${TERMS.map(t => `<li>${t}</li>`).join('')}</ol>
+
+<h2>Signature</h2>
+<div class="sig-box">
+${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<div class="sig-line"></div>'}
+<div style="margin-top:8px;font-size:13px;color:#444;">${w.name || ''} &nbsp;·&nbsp; Signed ${signedDate}</div>
+</div>
+
+<div class="footer">
+  This waiver was completed digitally via swindon-airsoft.com on ${signedDate}.
+  Swindon Airsoft Field · swindonairsoftfield@gmail.com
+</div>
+
+<br><button onclick="window.print()" style="margin-top:16px;padding:10px 24px;background:#8cc200;color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;border-radius:3px;">🖨 Print / Save as PDF</button>
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+  };
+
   return (
     <div className="page-content">
       <div className="page-header">
@@ -434,6 +513,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               ? <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
                   <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("addPlayer")}>+ Add Player Waiver</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => downloadWaiver(0)}>⬇ Download Waiver</button>
                 </div>
               : <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>}
           </div>
@@ -478,6 +558,10 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                           PLAYER {i + 1}{i === 0 ? " (PRIMARY)" : " (ADDITIONAL)"}
                         </div>
                       )}
+                      <div style={{ display:"flex", gap:6, marginLeft:"auto" }}>
+                        <button onClick={() => downloadWaiver(i)} style={{ background:"none", border:"1px solid #3a5010", color:"var(--accent)", fontSize:11, padding:"2px 10px", cursor:"pointer", fontFamily:"'Oswald','Barlow Condensed',sans-serif", letterSpacing:".08em" }}>
+                          ⬇ DOWNLOAD PDF
+                        </button>
                       {i > 0 && (
                         <button onClick={async () => {
                           if (!window.confirm("Request removal of this additional player waiver? An admin will need to approve before it's deleted.")) return;
@@ -489,6 +573,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
                           🗑 REQUEST REMOVAL
                         </button>
                       )}
+                      </div>
                     </div>
                     {[["Name", w.name], ["DOB", w.dob], ["Address", [w.addr1, w.addr2, w.city, w.county, w.postcode].filter(Boolean).join(", ") || "—"], ["Emergency", w.emergencyName ? `${w.emergencyName} · ${w.emergencyPhone}` : "—"], ["Medical", w.medical || "None"], ["Minor", w.isChild ? `Yes — Guardian: ${w.guardian}` : "No"], ["Signed", gmtShort(w.date)]].map(([k, v]) => (
                       <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
