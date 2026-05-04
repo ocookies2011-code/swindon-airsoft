@@ -29,12 +29,12 @@ function AdminMessages({ data, save, showToast, cu }) {
   const [contactEmail, setContactEmail] = useState(data.contactEmail || "swindonairsoftfield@gmail.com");
   const [saving, setSaving] = useState(false);
   const [savingSocial, setSavingSocial] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") { setSaving(false); setSavingSocial(false); } };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
-  const [savingContact, setSavingContact] = useState(false);
 
   const saveBanners = async (list) => {
     setSaving(true);

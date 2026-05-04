@@ -208,6 +208,7 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
     setActiveIdx(prev => Math.max(0, prev >= idx ? prev - 1 : prev));
   };
 
+  const [submitting, setSubmitting] = useState(false);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -232,7 +233,6 @@ function WaiverModal({ cu, updateUser, onClose, showToast, editMode, existing, a
   const endDraw = () => { if (!drawing) return; setDrawing(false); fw("sigData", canvasRef.current.toDataURL()); };
   const clearSig = () => { canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); fw("sigData", ""); };
 
-  const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
     for (let waiverIdx = 0; waiverIdx < waivers.length; waiverIdx++) {
