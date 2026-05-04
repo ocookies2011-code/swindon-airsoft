@@ -6,6 +6,9 @@ import { fmtErr, renderMd, stockLabel, uid, useMobile } from "../utils";
 import { diffFields, logAction } from "./adminHelpers";
 import { AdminOrdersInline } from "./AdminOrders";
 
+const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", supplierCode: "", variants: [] };
+const blankPost = { name: "", price: 0 };
+
 function AdminShop({ data, save, showToast, cu }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
@@ -43,7 +46,6 @@ function AdminShop({ data, save, showToast, cu }) {
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
   const uid = () => Math.random().toString(36).slice(2,10);
-  const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", supplierCode: "", variants: [] };
 
   // Drag-to-reorder state for products
   const dragProductIdx = useRef(null);
@@ -151,7 +153,6 @@ function AdminShop({ data, save, showToast, cu }) {
   const hasVariants = (form.variants || []).length > 0;
 
   // Postage state
-  const blankPost = { name: "", price: 0 };
   const pf = (k, v) => setPostForm(p => ({ ...p, [k]: v }));
 
   const compressImage = (file) => new Promise(resolve => {

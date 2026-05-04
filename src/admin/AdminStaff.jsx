@@ -5,6 +5,7 @@ import * as api from "../api";
 import { fmtErr, uid } from "../utils";
 import { diffFields, logAction } from "./adminHelpers";
 
+const blank = { name: "", jobTitle: "", bio: "", photo: "", rankOrder: 3 };
 function AdminStaff({ showToast, cu }) {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,6 @@ function AdminStaff({ showToast, cu }) {
     { value: 3, label: "3 — Marshal" },
   ];
 
-  const blank = { name: "", jobTitle: "", bio: "", photo: "", rankOrder: 3 };
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const loadStaff = useCallback((silent = false) => {

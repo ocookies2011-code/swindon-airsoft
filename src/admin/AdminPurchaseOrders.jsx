@@ -5,6 +5,8 @@ import * as api from "../api";
 import { fmtDate, gmtShort, uid } from "../utils";
 import { logAction } from "./adminHelpers";
 
+const blankPo = { supplierId: "", notes: "", items: [] };
+const blankSup = { name: "", contact: "", email: "", phone: "", notes: "" };
 function AdminPurchaseOrders({ data, save, showToast, cu }) {
   const [tab, setTab] = useState("orders"); // "orders" | "suppliers"
   const [orders, setOrders] = useState([]);
@@ -30,10 +32,8 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
   }, []);
 
   // New PO form state
-  const blankPo = { supplierId: "", notes: "", items: [] };
 
   // Supplier form state
-  const blankSup = { name: "", contact: "", email: "", phone: "", notes: "" };
 
   const STATUS_COLORS = { draft: "muted", ordered: "blue", partial: "gold", received: "green", cancelled: "red" };
   const STATUS_LABELS = { draft: "Draft", ordered: "Ordered", partial: "Part Received", received: "Fully Received", cancelled: "Cancelled" };
