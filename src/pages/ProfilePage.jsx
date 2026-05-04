@@ -30,14 +30,14 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const composeAddress = (a) =>
     [a.line1, a.line2, a.city, a.county, a.postcode].map(s => s.trim()).filter(Boolean).join("\n");
 
-  const [edit, setEdit] = useState({
-    name: cu.name,
-    callsign: cu.callsign || "",
-    nationality: cu.nationality || 'GB',
-    email: cu.email || "",
-    phone: cu.phone || "",
-    ...parseAddress(cu.address),
-  });
+  const [edit, setEdit] = useState(() => ({
+    name: cu?.name || "",
+    callsign: cu?.callsign || "",
+    nationality: cu?.nationality || 'GB',
+    email: cu?.email || "",
+    phone: cu?.phone || "",
+    ...parseAddress(cu?.address),
+  }));
   const [emailSaving, setEmailSaving] = useState(false);
 
   const changeEmail = async () => {
@@ -56,8 +56,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
 
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
-  const waiverValid = (cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin";
-  const myBookings = data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev })));
+  const waiverValid = cu && ((cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin");
+  const myBookings = cu ? data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))) : [];
 
   // Count actual checked-in games from booking records — source of truth
   const actualGamesAttended = myBookings.filter(b => b.checkedIn).length;
@@ -194,6 +194,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       showToast("Failed to save: " + (e.message || "unknown error"), "red");
     }
   };
+
+  if (!cu) return <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Please log in to view your profile.</div>;
 
   return (
     <div className="page-content">
