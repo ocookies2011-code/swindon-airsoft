@@ -516,8 +516,12 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
                   <button className="btn btn-ghost btn-sm" onClick={() => setWaiverModal("edit")}>Request Changes</button>
                   <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("addPlayer")}>+ Add Player Waiver</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => downloadWaiver(0)}>⬇ Download Waiver</button>
+                  <a href="/waiver.pdf" download="swindon-airsoft-waiver.pdf" className="btn btn-ghost btn-sm" style={{ textDecoration:"none" }}>🖨 Print Blank Waiver</a>
                 </div>
-              : <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>}
+              : <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setWaiverModal("new")}>Sign Waiver {new Date().getFullYear()}</button>
+                  <a href="/waiver.pdf" download="swindon-airsoft-waiver.pdf" className="btn btn-ghost btn-sm" style={{ textDecoration:"none" }}>🖨 Download Blank Waiver</a>
+                </div>}
           </div>
           {cu.waiverPending && (
             <div className="alert alert-gold" style={{ marginBottom:12 }}>
