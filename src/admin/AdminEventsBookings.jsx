@@ -148,17 +148,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   const [viewBooking, setViewBooking] = useState(null);
   const [squareDetail, setSquareDetail] = useState(null);
 
-  useEffect(() => {
-    const payId = viewBooking?.squareOrderId;
-    if (!payId || payId.startsWith('ADMIN-MANUAL-')) { setSquareDetail(null); return; }
-    setSquareDetail({ loading: true, data: null, error: null });
-    supabase.functions.invoke('get-square-payment', { body: { paymentId: payId } })
-      .then(({ data, error }) => {
-        if (error || data?.error) setSquareDetail({ loading: false, data: null, error: error?.message || data?.error });
-        else setSquareDetail({ loading: false, data, error: null });
-      })
-      .catch(e => setSquareDetail({ loading: false, data: null, error: e.message }));
-  }, [viewBooking?.squareOrderId]);
   const [bookingBusy, setBookingBusy] = useState(false);
   const [refundModal, setRefundModal] = useState(null);
   const [refundAmt, setRefundAmt] = useState("");
@@ -576,6 +565,19 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
   const [delEventConfirm, setDelEventConfirm] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(false);
+
+  useEffect(() => {
+    const payId = viewBooking?.squareOrderId;
+    if (!payId || payId.startsWith('ADMIN-MANUAL-')) { setSquareDetail(null); return; }
+    setSquareDetail({ loading: true, data: null, error: null });
+    supabase.functions.invoke('get-square-payment', { body: { paymentId: payId } })
+      .then(({ data, error }) => {
+        if (error || data?.error) setSquareDetail({ loading: false, data: null, error: error?.message || data?.error });
+        else setSquareDetail({ loading: false, data, error: null });
+      })
+      .catch(e => setSquareDetail({ loading: false, data: null, error: e.message }));
+  }, [viewBooking?.squareOrderId]);
+
   const deleteEvent = async () => {
     if (!delEventConfirm) return;
     setDeletingEvent(true);
