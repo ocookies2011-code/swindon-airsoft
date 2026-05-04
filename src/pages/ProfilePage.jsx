@@ -500,7 +500,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               </div>
             );
           })()}
-          {waiverModal && <WaiverModal cu={cu} updateUser={(id, patch) => {
+          {waiverModal && cu && <WaiverModal cu={cu} updateUser={(id, patch) => {
             const waiver = patch.waiverData || (patch.extraWaivers && patch.extraWaivers[patch.extraWaivers.length - 1]);
             if (waiver && waiver.emergencyName) {
               const playerName = (waiver.name || cu?.waiverData?.name || "").trim().toLowerCase();
