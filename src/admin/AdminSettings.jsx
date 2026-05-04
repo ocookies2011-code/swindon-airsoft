@@ -18,16 +18,13 @@ function AdminSettings({ showToast, cu }) {
 
   const [squareAppId, setSquareAppId] = S("square_app_id");
   const [trackApiKey, setTrackApiKey] = S("trackingmore_api_key");
-  const [savingTrack, setSavingTrack] = useState(false);
-  const [savingSQ, setSavingSQ] = useState(false);
-  const [showAppId, setShowAppId] = useState(false);
-  const [shopClosedSetting, setShopClosedSetting] = useState(false);
-  const [savingShopClosed, setSavingShopClosed] = useState(false);
-  const [openSections, setOpenSections] = React.useState({});
   React.useEffect(() => { if (trackApiKey) trackKeyCache.value = trackApiKey; }, [trackApiKey]);
+  const [savingTrack, setSavingTrack] = useState(false);
   const [squareLocationId, setSquareLocationId] = S("square_location_id");
   const [squareEnv, setSquareEnv, sqLoaded] = S("square_env", "sandbox");
   const [squareTerminalDeviceId, setSquareTerminalDeviceId] = S("square_terminal_device_id");
+  const [savingSQ, setSavingSQ] = useState(false);
+  const [showAppId, setShowAppId] = useState(false);
 
   // Release stuck saving states if user switches tabs mid-save
   useEffect(() => {
@@ -43,6 +40,8 @@ function AdminSettings({ showToast, cu }) {
   }, []);
 
   // Shop closed toggle
+  const [shopClosedSetting, setShopClosedSetting] = useState(false);
+  const [savingShopClosed, setSavingShopClosed] = useState(false);
   React.useEffect(() => {
     api.settings.get("shop_closed").then(v => setShopClosedSetting(v === "true")).catch(() => {});
   }, []);
@@ -63,6 +62,7 @@ function AdminSettings({ showToast, cu }) {
     } finally { setSavingSQ(false); }
   };
 
+  const [openSections, setOpenSections] = React.useState({});
   const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   const sectionHead = (label, key) => {

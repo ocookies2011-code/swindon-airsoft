@@ -13,7 +13,6 @@ function AdminStaff({ showToast, cu }) {
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [form, setForm] = useState(blank);
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
     document.addEventListener("visibilitychange", onVisible);
@@ -27,6 +26,7 @@ function AdminStaff({ showToast, cu }) {
   ];
 
   const blank = { name: "", jobTitle: "", bio: "", photo: "", rankOrder: 3 };
+  const [form, setForm] = useState(blank);
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const loadStaff = useCallback((silent = false) => {

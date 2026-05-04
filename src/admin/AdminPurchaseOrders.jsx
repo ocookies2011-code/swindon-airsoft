@@ -19,10 +19,6 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
   const [editForm, setEditForm] = useState({ supplierId: "", notes: "", items: [] });
   const [editNewItem, setEditNewItem] = useState({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
   const [busy, setBusy] = useState(false);
-  const [poForm, setPoForm] = useState(blankPo);
-  const [newItem, setNewItem] = useState({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
-  const [supForm, setSupForm] = useState(blankSup);
-  const [receiveQtys, setReceiveQtys] = useState({});
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") setBusy(false); };
     document.addEventListener("visibilitychange", onVisible);
@@ -31,9 +27,12 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
 
   // New PO form state
   const blankPo = { supplierId: "", notes: "", items: [] };
+  const [poForm, setPoForm] = useState(blankPo);
+  const [newItem, setNewItem] = useState({ productId: "", variantId: "", productName: "", qtyOrdered: 1, unitCost: "" });
 
   // Supplier form state
   const blankSup = { name: "", contact: "", email: "", phone: "", notes: "" };
+  const [supForm, setSupForm] = useState(blankSup);
 
   const STATUS_COLORS = { draft: "muted", ordered: "blue", partial: "gold", received: "green", cancelled: "red" };
   const STATUS_LABELS = { draft: "Draft", ordered: "Ordered", partial: "Part Received", received: "Fully Received", cancelled: "Cancelled" };
@@ -139,6 +138,7 @@ function AdminPurchaseOrders({ data, save, showToast, cu }) {
   };
 
   // ── Receive items ──
+  const [receiveQtys, setReceiveQtys] = useState({});
   const openDetail = (order) => {
     setDetailModal(order);
     const qtys = {};

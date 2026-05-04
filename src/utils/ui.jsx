@@ -21,7 +21,6 @@ function Toast({ msg, type }) {
 
 function useMobile(bp = 640) {
   const [mobile, setMobile] = useState(() => window.innerWidth <= bp);
-  const [toast, setToast] = useState(null);
   useEffect(() => {
     const fn = () => setMobile(window.innerWidth <= bp);
     window.addEventListener("resize", fn);
@@ -31,6 +30,7 @@ function useMobile(bp = 640) {
 }
 
 function useToast() {
+  const [toast, setToast] = useState(null);
   const show = (msg, type = "green") => {
     setToast({ msg, type });
     const duration = type === "red" ? 5000 : msg.length > 60 ? 5000 : 3000;
