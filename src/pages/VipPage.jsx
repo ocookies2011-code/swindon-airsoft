@@ -8,6 +8,10 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   const isMobile = useMobile(640);
   const [applying, setApplying] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [vipEnabled, setVipEnabled] = useState(true);
+  React.useEffect(() => {
+    api.settings.get("vip_enabled").then(v => { if (v !== null && v !== undefined) setVipEnabled(v !== "false"); }).catch(() => {});
+  }, []);
   const [vipPayError, setVipPayError] = useState(null);
 
   // ID upload state — up to 2 images, required before payment
@@ -20,7 +24,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
   ) : [];
   const gamesAttended = cu ? Math.max(cu.gamesAttended || 0, myBookings.length) : 0;
   const gamesNeeded = Math.max(0, 3 - gamesAttended);
-  const canApply = cu && gamesAttended >= 3 && (cu.vipStatus === "none" || cu.vipStatus === "expired") && !cu.vipApplied;
+  const canApply = cu && gamesAttended >= 3 && (cu.vipStatus === "none" || cu.vipStatus === "expired") && !cu.vipApplied && vipEnabled;
   const isVip = cu?.vipStatus === "active";
   const isExpired = cu?.vipStatus === "expired";
   const hasPending = cu?.vipApplied && !isVip;
@@ -219,6 +223,11 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             )}
 
             {/* Step 1 — trigger: APPLY button */}
+            {!vipEnabled && cu && !isVip && !cu.vipApplied && (
+              <div style={{ background:"rgba(239,68,68,.08)", border:"1px solid rgba(239,68,68,.2)", padding:"12px 16px", borderRadius:3, marginBottom:16, fontSize:13, color:"#ef4444" }}>
+                ⛔ VIP purchasing is currently unavailable. Please check back later or contact us directly.
+              </div>
+            )}
             {cu && canApply && !idStep && !showPayment && (
               <button className="btn btn-primary" style={{ width:"100%", padding:"14px", fontSize:14 }}
                 onClick={() => { setIdStep(true); setVipPayError(null); setIdImages([]); }}>

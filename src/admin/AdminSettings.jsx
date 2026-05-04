@@ -42,8 +42,11 @@ function AdminSettings({ showToast, cu }) {
   // Shop closed toggle
   const [shopClosedSetting, setShopClosedSetting] = useState(false);
   const [savingShopClosed, setSavingShopClosed] = useState(false);
+  const [vipEnabled, setVipEnabled] = useState(true);
+  const [savingVip, setSavingVip] = useState(false);
   React.useEffect(() => {
     api.settings.get("shop_closed").then(v => setShopClosedSetting(v === "true")).catch(() => {});
+    api.settings.get("vip_enabled").then(v => { if (v !== null && v !== undefined) setVipEnabled(v !== "false"); }).catch(() => {});
   }, []);
 
   const saveSquare = async () => {
@@ -123,6 +126,43 @@ function AdminSettings({ showToast, cu }) {
               finally { setSavingShopClosed(false); }
             }}>
             {savingShopClosed ? "Saving…" : shopClosedSetting ? "🔓 Reopen Shop" : "🔒 Close Shop"}
+          </button>
+        </div>
+        </>)}
+      </div>
+
+      {/* VIP Toggle */}
+      <div className="card mb-2">
+        {sectionHead("⭐ VIP Purchasing", "vip")}
+        {sectionBody("vip", <>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
+          <div>
+            <div style={{ fontSize:13, color:"var(--text)", marginBottom:4 }}>
+              {vipEnabled
+                ? <span style={{ color:"var(--accent)", fontWeight:700 }}>✅ VIP Purchasing is ENABLED</span>
+                : <span style={{ color:"var(--red)", fontWeight:700 }}>⛔ VIP Purchasing is DISABLED</span>}
+            </div>
+            <div style={{ fontSize:11, color:"var(--muted)", lineHeight:1.6 }}>
+              When disabled, the VIP page hides the payment option and players cannot purchase VIP status online.
+              Existing VIP members are unaffected.
+            </div>
+          </div>
+          <button
+            className={!vipEnabled ? "btn btn-primary" : "btn btn-ghost"}
+            style={{ minWidth:160, borderColor: !vipEnabled ? "var(--red)" : "var(--accent)", color: !vipEnabled ? "var(--red)" : "var(--accent)" }}
+            disabled={savingVip}
+            onClick={async () => {
+              setSavingVip(true);
+              try {
+                const next = !vipEnabled;
+                await api.settings.set("vip_enabled", String(next));
+                setVipEnabled(next);
+                showToast(next ? "✅ VIP purchasing enabled." : "⛔ VIP purchasing disabled.");
+                logAction({ adminEmail: cu?.email, adminName: cu?.name, action: next ? "VIP purchasing enabled" : "VIP purchasing disabled", detail: null });
+              } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
+              finally { setSavingVip(false); }
+            }}>
+            {savingVip ? "Saving…" : vipEnabled ? "⛔ Disable VIP Purchasing" : "✅ Enable VIP Purchasing"}
           </button>
         </div>
         </>)}
