@@ -16,6 +16,22 @@ function AdminShop({ data, save, showToast, cu }) {
 
   // Live pending order count for the Orders tab badge
   const [orderCount, setOrderCount] = useState(0);
+  const [modal, setModal] = useState(null);
+  const [shopOrder, setShopOrder] = useState(data.shop);
+  const [productSearch, setProductSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [collapsedCats, setCollapsedCats] = useState(() => {
+  const [catOrder, setCatOrder] = useState([]);
+  const [expandedProduct, setExpandedProduct] = useState(null);
+  const [form, setForm] = useState(blank);
+  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "", supplierCode: "" });
+  const [postModal, setPostModal] = useState(null);
+  const [postForm, setPostForm] = useState(blankPost);
+  const [delProductConfirm, setDelProductConfirm] = useState(null);
+  const [deletingProduct, setDeletingProduct] = useState(false);
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null|"syncing"|"ok"|"error"
+  const [bulkSyncing, setBulkSyncing] = useState(false);
   useEffect(() => {
     const fetch = () =>
       supabase.from("shop_orders").select("id", { count: "exact", head: true })
@@ -28,19 +44,15 @@ function AdminShop({ data, save, showToast, cu }) {
     document.addEventListener("visibilitychange", onVisible);
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
-  const [modal, setModal] = useState(null);
   const uid = () => Math.random().toString(36).slice(2,10);
   const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", supplierCode: "", variants: [] };
 
   // Drag-to-reorder state for products
-  const [shopOrder, setShopOrder] = useState(data.shop);
   const dragProductIdx = useRef(null);
   // Keep shopOrder in sync when data.shop changes (after save/refresh)
   useEffect(() => { setShopOrder(data.shop); }, [data.shop]);
 
   // Product search + category filter
-  const [productSearch, setProductSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
   const allCategories = useMemo(() => {
     const cats = [...new Set(shopOrder.map(p => p.category).filter(Boolean))].sort();
     return cats;
@@ -56,7 +68,6 @@ function AdminShop({ data, save, showToast, cu }) {
   }, [shopOrder, productSearch, categoryFilter]);
 
   // Collapsed category state - all collapsed by default
-  const [collapsedCats, setCollapsedCats] = useState(() => {
     // Pre-collapse all categories including uncategorised on first render
     const initial = { "__none": true };
     return initial;
@@ -76,7 +87,6 @@ function AdminShop({ data, save, showToast, cu }) {
     });
   }, [allCatKeys]);
   // Category display order — drag to reorder in the category header
-  const [catOrder, setCatOrder] = useState([]);
   const dragCatIdx = useRef(null);
   useEffect(() => {
     const allCats = [...new Set(shopOrder.map(p => p.category).filter(Boolean))];
@@ -105,13 +115,10 @@ function AdminShop({ data, save, showToast, cu }) {
   }, [shopOrder]);
 
   // Expanded variant detail state — click a product card to toggle
-  const [expandedProduct, setExpandedProduct] = useState(null);
   const dragVariantIdx = useRef(null);
-  const [form, setForm] = useState(blank);
   const setField = (fieldKey, fieldVal) => setForm(prev => ({ ...prev, [fieldKey]: fieldVal }));
 
   // Variant editor state
-  const [newVariant, setNewVariant] = useState({ name: "", price: "", stock: "", supplierCode: "" });
 
   const addVariant = () => {
     if (!newVariant.name) { showToast("Variant name required", "red"); return; }
@@ -145,9 +152,7 @@ function AdminShop({ data, save, showToast, cu }) {
   const hasVariants = (form.variants || []).length > 0;
 
   // Postage state
-  const [postModal, setPostModal] = useState(null);
   const blankPost = { name: "", price: 0 };
-  const [postForm, setPostForm] = useState(blankPost);
   const pf = (k, v) => setPostForm(p => ({ ...p, [k]: v }));
 
   const compressImage = (file) => new Promise(resolve => {
@@ -195,8 +200,6 @@ function AdminShop({ data, save, showToast, cu }) {
     });
   };
 
-  const [delProductConfirm, setDelProductConfirm] = useState(null);
-  const [deletingProduct, setDeletingProduct] = useState(false);
   const confirmDeleteProduct = async () => {
     setDeletingProduct(true);
     try {
@@ -210,9 +213,6 @@ function AdminShop({ data, save, showToast, cu }) {
     finally { setDeletingProduct(false); }
   };
 
-  const [savingProduct, setSavingProduct] = useState(false);
-  const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null|"syncing"|"ok"|"error"
-  const [bulkSyncing, setBulkSyncing] = useState(false);
 
   // ── Sync single product to Square (background, non-blocking) ──
   const syncToSquare = async (action, product) => {

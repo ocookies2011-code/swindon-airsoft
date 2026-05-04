@@ -31,6 +31,18 @@ function AppInner() {
   const { data, loading, loadError, save, updateUser, updateEvent, refresh } = useData();
   // ── Offline detection ─────────────────────────────────────
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [page, setPageState] = useState(getInitialPage);
+  const [publicProfileId, setPublicProfileId] = useState(() => {
+  const [prevPage, setPrevPage] = useState("leaderboard");
+  const [cu, setCu] = useState(null);          // current user profile
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authModal, setAuthModal] = useState(null);
+  const [shopCart, setShopCart] = useState([]);
+  const [shopCartOpen, setShopCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
+  const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
   useEffect(() => {
     const goOffline = () => setIsOffline(true);
     const goOnline  = () => setIsOffline(false);
@@ -49,12 +61,9 @@ function AppInner() {
     if (p === "admin") return "admin";
     return PUBLIC_PAGES.includes(p) ? p : "home";
   };
-  const [page, setPageState] = useState(getInitialPage);
-  const [publicProfileId, setPublicProfileId] = useState(() => {
     const parts = window.location.hash.replace("#","").split("/");
     return parts[0] === "player" ? (parts[1] || null) : null;
   });
-  const [prevPage, setPrevPage] = useState("leaderboard");
   const goToPlayer = (id) => {
     setPrevPage(page === "admin" ? "admin" : page);
     setPublicProfileId(id);
@@ -76,9 +85,6 @@ function AppInner() {
     }
   };
 
-  const [cu, setCu] = useState(null);          // current user profile
-  const [authLoading, setAuthLoading] = useState(true);
-  const [authModal, setAuthModal] = useState(null);
   const [toast, showToast] = useToast();
 
   // ── Page visit tracking ──────────────────────────────────
@@ -135,8 +141,6 @@ function AppInner() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
   // Shop state — lifted to App level so cart persists between shop & product page
-  const [shopCart, setShopCart] = useState([]);
-  const [shopCartOpen, setShopCartOpen] = useState(false);
   // ── Shop cart funnel tracking ──────────────────────────────
   useEffect(() => {
     if (page !== "shop") return;
@@ -151,8 +155,6 @@ function AppInner() {
       sessionId: sid,
     });
   }, [shopCart.length, shopCartOpen, page]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [recentlyViewed, setRecentlyViewed] = useState([]);
   // Reset product view when navigating away from shop
   useEffect(() => { if (page !== "shop") setSelectedProduct(null); }, [page]);
 
@@ -352,7 +354,6 @@ function AppInner() {
     }
   }, [updateUser, cu, refreshCu, data]);
 
-  const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
 
   useEffect(() => {
     let cancelled = false;
@@ -391,7 +392,6 @@ function AppInner() {
     return () => { cancelled = true; };
   }, []);
 
-  const [loadingSeconds, setLoadingSeconds] = useState(0);
   useEffect(() => {
     if (!loading) return;
     const interval = setInterval(() => setLoadingSeconds(s => s + 1), 1000);

@@ -38,6 +38,15 @@ function AdminOrdersInline({ showToast, cu }) {
       });
   };
 
+  const [refundModal, setRefundModal] = useState(null); // { order }
+  const [refundAmt, setRefundAmt] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [refunding, setRefunding] = useState(false);
+  const [returnModal, setReturnModal] = useState(null); // { order }
+  const [returnAction, setReturnAction] = useState(""); // "approve" | "reject" | "received"
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [returnsProcessing, setReturnsProcessing] = useState(false);
+  const [statusTab, setStatusTab] = useState("action");
   useEffect(() => {
     runFetch();
     const interval = setInterval(runFetch, 30000);
@@ -80,16 +89,8 @@ function AdminOrdersInline({ showToast, cu }) {
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
-  const [refundModal, setRefundModal] = useState(null); // { order }
-  const [refundAmt, setRefundAmt] = useState("");
-  const [refundNote, setRefundNote] = useState("");
-  const [refunding, setRefunding] = useState(false);
 
   // Returns
-  const [returnModal, setReturnModal] = useState(null); // { order }
-  const [returnAction, setReturnAction] = useState(""); // "approve" | "reject" | "received"
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [returnsProcessing, setReturnsProcessing] = useState(false);
 
   const handleReturnAction = async () => {
     if (!returnModal) return;
@@ -163,7 +164,6 @@ function AdminOrdersInline({ showToast, cu }) {
     } finally { setRefunding(false); }
   };
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
-  const [statusTab, setStatusTab] = useState("action");
 
   // Smart grouped tabs — most admins only care about 4 views
   const SMART_TABS = [
