@@ -44,8 +44,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   };
 
   // Clear discount code when cart is emptied
-  const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
-  const [holdMap, setHoldMap]         = useState({}); // "eventId:ticketType" -> hold | null
   const [waitlistBusy, setWaitlistBusy] = useState(false);
   useEffect(() => {
     const cartIsEmpty = bCart.walkOn === 0 && bCart.rental === 0 && Object.keys(bCart.extras).length === 0;
@@ -60,6 +58,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   useEffect(() => () => { if (bookingSafetyRef.current) clearTimeout(bookingSafetyRef.current); }, []);
 
   // Waitlist state
+  const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
+  const [holdMap, setHoldMap]         = useState({}); // "eventId:ticketType" -> hold | null
 
   const loadWaitlist = (eventId) => {
     waitlistApi.getByEvent(eventId).then(list => {

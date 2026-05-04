@@ -32,16 +32,13 @@ function AppInner() {
   // ── Offline detection ─────────────────────────────────────
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [page, setPageState] = useState(getInitialPage);
-  const [publicProfileId, setPublicProfileId] = useState(() => {
   const [prevPage, setPrevPage] = useState("leaderboard");
-  const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
   const [authModal, setAuthModal] = useState(null);
   const [shopCart, setShopCart] = useState([]);
   const [shopCartOpen, setShopCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
-  const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
   const [loadingSeconds, setLoadingSeconds] = useState(0);
   useEffect(() => {
     const goOffline = () => setIsOffline(true);
@@ -61,6 +58,7 @@ function AppInner() {
     if (p === "admin") return "admin";
     return PUBLIC_PAGES.includes(p) ? p : "home";
   };
+  const [publicProfileId, setPublicProfileId] = useState(() => {
     const parts = window.location.hash.replace("#","").split("/");
     return parts[0] === "player" ? (parts[1] || null) : null;
   });
@@ -85,6 +83,7 @@ function AppInner() {
     }
   };
 
+  const [cu, setCu] = useState(null);          // current user profile
   const [toast, showToast] = useToast();
 
   // ── Page visit tracking ──────────────────────────────────
@@ -354,6 +353,7 @@ function AppInner() {
     }
   }, [updateUser, cu, refreshCu, data]);
 
+  const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
 
   useEffect(() => {
     let cancelled = false;

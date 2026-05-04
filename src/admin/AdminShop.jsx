@@ -20,7 +20,6 @@ function AdminShop({ data, save, showToast, cu }) {
   const [shopOrder, setShopOrder] = useState(data.shop);
   const [productSearch, setProductSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [collapsedCats, setCollapsedCats] = useState(() => {
   const [catOrder, setCatOrder] = useState([]);
   const [expandedProduct, setExpandedProduct] = useState(null);
   const [form, setForm] = useState(blank);
@@ -30,7 +29,6 @@ function AdminShop({ data, save, showToast, cu }) {
   const [delProductConfirm, setDelProductConfirm] = useState(null);
   const [deletingProduct, setDeletingProduct] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
-  const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null|"syncing"|"ok"|"error"
   const [bulkSyncing, setBulkSyncing] = useState(false);
   useEffect(() => {
     const fetch = () =>
@@ -68,6 +66,7 @@ function AdminShop({ data, save, showToast, cu }) {
   }, [shopOrder, productSearch, categoryFilter]);
 
   // Collapsed category state - all collapsed by default
+  const [collapsedCats, setCollapsedCats] = useState(() => {
     // Pre-collapse all categories including uncategorised on first render
     const initial = { "__none": true };
     return initial;
@@ -213,6 +212,7 @@ function AdminShop({ data, save, showToast, cu }) {
     finally { setDeletingProduct(false); }
   };
 
+  const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null|"syncing"|"ok"|"error"
 
   // ── Sync single product to Square (background, non-blocking) ──
   const syncToSquare = async (action, product) => {

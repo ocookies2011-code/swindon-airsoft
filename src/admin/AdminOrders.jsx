@@ -38,12 +38,9 @@ function AdminOrdersInline({ showToast, cu }) {
       });
   };
 
-  const [refundModal, setRefundModal] = useState(null); // { order }
   const [refundAmt, setRefundAmt] = useState("");
   const [refundNote, setRefundNote] = useState("");
   const [refunding, setRefunding] = useState(false);
-  const [returnModal, setReturnModal] = useState(null); // { order }
-  const [returnAction, setReturnAction] = useState(""); // "approve" | "reject" | "received"
   const [rejectionReason, setRejectionReason] = useState("");
   const [returnsProcessing, setReturnsProcessing] = useState(false);
   const [statusTab, setStatusTab] = useState("action");
@@ -89,8 +86,11 @@ function AdminOrdersInline({ showToast, cu }) {
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
+  const [refundModal, setRefundModal] = useState(null); // { order }
 
   // Returns
+  const [returnModal, setReturnModal] = useState(null); // { order }
+  const [returnAction, setReturnAction] = useState(""); // "approve" | "reject" | "received"
 
   const handleReturnAction = async () => {
     if (!returnModal) return;
