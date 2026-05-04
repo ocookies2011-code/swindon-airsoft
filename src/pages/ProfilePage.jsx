@@ -511,7 +511,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
               }
             }
             return updateUser(id, patch);
-          }} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} existing={cu.waiverData} />}
+          }} onClose={() => setWaiverModal(false)} showToast={showToast} editMode={waiverModal === "edit"} addPlayerMode={waiverModal === "addPlayer"} existing={cu.waiverData} />}
         </div>
       )}
 
