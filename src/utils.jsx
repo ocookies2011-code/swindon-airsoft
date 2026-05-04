@@ -776,7 +776,7 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 
 /* ── BUTTONS ── */
 button{cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;border:none;transition:all .15s;letter-spacing:.08em;text-transform:uppercase;}
-.btn{padding:10px 24px;font-size:13px;border-radius:2px;letter-spacing:.15em;font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase;}
+.btn{padding:10px 24px;font-size:13px;border-radius:2px;letter-spacing:.15em;font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase;display:inline-block;cursor:pointer;text-decoration:none;text-align:center;line-height:1;box-sizing:border-box;}
 .btn-primary{background:var(--accent);color:#000;font-weight:800;}
 .btn-primary:hover{background:var(--accent-pale);}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;}

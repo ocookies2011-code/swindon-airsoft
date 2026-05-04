@@ -517,7 +517,7 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
               <li>Print it, fill in by hand, and bring it on the day — or photograph/scan and email to <a href="mailto:swindonairsoftfield@gmail.com" style={{ color:"var(--accent)" }}>swindonairsoftfield@gmail.com</a></li>
             </ul>
           </div>
-          <a href="/waiver.pdf" download="swindon-airsoft-waiver.pdf" className="btn btn-ghost btn-sm" style={{ textDecoration:"none", display:"inline-block", marginTop:4 }}>🖨 Download Blank Waiver</a>
+          <a href="/waiver.pdf" download="swindon-airsoft-waiver.pdf" className="btn btn-ghost btn-sm" style={{ marginTop:4 }}>🖨 Download Blank Waiver</a>
         </div>
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>

@@ -773,7 +773,7 @@ body,#root{background:#0a0a0a;color:#e0e0e0;font-family:'Barlow',sans-serif;min-
 .stat-sub.green{color:var(--accent);}
 
 /* ── CLIPPED CORNERS — tactical mil-spec aesthetic ── */
-.btn{padding:10px 24px;font-size:13px;border-radius:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
+.btn{padding:10px 24px;font-size:13px;border-radius:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);display:inline-block;cursor:pointer;font-family:inherit;letter-spacing:.1em;text-transform:uppercase;text-align:center;text-decoration:none;line-height:1;box-sizing:border-box;}
 .btn-primary{background:var(--accent);color:#000;font-weight:800;}
 .btn-primary:hover{background:var(--accent-pale);}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
