@@ -62,7 +62,7 @@ function RankInsigniaIcon({ pip, tier, size }) {
   const c = s / 2;
   const Bar = ({ y }) => <rect x="2" y={y} width={s - 4} height="3" rx="1" fill={col} />;
   const Pip = ({ x, y, r }) => { const rr = r || 4; return <polygon points={`${x},${y-rr} ${x+rr},${y} ${x},${y+rr} ${x-rr},${y}`} fill={col} />; };
-  const Crown = ({ cx, cy, w, h }) => { const ww = w||10; const hh = h||7; return (<g><rect x={cx-ww/2} y={cy+hh*0.4} width={ww} height={hh*0.6} rx="1" fill={col}/><polygon fill={col} points={[`${cx-ww/2},${cy+hh*0.4}`,`${cx-ww/2},${cy}`,`${cx-ww/4},${cy+hh*0.25}`,`${cx},${cy}`,`${cx+wh/4||cx+ww/4},${cy+hh*0.25}`,`${cx+ww/2},${cy}`,`${cx+ww/2},${cy+hh*0.4}`].join(' ')}/></g>); };
+  const Crown = ({ cx, cy, w, h }) => { const ww = w||10; const hh = h||7; return (<g><rect x={cx-ww/2} y={cy+hh*0.4} width={ww} height={hh*0.6} rx="1" fill={col}/><polygon fill={col} points={[`${cx-ww/2},${cy+hh*0.4}`,`${cx-ww/2},${cy}`,`${cx-ww/4},${cy+hh*0.25}`,`${cx},${cy}`,`${cx+ww/4},${cy+hh*0.25}`,`${cx+ww/2},${cy}`,`${cx+ww/2},${cy+hh*0.4}`].join(' ')}/></g>); };
   const Star = ({ cx, cy, r }) => { const rr=r||4; const pts=[]; for(let i=0;i<10;i++){const a=(i*36-90)*Math.PI/180;const rad=i%2===0?rr:rr*0.42;pts.push(`${cx+rad*Math.cos(a)},${cy+rad*Math.sin(a)}`);} return <polygon points={pts.join(' ')} fill={col} />; };
   const shapes = {
     PTE: <text x={c} y={c+4} textAnchor="middle" fontSize={s*0.38} fill={col} fontFamily="'Oswald',sans-serif" fontWeight="700">Pte</text>,
