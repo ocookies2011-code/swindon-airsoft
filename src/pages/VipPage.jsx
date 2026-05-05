@@ -225,7 +225,7 @@ function VipPage({ data, cu, updateUser, showToast, setAuthModal, setPage }) {
             {/* Step 1 — trigger: APPLY button */}
             {!vipEnabled && cu && !isVip && !cu.vipApplied && (
               <div style={{ background:"rgba(239,68,68,.08)", border:"1px solid rgba(239,68,68,.2)", padding:"12px 16px", borderRadius:3, marginBottom:16, fontSize:13, color:"#ef4444" }}>
-                ⛔ VIP purchasing is currently unavailable. Please check back later or contact us directly.
+                ⛔ VIP purchasing is currently unavailable. Please check back later or contact us directly. In the meantime, you can still get your <button onClick={() => setPage("ukara")} style={{ background:"none", border:"none", padding:0, color:"var(--accent)", cursor:"pointer", fontWeight:700, fontSize:"inherit", textDecoration:"underline" }}>UKARA registration</button> on the UKARA page.
               </div>
             )}
             {cu && canApply && !idStep && !showPayment && (
