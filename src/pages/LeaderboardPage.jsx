@@ -217,7 +217,12 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
   const [yearTab, setYearTab] = useState("all");
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
-  const mobile = typeof window !== "undefined" && window.innerWidth < 640;
+  const [mobile, setMobile] = useState(typeof window !== "undefined" && window.innerWidth < 640);
+  React.useEffect(() => {
+    const fn = () => setMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -281,7 +286,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
         </div>
 
         {/* ── GHOST TOGGLE ── */}
-        {cu?.role === "player" && (
+        {cu && cu.role !== "admin" && (
           <div style={{ background:BG2, border:"1px solid "+BORDER2, padding:"10px 14px", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
             <div>
               <div style={{ ...MIL, fontWeight:700, fontSize:11, letterSpacing:".18em", color:ACCENT, marginBottom:2 }}>FIELD VISIBILITY</div>
