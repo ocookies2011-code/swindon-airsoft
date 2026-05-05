@@ -112,15 +112,18 @@ function AppInner() {
   }, [cu?.id, page]);
 
   // ── Backfill user info on anonymous visit rows ────────────
-  // When auth resolves after the initial page track (e.g. returning player
-  // whose session loads asynchronously), patch all rows for this tab session
-  // that were recorded before cu was known so their name appears on the map.
+  // Runs after a short delay to ensure track() has already inserted the row
+  // for the current page. Claims ALL null-user rows for this session.
   useEffect(() => {
     if (!cu?.id || page === "admin") return;
     const sid = sessionStorage.getItem("sa_sid");
     if (!sid) return;
-    api.visits.backfillUser({ sessionId: sid, userId: cu.id, userName: cu.name });
-  }, [cu?.id]);
+    // Small delay so track() fires first and inserts the row before we claim it
+    const t = setTimeout(() => {
+      api.visits.backfillUser({ sessionId: sid, userId: cu.id, userName: cu.name });
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [cu?.id, page]);
 
 
   useEffect(() => {

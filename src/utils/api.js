@@ -1203,21 +1203,14 @@ export const visits = wrapWithTimeout({
   async backfillUser({ sessionId, userId, userName }) {
     if (!sessionId || !userId) return;
     try {
-      // Fetch ALL anonymous rows for this session (one per page visited before login)
-      const { data: anonRows } = await supabase
+      // Single atomic UPDATE — claim all anonymous rows for this session at once.
+      // Using a direct update with filters is atomic and avoids the race condition
+      // where track() inserts a null-user row after we've already fetched the list.
+      await supabase
         .from('page_visits')
-        .select('id')
+        .update({ user_id: userId, user_name: userName || null })
         .eq('session_id', sessionId)
         .is('user_id', null);
-
-      if (anonRows && anonRows.length > 0) {
-        // Claim every anonymous row by stamping the user's identity on them
-        const ids = anonRows.map(r => r.id);
-        await supabase.from('page_visits').update({
-          user_id:   userId,
-          user_name: userName || null,
-        }).in('id', ids);
-      }
     } catch { /* non-fatal */ }
   },
 
