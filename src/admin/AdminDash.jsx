@@ -56,7 +56,7 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
     lowStock.length > 0 && { msg: lowStock.length + " product(s) running low (≤" + LOW_STOCK_THRESHOLD + "): " + lowStock.slice(0,3).map(p=>p.name+" ("+p.stock+")").join(", ") + (lowStock.length>3 ? " +" + (lowStock.length-3) + " more" : "") + ".", section: "shop", color: "gold", icon: "⚠️" },
     lowStockVariants.length > 0 && { msg: lowStockVariants.length + " variant product(s) have low stock variants.", section: "shop", color: "gold", icon: "⚠️" },
     new Date().getMonth() === 11 && { msg: `⏰ All player waivers expire 31 Dec ${new Date().getFullYear()} — players will need to re-sign on 1 Jan.`, section: "unsigned-waivers", color: "gold", icon: "⚠" },
-    failedPayCount > 0 && { msg: `${failedPayCount} failed payment record${failedPayCount !== 1 ? "s" : ""} — review in Failed Payments.`, section: "failed-payments", color: "red", icon: "💳" },
+    // failed payments alert removed — managed separately in Failed Payments section
   ].filter(Boolean);
 
   // Quick action state

@@ -182,10 +182,12 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     // ── Discount code savings (applied after VIP, before credits)
     let discountSaving = 0;
     if (appliedDiscount && !cartEmpty) {
+      // Discount codes apply to tickets only (walk-on + rental), not game day extras
+      const ticketOnlyTotal = Math.round((walkOnTotal + rentalTotal) * 100) / 100;
       if (appliedDiscount.type === 'percent') {
-        discountSaving = Math.round(grandTotal * (Number(appliedDiscount.value) / 100) * 100) / 100;
+        discountSaving = Math.round(ticketOnlyTotal * (Number(appliedDiscount.value) / 100) * 100) / 100;
       } else {
-        discountSaving = Math.min(Math.round(Number(appliedDiscount.value) * 100) / 100, grandTotal);
+        discountSaving = Math.min(Math.round(Number(appliedDiscount.value) * 100) / 100, ticketOnlyTotal);
       }
     }
     const afterDiscount  = Math.round(Math.max(0, grandTotal - discountSaving) * 100) / 100;
