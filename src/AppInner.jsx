@@ -18,6 +18,7 @@ import { VipPage }            from "./pages/VipPage";
 import { QAPage }             from "./pages/QAPage";
 import { ProfilePage }        from "./pages/ProfilePage";
 import { PublicProfilePage }  from "./pages/PublicProfilePage";
+import { PasswordResetPage }  from "./pages/PasswordResetPage";
 import { UKARAPage }          from "./pages/UKARAPage";
 
 const ALLOWED_COUNTRY_CODES = new Set([
@@ -42,7 +43,7 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","reset"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
@@ -50,6 +51,7 @@ function AppInner() {
     return PUBLIC_PAGES.includes(p) ? p : "home";
   };
   const [page, setPageState] = useState(getInitialPage);
+  const [resetToken, setResetToken] = useState(null);
   const [publicProfileId, setPublicProfileId] = useState(() => {
     const parts = window.location.hash.replace("#","").split("/");
     return parts[0] === "player" ? (parts[1] || null) : null;
@@ -132,6 +134,7 @@ function AppInner() {
       const p = parts[0];
       if (p === "admin") { setPageState("admin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); window.scrollTo({ top:0, behavior:"instant" }); return; }
+      if (p === "reset" && parts[1]) { setResetToken(parts[1]); setPageState("reset"); window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (PUBLIC_PAGES.includes(p)) { setPageState(p); window.scrollTo({ top:0, behavior:"instant" }); }
     };
     window.addEventListener("hashchange", onHash);
@@ -599,6 +602,7 @@ function AppInner() {
         {page === "profile"     && !authLoading && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
         {page === "profile"     && authLoading  && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Loading…</div>}
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
+        {page === "reset"       && <PasswordResetPage token={resetToken} setPage={setPage} showToast={showToast} />}
         {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "about"       && <AboutPage setPage={setPage} />}
         {page === "staff"       && <StaffPage staff={data.staff || []} />}

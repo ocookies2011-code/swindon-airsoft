@@ -18,10 +18,41 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     if (!form.email || !form.email.includes("@")) { showToast("Enter your email address first", "red"); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
-        redirectTo: window.location.origin + window.location.pathname,
+      // Generate a secure token and store it in the DB
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
+      const { error: insertErr } = await supabase
+        .from('password_reset_tokens')
+        .insert({ email: form.email.trim().toLowerCase(), token });
+      if (insertErr) throw new Error('Failed to create reset token');
+
+      // Send via EmailJS (same system as all other site emails)
+      const resetUrl = window.location.origin + '/#reset/' + token;
+      const htmlContent = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#0d0d0d;color:#e0e8d0;padding:32px;border-radius:4px;">
+          <h2 style="color:#c8ff00;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;margin-top:0;">PASSWORD RESET</h2>
+          <p>We received a request to reset the password for your Swindon Airsoft account.</p>
+          <p>Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+          <a href="${resetUrl}" style="display:inline-block;background:#c8ff00;color:#000;font-weight:700;padding:12px 28px;text-decoration:none;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;font-size:15px;margin:16px 0;">RESET MY PASSWORD</a>
+          <p style="font-size:12px;color:#666;margin-top:24px;">If you didn't request this, you can safely ignore this email. Your password won't change until you click the link above.</p>
+          <p style="font-size:12px;color:#666;">Or copy this link: <a href="${resetUrl}" style="color:#c8ff00;">${resetUrl}</a></p>
+        </div>`;
+
+      if (!window.emailjs) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        await new Promise((res, rej) => { script.onload = res; script.onerror = rej; document.head.appendChild(script); });
+      }
+      const PUBLIC_KEY   = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+      const SERVICE_ID   = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
+      const TEMPLATE_ID  = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
+      window.emailjs.init({ publicKey: PUBLIC_KEY });
+      await window.emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+        to_email:    form.email.trim(),
+        to_name:     'Player',
+        subject:     'Reset Your Swindon Airsoft Password',
+        html_content: htmlContent,
       });
-      if (error) throw error;
+
       setResetSent(true);
     } catch (e) {
       showToast(e.message || "Failed to send reset email", "red");
