@@ -81,7 +81,15 @@ function AppInner() {
   const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
   const [authModal, setAuthModal] = useState(null);
+  const [hitCount, setHitCount] = useState(null);
   const [toast, showToast] = useToast();
+
+  // ── Total hit counter ───────────────────────────────────────
+  useEffect(() => {
+    supabase.from('page_visits').select('visit_count').then(({ data }) => {
+      if (data) setHitCount(data.reduce((s, r) => s + (r.visit_count || 1), 0));
+    }).catch(() => {});
+  }, []);
 
   // ── Page visit tracking ──────────────────────────────────
   useEffect(() => {
@@ -680,7 +688,15 @@ function AppInner() {
             </div>
           </div>
           <div className="pub-footer-bottom">
-            <div className="pub-footer-copy">© {new Date().getFullYear()} Swindon Airsoft. All rights reserved.</div>
+            <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
+              <div className="pub-footer-copy">© {new Date().getFullYear()} Swindon Airsoft. All rights reserved.</div>
+              {hitCount !== null && (
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#3a5010", letterSpacing:".08em", display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ display:"inline-block", width:7, height:7, borderRadius:"50%", background:"#3a5010" }}/>
+                  {hitCount.toLocaleString()} HITS
+                </div>
+              )}
+            </div>
             <div style={{ display:"flex", gap:16, alignItems:"center", flexWrap:"wrap" }}>
               <div className="pub-footer-legal">Players must be 18+ or accompanied by adult. Valid ID required.</div>
               <button onClick={() => setPage("terms")} style={{ background:"none", border:"none", color:"var(--muted)", fontSize:12, cursor:"pointer", padding:0, textDecoration:"underline" }}>Terms & Privacy Policy</button>
