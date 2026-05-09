@@ -1134,67 +1134,19 @@ export const visits = wrapWithTimeout({
   async track({ page, userId, userName, sessionId }) {
     try {
       if (!sessionId) return;
-      const now = new Date().toISOString();
-
-      // Key is ALWAYS session_id + page — one row per page per browser session.
-      // This means every page a visitor browses gets its own row, whether they
-      // are anonymous or logged in. User identity is stamped on the row immediately
-      // if known, or backfilled later via backfillUser() when auth resolves.
-      const { data: existing } = await supabase
-        .from('page_visits')
-        .select('id, user_id, visit_count')
-        .eq('session_id', sessionId)
-        .eq('page', page)
-        .maybeSingle();
-
-      if (existing) {
-        // Row exists for this session+page — increment count and update identity
-        // if the visitor has since logged in (user_id was null when row was created).
-        const updates = {
-          last_seen_at: now,
-          user_agent:   navigator.userAgent || null,
-          visit_count:  (existing.visit_count || 1) + 1,
-          ...(userId && !existing.user_id
-            ? { user_id: userId, user_name: userName || null }
-            : {}),
-        };
-        await supabase.from('page_visits').update(updates).eq('id', existing.id);
-
-        // Re-run geo in background (fixes stale coords)
-        _lookupGeo().then(geo => {
-          if (!geo) return;
-          supabase.from('page_visits').update({
-            country: geo.country || null,
-            city:    geo.city    || null,
-            lat:     geo.lat     || null,
-            lon:     geo.lon     || null,
-          }).eq('id', existing.id).then(() => {}).catch(() => {});
-        }).catch(() => {});
-      } else {
-        // New session+page combination — insert a fresh row
-        const { data: newRow } = await supabase.from('page_visits').insert({
-          session_id: sessionId,
+      // Call the edge function which uses service role — bypasses RLS entirely.
+      // This fixes the bug where direct Supabase calls were blocked by RLS policies
+      // causing silent failures and no tracking for most logged-in users.
+      await supabase.functions.invoke('track-visit', {
+        body: {
           page,
-          user_id:    userId    || null,
-          user_name:  userName  || null,
-          last_seen_at: now,
-          visit_count:  1,
-          user_agent:   navigator.userAgent || null,
-          referrer:     document.referrer   || null,
-        }).select('id').single();
-
-        if (newRow?.id) {
-          _lookupGeo().then(geo => {
-            if (!geo) return;
-            supabase.from('page_visits').update({
-              country: geo.country || null,
-              city:    geo.city    || null,
-              lat:     geo.lat     || null,
-              lon:     geo.lon     || null,
-            }).eq('id', newRow.id).then(() => {}).catch(() => {});
-          }).catch(() => {});
-        }
-      }
+          userId:    userId    || null,
+          userName:  userName  || null,
+          sessionId,
+          referrer:  document.referrer   || null,
+          userAgent: navigator.userAgent || null,
+        },
+      });
     } catch { /* never break the site */ }
   },
 
@@ -1204,9 +1156,7 @@ export const visits = wrapWithTimeout({
   async backfillUser({ sessionId, userId, userName }) {
     if (!sessionId || !userId) return;
     try {
-      // Single atomic UPDATE — claim all anonymous rows for this session at once.
-      // Using a direct update with filters is atomic and avoids the race condition
-      // where track() inserts a null-user row after we've already fetched the list.
+      // Direct UPDATE — RLS allows updating rows where user_id IS NULL
       await supabase
         .from('page_visits')
         .update({ user_id: userId, user_name: userName || null })
