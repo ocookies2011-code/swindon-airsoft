@@ -9,6 +9,7 @@ import { logAction } from "./adminHelpers";
 function AdminRevenue({ data, save, showToast, cu }) {
   const [cashSales, setCashSales] = useState([]);
   const [shopOrders, setShopOrders] = useState([]);
+  const [ukaraApps, setUkaraApps] = useState([]);
   const [selected, setSelected]       = useState(null);
   const [squareDetail, setSquareDetail] = useState(null); // selected transaction for detail modal
   const [monthDetail, setMonthDetail] = useState(null);
@@ -28,7 +29,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
   const [txDateFrom, setTxDateFrom] = useState(firstOfMonth);
   const [txDateTo,   setTxDateTo]   = useState(today);
-  const [txSource,   setTxSource]   = useState('all'); // all | booking | shop | terminal | cash
+  const [txSource,   setTxSource]   = useState('all'); // all | booking | shop | terminal | cash | ukara
   const [txSearch,   setTxSearch]   = useState('');
   const [txPage,     setTxPage]     = useState(1);
   const TX_PER_PAGE = 50;
@@ -125,6 +126,10 @@ function AdminRevenue({ data, save, showToast, cu }) {
   useEffect(() => {
     reloadCash();
     api.shopOrders.getAll().then(setShopOrders).catch(console.error);
+    supabase.from('ukara_applications')
+      .select('id,name,email,status,square_payment_id,square_receipt_url,renewal_square_payment_id,renewal_square_receipt_url,renewal_paid_at,created_at')
+      .then(({ data }) => setUkaraApps(data || []))
+      .catch(console.error);
   }, []);
 
   const deleteTransaction = async (t) => {
@@ -212,7 +217,41 @@ function AdminRevenue({ data, save, showToast, cu }) {
     adminNotes: s.admin_notes || '',
   }));
 
-  const all = [...bookingRevenue, ...shopRevenue, ...cashRevenue]
+  const ukaraRevenue = ukaraApps
+    .filter(a => a.square_payment_id)
+    .map(a => ({
+      id: a.id,
+      userName: a.name,
+      customerEmail: a.email,
+      source: "ukara",
+      eventTitle: "UKARA Registration",
+      items: [{ name: "UKARA Registration Fee", qty: 1, price: 5 }],
+      total: 5,
+      date: a.created_at,
+      squareOrderId: a.square_payment_id || null,
+      squareReceiptUrl: a.square_receipt_url || null,
+      status: a.status,
+      adminNotes: '',
+    }));
+
+  const ukaraRenewalRevenue = ukaraApps
+    .filter(a => a.renewal_square_payment_id)
+    .map(a => ({
+      id: a.id + '-renewal',
+      userName: a.name,
+      customerEmail: a.email,
+      source: "ukara",
+      eventTitle: "UKARA Renewal",
+      items: [{ name: "UKARA Renewal Fee", qty: 1, price: 5 }],
+      total: 5,
+      date: a.renewal_paid_at || a.created_at,
+      squareOrderId: a.renewal_square_payment_id || null,
+      squareReceiptUrl: a.renewal_square_receipt_url || null,
+      status: a.status,
+      adminNotes: '',
+    }));
+
+  const all = [...bookingRevenue, ...shopRevenue, ...cashRevenue, ...ukaraRevenue, ...ukaraRenewalRevenue]
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const totalBookings = bookingRevenue.reduce((s, b) => s + b.total, 0);
@@ -375,6 +414,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                 <option value="shop">🛒 Shop Orders</option>
                 <option value="terminal">🖥 Terminal</option>
                 <option value="cash">💵 Cash Sales</option>
+                <option value="ukara">🪪 UKARA Payments</option>
               </select>
               <input value={txSearch} onChange={e => { setTxSearch(e.target.value); setTxPage(1); }}
                 placeholder="Search name, event, email…"
