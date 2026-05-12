@@ -240,7 +240,7 @@ function AboutPage({ setPage }) {
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(18px,4vw,22px)", color:"#4fc3f7", letterSpacing:".04em" }}>£40 per hour</div>
                 <div style={{ fontSize:11, color:"#336070", marginTop:4 }}>Parts discussed before purchase. Full report provided.</div>
               </div>
-              <a href="https://wa.me/447877731973" target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/447861058487" target="_blank" rel="noopener noreferrer"
                 style={{ display:"inline-block", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".18em", color:"#25d366", background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", padding:"11px 28px", textDecoration:"none", textTransform:"uppercase", textAlign:"center" }}>
                 WHATSAPP TO BOOK
               </a>
