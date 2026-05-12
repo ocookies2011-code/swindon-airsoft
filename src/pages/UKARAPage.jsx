@@ -111,7 +111,6 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         proof_description: `${gamesAtSwindon} games verified at Swindon Airsoft`,
         declaration_signed: true,
         status:            "pending",
-        payment_id:         sqPayment.id,
         square_payment_id:  sqPayment.id,
         square_receipt_url: sqPayment.receiptUrl || null,
       });
