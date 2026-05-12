@@ -30,6 +30,9 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   const [submitting, setSubmitting]       = useState(false);
   const [submitted, setSubmitted]         = useState(false);
   const [existingApp, setExistingApp]     = useState(null);
+  const [docGovId, setDocGovId]           = useState(null);
+  const [docFace, setDocFace]             = useState(null);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(!!cu);
   const [renewalPaying, setRenewalPaying] = useState(false);
   const [useSubscription, setUseSubscription] = useState(false);
@@ -333,10 +336,70 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
 
         {/* ── PENDING ── */}
         {!checkingExisting && existingApp?.status === "pending" && (
-          <div style={{ background: "rgba(255,183,77,.06)", border: "1px solid #3a2800", borderRadius: 10, padding: "28px 32px", marginBottom: 32, textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
-            <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#ffb74d", letterSpacing: ".08em", marginBottom: 8 }}>APPLICATION UNDER REVIEW</div>
-            <p style={{ color: "#7a6040", fontSize: 13, margin: 0 }}>Your application and £5 payment have been received. We'll contact you at <strong style={{ color: "#c8d8a0" }}>{existingApp.email}</strong> within 3–5 working days.</p>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ background: "rgba(255,183,77,.06)", border: "1px solid #3a2800", borderRadius: 10, padding: "28px 32px", textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#ffb74d", letterSpacing: ".08em", marginBottom: 8 }}>APPLICATION UNDER REVIEW</div>
+              <p style={{ color: "#7a6040", fontSize: 13, margin: 0 }}>Your application and £5 payment have been received. We'll contact you at <strong style={{ color: "#c8d8a0" }}>{existingApp.email}</strong> within 3–5 working days.</p>
+            </div>
+            {/* Document upload — shown if docs are missing */}
+            {(!existingApp.gov_id_url || !existingApp.face_photo_url) && (
+              <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid #2a3a10", borderRadius: 10, padding: "24px 28px" }}>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontSize: 16, fontWeight: 700, color: "var(--accent)", letterSpacing: ".08em", marginBottom: 4 }}>
+                  📎 UPLOAD YOUR DOCUMENTS
+                </div>
+                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>
+                  We still need your ID and face photo to process your application. Please upload them below.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 6 }}>
+                      Government ID {existingApp.gov_id_url ? "✅" : "(required)"}
+                    </div>
+                    {existingApp.gov_id_url
+                      ? <div style={{ fontSize: 12, color: "var(--accent)" }}>✅ Already uploaded</div>
+                      : <input type="file" accept="image/*,.pdf" onChange={e => setDocGovId(e.target.files[0])}
+                          style={{ fontSize: 12, color: "var(--muted)", width: "100%" }} />
+                    }
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 6 }}>
+                      Face Photo {existingApp.face_photo_url ? "✅" : "(required)"}
+                    </div>
+                    {existingApp.face_photo_url
+                      ? <div style={{ fontSize: 12, color: "var(--accent)" }}>✅ Already uploaded</div>
+                      : <input type="file" accept="image/*" onChange={e => setDocFace(e.target.files[0])}
+                          style={{ fontSize: 12, color: "var(--muted)", width: "100%" }} />
+                    }
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  disabled={uploadingDocs || (!docGovId && !existingApp.gov_id_url) || (!docFace && !existingApp.face_photo_url)}
+                  onClick={async () => {
+                    setUploadingDocs(true);
+                    try {
+                      const uploads = {};
+                      if (docGovId && !existingApp.gov_id_url) {
+                        uploads.gov_id_url = await api.ukaraApplications.uploadGovId(cu.id, existingApp.id, docGovId);
+                      }
+                      if (docFace && !existingApp.face_photo_url) {
+                        uploads.face_photo_url = await api.ukaraApplications.uploadFacePhoto(cu.id, existingApp.id, docFace);
+                      }
+                      if (Object.keys(uploads).length > 0) {
+                        await api.ukaraApplications.update(existingApp.id, uploads);
+                        setExistingApp(prev => ({ ...prev, ...uploads }));
+                        showToast("✅ Documents uploaded! We'll review your application shortly.");
+                      }
+                    } catch (e) {
+                      showToast("Upload failed: " + e.message, "red");
+                    } finally { setUploadingDocs(false); }
+                  }}
+                >
+                  {uploadingDocs ? "Uploading…" : "Upload Documents"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
