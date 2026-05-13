@@ -438,7 +438,8 @@ export const gallery = wrapWithTimeout({
     if (error) throw error
     return data.map(a => ({
       id: a.id, title: a.title,
-      images: (a.gallery_images || []).sort((x, y) => x.sort_order - y.sort_order).map(i => i.url)
+      images: (a.gallery_images || []).sort((x, y) => x.sort_order - y.sort_order).map(i => i.url),
+      driveFolderId: a.drive_folder_id || null
     }))
   },
 

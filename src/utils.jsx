@@ -2254,7 +2254,7 @@ function HomePage({ data, setPage, onProductClick }) {
       {/* MISSION COUNTDOWN */}
       {nextEvent && (() => {
         const target = nextEvent.date + "T" + nextEvent.time + ":00";
-        const recentNews = (data.news || []).filter(n => n.published).slice(0, 5);
+        const recentNews = (data.news || []).filter(n => n.published).slice(0, 4);
         const CATEGORY_COLOURS = { event:"#c8ff00", update:"#4fc3f7", safety:"#ef5350", community:"#ce93d8" };
         return (
           <div style={{ background:"#0a0a0a", padding:"24px" }}>

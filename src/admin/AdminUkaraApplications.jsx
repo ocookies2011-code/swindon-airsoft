@@ -381,9 +381,11 @@ function AdminUkaraApplications({ showToast, cu }) {
             )}
 
             {/* Government ID */}
-            {selected.gov_id_url && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 8 }}>GOVERNMENT ID</div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 8 }}>
+                GOVERNMENT ID {selected.gov_id_url ? "✅" : "⚠ MISSING"}
+              </div>
+              {selected.gov_id_url ? (
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {selected.gov_id_url.toLowerCase().endsWith(".pdf") ? (
                     <a href={selected.gov_id_url} target="_blank" rel="noopener noreferrer" style={{ background: "rgba(200,255,0,.08)", border: "1px solid #2a3a10", color: "#c8ff00", padding: "8px 16px", borderRadius: 6, fontSize: 12, textDecoration: "none" }}>📄 View PDF</a>
@@ -393,17 +395,57 @@ function AdminUkaraApplications({ showToast, cu }) {
                     </a>
                   )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <input type="file" accept="image/*,.pdf" onChange={e => setAdminDocGovId(e.target.files[0])}
+                  style={{ fontSize: 12, color: "var(--muted)" }} />
+              )}
+            </div>
 
             {/* Face Photo */}
-            {selected.face_photo_url && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 8 }}>FACE PHOTO</div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: ".15em", color: "#3a5010", marginBottom: 8 }}>
+                FACE PHOTO {selected.face_photo_url ? "✅" : "⚠ MISSING"}
+              </div>
+              {selected.face_photo_url ? (
                 <a href={selected.face_photo_url} target="_blank" rel="noopener noreferrer">
                   <img src={selected.face_photo_url} alt="Face photo" style={{ maxHeight: 200, maxWidth: "100%", borderRadius: 6, border: "1px solid #2a3a10", cursor: "pointer" }} />
                 </a>
-              </div>
+              ) : (
+                <input type="file" accept="image/*" onChange={e => setAdminDocFace(e.target.files[0])}
+                  style={{ fontSize: 12, color: "var(--muted)" }} />
+              )}
+            </div>
+
+            {/* Admin upload button — shown when any docs are missing and files selected */}
+            {(!selected.gov_id_url || !selected.face_photo_url) && (
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ marginBottom: 16 }}
+                disabled={adminUploading || (!adminDocGovId && !selected.gov_id_url) || (!adminDocFace && !selected.face_photo_url)}
+                onClick={async () => {
+                  setAdminUploading(true);
+                  try {
+                    const updates = {};
+                    if (adminDocGovId && !selected.gov_id_url) {
+                      updates.gov_id_url = await api.ukaraApplications.uploadGovId(selected.user_id, selected.id, adminDocGovId);
+                    }
+                    if (adminDocFace && !selected.face_photo_url) {
+                      updates.face_photo_url = await api.ukaraApplications.uploadFacePhoto(selected.user_id, selected.id, adminDocFace);
+                    }
+                    if (Object.keys(updates).length > 0) {
+                      await api.ukaraApplications.update(selected.id, updates);
+                      setSelected(prev => ({ ...prev, ...updates }));
+                      setAdminDocGovId(null);
+                      setAdminDocFace(null);
+                      showToast("✅ Documents uploaded successfully");
+                    }
+                  } catch (e) {
+                    showToast("Upload failed: " + e.message, "red");
+                  } finally { setAdminUploading(false); }
+                }}
+              >
+                {adminUploading ? "Uploading…" : "⬆ Upload Documents"}
+              </button>
             )}
 
             {selected.admin_notes && (

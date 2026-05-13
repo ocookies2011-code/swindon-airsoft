@@ -7,16 +7,52 @@ import { SA_LOGO_SRC } from "../assets/logoImage";
 function GalleryPage({ data }) {
   const [openAlbum, setOpenAlbum] = useState(null);
   const [lightbox, setLightbox]   = useState(null);
+  const [driveImages, setDriveImages] = useState({}); // albumId -> image URLs
+  const [driveLoading, setDriveLoading] = useState({});
+
+  // Fetch images from a public Google Drive folder
+  const fetchDriveImages = async (album) => {
+    if (!album.driveFolderId || driveImages[album.id] || driveLoading[album.id]) return;
+    setDriveLoading(prev => ({ ...prev, [album.id]: true }));
+    try {
+      // Use Drive API v3 to list image files in the shared folder
+      // Requires the folder to be shared publicly ("Anyone with the link can view")
+      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || '';
+      const url = `https://www.googleapis.com/drive/v3/files?q='${album.driveFolderId}'+in+parents+and+mimeType+contains+'image/'&fields=files(id,name,thumbnailLink)&orderBy=name&key=${apiKey}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.files) {
+        // Convert file IDs to direct image URLs
+        const urls = json.files.map(f => `https://drive.google.com/uc?export=view&id=${f.id}`);
+        setDriveImages(prev => ({ ...prev, [album.id]: urls }));
+      }
+    } catch (e) {
+      console.error('Drive fetch failed:', e);
+    } finally {
+      setDriveLoading(prev => ({ ...prev, [album.id]: false }));
+    }
+  };
+
+  // Get effective images for an album (Drive or Supabase)
+  const getAlbumImages = (album) => {
+    if (album.driveFolderId) return driveImages[album.id] || album.images;
+    return album.images;
+  };
 
   const openLightbox = (url, album, idx) => setLightbox({ url, album, index: idx });
+
+  const handleOpenAlbum = (album) => {
+    setOpenAlbum(album);
+    if (album.driveFolderId) fetchDriveImages(album);
+  };
   const closeLightbox = () => setLightbox(null);
   const prevImg = () => {
-    const imgs = lightbox.album.images;
+    const imgs = getAlbumImages(lightbox.album);
     const i = (lightbox.index - 1 + imgs.length) % imgs.length;
     setLightbox({ ...lightbox, url: imgs[i], index: i });
   };
   const nextImg = () => {
-    const imgs = lightbox.album.images;
+    const imgs = getAlbumImages(lightbox.album);
     const i = (lightbox.index + 1) % imgs.length;
     setLightbox({ ...lightbox, url: imgs[i], index: i });
   };
@@ -87,9 +123,9 @@ function GalleryPage({ data }) {
           ? <div style={{ textAlign:'center', padding:80, fontFamily:"'Share Tech Mono',monospace", color:'#2a3a10', fontSize:11, letterSpacing:'.2em' }}>NO MISSION FOOTAGE ON FILE</div>
           : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:16 }}>
               {data.albums.map(album => {
-                const cover = album.images[0];
+                const cover = (album.driveFolderId && driveImages[album.id]?.[0]) || album.images[0];
                 return (
-                  <div key={album.id} onClick={() => setOpenAlbum(album)}
+                  <div key={album.id} onClick={() => handleOpenAlbum(album)}
                     style={{ cursor:'pointer', background:'#0c1009', border:'1px solid #1a2808', overflow:'hidden', transition:'border-color .2s, transform .2s' }}
                     onMouseEnter={e=>{e.currentTarget.style.borderColor='#c8ff00';e.currentTarget.style.transform='translateY(-2px)';}}
                     onMouseLeave={e=>{e.currentTarget.style.borderColor='#1a2808';e.currentTarget.style.transform='none';}}>
@@ -103,7 +139,7 @@ function GalleryPage({ data }) {
                         <img src={SA_LOGO_SRC} alt="" style={{ width:100, height:'auto', objectFit:'contain', opacity:0.15, transform:'rotate(-25deg)', userSelect:'none', pointerEvents:'none', filter:'saturate(0) brightness(10)' }} />
                       </div>
                       <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,.75)', border:'1px solid rgba(200,255,0,.3)', fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#c8ff00', letterSpacing:'.12em', padding:'2px 7px' }}>
-                        {album.images.length} FRAMES
+                        {album.driveFolderId ? (driveImages[album.id]?.length ?? '…') : album.images.length} FRAMES
                       </div>
                     </div>
                     <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>

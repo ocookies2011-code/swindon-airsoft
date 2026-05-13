@@ -262,7 +262,22 @@ function AdminGallery({ data, save, showToast }) {
                     {album.images.length > 4 && <div style={{ width:36, height:36, background:"#1a1a1a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>+{album.images.length-4}</div>}
                   </div>
                   {/* Controls */}
-                  <div style={{ display:"flex", gap:6, flexShrink:0 }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display:"flex", gap:6, flexShrink:0, alignItems:"center" }} onClick={e => e.stopPropagation()}>
+                    {/* Google Drive folder link */}
+                    <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", whiteSpace:"nowrap" }}>Drive ID:</span>
+                      <input
+                        defaultValue={album.driveFolderId || ""}
+                        placeholder="paste folder ID"
+                        style={{ background:"#0f0f0f", border:"1px solid #2a2a2a", color:"var(--muted)", fontSize:10, padding:"4px 8px", width:180, fontFamily:"'Share Tech Mono',monospace" }}
+                        onBlur={async e => {
+                          const val = e.target.value.trim();
+                          if (val === (album.driveFolderId || "")) return;
+                          await supabase.from('gallery_albums').update({ drive_folder_id: val || null }).eq('id', album.id);
+                          showToast(val ? '✅ Drive folder linked' : 'Drive folder removed');
+                        }}
+                      />
+                    </div>
                     <label style={{ cursor: upState ? "default" : "pointer", opacity: upState ? .5 : 1,
                       display:"inline-flex", alignItems:"center", gap:5, padding:"6px 12px",
                       background:"var(--accent)", color:"#000", fontFamily:"'Barlow Condensed',sans-serif",
