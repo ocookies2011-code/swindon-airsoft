@@ -42,10 +42,17 @@ function AdminGallery({ data, save, showToast }) {
     } catch (e) { showToast("Failed: " + e.message, "red"); }
   };
 
-  const addImg = async (albumId, url) => {
-    if (!url.trim()) return;
+  const addImg = async (albumId, rawUrl) => {
+    if (!rawUrl.trim()) return;
+    // Auto-convert Google Drive sharing/view URLs to thumbnail URLs
+    let url = rawUrl.trim();
+    const driveFile = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]{25,})/);
+    const driveOpen = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]{25,})/);
+    const driveUc   = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]{25,})/);
+    const fileId    = driveFile?.[1] || driveOpen?.[1] || driveUc?.[1];
+    if (fileId) url = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200-h900`;
     try {
-      await api.gallery.addImageUrl(albumId, url.trim());
+      await api.gallery.addImageUrl(albumId, url);
       save({ albums: await api.gallery.getAll() });
       setUrlInput(p => ({ ...p, [albumId]: "" }));
     } catch (e) { showToast("Failed: " + e.message, "red"); }

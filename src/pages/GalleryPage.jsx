@@ -7,51 +7,21 @@ import { SA_LOGO_SRC } from "../assets/logoImage";
 function GalleryPage({ data }) {
   const [openAlbum, setOpenAlbum] = useState(null);
   const [lightbox, setLightbox]   = useState(null);
-  const [driveImages, setDriveImages] = useState({});
-  const [driveLoading, setDriveLoading] = useState({});
-
-  const fetchDriveImages = async (album) => {
-    if (!album.driveFolderId || driveImages[album.id] !== undefined || driveLoading[album.id]) return;
-    const raw = album.driveFolderId;
-    const match = raw.match(/[-\w]{25,}/);
-    const folderId = match ? match[0] : raw;
-    setDriveLoading(prev => ({ ...prev, [album.id]: true }));
-    try {
-      const { data, error } = await supabase.functions.invoke('drive-images', { body: { folderId } });
-      if (error) throw error;
-      const imgs = data?.images || [];
-      setDriveImages(prev => ({
-        ...prev,
-        [album.id]: imgs.map(i => i.thumb),
-        [album.id + '_full']: imgs.map(i => i.url),
-      }));
-    } catch (e) {
-      console.error('Drive fetch failed:', e);
-      setDriveImages(prev => ({ ...prev, [album.id]: [] }));
-    } finally {
-      setDriveLoading(prev => ({ ...prev, [album.id]: false }));
-    }
-  };
-
-  const getAlbumImages = (album) => {
-    if (album.driveFolderId && driveImages[album.id]?.length) return driveImages[album.id];
-    return album.images;
-  };
+  const getAlbumImages = (album) => album.images;
 
   const openLightbox = (url, album, idx) => setLightbox({ url, album, index: idx });
 
   const handleOpenAlbum = (album) => {
     setOpenAlbum(album);
-    if (album.driveFolderId) fetchDriveImages(album);
   };
   const closeLightbox = () => setLightbox(null);
   const prevImg = () => {
-    const imgs = getAlbumImages(lightbox.album);
+    const imgs = lightbox.album.images;
     const i = (lightbox.index - 1 + imgs.length) % imgs.length;
     setLightbox({ ...lightbox, url: imgs[i], index: i });
   };
   const nextImg = () => {
-    const imgs = getAlbumImages(lightbox.album);
+    const imgs = lightbox.album.images;
     const i = (lightbox.index + 1) % imgs.length;
     setLightbox({ ...lightbox, url: imgs[i], index: i });
   };
@@ -122,7 +92,7 @@ function GalleryPage({ data }) {
           ? <div style={{ textAlign:'center', padding:80, fontFamily:"'Share Tech Mono',monospace", color:'#2a3a10', fontSize:11, letterSpacing:'.2em' }}>NO MISSION FOOTAGE ON FILE</div>
           : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:16 }}>
               {data.albums.map(album => {
-                const cover = (album.driveFolderId && driveImages[album.id]?.[0]) || album.images[0];
+                const cover = album.images[0];
                 return (
                   <div key={album.id} onClick={() => handleOpenAlbum(album)}
                     style={{ cursor:'pointer', background:'#0c1009', border:'1px solid #1a2808', overflow:'hidden', transition:'border-color .2s, transform .2s' }}
@@ -138,7 +108,7 @@ function GalleryPage({ data }) {
                         <img src={SA_LOGO_SRC} alt="" style={{ width:100, height:'auto', objectFit:'contain', opacity:0.15, transform:'rotate(-25deg)', userSelect:'none', pointerEvents:'none', filter:'saturate(0) brightness(10)' }} />
                       </div>
                       <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,.75)', border:'1px solid rgba(200,255,0,.3)', fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:'#c8ff00', letterSpacing:'.12em', padding:'2px 7px' }}>
-                        {album.driveFolderId ? (driveImages[album.id]?.length ?? '…') : album.images.length} FRAMES
+                        {album.images.length} FRAMES
                       </div>
                     </div>
                     <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -155,13 +125,6 @@ function GalleryPage({ data }) {
   );
 
   /* ── Album image grid ── */
-  // Pre-fetch Drive images for any albums that have a folder ID
-  React.useEffect(() => {
-    data.albums.forEach(album => {
-      if (album.driveFolderId) fetchDriveImages(album);
-    });
-  }, [data.albums]);
-
   return (
     <div style={{ background:'#080a06', minHeight:'100vh' }}>
       <PageHeader />
