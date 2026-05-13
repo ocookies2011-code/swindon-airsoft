@@ -178,6 +178,24 @@ function AdminGallery({ data, save, showToast }) {
                     </div>
                   )}
 
+                  {/* Google Drive folder ID */}
+                  <div style={{ marginBottom:8 }}>
+                    <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em", marginBottom:4 }}>
+                      📁 GOOGLE DRIVE FOLDER ID <span style={{ color:"#2a3a10" }}>(optional — link instead of uploading)</span>
+                    </div>
+                    <input
+                      defaultValue={album.driveFolderId || ""}
+                      placeholder="Paste Google Drive folder ID here…"
+                      style={{ width:"100%", background:"#0f0f0f", border:"1px solid #2a2a2a", color:"var(--accent)", fontSize:11, padding:"6px 10px", fontFamily:"'Share Tech Mono',monospace", boxSizing:"border-box" }}
+                      onBlur={async e => {
+                        const val = e.target.value.trim();
+                        if (val === (album.driveFolderId || "")) return;
+                        await supabase.from('gallery_albums').update({ drive_folder_id: val || null }).eq('id', album.id);
+                        showToast(val ? '✅ Drive folder linked — images will load from Google Drive' : 'Drive folder removed');
+                      }}
+                    />
+                  </div>
+
                   {/* Action buttons */}
                   <div style={{ display:"flex", gap:6 }}>
                     <label style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"7px 0", cursor: upState ? "default" : "pointer", opacity: upState ? .5 : 1,
