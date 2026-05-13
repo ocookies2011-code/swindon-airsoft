@@ -65,33 +65,32 @@ function AdminGallery({ data, save, showToast }) {
     if (!rawText.trim()) return;
     setBulkBusy(p => ({ ...p, [albumId]: true }));
     try {
-      const lines = rawText.split(/[
-,]+/).map(l => l.trim()).filter(Boolean);
+      const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
       let added = 0;
       for (const raw of lines) {
         let url = raw;
-        const driveFile = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]{25,})/);
-        const driveOpen = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]{25,})/);
-        const driveUc   = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]{25,})/);
-        const fileId    = driveFile?.[1] || driveOpen?.[1] || driveUc?.[1];
-        if (fileId) url = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200-h900`;
-        if (url.startsWith('http')) {
+        const m1 = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]{25,})/);
+        const m2 = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]{25,})/);
+        const m3 = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]{25,})/);
+        const fid = (m1 || m2 || m3)?.[1];
+        if (fid) url = "https://drive.google.com/thumbnail?id=" + fid + "&sz=w1200-h900";
+        if (url.startsWith("http")) {
           await api.gallery.addImageUrl(albumId, url);
           added++;
         }
       }
       save({ albums: await api.gallery.getAll() });
-      setBulkInput(p => ({ ...p, [albumId]: '' }));
+      setBulkInput(p => ({ ...p, [albumId]: "" }));
       setBulkOpen(p => ({ ...p, [albumId]: false }));
-      showToast(`✅ Added ${added} image${added !== 1 ? 's' : ''}`);
+      showToast("\u2705 Added " + added + " image" + (added !== 1 ? "s" : ""));
     } catch (e) {
-      showToast('Bulk add failed: ' + e.message, 'red');
+      showToast("Bulk add failed: " + e.message, "red");
     } finally {
       setBulkBusy(p => ({ ...p, [albumId]: false }));
     }
   };
 
-  const handleFiles = async (albumId, e) => {
+    const handleFiles = async (albumId, e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
     e.target.value = "";
