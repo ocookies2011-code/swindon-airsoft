@@ -7,6 +7,9 @@ import { logAction } from "./adminHelpers";
 
 function AdminGallery({ data, save, showToast }) {
   const [urlInput, setUrlInput]       = useState({});
+  const [bulkInput, setBulkInput]     = useState({});
+  const [bulkOpen, setBulkOpen]       = useState({});
+  const [bulkBusy, setBulkBusy]       = useState({});
   const [uploading, setUploading]     = useState({});
   const [expanded, setExpanded]       = useState({});
   const [delConfirm, setDelConfirm]   = useState(null);
@@ -56,6 +59,36 @@ function AdminGallery({ data, save, showToast }) {
       save({ albums: await api.gallery.getAll() });
       setUrlInput(p => ({ ...p, [albumId]: "" }));
     } catch (e) { showToast("Failed: " + e.message, "red"); }
+  };
+
+  const bulkAddUrls = async (albumId, rawText) => {
+    if (!rawText.trim()) return;
+    setBulkBusy(p => ({ ...p, [albumId]: true }));
+    try {
+      const lines = rawText.split(/[
+,]+/).map(l => l.trim()).filter(Boolean);
+      let added = 0;
+      for (const raw of lines) {
+        let url = raw;
+        const driveFile = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]{25,})/);
+        const driveOpen = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]{25,})/);
+        const driveUc   = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]{25,})/);
+        const fileId    = driveFile?.[1] || driveOpen?.[1] || driveUc?.[1];
+        if (fileId) url = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200-h900`;
+        if (url.startsWith('http')) {
+          await api.gallery.addImageUrl(albumId, url);
+          added++;
+        }
+      }
+      save({ albums: await api.gallery.getAll() });
+      setBulkInput(p => ({ ...p, [albumId]: '' }));
+      setBulkOpen(p => ({ ...p, [albumId]: false }));
+      showToast(`✅ Added ${added} image${added !== 1 ? 's' : ''}`);
+    } catch (e) {
+      showToast('Bulk add failed: ' + e.message, 'red');
+    } finally {
+      setBulkBusy(p => ({ ...p, [albumId]: false }));
+    }
   };
 
   const handleFiles = async (albumId, e) => {
@@ -216,13 +249,19 @@ function AdminGallery({ data, save, showToast }) {
                   </div>
 
                   {/* Action buttons */}
-                  <div style={{ display:"flex", gap:6 }}>
+                  <div style={{ display:"flex", gap:6, marginBottom: bulkOpen[album.id] ? 8 : 0 }}>
                     <label style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"7px 0", cursor: upState ? "default" : "pointer", opacity: upState ? .5 : 1,
                       background:"var(--accent)", color:"#000", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:11, letterSpacing:".1em", textTransform:"uppercase",
                       clipPath:"polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%)" }}>
                       📷 Upload Photos
                       <input type="file" accept="image/*" multiple style={{ display:"none" }} disabled={!!upState} onChange={e => handleFiles(album.id, e)} />
                     </label>
+                    <button onClick={() => setBulkOpen(p => ({ ...p, [album.id]: !p[album.id] }))} style={{
+                      padding:"7px 12px", background: bulkOpen[album.id] ? "rgba(200,255,0,.15)" : "rgba(255,255,255,.07)", border:"1px solid "+(bulkOpen[album.id] ? "rgba(200,255,0,.4)" : "rgba(255,255,255,.1)"),
+                      color: bulkOpen[album.id] ? "var(--accent)" : "var(--muted)", cursor:"pointer", fontSize:11, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".1em",
+                      clipPath:"polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%)", whiteSpace:"nowrap" }}>
+                      🔗 BULK ADD
+                    </button>
                     <button onClick={() => toggleExpand(album.id)} style={{
                       padding:"7px 12px", background:"rgba(255,255,255,.07)", border:"1px solid rgba(255,255,255,.1)",
                       color:"var(--muted)", cursor:"pointer", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".1em",
@@ -230,6 +269,30 @@ function AdminGallery({ data, save, showToast }) {
                       {expanded[album.id] ? "▲ HIDE" : "▼ VIEW"}
                     </button>
                   </div>
+
+                  {/* Bulk URL import panel */}
+                  {bulkOpen[album.id] && (
+                    <div style={{ background:"#0a0a0a", border:"1px solid #2a2a2a", padding:12, marginBottom:4 }}>
+                      <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em", marginBottom:6 }}>
+                        BULK ADD — paste Google Drive sharing links (one per line). Auto-converts to display URLs.
+                      </div>
+                      <textarea
+                        value={bulkInput[album.id] || ""}
+                        onChange={e => setBulkInput(p => ({ ...p, [album.id]: e.target.value }))}
+                        placeholder={"Paste Drive links here, one per line:\nhttps://drive.google.com/file/d/1abc.../view\nhttps://drive.google.com/file/d/1def.../view"}
+                        rows={6}
+                        style={{ width:"100%", background:"#0f0f0f", border:"1px solid #2a2a2a", color:"var(--muted)", fontSize:11, padding:"8px 10px", fontFamily:"'Share Tech Mono',monospace", boxSizing:"border-box", resize:"vertical" }}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        style={{ marginTop:8, width:"100%" }}
+                        disabled={bulkBusy[album.id] || !bulkInput[album.id]?.trim()}
+                        onClick={() => bulkAddUrls(album.id, bulkInput[album.id] || "")}
+                      >
+                        {bulkBusy[album.id] ? "Adding images…" : `Add All Images`}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Expanded photo grid */}
