@@ -10,24 +10,30 @@ function GalleryPage({ data }) {
   const [driveImages, setDriveImages] = useState({}); // albumId -> image URLs
   const [driveLoading, setDriveLoading] = useState({});
 
-  // Fetch images from a public Google Drive folder
+  // Fetch images from a public Google Drive folder via Supabase edge function
   const fetchDriveImages = async (album) => {
     if (!album.driveFolderId || driveImages[album.id] || driveLoading[album.id]) return;
+    // Extract folder ID if full URL was pasted
+    const rawId = album.driveFolderId;
+    const folderIdMatch = rawId.match(/[-\w]{25,}/);
+    const folderId = folderIdMatch ? folderIdMatch[0] : rawId;
     setDriveLoading(prev => ({ ...prev, [album.id]: true }));
     try {
-      // Use Drive API v3 to list image files in the shared folder
-      // Requires the folder to be shared publicly ("Anyone with the link can view")
-      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || '';
-      const url = `https://www.googleapis.com/drive/v3/files?q='${album.driveFolderId}'+in+parents+and+mimeType+contains+'image/'&fields=files(id,name,thumbnailLink)&orderBy=name&key=${apiKey}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json.files) {
-        // Convert file IDs to direct image URLs
-        const urls = json.files.map(f => `https://drive.google.com/uc?export=view&id=${f.id}`);
-        setDriveImages(prev => ({ ...prev, [album.id]: urls }));
+      const { data, error } = await supabase.functions.invoke('drive-images', {
+        body: { folderId },
+      });
+      if (error) throw error;
+      if (data?.images?.length > 0) {
+        // Use thumbnail URLs for display (faster loading), full URL for lightbox
+        const urls = data.images.map(img => img.thumb);
+        const fullUrls = data.images.map(img => img.url);
+        setDriveImages(prev => ({ ...prev, [album.id]: urls, [album.id + '_full']: fullUrls }));
+      } else {
+        setDriveImages(prev => ({ ...prev, [album.id]: [] }));
       }
     } catch (e) {
       console.error('Drive fetch failed:', e);
+      setDriveImages(prev => ({ ...prev, [album.id]: [] }));
     } finally {
       setDriveLoading(prev => ({ ...prev, [album.id]: false }));
     }

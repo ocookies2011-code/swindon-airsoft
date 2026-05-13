@@ -194,9 +194,13 @@ function AdminGallery({ data, save, showToast }) {
                         className="btn btn-ghost btn-sm"
                         onClick={async () => {
                           const input = document.getElementById(`drive-${album.id}`);
-                          const val = input ? input.value.trim() : "";
+                          const raw = input ? input.value.trim() : "";
+                          // Extract folder ID from full URL if pasted
+                          const match = raw.match(/[-\w]{25,}/);
+                          const val = match ? match[0] : raw;
+                          if (input && val !== raw) input.value = val; // show extracted ID
                           await supabase.from('gallery_albums').update({ drive_folder_id: val || null }).eq('id', album.id);
-                          showToast(val ? '✅ Drive folder linked' : 'Drive folder removed');
+                          showToast(val ? `✅ Drive folder linked: ${val}` : 'Drive folder removed');
                         }}
                       >
                         Save
