@@ -181,19 +181,27 @@ function AdminGallery({ data, save, showToast }) {
                   {/* Google Drive folder ID */}
                   <div style={{ marginBottom:8 }}>
                     <div style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em", marginBottom:4 }}>
-                      📁 GOOGLE DRIVE FOLDER ID <span style={{ color:"#2a3a10" }}>(optional — link instead of uploading)</span>
+                      📁 GOOGLE DRIVE FOLDER ID <span style={{ color:"#2a3a10" }}>(optional — displays Drive images instead of uploads)</span>
                     </div>
-                    <input
-                      defaultValue={album.driveFolderId || ""}
-                      placeholder="Paste Google Drive folder ID here…"
-                      style={{ width:"100%", background:"#0f0f0f", border:"1px solid #2a2a2a", color:"var(--accent)", fontSize:11, padding:"6px 10px", fontFamily:"'Share Tech Mono',monospace", boxSizing:"border-box" }}
-                      onBlur={async e => {
-                        const val = e.target.value.trim();
-                        if (val === (album.driveFolderId || "")) return;
-                        await supabase.from('gallery_albums').update({ drive_folder_id: val || null }).eq('id', album.id);
-                        showToast(val ? '✅ Drive folder linked — images will load from Google Drive' : 'Drive folder removed');
-                      }}
-                    />
+                    <div style={{ display:"flex", gap:6 }}>
+                      <input
+                        id={`drive-${album.id}`}
+                        defaultValue={album.driveFolderId || ""}
+                        placeholder="Paste Google Drive folder ID here…"
+                        style={{ flex:1, background:"#0f0f0f", border:"1px solid #2a2a2a", color:"var(--accent)", fontSize:11, padding:"6px 10px", fontFamily:"'Share Tech Mono',monospace" }}
+                      />
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={async () => {
+                          const input = document.getElementById(`drive-${album.id}`);
+                          const val = input ? input.value.trim() : "";
+                          await supabase.from('gallery_albums').update({ drive_folder_id: val || null }).eq('id', album.id);
+                          showToast(val ? '✅ Drive folder linked' : 'Drive folder removed');
+                        }}
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
 
                   {/* Action buttons */}
