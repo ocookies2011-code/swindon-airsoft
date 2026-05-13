@@ -26,6 +26,9 @@ function AdminUkaraApplications({ showToast, cu }) {
   const [expiryModal, setExpiryModal] = React.useState(null);  // app being given an expiry date
   const [expiryDate, setExpiryDate] = React.useState("");
   const [expiryBusy, setExpiryBusy] = React.useState(false);
+  const [adminDocGovId, setAdminDocGovId] = useState(null);
+  const [adminDocFace, setAdminDocFace] = useState(null);
+  const [adminUploading, setAdminUploading] = useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
