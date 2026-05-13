@@ -253,6 +253,21 @@ function AdminGallery({ data, save, showToast }) {
                       {album.images.length > 0 && <span style={{ color:"rgba(200,255,0,.4)", marginLeft:10 }}>▸ {Math.ceil(album.images.length / 4)} row{Math.ceil(album.images.length / 4) !== 1 ? "s" : ""}</span>}
                     </div>
                   </div>
+                  {/* Google Drive folder ID — always visible */}
+                  <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }} onClick={e => e.stopPropagation()}>
+                    <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", whiteSpace:"nowrap" }}>📁 Drive:</span>
+                    <input
+                      defaultValue={album.driveFolderId || ""}
+                      placeholder="paste folder ID (optional)"
+                      style={{ background:"#0f0f0f", border:"1px solid #2a2a2a", color:"var(--accent)", fontSize:10, padding:"4px 8px", width:200, fontFamily:"'Share Tech Mono',monospace" }}
+                      onBlur={async e => {
+                        const val = e.target.value.trim();
+                        if (val === (album.driveFolderId || "")) return;
+                        await supabase.from('gallery_albums').update({ drive_folder_id: val || null }).eq('id', album.id);
+                        showToast(val ? '✅ Drive folder linked' : 'Drive folder removed');
+                      }}
+                    />
+                  </div>
                   {/* Strip preview */}
                   <div style={{ display:"flex", gap:2, flexShrink:0 }} onClick={e => e.stopPropagation()}>
                     {album.images.slice(0, 4).map((img, i) => (
@@ -263,21 +278,6 @@ function AdminGallery({ data, save, showToast }) {
                   </div>
                   {/* Controls */}
                   <div style={{ display:"flex", gap:6, flexShrink:0, alignItems:"center" }} onClick={e => e.stopPropagation()}>
-                    {/* Google Drive folder link */}
-                    <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:10, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", whiteSpace:"nowrap" }}>Drive ID:</span>
-                      <input
-                        defaultValue={album.driveFolderId || ""}
-                        placeholder="paste folder ID"
-                        style={{ background:"#0f0f0f", border:"1px solid #2a2a2a", color:"var(--muted)", fontSize:10, padding:"4px 8px", width:180, fontFamily:"'Share Tech Mono',monospace" }}
-                        onBlur={async e => {
-                          const val = e.target.value.trim();
-                          if (val === (album.driveFolderId || "")) return;
-                          await supabase.from('gallery_albums').update({ drive_folder_id: val || null }).eq('id', album.id);
-                          showToast(val ? '✅ Drive folder linked' : 'Drive folder removed');
-                        }}
-                      />
-                    </div>
                     <label style={{ cursor: upState ? "default" : "pointer", opacity: upState ? .5 : 1,
                       display:"inline-flex", alignItems:"center", gap:5, padding:"6px 12px",
                       background:"var(--accent)", color:"#000", fontFamily:"'Barlow Condensed',sans-serif",
