@@ -5,35 +5,20 @@ serve(async (req) => {
   try {
     const { folderId } = await req.json();
     if (!folderId) return new Response(JSON.stringify({ error: "folderId required" }), { status: 400, headers: { ...CORS, "Content-Type": "application/json" } });
-
-    // Fetch Drive folder page HTML
-    const res = await fetch(`https://drive.google.com/drive/folders/${folderId}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120" }
-    });
-    const html = await res.text();
-
-    // Extract file IDs from thumbnail URLs embedded in the page HTML
-    const ids: string[] = [];
-    const re = /thumbnail\?id=([a-zA-Z0-9_-]{25,})/g;
-    let m;
-    while ((m = re.exec(html)) !== null) {
-      if (!ids.includes(m[1])) ids.push(m[1]);
-    }
-
-    // Also check data-id patterns
-    const re2 = /"id":"([a-zA-Z0-9_-]{28,33})"/g;
-    while ((m = re2.exec(html)) !== null) {
-      if (!ids.includes(m[1])) ids.push(m[1]);
-    }
-
-    const images = ids.map(id => ({
-      id,
-      url: `https://drive.google.com/uc?export=view&id=${id}`,
-      thumb: `https://drive.google.com/thumbnail?id=${id}&sz=w600`,
+    const apiKey = Deno.env.get("GOOGLE_API_KEY");
+    if (!apiKey) return new Response(JSON.stringify({ error: "GOOGLE_API_KEY not set" }), { status: 500, headers: { ...CORS, "Content-Type": "application/json" } });
+    const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'&fields=files(id,name)&orderBy=name&pageSize=100&key=${apiKey}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (!res.ok) return new Response(JSON.stringify({ error: json.error?.message || "Drive API error" }), { status: 502, headers: { ...CORS, "Content-Type": "application/json" } });
+    const images = (json.files || []).map((f: {id:string,name:string}) => ({
+      id: f.id, name: f.name,
+      url: `https://drive.google.com/uc?export=view&id=${f.id}`,
+      thumb: `https://drive.google.com/thumbnail?id=${f.id}&sz=w800-h600`,
     }));
-
     return new Response(JSON.stringify({ ok: true, count: images.length, images }), { headers: { ...CORS, "Content-Type": "application/json" } });
   } catch (err) {
+    console.error("drive-images error:", err);
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...CORS, "Content-Type": "application/json" } });
   }
 });
