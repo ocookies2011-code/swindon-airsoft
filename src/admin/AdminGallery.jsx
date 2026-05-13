@@ -66,7 +66,8 @@ function AdminGallery({ data, save, showToast }) {
     setBulkBusy(p => ({ ...p, [albumId]: true }));
     try {
       const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
-      let added = 0;
+      // Build the full list of URLs first, converting Drive links
+      const urls = [];
       for (const raw of lines) {
         let url = raw;
         const m1 = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]{25,})/);
@@ -74,15 +75,16 @@ function AdminGallery({ data, save, showToast }) {
         const m3 = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]{25,})/);
         const fid = (m1 || m2 || m3)?.[1];
         if (fid) url = "https://drive.google.com/thumbnail?id=" + fid + "&sz=w1200-h900";
-        if (url.startsWith("http")) {
-          await api.gallery.addImageUrl(albumId, url);
-          added++;
-        }
+        if (url.startsWith("http")) urls.push(url);
       }
+      // Insert all rows in one batch call — no loop, no intermediate saves
+      const rows = urls.map(url => ({ album_id: albumId, url }));
+      const { error } = await supabase.from("gallery_images").insert(rows);
+      if (error) throw error;
       save({ albums: await api.gallery.getAll() });
       setBulkInput(p => ({ ...p, [albumId]: "" }));
       setBulkOpen(p => ({ ...p, [albumId]: false }));
-      showToast("\u2705 Added " + added + " image" + (added !== 1 ? "s" : ""));
+      showToast("\u2705 Added " + urls.length + " image" + (urls.length !== 1 ? "s" : ""));
     } catch (e) {
       showToast("Bulk add failed: " + e.message, "red");
     } finally {
