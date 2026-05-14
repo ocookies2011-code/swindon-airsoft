@@ -295,8 +295,24 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 
       {/* 3DS in-progress notice — shown while verifyBuyer popup is open */}
       {payStage === "verifying" && (
-        <div style={{ background: "rgba(79,195,247,.08)", border: "1px solid rgba(79,195,247,.3)", padding: "10px 14px", marginBottom: 10, fontSize: 12, color: "#4fc3f7", fontFamily: "'Share Tech Mono',monospace", lineHeight: 1.6 }}>
-          🔐 Your bank is requesting identity verification. Please check your banking app or complete the pop-up security step.
+        <div style={{ position:"fixed", inset:0, zIndex:99999, background:"rgba(0,0,0,.85)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div style={{ background:"#0d1a08", border:"2px solid #4fc3f7", padding:"32px 28px", maxWidth:420, width:"100%", textAlign:"center" }}>
+            <div style={{ fontSize:40, marginBottom:16 }}>🔐</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:20, letterSpacing:".1em", color:"#4fc3f7", marginBottom:12 }}>
+              BANK VERIFICATION REQUIRED
+            </div>
+            <div style={{ fontSize:13, color:"#a0c0d0", lineHeight:1.7, marginBottom:16 }}>
+              Your bank is verifying your identity before processing the payment.
+            </div>
+            <div style={{ fontSize:12, color:"#7a9aaa", lineHeight:1.8, background:"rgba(79,195,247,.06)", border:"1px solid rgba(79,195,247,.2)", padding:"12px 16px", marginBottom:16 }}>
+              📱 <strong style={{color:"#4fc3f7"}}>Check your banking app</strong> for a push notification<br/>
+              💬 Or complete the security pop-up that appeared<br/>
+              ⏳ <strong style={{color:"#4fc3f7"}}>Do not close this page</strong>
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#4a6a7a", letterSpacing:".1em" }}>
+              ◉ PROCESSING — PLEASE WAIT
+            </div>
+          </div>
         </div>
       )}
 
