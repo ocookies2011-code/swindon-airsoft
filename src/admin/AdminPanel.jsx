@@ -24,7 +24,6 @@ import { AdminMarshalSchedule }    from "./AdminMarshalSchedule";
 import { AdminContactDepts }       from "./AdminContactDepts";
 import { AdminLeaderboard }        from "./AdminLeaderboard";
 import { AdminMessages }           from "./AdminMessages";
-import { AdminCash }               from "./AdminCash";
 import { AdminSettings }           from "./AdminSettings";
 import { AdminVisitorStats }       from "./AdminVisitorStats";
 import { AdminAuditLog }           from "./AdminAuditLog";
@@ -46,7 +45,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","scan-waiver","players","shop",
       "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
-      "contact-admin","messages","news-admin","marshal-admin","cash","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
+      "contact-admin","messages","news-admin","marshal-admin","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -212,7 +211,6 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "messages" && <AdminMessages data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "news-admin" && <AdminNews showToast={showToast} cu={cu} />}
           {section === "marshal-admin" && <AdminMarshalSchedule data={data} cu={cu} showToast={showToast} />}
-          {section === "cash" && <AdminCash data={data} cu={cu} showToast={showToast} />}
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
           {section === "gift-vouchers" && <AdminGiftVouchers showToast={showToast} cu={cu} />}
           {section === "settings" && <AdminSettings showToast={showToast} cu={cu} />}
