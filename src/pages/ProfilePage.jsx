@@ -69,21 +69,25 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const [cancelling, setCancelling] = useState(false);
 
   const doSelfCheckIn = async (scannedCode, booking) => {
-    // The gate QR contains the event ID — verify it matches this booking
     setScanningCheckin(null);
-    if (scannedCode !== booking.eventId) {
-      setCheckInResult({ ok: false, msg: "Wrong event QR code. Make sure you're scanning the correct event sign." });
+    // Accept the permanent checkin URL or any QR that contains "checkin" or "swindon-airsoft"
+    const isValidQR = scannedCode && (
+      scannedCode.includes("checkin") ||
+      scannedCode.includes("swindon-airsoft") ||
+      scannedCode === booking.eventId  // also still accept old event-ID QRs
+    );
+    if (!isValidQR) {
+      setCheckInResult({ ok: false, msg: "QR code not recognised. Make sure you're scanning the Swindon Airsoft check-in poster at the gate." });
       return;
     }
     if (booking.checkedIn) {
-      setCheckInResult({ ok: true, msg: "You're already checked in!" });
+      setCheckInResult({ ok: true, msg: "You're already checked in! Have a great game! 🎯" });
       return;
     }
     try {
       const { error } = await supabase.from('bookings').update({ checked_in: true }).eq('id', booking.id).eq('user_id', cu.id);
       if (error) throw error;
       setCheckInResult({ ok: true, msg: `✅ Checked in to ${booking.eventTitle}! Have a great game! 🎯` });
-      // Refresh data so profile shows ✓ Attended
       refresh();
     } catch (e) {
       setCheckInResult({ ok: false, msg: "Check-in failed: " + e.message });

@@ -1110,73 +1110,70 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               <div className="modal-title" style={{ margin:0 }}>📅 {viewEv.title}</div>
               <button className="btn btn-ghost btn-sm" onClick={() => printPlayerList(viewEv)}>🖨️ Print Player List</button>
               <button className="btn btn-ghost btn-sm" onClick={() => {
+                const checkinUrl = window.location.origin + "/#checkin";
                 const w = window.open("", "_blank");
-                w.document.write(`<!DOCTYPE html><html><head><title>Gate Check-In QR</title>
-                  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-                  <style>*{box-sizing:border-box}body{background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;margin:0;padding:40px;text-align:center}
-                  h1{font-size:32px;font-weight:900;margin:0 0 4px;letter-spacing:2px}
-                  h2{font-size:18px;font-weight:400;color:#555;margin:0 0 4px}
-                  h3{font-size:15px;font-weight:400;color:#888;margin:0 0 24px}
-                  #qr{margin:0 0 20px}
-                  p{font-size:13px;color:#888;max-width:320px;line-height:1.6;margin:0 0 8px}
-                  .steps{border:3px solid #000;padding:20px 28px;max-width:360px;margin-top:20px;text-align:left}
-                  .steps h4{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:1px}
-                  .steps ol{margin:0;padding-left:20px;font-size:14px;line-height:2}
-                  @media print{body{padding:20px}}</style>
-                </head><body>
-                  <h1>🎯 SWINDON AIRSOFT</h1>
-                  <h2>${viewEv.title}</h2>
-                  <h3>${viewEv.date} · ${viewEv.location || ''}</h3>
-                  <div id="qr"></div>
-                  <p>Scan this QR code with your phone to check yourself in</p>
-                  <div class="steps">
-                    <h4>How to Check In</h4>
-                    <ol>
-                      <li>Open the Swindon Airsoft website</li>
-                      <li>Go to your <strong>Profile → Bookings</strong></li>
-                      <li>Tap <strong>📷 CHECK IN</strong></li>
-                      <li>Scan this QR code</li>
-                    </ol>
-                  </div>
-                  <script>new QRCode(document.getElementById("qr"),{text:"${viewEv.id}",width:240,height:240,colorDark:"#000",colorLight:"#fff"});<\/script>
-                  <script>window.onload=()=>setTimeout(()=>window.print(),800);<\/script>
-                </body></html>`);
+                w.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Check-In Poster</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#080b06;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;font-family:Arial,sans-serif}
+  .poster{width:100%;max-width:520px;background:#0d1209;border:2px solid #c8ff00;position:relative;overflow:hidden}
+  .top-bar{background:#c8ff00;padding:14px 24px;display:flex;align-items:center;gap:14px}
+  .logo{width:52px;height:52px;background:#080b06;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+  .brand{font-family:'Oswald',sans-serif;font-weight:900;font-size:22px;letter-spacing:.12em;text-transform:uppercase;color:#080b06;line-height:1.1}
+  .brand span{font-size:11px;font-weight:400;letter-spacing:.2em;display:block;color:#2a4018}
+  .body{padding:28px 32px;text-align:center}
+  .headline{font-family:'Oswald',sans-serif;font-weight:900;font-size:32px;letter-spacing:.1em;text-transform:uppercase;color:#fff;line-height:1;margin-bottom:4px}
+  .headline em{color:#c8ff00;font-style:normal}
+  .sub{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.2em;color:#3a5010;text-transform:uppercase;margin-bottom:24px}
+  .qr-wrap{background:#fff;padding:16px;display:inline-block;margin-bottom:20px;border:3px solid #c8ff00}
+  .steps{text-align:left;background:#080b06;border:1px solid #1e2e12;padding:18px 20px;margin-bottom:20px}
+  .steps-title{font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:.18em;color:#c8ff00;text-transform:uppercase;margin-bottom:10px}
+  .step{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+  .step:last-child{margin-bottom:0}
+  .step-num{font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;color:#c8ff00;background:rgba(200,255,0,.1);border:1px solid rgba(200,255,0,.3);width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .step-text{font-family:Arial,sans-serif;font-size:13px;color:#8aaa60;line-height:1.4}
+  .step-text strong{color:#fff}
+  .footer{background:#080b06;border-top:1px solid #1e2e12;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+  .footer-url{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.12em;color:#3a5010}
+  .footer-badge{font-family:'Oswald',sans-serif;font-size:9px;letter-spacing:.2em;color:#1e2e12;text-transform:uppercase}
+  .accent-line{height:2px;background:linear-gradient(90deg,#c8ff00,transparent)}
+  @media print{body{background:#080b06;padding:16px}@page{margin:1cm;size:A4}}
+</style>
+</head>
+<body>
+  <div class="poster">
+    <div class="top-bar">
+      <div class="logo">🎯</div>
+      <div class="brand">Swindon Airsoft<span>◈ Field Command ◈</span></div>
+    </div>
+    <div class="accent-line"></div>
+    <div class="body">
+      <div class="headline">PLAYER<br><em>CHECK-IN</em></div>
+      <div class="sub">◆ Scan to check yourself in on the day ◆</div>
+      <div class="qr-wrap"><div id="qr"></div></div>
+      <div class="steps">
+        <div class="steps-title">⚡ How to Check In</div>
+        <div class="step"><div class="step-num">1</div><div class="step-text">Open <strong>swindon-airsoft.com</strong> on your phone</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Go to your <strong>Profile → Bookings tab</strong></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">Tap <strong>📷 CHECK IN</strong> on your booking</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text">Point your camera at <strong>this QR code</strong></div></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="footer-url">swindon-airsoft.com</div>
+      <div class="footer-badge">◈ Print &amp; Display at Gate ◈</div>
+    </div>
+  </div>
+  <script>
+    new QRCode(document.getElementById("qr"),{text:"${checkinUrl}",width:200,height:200,colorDark:"#000000",colorLight:"#ffffff"});
+    window.onload = () => setTimeout(() => window.print(), 900);
+  <\/script>
+</body></html>`);
                 w.document.close();
-              }}>📱 Print Gate QR</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => {
-                const url = window.location.origin + "/#checkin";
-                const w = window.open("", "_blank");
-                w.document.write(`<!DOCTYPE html><html><head><title>Check-In QR — ${viewEv.title}</title>
-                  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-                  <style>body{background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;margin:0;padding:40px;box-sizing:border-box}
-                  h1{font-size:28px;margin:0 0 8px;text-align:center}
-                  h2{font-size:20px;margin:0 0 4px;color:#555;text-align:center;font-weight:normal}
-                  p{font-size:13px;color:#888;margin:4px 0 24px;text-align:center}
-                  #qr{margin:0 0 24px}
-                  .url{font-size:11px;color:#aaa;word-break:break-all;text-align:center;max-width:300px}
-                  .instructions{margin-top:24px;border:2px solid #222;padding:20px 28px;max-width:340px;text-align:center}
-                  .instructions h3{margin:0 0 10px;font-size:16px}
-                  .instructions ol{margin:0;padding-left:20px;text-align:left;font-size:14px;line-height:1.8}
-                  @media print{body{padding:20px}}</style>
-                </head><body>
-                  <h1>🎯 SWINDON AIRSOFT</h1>
-                  <h2>PLAYER SELF CHECK-IN</h2>
-                  <p>Scan to check yourself in on the day</p>
-                  <div id="qr"></div>
-                  <div class="url">${url}</div>
-                  <div class="instructions">
-                    <h3>HOW TO CHECK IN</h3>
-                    <ol>
-                      <li>Scan the QR code with your phone</li>
-                      <li>Log in to your Swindon Airsoft account</li>
-                      <li>Tap <strong>Confirm Check-In</strong></li>
-                    </ol>
-                  </div>
-                  <script>new QRCode(document.getElementById("qr"),{text:"${url}",width:220,height:220,colorDark:"#000",colorLight:"#fff"});<\/script>
-                  <script>window.onload=()=>setTimeout(()=>window.print(),800);<\/script>
-                </body></html>`);
-                w.document.close();
-              }}>📱 Print Check-In QR</button>
+              }}>🖨 Print Check-In Poster</button>
             </div>
             <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{fmtDate(viewEv.date)} @ {viewEv.time} GMT | {viewEv.location} · {viewEv.bookings.length} booked</p>
             <div className="table-wrap"><table className="data-table">
