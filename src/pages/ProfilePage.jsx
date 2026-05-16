@@ -8,7 +8,7 @@ import { ReportCheatTab } from "./ReportCheatTab";
 import { PlayerOrders } from "./PlayerOrders";
 import { PlayerWaitlist } from "./PlayerWaitlist";
 
-function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
+function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="profile" && ["profile","waiver","bookings","orders","waitlist","vip","loadout","report"].includes(p[1]) ? p[1] : "profile";
@@ -88,7 +88,14 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
       const { error } = await supabase.from('bookings').update({ checked_in: true }).eq('id', booking.id).eq('user_id', cu.id);
       if (error) throw error;
       setCheckInResult({ ok: true, msg: `✅ Checked in to ${booking.eventTitle}! Have a great game! 🎯` });
-      refresh();
+      // Reload data so booking shows ✓ Attended
+      if (refresh) refresh();
+      else save({
+        events: data.events.map(ev => ({
+          ...ev,
+          bookings: ev.bookings.map(bk => bk.id === booking.id ? { ...bk, checkedIn: true } : bk)
+        }))
+      });
     } catch (e) {
       setCheckInResult({ ok: false, msg: "Check-in failed: " + e.message });
     }
