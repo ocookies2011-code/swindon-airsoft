@@ -2592,6 +2592,52 @@ function HomePage({ data, setPage, onProductClick }) {
         </div>
       </div>
 
+      {/* ── INTEL ARMS PARTNER SECTION ── */}
+      <div style={{ padding:"48px 20px", borderTop:"1px solid #1e2e12" }}>
+        <div style={{ maxWidth:900, margin:"0 auto" }}>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:32 }}>
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".3em", color:"#3a5010", marginBottom:10, textTransform:"uppercase" }}>◈ OFFICIAL FIELD PARTNER ◈</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(28px,6vw,52px)", letterSpacing:".08em", textTransform:"uppercase", color:"#fff", lineHeight:.9, marginBottom:8 }}>
+                INTEL <span style={{ color:"#c8ff00" }}>ARMS</span>
+              </div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#5a6e42", letterSpacing:".15em", marginBottom:20 }}>PREMIUM AIRSOFT PROPS & GAMING ELECTRONICS</div>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))", gap:12, width:"100%" }}>
+              {[
+                { icon:"⚡", name:"NEXUS SYSTEM", desc:"Wireless bomb-defuse & domination gaming platform. Up to 20 modules, multiple game modes.", tag:"E.D.S" },
+                { icon:"💣", name:"CLAYMORE MODULE", desc:"Motion-sensing tactical prop with 6W dual speakers and multiple scenario modes.", tag:"TACTICAL" },
+              ].map(p => (
+                <div key={p.name} style={{ background:"#0d1209", border:"1px solid #2a4018", padding:"20px", position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,#c8ff00,transparent)" }} />
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                    <span style={{ fontSize:28 }}>{p.icon}</span>
+                    <div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".1em", color:"#fff", textTransform:"uppercase" }}>{p.name}</div>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#c8ff00", letterSpacing:".2em" }}>{p.tag}</div>
+                    </div>
+                  </div>
+                  <p style={{ fontSize:12, color:"#7a9a60", lineHeight:1.7, margin:0 }}>{p.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign:"center" }}>
+              <p style={{ fontSize:13, color:"#5a6e42", marginBottom:20, lineHeight:1.7, fontFamily:"'Share Tech Mono',monospace" }}>
+                We run Intel Arms props on our field — bringing immersive, mission-critical gameplay to every game day.
+              </p>
+              <button
+                onClick={() => setPage("props")}
+                style={{ background:"transparent", border:"2px solid #c8ff00", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:14, letterSpacing:".2em", padding:"12px 36px", cursor:"pointer", textTransform:"uppercase", transition:"all .15s" }}
+                onMouseEnter={e => { e.currentTarget.style.background="#c8ff00"; e.currentTarget.style.color="#000"; }}
+                onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#c8ff00"; }}
+              >
+                ▸ VIEW INTEL ARMS PROPS
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
     </div>
   );
