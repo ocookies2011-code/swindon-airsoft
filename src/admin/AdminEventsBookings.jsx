@@ -1048,121 +1048,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             </div>
           )}
 
-          {/* ── View Booking Modal ── */}
-          {viewBooking && (() => {
-            const cb = viewBooking;
-            const evObj = cb.eventObj || data.events.find(e => e.id === cb.eventId) || null;
-            const extras = Object.entries(cb.extras || {}).filter(([,v]) => v > 0);
-            const ticketLabel = cb.type === "walkOn" ? "Walk-On" : "Rental Package";
-            const ticketPrice = cb.type === "walkOn" ? evObj?.walkOnPrice : evObj?.rentalPrice;
-            // Fall back to total when price can't be determined
-            const ticketLineTotal = ticketPrice != null
-              ? (Number(ticketPrice) * cb.qty).toFixed(2)
-              : cb.total?.toFixed(2) ?? "—";
-            return (
-              <div className="overlay" onClick={() => setViewBooking(null)}>
-                <div className="modal-box wide" onClick={e => e.stopPropagation()}>
-                  <div className="modal-title">🎟 Booking Details</div>
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
-                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.userName}</div></div>
-                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || evObj?.title}</div></div>
-                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
-                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
-                    {cb.squareOrderId && !cb.squareOrderId.startsWith('ADMIN-MANUAL-') && (
-                      <div style={{ gridColumn:"1/-1", borderTop:"1px solid #1a1a1a", paddingTop:10, marginTop:4 }}>
-                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em", textTransform:"uppercase", marginBottom:8, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>Square Reference</div>
-                        {squareDetail?.loading && (
-                          <div style={{ color:"var(--muted)", fontSize:11 }}>Loading payment details…</div>
-                        )}
-                        {squareDetail?.error && (
-                          <div style={{ color:"var(--muted)", fontSize:11 }}>Could not load Square details — {squareDetail.error}</div>
-                        )}
-                        {squareDetail?.data && (
-                          <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
-                            {squareDetail.data.receiptNumber && (
-                              <div>
-                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Receipt No.</div>
-                                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"#c8ff00", fontWeight:700, letterSpacing:".06em" }}>{squareDetail.data.receiptNumber}</div>
-                              </div>
-                            )}
-                            {(squareDetail.data.cardBrand || squareDetail.data.last4) && (
-                              <div>
-                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Payment Method</div>
-                                <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>
-                                  {squareDetail.data.cardBrand ? squareDetail.data.cardBrand.charAt(0) + squareDetail.data.cardBrand.slice(1).toLowerCase() : ""}{squareDetail.data.last4 ? ` ${squareDetail.data.last4}` : ""}
-                                </div>
-                              </div>
-                            )}
-                            {squareDetail.data.entryMethod && (
-                              <div>
-                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Entry</div>
-                                <div style={{ fontSize:12, color:"var(--text)", textTransform:"capitalize" }}>{squareDetail.data.entryMethod.toLowerCase()}</div>
-                              </div>
-                            )}
-                            <div>
-                              <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Transaction ID</div>
-                              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".04em", wordBreak:"break-all" }}>{cb.squareOrderId}</div>
-                            </div>
-                            {squareDetail.data.receiptUrl && (
-                              <div style={{ alignSelf:"flex-end" }}>
-                                <a href={squareDetail.data.receiptUrl} target="_blank" rel="noreferrer"
-                                   style={{ fontSize:12, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
-                    <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>
-                    <div style={{ padding:"0 14px" }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
-                        <span>{ticketLabel} ×{cb.qty}</span>
-                        <span style={{ color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>£{ticketLineTotal}</span>
-                      </div>
-                      {extras.map(([key, qty]) => {
-                        const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
-                        // 1. Match event extra by its own id
-                        let exDef    = evObj?.extras?.find(e => e.id === extraId);
-                        // 2. Match shop product via event extra's productId, or directly by extraId
-                        let shopProd = exDef
-                          ? (data?.shop || []).find(p => p.id === exDef.productId)
-                          : (data?.shop || []).find(p => p.id === extraId);
-                        // 3. Search by variantId across all products
-                        if (!shopProd && variantId)
-                          shopProd = (data?.shop || []).find(p => (p.variants || []).some(vv => vv.id === variantId));
-                        // 4. Match event extra by productId if still missing
-                        if (!exDef && shopProd)
-                          exDef = evObj?.extras?.find(e => e.productId === shopProd.id);
-                        const varDef    = variantId && shopProd
-                          ? (shopProd.variants || []).find(vv => vv.id === variantId)
-                          : null;
-                        const name      = exDef?.name || shopProd?.name || extraId;
-                        const label     = varDef ? `${name} — ${varDef.name}` : name;
-                        const unitPrice = varDef ? Number(varDef.price) : (shopProd ? Number(shopProd.price) : 0);
-                        return (
-                          <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
-                            <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
-                            <span style={{ color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
-                          </div>
-                        );
-                      })}
-                      <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
-                        <span>TOTAL</span>
-                        <span style={{ color:"var(--accent)" }}>£{cb.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="gap-2">
-                    <button className="btn btn-ghost" onClick={() => setViewBooking(null)}>Close</button>
-                    <button className="btn btn-ghost" onClick={() => { setViewBooking(null); openEdit(cb); }}>Edit Booking</button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
           {/* ── Delete Confirm Modal ── */}
           {delConfirm && (
             <div className="overlay" onClick={() => setDelConfirm(null)}>
@@ -1732,6 +1617,122 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           </div>
         </div>
       )}
+
+          {/* ── View Booking Modal ── */}
+          {viewBooking && (() => {
+            const cb = viewBooking;
+            const evObj = cb.eventObj || data.events.find(e => e.id === cb.eventId) || null;
+            const extras = Object.entries(cb.extras || {}).filter(([,v]) => v > 0);
+            const ticketLabel = cb.type === "walkOn" ? "Walk-On" : "Rental Package";
+            const ticketPrice = cb.type === "walkOn" ? evObj?.walkOnPrice : evObj?.rentalPrice;
+            // Fall back to total when price can't be determined
+            const ticketLineTotal = ticketPrice != null
+              ? (Number(ticketPrice) * cb.qty).toFixed(2)
+              : cb.total?.toFixed(2) ?? "—";
+            return (
+              <div className="overlay" onClick={() => setViewBooking(null)}>
+                <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+                  <div className="modal-title">🎟 Booking Details</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.userName}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || evObj?.title}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
+                    {cb.squareOrderId && !cb.squareOrderId.startsWith('ADMIN-MANUAL-') && (
+                      <div style={{ gridColumn:"1/-1", borderTop:"1px solid #1a1a1a", paddingTop:10, marginTop:4 }}>
+                        <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".15em", textTransform:"uppercase", marginBottom:8, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>Square Reference</div>
+                        {squareDetail?.loading && (
+                          <div style={{ color:"var(--muted)", fontSize:11 }}>Loading payment details…</div>
+                        )}
+                        {squareDetail?.error && (
+                          <div style={{ color:"var(--muted)", fontSize:11 }}>Could not load Square details — {squareDetail.error}</div>
+                        )}
+                        {squareDetail?.data && (
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:"10px 28px" }}>
+                            {squareDetail.data.receiptNumber && (
+                              <div>
+                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Receipt No.</div>
+                                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"#c8ff00", fontWeight:700, letterSpacing:".06em" }}>{squareDetail.data.receiptNumber}</div>
+                              </div>
+                            )}
+                            {(squareDetail.data.cardBrand || squareDetail.data.last4) && (
+                              <div>
+                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Payment Method</div>
+                                <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>
+                                  {squareDetail.data.cardBrand ? squareDetail.data.cardBrand.charAt(0) + squareDetail.data.cardBrand.slice(1).toLowerCase() : ""}{squareDetail.data.last4 ? ` ${squareDetail.data.last4}` : ""}
+                                </div>
+                              </div>
+                            )}
+                            {squareDetail.data.entryMethod && (
+                              <div>
+                                <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Entry</div>
+                                <div style={{ fontSize:12, color:"var(--text)", textTransform:"capitalize" }}>{squareDetail.data.entryMethod.toLowerCase()}</div>
+                              </div>
+                            )}
+                            <div>
+                              <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:2 }}>Transaction ID</div>
+                              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".04em", wordBreak:"break-all" }}>{cb.squareOrderId}</div>
+                            </div>
+                            {squareDetail.data.receiptUrl && (
+                              <div style={{ alignSelf:"flex-end" }}>
+                                <a href={squareDetail.data.receiptUrl} target="_blank" rel="noreferrer"
+                                   style={{ fontSize:12, color:"var(--blue)", textDecoration:"underline" }}>View Receipt ↗</a>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ border:"1px solid #2a2a2a", marginBottom:16 }}>
+                    <div style={{ background:"#0d0d0d", padding:"8px 14px", fontSize:9, letterSpacing:".25em", color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, borderBottom:"1px solid #2a2a2a" }}>ORDER</div>
+                    <div style={{ padding:"0 14px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
+                        <span>{ticketLabel} ×{cb.qty}</span>
+                        <span style={{ color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>£{ticketLineTotal}</span>
+                      </div>
+                      {extras.map(([key, qty]) => {
+                        const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
+                        // 1. Match event extra by its own id
+                        let exDef    = evObj?.extras?.find(e => e.id === extraId);
+                        // 2. Match shop product via event extra's productId, or directly by extraId
+                        let shopProd = exDef
+                          ? (data?.shop || []).find(p => p.id === exDef.productId)
+                          : (data?.shop || []).find(p => p.id === extraId);
+                        // 3. Search by variantId across all products
+                        if (!shopProd && variantId)
+                          shopProd = (data?.shop || []).find(p => (p.variants || []).some(vv => vv.id === variantId));
+                        // 4. Match event extra by productId if still missing
+                        if (!exDef && shopProd)
+                          exDef = evObj?.extras?.find(e => e.productId === shopProd.id);
+                        const varDef    = variantId && shopProd
+                          ? (shopProd.variants || []).find(vv => vv.id === variantId)
+                          : null;
+                        const name      = exDef?.name || shopProd?.name || extraId;
+                        const label     = varDef ? `${name} — ${varDef.name}` : name;
+                        const unitPrice = varDef ? Number(varDef.price) : (shopProd ? Number(shopProd.price) : 0);
+                        return (
+                          <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
+                            <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
+                            <span style={{ color:"var(--accent)", fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>£{(unitPrice * qty).toFixed(2)}</span>
+                          </div>
+                        );
+                      })}
+                      <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", fontSize:16, fontFamily:"'Oswald','Barlow Condensed',sans-serif" }}>
+                        <span>TOTAL</span>
+                        <span style={{ color:"var(--accent)" }}>£{cb.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="gap-2">
+                    <button className="btn btn-ghost" onClick={() => setViewBooking(null)}>Close</button>
+                    <button className="btn btn-ghost" onClick={() => { setViewBooking(null); openEdit(cb); }}>Edit Booking</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
     </div>
   );
 }
