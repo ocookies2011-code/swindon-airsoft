@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { DesignationInsignia, QRCode, RankInsignia, SquareCheckoutButton, WaiverModal, fmtDate, fmtErr, gmtShort, loadSquareConfig, sendCancellationEmail, sendWaitlistNotifyEmail, sendWelcomeEmail, uid, useMobile } from "../utils";
+import { DesignationInsignia, QRCode, QRScanner, RankInsignia, SquareCheckoutButton, WaiverModal, fmtDate, fmtErr, gmtShort, loadSquareConfig, sendCancellationEmail, sendWaitlistNotifyEmail, sendWelcomeEmail, uid, useMobile } from "../utils";
 import { LoadoutTab } from "./LoadoutTab";
 import { ReportCheatTab } from "./ReportCheatTab";
 import { PlayerOrders } from "./PlayerOrders";
@@ -63,8 +63,32 @@ function ProfilePage({ data, cu, updateUser, showToast, save, setPage }) {
   const actualGamesAttended = myBookings.filter(b => b.checkedIn).length;
 
   // ── Booking cancellation ──
-  const [cancelModal, setCancelModal] = useState(null); // booking object
+  const [cancelModal, setCancelModal] = useState(null);
+  const [scanningCheckin, setScanningCheckin] = useState(null); // booking being checked in
+  const [checkInResult, setCheckInResult] = useState(null);     // {ok, msg} after scan // booking object
   const [cancelling, setCancelling] = useState(false);
+
+  const doSelfCheckIn = async (scannedCode, booking) => {
+    // The gate QR contains the event ID — verify it matches this booking
+    setScanningCheckin(null);
+    if (scannedCode !== booking.eventId) {
+      setCheckInResult({ ok: false, msg: "Wrong event QR code. Make sure you're scanning the correct event sign." });
+      return;
+    }
+    if (booking.checkedIn) {
+      setCheckInResult({ ok: true, msg: "You're already checked in!" });
+      return;
+    }
+    try {
+      const { error } = await supabase.from('bookings').update({ checked_in: true }).eq('id', booking.id).eq('user_id', cu.id);
+      if (error) throw error;
+      setCheckInResult({ ok: true, msg: `✅ Checked in to ${booking.eventTitle}! Have a great game! 🎯` });
+      // Refresh data so profile shows ✓ Attended
+      refresh();
+    } catch (e) {
+      setCheckInResult({ ok: false, msg: "Check-in failed: " + e.message });
+    }
+  };
 
   const doCancel = async () => {
     if (!cancelModal) return;
@@ -731,6 +755,13 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
                             }}>
                               {b.checkedIn ? "✓ Attended" : isPast ? "Missed" : "Booked"}
                             </span>
+                            {!isPast && !b.checkedIn && (
+                              <button
+                                onClick={() => { setCheckInResult(null); setScanningCheckin(b); }}
+                                style={{ background:"rgba(200,255,0,.12)", border:"1px solid rgba(200,255,0,.4)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
+                                📷 CHECK IN
+                              </button>
+                            )}
                             <button
                               onClick={() => openTicket(b)}
                               title="View / Print Ticket"
@@ -754,6 +785,38 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
         );
       })()}
       {/* Cancel booking modal */}
+      {/* ── Self Check-In QR Scanner ── */}
+      {scanningCheckin && (
+        <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.92)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div style={{ width:"100%", maxWidth:400, textAlign:"center" }}>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:22, letterSpacing:".1em", color:"var(--accent)", marginBottom:4 }}>
+              SCAN GATE QR CODE
+            </div>
+            <div style={{ fontSize:13, color:"var(--muted)", marginBottom:20, lineHeight:1.6 }}>
+              Point your camera at the QR code displayed at the site entrance to check in to <strong style={{ color:"#fff" }}>{scanningCheckin.eventTitle}</strong>
+            </div>
+            <QRScanner
+              onScan={code => doSelfCheckIn(code, scanningCheckin)}
+              onClose={() => setScanningCheckin(null)}
+            />
+            <button className="btn btn-ghost btn-sm" style={{ marginTop:16 }} onClick={() => setScanningCheckin(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Check-In Result ── */}
+      {checkInResult && (
+        <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div style={{ background:"#0d1209", border:`2px solid ${checkInResult.ok ? "rgba(200,255,0,.4)" : "rgba(239,68,68,.4)"}`, padding:"32px 28px", maxWidth:380, width:"100%", textAlign:"center" }}>
+            <div style={{ fontSize:56, marginBottom:16 }}>{checkInResult.ok ? "✅" : "❌"}</div>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:18, letterSpacing:".08em", color: checkInResult.ok ? "var(--accent)" : "#ef4444", marginBottom:12, lineHeight:1.4 }}>
+              {checkInResult.msg}
+            </div>
+            <button className="btn btn-primary" style={{ marginTop:8 }} onClick={() => setCheckInResult(null)}>Close</button>
+          </div>
+        </div>
+      )}
+
       {cancelModal && (() => {
         const b = cancelModal;
         const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;

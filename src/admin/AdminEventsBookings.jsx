@@ -1110,6 +1110,40 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               <div className="modal-title" style={{ margin:0 }}>📅 {viewEv.title}</div>
               <button className="btn btn-ghost btn-sm" onClick={() => printPlayerList(viewEv)}>🖨️ Print Player List</button>
               <button className="btn btn-ghost btn-sm" onClick={() => {
+                const w = window.open("", "_blank");
+                w.document.write(`<!DOCTYPE html><html><head><title>Gate Check-In QR</title>
+                  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+                  <style>*{box-sizing:border-box}body{background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;margin:0;padding:40px;text-align:center}
+                  h1{font-size:32px;font-weight:900;margin:0 0 4px;letter-spacing:2px}
+                  h2{font-size:18px;font-weight:400;color:#555;margin:0 0 4px}
+                  h3{font-size:15px;font-weight:400;color:#888;margin:0 0 24px}
+                  #qr{margin:0 0 20px}
+                  p{font-size:13px;color:#888;max-width:320px;line-height:1.6;margin:0 0 8px}
+                  .steps{border:3px solid #000;padding:20px 28px;max-width:360px;margin-top:20px;text-align:left}
+                  .steps h4{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:1px}
+                  .steps ol{margin:0;padding-left:20px;font-size:14px;line-height:2}
+                  @media print{body{padding:20px}}</style>
+                </head><body>
+                  <h1>🎯 SWINDON AIRSOFT</h1>
+                  <h2>${viewEv.title}</h2>
+                  <h3>${viewEv.date} · ${viewEv.location || ''}</h3>
+                  <div id="qr"></div>
+                  <p>Scan this QR code with your phone to check yourself in</p>
+                  <div class="steps">
+                    <h4>How to Check In</h4>
+                    <ol>
+                      <li>Open the Swindon Airsoft website</li>
+                      <li>Go to your <strong>Profile → Bookings</strong></li>
+                      <li>Tap <strong>📷 CHECK IN</strong></li>
+                      <li>Scan this QR code</li>
+                    </ol>
+                  </div>
+                  <script>new QRCode(document.getElementById("qr"),{text:"${viewEv.id}",width:240,height:240,colorDark:"#000",colorLight:"#fff"});<\/script>
+                  <script>window.onload=()=>setTimeout(()=>window.print(),800);<\/script>
+                </body></html>`);
+                w.document.close();
+              }}>📱 Print Gate QR</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
                 const url = window.location.origin + "/#checkin";
                 const w = window.open("", "_blank");
                 w.document.write(`<!DOCTYPE html><html><head><title>Check-In QR — ${viewEv.title}</title>
