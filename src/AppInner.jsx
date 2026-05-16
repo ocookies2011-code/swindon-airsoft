@@ -19,6 +19,7 @@ import { QAPage }             from "./pages/QAPage";
 import { ProfilePage }        from "./pages/ProfilePage";
 import { PublicProfilePage }  from "./pages/PublicProfilePage";
 import { PasswordResetPage }  from "./pages/PasswordResetPage";
+import { SelfCheckInPage }   from "./pages/SelfCheckInPage";
 import { UKARAPage }          from "./pages/UKARAPage";
 
 const ALLOWED_COUNTRY_CODES = new Set([
@@ -43,7 +44,7 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","reset"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","reset","checkin"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
@@ -143,6 +144,7 @@ function AppInner() {
       if (p === "admin") { setPageState("admin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (p === "reset" && parts[1]) { setResetToken(parts[1]); setPageState("reset"); window.scrollTo({ top:0, behavior:"instant" }); return; }
+      if (p === "checkin") { setPageState("checkin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (PUBLIC_PAGES.includes(p)) { setPageState(p); window.scrollTo({ top:0, behavior:"instant" }); }
     };
     window.addEventListener("hashchange", onHash);
@@ -611,6 +613,7 @@ function AppInner() {
         {page === "profile"     && authLoading  && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Loading…</div>}
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
         {page === "reset"       && <PasswordResetPage token={resetToken} setPage={setPage} showToast={showToast} />}
+        {page === "checkin"     && <SelfCheckInPage cu={cu} setAuthModal={setAuthModal} />}
         {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "about"       && <AboutPage setPage={setPage} />}
         {page === "staff"       && <StaffPage staff={data.staff || []} />}
