@@ -129,7 +129,7 @@ export function PropsPage() {
           <a href="https://intelarms.shop" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ textDecoration:"none" }}>
             🛒 Visit Intel Arms Shop
           </a>
-          <a href="mailto:intelarms@example.com" className="btn btn-ghost" style={{ textDecoration:"none" }}>
+          <a href="mailto:potateking@gmail.com" className="btn btn-ghost" style={{ textDecoration:"none" }}>
             ✉ Contact Intel Arms
           </a>
         </div>
