@@ -1116,7 +1116,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               <tbody>
                 {[...viewEv.bookings].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => (
                   <tr key={b.id}>
-                    <td><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: viewEv, eventTitle: viewEv?.title })} /></td>
+                    <td><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: ev, eventTitle: ev?.title })} /></td>
                     <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                     <td>{b.qty}</td>
                     <td style={{fontSize:11}}>
