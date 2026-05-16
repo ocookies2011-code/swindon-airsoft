@@ -981,6 +981,72 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             </div>
           )}
 
+          {/* ── Edit Booking Modal ── */}
+          {editBooking && (
+            <div className="overlay" onClick={() => setEditBooking(null)}>
+              <div className="modal-box" onClick={e => e.stopPropagation()}>
+                <div className="modal-title">✏️ Edit Booking</div>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+                  {editBooking.userName} — {editBooking.eventTitle}
+                </div>
+                <div className="form-group">
+                  <label>Transfer to Different Event</label>
+                  <select
+                    value={editBooking.newEventId || editBooking.eventId || ""}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditBooking(p => ({ ...p, newEventId: val === p.eventId ? null : val }));
+                    }}
+                  >
+                    {data.events
+                      .slice()
+                      .sort((a, b) => new Date(a.date) - new Date(b.date))
+                      .map(ev => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+                        </option>
+                      ))
+                    }
+                  </select>
+                  {editBooking.newEventId && editBooking.newEventId !== editBooking.eventId && (
+                    <div style={{ marginTop:6, padding:"6px 10px", background:"rgba(255,160,0,.1)", border:"1px solid rgba(255,160,0,.35)", borderRadius:3, fontSize:12, color:"#ffc060" }}>
+                      ⚠️ This booking will be moved from <strong>{editBooking._orig.eventTitle}</strong> to <strong>{data.events.find(e => e.id === editBooking.newEventId)?.title}</strong>.
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>Ticket Type</label>
+                  <select value={editBooking.type} onChange={e => setEditBooking(p => ({ ...p, type: e.target.value }))}>
+                    <option value="walkOn">Walk-On</option>
+                    <option value="rental">Rental</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Quantity</label>
+                    <input type="number" min={1} value={editBooking.qty}
+                      onChange={e => setEditBooking(p => ({ ...p, qty: +e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label>Total (£)</label>
+                    <input type="number" step="0.01" min={0} value={editBooking.total}
+                      onChange={e => setEditBooking(p => ({ ...p, total: +e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" id="ci-edit-checkin" checked={editBooking.checkedIn}
+                    onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
+                  <label htmlFor="ci-edit-checkin" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
+                </div>
+                <div className="gap-2 mt-2">
+                  <button className="btn btn-primary" disabled={bookingBusy} onClick={saveEdit}>
+                    {bookingBusy ? "Saving…" : "Save Changes"}
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setEditBooking(null)}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── View Booking Modal ── */}
           {viewBooking && (() => {
@@ -1674,71 +1740,3 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 // ── Admin Cheat Reports ────────────────────────────────────
 
 export { AdminEventsBookings };
-          {/* ── Edit Booking Modal ── */}
-          {editBooking && (
-            <div className="overlay" onClick={() => setEditBooking(null)}>
-              <div className="modal-box" onClick={e => e.stopPropagation()}>
-                <div className="modal-title">✏️ Edit Booking</div>
-                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
-                  {editBooking.userName} — {editBooking.eventTitle}
-                </div>
-                <div className="form-group">
-                  <label>Transfer to Different Event</label>
-                  <select
-                    value={editBooking.newEventId || editBooking.eventId || ""}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setEditBooking(p => ({ ...p, newEventId: val === p.eventId ? null : val }));
-                    }}
-                  >
-                    {data.events
-                      .slice()
-                      .sort((a, b) => new Date(a.date) - new Date(b.date))
-                      .map(ev => (
-                        <option key={ev.id} value={ev.id}>
-                          {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
-                        </option>
-                      ))
-                    }
-                  </select>
-                  {editBooking.newEventId && editBooking.newEventId !== editBooking.eventId && (
-                    <div style={{ marginTop:6, padding:"6px 10px", background:"rgba(255,160,0,.1)", border:"1px solid rgba(255,160,0,.35)", borderRadius:3, fontSize:12, color:"#ffc060" }}>
-                      ⚠️ This booking will be moved from <strong>{editBooking._orig.eventTitle}</strong> to <strong>{data.events.find(e => e.id === editBooking.newEventId)?.title}</strong>.
-                    </div>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label>Ticket Type</label>
-                  <select value={editBooking.type} onChange={e => setEditBooking(p => ({ ...p, type: e.target.value }))}>
-                    <option value="walkOn">Walk-On</option>
-                    <option value="rental">Rental</option>
-                  </select>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Quantity</label>
-                    <input type="number" min={1} value={editBooking.qty}
-                      onChange={e => setEditBooking(p => ({ ...p, qty: +e.target.value }))} />
-                  </div>
-                  <div className="form-group">
-                    <label>Total (£)</label>
-                    <input type="number" step="0.01" min={0} value={editBooking.total}
-                      onChange={e => setEditBooking(p => ({ ...p, total: +e.target.value }))} />
-                  </div>
-                </div>
-                <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input type="checkbox" id="ci-edit-checkin" checked={editBooking.checkedIn}
-                    onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
-                  <label htmlFor="ci-edit-checkin" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
-                </div>
-                <div className="gap-2 mt-2">
-                  <button className="btn btn-primary" disabled={bookingBusy} onClick={saveEdit}>
-                    {bookingBusy ? "Saving…" : "Save Changes"}
-                  </button>
-                  <button className="btn btn-ghost" onClick={() => setEditBooking(null)}>Cancel</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-
