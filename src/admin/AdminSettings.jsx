@@ -44,9 +44,12 @@ function AdminSettings({ showToast, cu }) {
   const [savingShopClosed, setSavingShopClosed] = useState(false);
   const [vipEnabled, setVipEnabled] = useState(true);
   const [savingVip, setSavingVip] = useState(false);
+  const [propsEnabled, setPropsEnabled] = useState(true);
+  const [savingProps, setSavingProps] = useState(false);
   React.useEffect(() => {
     api.settings.get("shop_closed").then(v => setShopClosedSetting(v === "true")).catch(() => {});
     api.settings.get("vip_enabled").then(v => { if (v !== null && v !== undefined) setVipEnabled(v !== "false"); }).catch(() => {});
+    api.settings.get("props_enabled").then(v => { if (v !== null && v !== undefined) setPropsEnabled(v !== "false"); }).catch(() => {});
   }, []);
 
   const saveSquare = async () => {
@@ -163,6 +166,42 @@ function AdminSettings({ showToast, cu }) {
               finally { setSavingVip(false); }
             }}>
             {savingVip ? "Saving…" : vipEnabled ? "⛔ Disable VIP Purchasing" : "✅ Enable VIP Purchasing"}
+          </button>
+        </div>
+        </>)}
+      </div>
+
+      {/* Props Page Toggle */}
+      <div className="card mb-2">
+        {sectionHead("💣 Intel Arms Props Page", "props")}
+        {sectionBody("props", <>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
+          <div>
+            <div style={{ fontSize:13, color:"var(--text)", marginBottom:4 }}>
+              {propsEnabled
+                ? <span style={{ color:"var(--accent)", fontWeight:700 }}>✅ Props Page is ENABLED</span>
+                : <span style={{ color:"var(--red)", fontWeight:700 }}>⛔ Props Page is DISABLED</span>}
+            </div>
+            <div style={{ fontSize:11, color:"var(--muted)", lineHeight:1.6 }}>
+              When disabled, the Intel Arms Props page is hidden from the navigation and returns a 404.
+            </div>
+          </div>
+          <button
+            className={!propsEnabled ? "btn btn-primary" : "btn btn-ghost"}
+            style={{ minWidth:160 }}
+            disabled={savingProps}
+            onClick={async () => {
+              setSavingProps(true);
+              try {
+                const next = !propsEnabled;
+                await api.settings.set("props_enabled", String(next));
+                setPropsEnabled(next);
+                showToast(next ? "✅ Props page enabled." : "⛔ Props page hidden.");
+                logAction({ adminEmail: cu?.email, adminName: cu?.name, action: next ? "Props page enabled" : "Props page disabled" });
+              } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
+              finally { setSavingProps(false); }
+            }}>
+            {savingProps ? "Saving…" : propsEnabled ? "⛔ Disable Props Page" : "✅ Enable Props Page"}
           </button>
         </div>
         </>)}

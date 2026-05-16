@@ -20,6 +20,7 @@ import { ProfilePage }        from "./pages/ProfilePage";
 import { PublicProfilePage }  from "./pages/PublicProfilePage";
 import { PasswordResetPage }  from "./pages/PasswordResetPage";
 import { SelfCheckInPage }   from "./pages/SelfCheckInPage";
+import { PropsPage }          from "./pages/PropsPage";
 import { UKARAPage }          from "./pages/UKARAPage";
 
 const ALLOWED_COUNTRY_CODES = new Set([
@@ -44,7 +45,7 @@ function AppInner() {
   // ── Hash routing ──────────────────────────────────────────
   // Format: #page  |  #admin/section  |  #admin/section/tab
   //         #profile/tab  |  #events/eventId
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","reset","checkin"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","reset","checkin","props"];
   const getInitialPage = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const p = parts[0];
@@ -90,6 +91,14 @@ function AppInner() {
     supabase.from('page_visits').select('visit_count').then(({ data }) => {
       if (data) setHitCount(data.reduce((s, r) => s + (r.visit_count || 1), 0));
     }).catch(() => {});
+  }, []);
+
+  // ── Props page enabled setting ───────────────────────────────
+  const [propsEnabled, setPropsEnabled] = useState(true);
+  useEffect(() => {
+    supabase.from('site_settings').select('value').eq('key','props_enabled').maybeSingle()
+      .then(({ data }) => { if (data?.value !== undefined) setPropsEnabled(data.value !== 'false'); })
+      .catch(() => {});
   }, []);
 
   // ── Page visit tracking ──────────────────────────────────
@@ -614,6 +623,7 @@ function AppInner() {
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
         {page === "reset"       && <PasswordResetPage token={resetToken} setPage={setPage} showToast={showToast} />}
         {page === "checkin"     && <SelfCheckInPage cu={cu} setAuthModal={setAuthModal} />}
+        {page === "props"       && (propsEnabled ? <PropsPage /> : <div style={{padding:60,textAlign:"center",color:"var(--muted)"}}>This page is currently unavailable.</div>)}
         {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "about"       && <AboutPage setPage={setPage} />}
         {page === "staff"       && <StaffPage staff={data.staff || []} />}

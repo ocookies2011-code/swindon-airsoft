@@ -25,9 +25,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
   const allLinks = [
     { id: "home",   label: "Home",   icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg> },
     { id: "events", label: "Events", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
-    { id: "shop", label: "Shop", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+    { id: "props", label: "Props", icon: "💣" },
+  { id: "shop", label: "Shop", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
       children: [
-        { id: "shop",          label: "Shop",          icon: <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="#c8ff00" strokeWidth="1.4"><path d="M3 5h14l-1.5 9H4.5L3 5z"/><circle cx="8" cy="17" r="1" fill="#c8ff00" stroke="none"/><circle cx="14" cy="17" r="1" fill="#c8ff00" stroke="none"/><path d="M1 2h3l1 3" strokeLinecap="round"/></svg> },
+        { id: "props", label: "Props", icon: "💣" },
+  { id: "shop",          label: "Shop",          icon: <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="#c8ff00" strokeWidth="1.4"><path d="M3 5h14l-1.5 9H4.5L3 5z"/><circle cx="8" cy="17" r="1" fill="#c8ff00" stroke="none"/><circle cx="14" cy="17" r="1" fill="#c8ff00" stroke="none"/><path d="M1 2h3l1 3" strokeLinecap="round"/></svg> },
         { id: "gift-vouchers", label: "Gift Vouchers", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8a000" strokeWidth="2"><rect x="2" y="9" width="20" height="13" rx="1"/><path d="M12 9V22M2 14h20M7 9c0-2.8 2.2-5 5-5s5 2.2 5 5" strokeLinecap="round"/></svg> },
       ]
     },
