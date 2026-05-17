@@ -739,63 +739,62 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
                 <div style={{ marginBottom:16, fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:13, letterSpacing:".15em", color:"var(--muted)", textTransform:"uppercase" }}>
                   {myBookings.length} booking{myBookings.length !== 1 ? "s" : ""}
                 </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
                   {myBookings
                     .sort((a,b) => new Date(b.eventDate) - new Date(a.eventDate))
-                    .map(b => {
+                    .map((b, idx, arr) => {
                       const isPast = new Date(b.eventDate) < new Date();
                       const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
                       const canCancel = !isPast && !b.checkedIn && hoursUntil > 24;
+                      const isToday = new Date().toDateString() === new Date(b.eventDate).toDateString();
+                      const accentCol = b.checkedIn ? "#c8ff00" : isPast ? "#2a2a2a" : "#4fc3f7";
                       return (
                         <div key={b.id} style={{
-                          display:"flex", alignItems:"center", justifyContent:"space-between",
-                          padding:"10px 14px", background:"var(--surface)",
-                          borderLeft:`3px solid ${b.checkedIn ? "#c8ff00" : isPast ? "#1e2e12" : "#4fc3f7"}`,
-                          gap:12, flexWrap:"wrap",
+                          borderTop: idx === 0 ? `1px solid #1e2e12` : `1px solid #1e2e12`,
+                          borderBottom: idx === arr.length - 1 ? `1px solid #1e2e12` : "none",
+                          borderLeft: `3px solid ${accentCol}`,
+                          padding:"14px 16px",
+                          background: isPast ? "rgba(0,0,0,.2)" : "var(--surface)",
                         }}>
-                          <div style={{ display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:0 }}>
-                            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:15, letterSpacing:".04em", color: isPast ? "var(--muted)" : "#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          {/* Top row: title + status badge */}
+                          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, marginBottom:6 }}>
+                            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:16, letterSpacing:".04em", color: isPast ? "var(--muted)" : "#fff", lineHeight:1.2 }}>
                               {b.eventTitle}
                             </div>
-                            <div style={{ fontSize:11, color:"var(--muted)", display:"flex", gap:10, flexWrap:"wrap" }}>
-                              <span>📅 {fmtDate(b.eventDate)}</span>
-                              <span>{b.type === "walkOn" ? "Walk-On" : "Rental"} × {b.qty}</span>
-                              {b.total > 0 && <span>£{Number(b.total).toFixed(2)}</span>}
-                            </div>
-                          </div>
-                          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5, flexShrink:0 }}>
-                            {/* Status badge */}
                             <span style={{
-                              fontSize:10, fontWeight:800, fontFamily:"'Oswald','Barlow Condensed',sans-serif",
-                              letterSpacing:".12em", padding:"2px 8px", textTransform:"uppercase",
+                              flexShrink:0, fontSize:10, fontWeight:800,
+                              fontFamily:"'Oswald','Barlow Condensed',sans-serif",
+                              letterSpacing:".12em", padding:"3px 8px", textTransform:"uppercase",
                               background: b.checkedIn ? "rgba(200,255,0,.1)" : isPast ? "rgba(255,255,255,.04)" : "rgba(79,195,247,.1)",
                               color: b.checkedIn ? "#c8ff00" : isPast ? "#555" : "#4fc3f7",
-                              border: `1px solid ${b.checkedIn ? "rgba(200,255,0,.2)" : isPast ? "#1e2e12" : "rgba(79,195,247,.2)"}`,
-                              whiteSpace:"nowrap",
+                              border: `1px solid ${b.checkedIn ? "rgba(200,255,0,.2)" : isPast ? "#333" : "rgba(79,195,247,.2)"}`,
                             }}>
                               {b.checkedIn ? "✓ Attended" : isPast ? "Missed" : "Booked"}
                             </span>
-                            {/* Action buttons row */}
-                            <div style={{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"flex-end" }}>
-                              {!isPast && !b.checkedIn && new Date().toDateString() === new Date(b.eventDate).toDateString() && (
-                                <button
-                                  onClick={() => { setCheckInResult(null); setScanningCheckin(b); }}
-                                  style={{ background:"rgba(200,255,0,.12)", border:"1px solid rgba(200,255,0,.4)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" }}>
-                                  📷 Check In
-                                </button>
-                              )}
+                          </div>
+                          {/* Middle row: date + ticket info */}
+                          <div style={{ fontSize:13, color:"var(--muted)", display:"flex", gap:14, flexWrap:"wrap", marginBottom:10 }}>
+                            <span style={{ color: isPast ? "var(--muted)" : "#8aaa60", fontWeight:600 }}>📅 {fmtDate(b.eventDate)}</span>
+                            <span>{b.type === "walkOn" ? "Walk-On" : "Rental"} × {b.qty}</span>
+                            {b.total > 0 && <span>£{Number(b.total).toFixed(2)}</span>}
+                          </div>
+                          {/* Bottom row: action buttons */}
+                          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                            {!isPast && !b.checkedIn && isToday && (
                               <button
-                                onClick={() => openTicket(b)}
-                                title="View / Print Ticket"
-                                style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" }}>
-                                🎟 Ticket
+                                onClick={() => { setCheckInResult(null); setScanningCheckin(b); }}
+                                className="btn btn-primary btn-sm">
+                                📷 Check In
                               </button>
-                              {canCancel && (
-                                <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"3px 8px", cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" }}>
-                                  ✕ Cancel
-                                </button>
-                              )}
-                            </div>
+                            )}
+                            <button onClick={() => openTicket(b)} className="btn btn-ghost btn-sm">
+                              🎟 Ticket
+                            </button>
+                            {canCancel && (
+                              <button onClick={() => setCancelModal(b)} className="btn btn-danger btn-sm">
+                                ✕ Cancel
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
