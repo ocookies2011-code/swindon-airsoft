@@ -71,10 +71,17 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
   const doSelfCheckIn = async (scannedCode, booking) => {
     setScanningCheckin(null);
     // Accept the permanent checkin URL or any QR that contains "checkin" or "swindon-airsoft"
+    // Only allow check-in on the actual event date
+    const today = new Date().toDateString();
+    const eventDay = new Date(booking.eventDate).toDateString();
+    if (today !== eventDay) {
+      setCheckInResult({ ok: false, msg: `Check-in is only available on the day of the event (${eventDay}).` });
+      return;
+    }
     const isValidQR = scannedCode && (
       scannedCode.includes("checkin") ||
       scannedCode.includes("swindon-airsoft") ||
-      scannedCode === booking.eventId  // also still accept old event-ID QRs
+      scannedCode === booking.eventId
     );
     if (!isValidQR) {
       setCheckInResult({ ok: false, msg: "QR code not recognised. Make sure you're scanning the Swindon Airsoft check-in poster at the gate." });
@@ -766,7 +773,7 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
                             }}>
                               {b.checkedIn ? "✓ Attended" : isPast ? "Missed" : "Booked"}
                             </span>
-                            {!isPast && !b.checkedIn && (
+                            {!isPast && !b.checkedIn && new Date().toDateString() === new Date(b.eventDate).toDateString() && (
                               <button
                                 onClick={() => { setCheckInResult(null); setScanningCheckin(b); }}
                                 style={{ background:"rgba(200,255,0,.12)", border:"1px solid rgba(200,255,0,.4)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
