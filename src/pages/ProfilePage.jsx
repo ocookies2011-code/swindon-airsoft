@@ -763,34 +763,39 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
                               {b.total > 0 && <span>£{Number(b.total).toFixed(2)}</span>}
                             </div>
                           </div>
-                          <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0 }}>
+                          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5, flexShrink:0 }}>
+                            {/* Status badge */}
                             <span style={{
                               fontSize:10, fontWeight:800, fontFamily:"'Oswald','Barlow Condensed',sans-serif",
                               letterSpacing:".12em", padding:"2px 8px", textTransform:"uppercase",
                               background: b.checkedIn ? "rgba(200,255,0,.1)" : isPast ? "rgba(255,255,255,.04)" : "rgba(79,195,247,.1)",
                               color: b.checkedIn ? "#c8ff00" : isPast ? "#555" : "#4fc3f7",
                               border: `1px solid ${b.checkedIn ? "rgba(200,255,0,.2)" : isPast ? "#1e2e12" : "rgba(79,195,247,.2)"}`,
+                              whiteSpace:"nowrap",
                             }}>
                               {b.checkedIn ? "✓ Attended" : isPast ? "Missed" : "Booked"}
                             </span>
-                            {!isPast && !b.checkedIn && new Date().toDateString() === new Date(b.eventDate).toDateString() && (
+                            {/* Action buttons row */}
+                            <div style={{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                              {!isPast && !b.checkedIn && new Date().toDateString() === new Date(b.eventDate).toDateString() && (
+                                <button
+                                  onClick={() => { setCheckInResult(null); setScanningCheckin(b); }}
+                                  style={{ background:"rgba(200,255,0,.12)", border:"1px solid rgba(200,255,0,.4)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                                  📷 Check In
+                                </button>
+                              )}
                               <button
-                                onClick={() => { setCheckInResult(null); setScanningCheckin(b); }}
-                                style={{ background:"rgba(200,255,0,.12)", border:"1px solid rgba(200,255,0,.4)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
-                                📷 CHECK IN
+                                onClick={() => openTicket(b)}
+                                title="View / Print Ticket"
+                                style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                                🎟 Ticket
                               </button>
-                            )}
-                            <button
-                              onClick={() => openTicket(b)}
-                              title="View / Print Ticket"
-                              style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color:"#c8ff00", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".1em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
-                              🎟 Ticket
-                            </button>
-                            {canCancel && (
-                              <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"3px 10px", cursor:"pointer", textTransform:"uppercase" }}>
-                                ✕ Cancel
-                              </button>
-                            )}
+                              {canCancel && (
+                                <button onClick={() => setCancelModal(b)} style={{ background:"transparent", border:"1px solid #6b2222", color:"#ef4444", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:10, letterSpacing:".12em", padding:"3px 8px", cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                                  ✕ Cancel
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
