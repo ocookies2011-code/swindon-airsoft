@@ -787,9 +787,11 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
                                 📷 Check In
                               </button>
                             )}
-                            <button onClick={() => openTicket(b)} className="btn btn-ghost btn-sm">
-                              🎟 Ticket
-                            </button>
+                            {!isPast && (
+                              <button onClick={() => openTicket(b)} className="btn btn-ghost btn-sm">
+                                🎟 Ticket
+                              </button>
+                            )}
                             {canCancel && (
                               <button onClick={() => setCancelModal(b)} className="btn btn-danger btn-sm">
                                 ✕ Cancel
