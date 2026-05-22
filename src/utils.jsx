@@ -1625,26 +1625,23 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
 
       // Send email via EmailJS
       const resetLink = window.location.origin + "/#reset/" + token;
-      const htmlContent = `
-        <div style="font-family:'Barlow Condensed',Arial,sans-serif;background:#080b06;padding:32px;max-width:520px;margin:0 auto">
-          <div style="text-align:center;margin-bottom:24px">
-            <img src="https://www.swindon-airsoft.com/logo.png" alt="Swindon Airsoft" style="height:60px" onerror="this.style.display='none'"/>
-          </div>
-          <div style="background:#0d1209;border:1px solid #2a4018;padding:28px;color:#c8d4b0">
-            <h2 style="color:#c8ff00;font-size:22px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 16px">🔐 PASSWORD RESET</h2>
-            <p style="margin:0 0 12px;font-size:14px;line-height:1.7">Hi \${profile.name || "Operator"},</p>
-            <p style="margin:0 0 20px;font-size:14px;line-height:1.7">We received a request to reset your Swindon Airsoft password. Click the button below to set a new password. This link expires in 1 hour.</p>
-            <div style="text-align:center;margin:24px 0">
-              <a href="\${resetLink}" style="background:#c8ff00;color:#000;font-weight:900;font-size:14px;letter-spacing:.15em;text-transform:uppercase;padding:14px 32px;text-decoration:none;display:inline-block">RESET MY PASSWORD</a>
-            </div>
-            <p style="margin:20px 0 0;font-size:12px;color:#5a6e42;line-height:1.6">If you didn't request this, you can safely ignore this email. Your password will not change.</p>
-          </div>
-          <p style="text-align:center;font-size:11px;color:#3a5010;margin-top:16px">◈ SWINDON AIRSOFT · FIELD COMMAND ◈</p>
-        </div>`;
-
+      const playerName = profile.name || "Operator";
+      const btnStyle = "background:#c8ff00;color:#000;font-weight:900;font-size:14px;letter-spacing:.15em;text-transform:uppercase;padding:14px 32px;text-decoration:none;display:inline-block";
+      const htmlContent = "<div style=\"font-family:Arial,sans-serif;background:#080b06;padding:32px;max-width:520px;margin:0 auto\">" +
+        "<div style=\"background:#0d1209;border:1px solid #2a4018;padding:28px;color:#c8d4b0\">" +
+        "<h2 style=\"color:#c8ff00;font-size:22px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 16px\">🔐 PASSWORD RESET</h2>" +
+        "<p style=\"margin:0 0 12px;font-size:14px;line-height:1.7\">Hi " + playerName + ",</p>" +
+        "<p style=\"margin:0 0 20px;font-size:14px;line-height:1.7\">We received a request to reset your Swindon Airsoft password. Click the button below to set a new password. This link expires in 1 hour.</p>" +
+        "<div style=\"text-align:center;margin:24px 0\">" +
+        "<a href=\"" + resetLink + "\" style=\"" + btnStyle + "\">RESET MY PASSWORD</a>" +
+        "</div>" +
+        "<p style=\"margin:20px 0 0;font-size:12px;color:#5a6e42;line-height:1.6\">If you didn't request this, you can safely ignore this email.</p>" +
+        "</div>" +
+        "<p style=\"text-align:center;font-size:11px;color:#3a5010;margin-top:16px\">◈ SWINDON AIRSOFT · FIELD COMMAND ◈</p>" +
+        "</div>";
       await sendEmail({
         toEmail: profile.email,
-        toName: profile.name || "Operator",
+        toName: playerName,
         subject: "🔐 Reset Your Swindon Airsoft Password",
         htmlContent,
       });
