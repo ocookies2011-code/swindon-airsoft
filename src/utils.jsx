@@ -1603,9 +1603,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     if (!form.email || !form.email.includes("@")) { showToast("Enter your email address first", "red"); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
-        redirectTo: window.location.origin + "/reset",
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim());
       if (error) throw error;
       setResetSent(true);
     } catch (e) {
