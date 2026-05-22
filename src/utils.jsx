@@ -1604,7 +1604,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     setBusy(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
-        redirectTo: window.location.origin + "/#reset",
+        redirectTo: window.location.origin + "/reset",
       });
       if (error) throw error;
       setResetSent(true);
