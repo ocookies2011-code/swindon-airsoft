@@ -11,14 +11,15 @@ export function PasswordResetPage({ token, setPage, showToast }) {
 
   const submit = async () => {
     setErr("");
+    if (!token) { setErr("Invalid reset link. Please request a new one."); return; }
     if (password.length < 8)       { setErr("Password must be at least 8 characters."); return; }
     if (password !== confirm)      { setErr("Passwords don't match."); return; }
     setBusy(true);
     try {
-      // Supabase recovery flow: user is already authenticated via the email link
-      // Just update the password directly
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke("reset-password", {
+        body: { token, newPassword: password },
+      });
+      if (error || !data?.ok) throw new Error(data?.error || error?.message || "Reset failed");
       setDone(true);
       showToast("✅ Password updated! You can now log in.");
       setTimeout(() => setPage("home"), 3000);
