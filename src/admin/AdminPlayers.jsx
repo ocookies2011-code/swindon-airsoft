@@ -44,6 +44,9 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [bulkEmailModal, setBulkEmailModal] = useState(false);
   const [squareCustomerSyncing, setSquareCustomerSyncing] = useState(false);
   const [squareCustomerSyncStatus, setSquareCustomerSyncStatus] = useState(null); // null|"ok"|"error"
+  const [passwordModal, setPasswordModal] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
 
   // ── Bulk sync all players to Square Customer Directory ────────
   const syncAllPlayersToSquare = async () => {
@@ -741,6 +744,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   </div>
                   <div style={{ display:"flex", gap:6 }}>
                     <button className="btn btn-sm btn-danger" onClick={() => setDelAccountConfirm(u)}>Delete Account</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => { setPasswordModal(u); setNewPassword(""); }}>🔑 Set Password</button>
                     <button className="btn btn-sm btn-ghost" onClick={async () => {
                       await updateUserAndRefresh(u.id, { deleteRequest: false });
                       showToast(`Deletion request cleared for ${u.name}`);
