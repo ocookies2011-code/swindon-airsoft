@@ -16,10 +16,11 @@ export function PasswordResetPage({ token, setPage, showToast }) {
     if (password !== confirm)      { setErr("Passwords don't match."); return; }
     setBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke("reset-password", {
-        body: { token, newPassword: password },
+      const { error } = await supabase.rpc("reset_password_with_token", {
+        reset_token: token,
+        new_password: password,
       });
-      if (error || !data?.ok) throw new Error(data?.error || error?.message || "Reset failed");
+      if (error) throw error;
       setDone(true);
       showToast("✅ Password updated! You can now log in.");
       setTimeout(() => setPage("home"), 3000);

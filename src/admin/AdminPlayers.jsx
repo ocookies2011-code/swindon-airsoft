@@ -981,10 +981,11 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                 onClick={async () => {
                   setPasswordBusy(true);
                   try {
-                    const { data, error } = await supabase.functions.invoke("reset-password", {
-                      body: { adminUserId: passwordModal.id, newPassword },
+                    const { error } = await supabase.rpc("admin_set_password", {
+                      target_user_id: passwordModal.id,
+                      new_password: newPassword,
                     });
-                    if (error || !data?.ok) throw new Error(data?.error || error?.message || "Failed");
+                    if (error) throw error;
                     showToast("✅ Password updated for " + passwordModal.name);
                     setPasswordModal(null);
                     setNewPassword("");
