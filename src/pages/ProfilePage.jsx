@@ -64,6 +64,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
 
   // ── Booking cancellation ──
   const [cancelModal, setCancelModal] = useState(null);
+  const [pwForm, setPwForm] = useState({ next:"", confirm:"" });
+  const [pwBusy, setPwBusy] = useState(false);
   const [scanningCheckin, setScanningCheckin] = useState(null); // booking being checked in
   const [checkInResult, setCheckInResult] = useState(null);     // {ok, msg} after scan // booking object
   const [cancelling, setCancelling] = useState(false);
@@ -533,6 +535,37 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
             }}>⬇ Download My Data (GDPR)</button>
 
             <button className="btn btn-danger" onClick={() => setDelConfirm(true)}>Request Account Deletion</button>
+          </div>
+
+          {/* ── Change Password ── */}
+          <div style={{ marginTop:20, padding:"18px 20px", background:"var(--surface)", border:"1px solid var(--border)" }}>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:13, letterSpacing:".12em", textTransform:"uppercase", color:"var(--accent)", marginBottom:14 }}>
+              🔒 Change Password
+            </div>
+            <div className="form-group">
+              <label>New Password</label>
+              <input type="password" value={pwForm.next} onChange={e => setPwForm(p => ({...p, next:e.target.value}))} placeholder="Minimum 8 characters" />
+            </div>
+            <div className="form-group">
+              <label>Confirm New Password</label>
+              <input type="password" value={pwForm.confirm} onChange={e => setPwForm(p => ({...p, confirm:e.target.value}))} placeholder="Repeat new password" />
+            </div>
+            <button
+              className="btn btn-primary btn-sm"
+              disabled={pwBusy || pwForm.next.length < 8 || pwForm.next !== pwForm.confirm}
+              onClick={async () => {
+                setPwBusy(true);
+                try {
+                  const { error } = await supabase.auth.updateUser({ password: pwForm.next });
+                  if (error) throw error;
+                  showToast("✅ Password updated successfully!");
+                  setPwForm({ next:"", confirm:"" });
+                } catch(e) { showToast("Failed: " + e.message, "red"); }
+                finally { setPwBusy(false); }
+              }}
+            >
+              {pwBusy ? "Updating…" : "Update Password"}
+            </button>
           </div>
           {delConfirm && (
             <div className="alert alert-red mt-2">
