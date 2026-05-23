@@ -681,6 +681,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                       {u.adminNotes && <span title={u.adminNotes} style={{ fontSize:12, cursor:"help" }}>🔒</span>}
                       <button className="btn btn-sm btn-ghost" onClick={() => setViewPlayer(u)}>View</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setPasswordModal(u); setNewPassword(""); }}>🔑 Password</button>
                     </div>
                   </td>
                 </tr>
