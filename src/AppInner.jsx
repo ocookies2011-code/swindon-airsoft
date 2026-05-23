@@ -153,7 +153,7 @@ function AppInner() {
       if (p === "admin") { setPageState("admin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (p === "reset" && parts[1]) { setResetToken(parts[1]); setPageState("reset"); window.scrollTo({ top:0, behavior:"instant" }); return; }
-      if (p === "checkin") { setPageState("checkin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
+      if (p === "checkin") { setPageState("profile"); window.location.hash = "profile"; window.scrollTo({ top:0, behavior:"instant" }); return; }
       if (PUBLIC_PAGES.includes(p)) { setPageState(p); window.scrollTo({ top:0, behavior:"instant" }); }
     };
     window.addEventListener("hashchange", onHash);
@@ -622,7 +622,7 @@ function AppInner() {
         {page === "profile"     && authLoading  && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Loading…</div>}
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
         {page === "reset"       && <PasswordResetPage token={resetToken} setPage={setPage} showToast={showToast} />}
-        {page === "checkin"     && <SelfCheckInPage cu={cu} setAuthModal={setAuthModal} />}
+        {/* #checkin QR route now redirects to profile page */}
         {page === "props"       && (propsEnabled ? <PropsPage /> : <div style={{padding:60,textAlign:"center",color:"var(--muted)"}}>This page is currently unavailable.</div>)}
         {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "about"       && <AboutPage setPage={setPage} />}

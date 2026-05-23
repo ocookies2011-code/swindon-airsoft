@@ -59,6 +59,23 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
   const waiverValid = cu && ((cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin");
   const myBookings = cu ? data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))) : [];
 
+  // Auto-open scanner when player arrives via QR code scan (#checkin)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === "#checkin" || hash.startsWith("#checkin")) {
+      window.history.replaceState(null, "", "/#profile");
+      const _n = new Date();
+      const todayStr = _n.getFullYear() + "-" + String(_n.getMonth()+1).padStart(2,"0") + "-" + String(_n.getDate()).padStart(2,"0");
+      const todayBooking = myBookings.find(b => !b.checkedIn && (b.eventDate||"").slice(0,10) === todayStr);
+      if (todayBooking) {
+        setCheckInResult(null);
+        setScanningCheckin(todayBooking);
+      } else {
+        setCheckInResult({ ok: false, msg: "No booking found for today's event. If you have a booking, check your profile. See a marshal if you need help." });
+      }
+    }
+  }, [myBookings.length]);
+
   // Count actual checked-in games from booking records — source of truth
   const actualGamesAttended = myBookings.filter(b => b.checkedIn).length;
 
