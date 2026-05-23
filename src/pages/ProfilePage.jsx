@@ -75,7 +75,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
     // Accept the permanent checkin URL or any QR that contains "checkin" or "swindon-airsoft"
     // Only allow check-in on the actual event date
     // Compare YYYY-MM-DD strings directly to avoid timezone issues
-    const todayStr = new Date().toLocaleDateString("en-CA"); // gives YYYY-MM-DD in local time
+    const now = new Date();
+    const todayStr = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
     const eventDateStr = (booking.eventDate || "").slice(0, 10); // take just YYYY-MM-DD
     if (todayStr !== eventDateStr) {
       setCheckInResult({ ok: false, msg: `Check-in is only available on the day of the event (${new Date(eventDateStr + "T12:00:00").toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long" })}).` });
@@ -780,7 +781,8 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
                       const isPast = new Date(b.eventDate) < new Date();
                       const hoursUntil = (new Date(b.eventDate) - new Date()) / 36e5;
                       const canCancel = !isPast && !b.checkedIn && hoursUntil > 24;
-                      const isToday = new Date().toLocaleDateString("en-CA") === (b.eventDate || "").slice(0, 10);
+                      const _n = new Date();
+                      const isToday = (_n.getFullYear() + "-" + String(_n.getMonth()+1).padStart(2,"0") + "-" + String(_n.getDate()).padStart(2,"0")) === (b.eventDate || "").slice(0, 10);
                       const accentCol = b.checkedIn ? "#c8ff00" : isPast ? "#2a2a2a" : "#4fc3f7";
                       return (
                         <div key={b.id} style={{
