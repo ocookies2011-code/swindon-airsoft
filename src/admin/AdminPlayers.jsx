@@ -956,6 +956,50 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         </div>
       )}
 
+      {/* ── Set Password Modal ── */}
+      {passwordModal && (
+        <div className="overlay" onClick={() => setPasswordModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🔑 Set Password</div>
+            <div style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
+              Setting new password for <strong style={{ color:"var(--text)" }}>{passwordModal.name}</strong>
+            </div>
+            <div className="form-group">
+              <label>New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Minimum 8 characters"
+                autoFocus
+              />
+            </div>
+            <div className="gap-2 mt-2">
+              <button
+                className="btn btn-primary"
+                disabled={passwordBusy || newPassword.length < 8}
+                onClick={async () => {
+                  setPasswordBusy(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke("reset-password", {
+                      body: { adminUserId: passwordModal.id, newPassword },
+                    });
+                    if (error || !data?.ok) throw new Error(data?.error || error?.message || "Failed");
+                    showToast("✅ Password updated for " + passwordModal.name);
+                    setPasswordModal(null);
+                    setNewPassword("");
+                  } catch(e) { showToast("Failed: " + e.message, "red"); }
+                  finally { setPasswordBusy(false); }
+                }}
+              >
+                {passwordBusy ? "Saving…" : "Set Password"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setPasswordModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {delAccountConfirm && (
         <div className="overlay" onClick={() => !deletingAccount && setDelAccountConfirm(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
