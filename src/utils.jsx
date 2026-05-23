@@ -2371,7 +2371,7 @@ function HomePage({ data, setPage, onProductClick }) {
                                 {post.category}
                               </span>
                               <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#2a3a10", letterSpacing:".1em" }}>
-                                {new Date(post.created_at).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" })}
+                                {new Date(post.created_at).toLocaleDateString("en-GB", { timeZone:"Europe/London", day:"2-digit", month:"short", year:"numeric" })}
                               </span>
                             </div>
                             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:15, color:"#c0d8a0", letterSpacing:".04em", textTransform:"uppercase" }}>
@@ -2560,7 +2560,7 @@ function HomePage({ data, setPage, onProductClick }) {
                     📍 {nextEvent.location}
                   </div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"rgba(200,255,0,.6)", marginBottom:20 }}>
-                    🗓 {new Date(nextEvent.date).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})} · {nextEvent.time} HRS GMT
+                    🗓 {new Date(nextEvent.date + "T12:00:00").toLocaleDateString("en-GB",{timeZone:"Europe/London",weekday:"long",day:"numeric",month:"long"})} · {nextEvent.time} HRS GMT
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
                     <button
@@ -2742,7 +2742,7 @@ async function sendEmail({ toEmail, toName, subject, htmlContent }) {
 
 async function sendTicketEmail({ cu, ev, bookings, extras }) {
   const extrasText = Object.entries(extras || {}).filter(([,v])=>v>0).map(([k,v])=>`${k} ×${v}`).join(", ") || "None";
-  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  const dateStr = new Date(ev.date + "T12:00:00").toLocaleDateString("en-GB", { timeZone:"Europe/London", weekday:"long", day:"numeric", month:"long", year:"numeric" });
   const totalPaid = bookings.reduce((s, b) => s + (b.total || 0), 0);
 
   const ticketRows = bookings.map(b => {
@@ -2918,7 +2918,7 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
 
 // ── Waitlist Slot Available Email ────────────────────────────
 async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
-  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const dateStr = new Date(ev.date + "T12:00:00").toLocaleDateString("en-GB", { timeZone:"Europe/London", weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const typeLabel = ticketType === "walkOn" ? "Walk-On" : "Rental Package";
   const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#0a0a0a;font-family:Arial,sans-serif;color:#e0e0e0;">
     <div style="height:3px;background:#c8ff00;"></div>
@@ -2955,7 +2955,7 @@ async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
 }
 
 async function sendCancellationEmail({ cu, eventTitle, eventDate, ticketType, refundAmount, isCredits, isRental }) {
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "—";
+  const fmtDate = (d) => d ? new Date(d.slice(0,10) + "T12:00:00").toLocaleDateString("en-GB", { timeZone:"Europe/London", weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "—";
   const refundLine = isCredits
     ? `£${refundAmount.toFixed(2)} has been added to your game credits and will automatically apply at your next checkout.`
     : `£${refundAmount.toFixed(2)} has been refunded to your original payment method. Please allow 3–5 working days.`;
@@ -3281,7 +3281,7 @@ async function sendNewEventEmail({ ev, users }) {
 // Fired after a player successfully books. Sends to the site contact_email.
 async function sendAdminBookingNotification({ adminEmail, cu, ev, bookings, total }) {
   if (!adminEmail) return;
-  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const dateStr = new Date(ev.date + "T12:00:00").toLocaleDateString("en-GB", { timeZone:"Europe/London", weekday: "short", day: "numeric", month: "short", year: "numeric" });
   const rows = (bookings || []).map(b =>
     `<tr>
       <td style="padding:7px 12px;border:1px solid #1a2808;color:#ccc;font-size:13px;">${b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
