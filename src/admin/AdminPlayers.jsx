@@ -798,14 +798,14 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   checked={filteredPlayers.length > 0 && filteredPlayers.every(u => selectedPlayerIds.has(u.id))}
                   onChange={e => setSelectedPlayerIds(e.target.checked ? new Set(filteredPlayers.map(u=>u.id)) : new Set())} />
               </th>
-              <th>Name</th><th>Email</th><th>{playerSort === "spend" ? "Spend" : "Games"}</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
+              <th>Name</th><th>{playerSort === "spend" ? "Spend" : "Games"}</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {sortedPlayers.map(u => (
                 <React.Fragment key={u.id}>
                 <tr style={{ background: selectedPlayerIds.has(u.id) ? "rgba(200,255,0,.03)" : "" }}>
                   <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
                   <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} /></td>
-                  <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
+
                   <td style={{ fontSize:12, fontWeight:700, fontFamily:"'Oswald',sans-serif", color: playerSort === "spend" ? "var(--accent)" : "inherit" }}>
                     {playerSort === "spend"
                       ? `£${(playerSpendMap[u.id] || 0).toFixed(2)}`
