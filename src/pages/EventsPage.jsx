@@ -227,13 +227,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     };
 
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, Math.max(0, walkOnLeft))) }));
-    const setRental = (n) => {
-      if (n > 0 && !rentalAgreed) {
-        // Show rental agreement before adding to cart
-        setRentalAgreementModal(n);
-        return;
-      }
-      setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
+    const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
+    const tryAddRental = (n) => {
+      if (n > 0 && !rentalAgreed) { setRentalAgreementModal({ qty: n, setFn: () => setRental(n) }); return; }
+      setRental(n);
     };
 
 
@@ -837,7 +834,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                           <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
                             <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                             <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                            <button onClick={() => setRental(bCart.rental + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
+                            <button onClick={() => tryAddRental(bCart.rental + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
                           </div>
                         ) : rnHeldForOther ? (
                           <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", textAlign:"right" }}>🔒 SLOT HELD</span>
@@ -860,7 +857,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                         <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                           <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                           <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                          <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
+                          <button onClick={() => tryAddRental(bCart.rental + 1)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
                         </div>
                       )}
                     </div>
@@ -1389,14 +1386,22 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#5a6e42", letterSpacing:".15em", marginBottom:20 }}>
               PLEASE READ BEFORE ADDING RENTAL TO YOUR BOOKING
             </div>
-            <div style={{ background:"#080b06", border:"1px solid #2a3a10", padding:"16px 18px", marginBottom:20, fontSize:13, color:"#c8d4b0", lineHeight:1.9 }}>
-              <div style={{ marginBottom:10 }}>
-                <strong style={{ color:"#ef4444" }}>⛔ No-Show Policy:</strong><br/>
-                If you book a rental package and <strong>do not attend</strong> on the day, <strong style={{ color:"#ef4444" }}>10% of your rental fee will be retained</strong> as a no-show charge. The remaining balance will be refunded.
+            <div style={{ background:"#080b06", border:"1px solid #2a3a10", padding:"16px 18px", marginBottom:20, fontSize:13, color:"#c8d4b0", lineHeight:1.8 }}>
+              <div style={{ marginBottom:14, paddingBottom:14, borderBottom:"1px solid #1e2e12" }}>
+                <strong style={{ color:"#c8a000", fontSize:11, letterSpacing:".1em", fontFamily:"'Share Tech Mono',monospace" }}>CANCELLATION — MORE THAN 48 HOURS BEFORE EVENT</strong><br/>
+                <span style={{ color:"#8aaa60" }}>✓ 90% refund issued to original payment method (10% rental processing fee retained)</span>
+              </div>
+              <div style={{ marginBottom:14, paddingBottom:14, borderBottom:"1px solid #1e2e12" }}>
+                <strong style={{ color:"#c8a000", fontSize:11, letterSpacing:".1em", fontFamily:"'Share Tech Mono',monospace" }}>CANCELLATION — 24–48 HOURS BEFORE EVENT</strong><br/>
+                <span style={{ color:"#8aaa60" }}>✓ 90% issued as Game Day Credits (10% fee retained) — credits added instantly for future bookings</span>
+              </div>
+              <div style={{ marginBottom:14, paddingBottom:14, borderBottom:"1px solid #1e2e12" }}>
+                <strong style={{ color:"#ef4444", fontSize:11, letterSpacing:".1em", fontFamily:"'Share Tech Mono',monospace" }}>⛔ CANCELLATION — WITHIN 24 HOURS OF EVENT</strong><br/>
+                <span style={{ color:"#c8d4b0" }}>Cancellations are not permitted within 24 hours of the event. No refund will be issued.</span>
               </div>
               <div>
-                <strong style={{ color:"#ef4444" }}>⛔ Early Departure Policy:</strong><br/>
-                If you leave the site early for any reason, <strong style={{ color:"#ef4444" }}>no refund will be issued under any circumstances.</strong> Rental equipment must be returned to a marshal before leaving.
+                <strong style={{ color:"#ef4444", fontSize:11, letterSpacing:".1em", fontFamily:"'Share Tech Mono',monospace" }}>⛔ EARLY DEPARTURE — NO REFUND UNDER ANY CIRCUMSTANCES</strong><br/>
+                <span style={{ color:"#c8d4b0" }}>If you leave the site early for any reason, no refund will be issued. Rental equipment must be returned to a marshal before leaving.</span>
               </div>
             </div>
             <div style={{ fontSize:12, color:"#5a6e42", marginBottom:20, lineHeight:1.6, fontStyle:"italic" }}>
@@ -1407,11 +1412,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 className="btn btn-primary"
                 style={{ flex:1 }}
                 onClick={() => {
-                  const qty = rentalAgreementModal;
+                  const pending = rentalAgreementModal;
                   setRentalAgreed(true);
                   setRentalAgreementModal(null);
-                  // Use setTimeout so rentalAgreed state is true before setBCart
-                  setTimeout(() => setBCart(p => ({ ...p, rental: qty })), 0);
+                  if (pending?.setFn) setTimeout(pending.setFn, 0);
                 }}
               >
                 ✅ I Agree &amp; Continue
