@@ -660,6 +660,8 @@ export function normaliseProfile(p) {
     address:            p.address,
     role:               p.role,
     approved:           p.approved ?? true,
+    lastIp:             p.last_ip || null,
+    lastSeenAt:         p.last_seen_at || null,
     approvedAt:         p.approved_at || null,
     dateOfBirth:        p.date_of_birth || null,
     postcode:           p.postcode || null,

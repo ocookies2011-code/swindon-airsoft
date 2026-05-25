@@ -812,7 +812,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                       <button className="btn btn-sm btn-ghost" onClick={() => setViewPlayer(u)}>View</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => { setPasswordModal(u); setNewPassword(""); }}>🔑 Password</button>
-                      <button className="btn btn-sm btn-danger" style={{ fontSize:10 }} onClick={() => { setIpBanModal(u); setIpBanReason(""); setIpBanExpiry(""); }}>🚫 Ban IP</button>
+                      <button className="btn btn-sm btn-danger" style={{ fontSize:10 }} onClick={() => { setIpBanModal({ ...u, ip: u.lastIp || "" }); setIpBanReason(""); setIpBanExpiry(""); }}>🚫 Ban IP</button>
                     </div>
                   </td>
                 </tr>
@@ -1370,6 +1370,23 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                     <div style={{ fontSize:13, fontWeight:600 }}>{String(val)}</div>
                   </div>
                 ))}
+
+                {/* IP Address — separate card with copy + ban */}
+                <div style={{ background:"var(--bg4)", padding:"10px 12px", borderRadius:3, gridColumn:"1/-1" }}>
+                  <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:4 }}>Last IP Address</div>
+                  {u.lastIp ? (
+                    <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:"var(--accent)", fontWeight:700 }}>{u.lastIp}</span>
+                      <button onClick={() => { navigator.clipboard.writeText(u.lastIp); showToast("IP copied to clipboard"); }}
+                        style={{ background:"none", border:"1px solid var(--border)", cursor:"pointer", color:"var(--muted)", fontSize:11, padding:"2px 8px" }}>📋 Copy</button>
+                      <button onClick={() => { setIpBanModal({ ...u, ip: u.lastIp }); setIpBanReason(""); setIpBanExpiry(""); setViewPlayer(null); }}
+                        style={{ background:"none", border:"1px solid #6b2222", cursor:"pointer", color:"#ef4444", fontSize:11, padding:"2px 8px" }}>🚫 Ban IP</button>
+                      {u.lastSeenAt && <span style={{ fontSize:10, color:"var(--muted)" }}>Last seen: {new Date(u.lastSeenAt).toLocaleString("en-GB", { timeZone:"Europe/London" })}</span>}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize:12, color:"var(--muted)" }}>Not recorded yet — player must log in after this update</span>
+                  )}
+                </div>
               </div>
 
               {/* Total spend */}

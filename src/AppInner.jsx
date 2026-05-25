@@ -390,6 +390,17 @@ function AppInner() {
           setGeoStatus("blocked");
         } else {
           setGeoStatus("allowed");
+          // Store the player's IP in their profile for admin visibility
+          if (data?.ip && data.ip !== 'unknown') {
+            supabase.auth.getUser().then(({ data: { user } }) => {
+              if (user?.id) {
+                supabase.from('profiles').update({
+                  last_ip: data.ip,
+                  last_seen_at: new Date().toISOString(),
+                }).eq('id', user.id).catch(() => {});
+              }
+            }).catch(() => {});
+          }
         }
       })
       .catch(() => setGeoStatus("allowed"));
