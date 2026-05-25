@@ -412,9 +412,13 @@ function AppInner() {
   // Save IP to profile once BOTH ip and user are available
   useEffect(() => {
     if (!detectedIp || !cu?.id) return;
-    supabase.rpc('log_my_ip', { p_ip: detectedIp })
-      .then(({ error }) => { if (error) console.warn('log_my_ip failed:', error.message); })
-      .catch(e => console.warn('log_my_ip error:', e));
+    // Direct update — simpler and more reliable than RPC
+    supabase
+      .from('profiles')
+      .update({ last_ip: detectedIp, last_seen_at: new Date().toISOString() })
+      .eq('id', cu.id)
+      .then(({ error }) => { if (error) console.warn('IP update failed:', error.message, error.code); })
+      .catch(e => console.warn('IP update error:', e));
   }, [detectedIp, cu?.id]);
 
   useEffect(() => {
