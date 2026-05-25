@@ -115,6 +115,17 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     finally { setWaitlistBusy(false); }
   };
 
+  // Top-level rental agreement handler - must be outside if(ev) so React re-renders correctly
+  const handleRentalIncrease = useCallback((currentQty, maxQty, agreed) => {
+    const next = Math.min(currentQty + 1, maxQty);
+    if (next > currentQty && !agreed) {
+      setPendingRentalQty(next);
+      setRentalAgreementModal(true);
+    } else {
+      setBCart(p => ({ ...p, rental: next }));
+    }
+  }, []);
+
   if (ev) {
     const vipIsActive = cu?.vipStatus === "active" && (!cu?.vipExpiresAt || new Date(cu.vipExpiresAt) > new Date());
     const vipDisc   = vipIsActive ? 0.1 : 0;
@@ -228,15 +239,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     };
 
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, Math.max(0, walkOnLeft))) }));
-    const setRental = (n) => {
-      if (n > bCart.rental && !rentalAgreed) {
-        // Store pending qty and show agreement - handled at top level
-        setPendingRentalQty(n);
-        setRentalAgreementModal(true);
-        return;
-      }
-      setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
-    };
+    const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
 
 
 
@@ -839,7 +842,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                           <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
                             <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                             <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                            <button onClick={() => setRental(bCart.rental + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
+                            <button onClick={() => handleRentalIncrease(bCart.rental, rentalLeft, rentalAgreed)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
                           </div>
                         ) : rnHeldForOther ? (
                           <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", textAlign:"right" }}>🔒 SLOT HELD</span>
@@ -862,7 +865,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                         <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                           <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                           <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                          <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
+                          <button onClick={() => handleRentalIncrease(bCart.rental, rentalLeft, rentalAgreed)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
                         </div>
                       )}
                     </div>
