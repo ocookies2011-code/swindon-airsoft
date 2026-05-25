@@ -60,7 +60,9 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const hasPerm = (p) => isMain || cu.permissions?.includes(p) || cu.permissions?.includes("all");
 
   const pendingWaivers = data.users.filter(u => u.waiverPending).length;
-  const pendingVip = data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length;  const deleteReqs = data.users.filter(u => u.deleteRequest).length;
+  const pendingVip = data.users.filter(u => u.vipApplied && u.vipStatus !== "active").length;
+  const deleteReqs = data.users.filter(u => u.deleteRequest).length;
+  const pendingRegistrations = data.users.filter(u => u.approved === false && u.role !== "admin").length;
   const [pendingOrders, setPendingOrders] = useState(0);
   const [pendingReports, setPendingReports] = useState(0);
   const [pendingUkara, setPendingUkara] = React.useState(0);
@@ -112,7 +114,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     // ── OPERATIONS ───────────────────────────────────────
     { id: "events",            label: "Events & Bookings", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "scan-waiver",       label: "Scan Waiver",      icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M2 20h20"/></svg>, group: "OPERATIONS" },
-    { id: "players",           label: "Players",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>, badge: (pendingWaivers + pendingVip + deleteReqs) || null, badgeColor: pendingWaivers > 0 ? "gold" : pendingVip > 0 ? "gold" : "", group: "OPERATIONS" },
+    { id: "players",           label: "Players",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>, badge: (pendingRegistrations + pendingWaivers + pendingVip + deleteReqs) || null, badgeColor: pendingRegistrations > 0 ? "red" : pendingWaivers > 0 ? "gold" : pendingVip > 0 ? "gold" : "", group: "OPERATIONS" },
     { id: "cheat-reports",     label: "Cheat Reports",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, badge: pendingReports || null, badgeColor: "red", group: "OPERATIONS" },
     { id: "ukara-admin",       label: "UKARA",             icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, badge: pendingUkara || null, badgeColor: "purple", group: "OPERATIONS" },
     { id: "staff-admin",       label: "Staff",             icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, group: "OPERATIONS" },
