@@ -384,6 +384,8 @@ function AppInner() {
   const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
   const [blockReason, setBlockReason] = useState(null); // "geo" | "vpn" | "tor"
 
+  const [detectedIp, setDetectedIp] = React.useState(null);
+
   useEffect(() => {
     supabase.functions.invoke('geo-check', { body: {} })
       .then(({ data }) => {
@@ -392,21 +394,20 @@ function AppInner() {
           setGeoStatus("blocked");
         } else {
           setGeoStatus("allowed");
-          // Store the player's IP in their profile for admin visibility
+          // Store IP in state — will be saved to profile once cu loads
           if (data?.ip && data.ip !== 'unknown') {
-            supabase.auth.getUser().then(({ data: { user } }) => {
-              if (user?.id) {
-                supabase.from('profiles').update({
-                  last_ip: data.ip,
-                  last_seen_at: new Date().toISOString(),
-                }).eq('id', user.id).catch(() => {});
-              }
-            }).catch(() => {});
+            setDetectedIp(data.ip);
           }
         }
       })
       .catch(() => setGeoStatus("allowed"));
   }, []);
+
+  // Save IP to profile once user is loaded - use RPC to bypass column restrictions
+  useEffect(() => {
+    if (!detectedIp || !cu?.id) return;
+    supabase.rpc('log_my_ip', { p_ip: detectedIp }).catch(() => {});
+  }, [detectedIp, cu?.id]);
 
   useEffect(() => {
     let cancelled = false;
