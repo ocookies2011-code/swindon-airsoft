@@ -386,6 +386,7 @@ function AppInner() {
 
   const [detectedIp, setDetectedIp] = React.useState(null);
 
+  // Geo-check for blocking
   useEffect(() => {
     supabase.functions.invoke('geo-check', { body: {} })
       .then(({ data }) => {
@@ -400,25 +401,32 @@ function AppInner() {
       .catch(() => setGeoStatus("allowed"));
   }, []);
 
-  // Fallback: fetch IP directly if geo-check didn't return one
+  // Always fetch IP directly on mount — reliable regardless of edge function
   useEffect(() => {
-    if (detectedIp) return;
     fetch('https://ipwho.is/')
       .then(r => r.json())
       .then(d => { if (d.ip) setDetectedIp(d.ip); })
-      .catch(() => {});
-  }, [detectedIp]);
+      .catch(() => {
+        // Try backup
+        fetch('https://api.ipify.org?format=json')
+          .then(r => r.json())
+          .then(d => { if (d.ip) setDetectedIp(d.ip); })
+          .catch(() => {});
+      });
+  }, []); // runs once on mount, no dependencies
 
-  // Save IP to profile once BOTH ip and user are available
+  // Save IP once we have BOTH the IP and the logged-in user
   useEffect(() => {
     if (!detectedIp || !cu?.id) return;
-    // Direct update — simpler and more reliable than RPC
     supabase
       .from('profiles')
       .update({ last_ip: detectedIp, last_seen_at: new Date().toISOString() })
       .eq('id', cu.id)
-      .then(({ error }) => { if (error) console.warn('IP update failed:', error.message, error.code); })
-      .catch(e => console.warn('IP update error:', e));
+      .then(({ error }) => {
+        if (error) console.warn('IP save failed:', error.message);
+        else console.info('IP saved:', detectedIp);
+      })
+      .catch(e => console.warn('IP save error:', e));
   }, [detectedIp, cu?.id]);
 
   useEffect(() => {
