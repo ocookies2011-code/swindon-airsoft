@@ -2368,7 +2368,13 @@ function HomePage({ data, setPage, onProductClick }) {
                       OP-{(nextEvent.id || "ALPHA").slice(0,8).toUpperCase()}
                     </span>
                   </div>
-                  <div style={{ background:"#111", padding:"24px", display:"flex", flexDirection:"column", gap:16, flex:1 }}>
+                  <div style={{
+                    padding:"24px", display:"flex", flexDirection:"column", gap:16, flex:1,
+                    position:"relative", overflow:"hidden",
+                    background: nextEvent.banner
+                      ? `linear-gradient(135deg, rgba(0,0,0,.82) 0%, rgba(10,15,5,.88) 100%), url('${nextEvent.banner}') center/cover no-repeat`
+                      : "#111",
+                  }}>
                     <div>
                       <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
                       <div className="countdown-panel-title">{nextEvent.title}</div>
