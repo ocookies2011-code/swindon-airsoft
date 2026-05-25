@@ -322,6 +322,7 @@ function useData() {
       waiverPending: "waiver_pending", vipStatus: "vip_status",
       vipApplied: "vip_applied", vipExpiresAt: "vip_expires_at", ukara: "ukara", credits: "credits",
       leaderboardOptOut: "leaderboard_opt_out", profilePic: "profile_pic",
+      nationality: "nationality", approved: "approved", approvedAt: "approved_at", role: "role",
       deleteRequest: "delete_request", permissions: "permissions",
       publicProfile: "public_profile", bio: "bio", customRank: "custom_rank", designation: "designation",
       birthDate: "birth_date", birthdayCreditYear: "birthday_credit_year",
