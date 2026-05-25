@@ -394,19 +394,27 @@ function AppInner() {
           setGeoStatus("blocked");
         } else {
           setGeoStatus("allowed");
-          // Store IP in state — will be saved to profile once cu loads
-          if (data?.ip && data.ip !== 'unknown') {
-            setDetectedIp(data.ip);
-          }
+          if (data?.ip && data.ip !== 'unknown') setDetectedIp(data.ip);
         }
       })
       .catch(() => setGeoStatus("allowed"));
   }, []);
 
-  // Save IP to profile once user is loaded - use RPC to bypass column restrictions
+  // Fallback: fetch IP directly if geo-check didn't return one
+  useEffect(() => {
+    if (detectedIp) return;
+    fetch('https://ipwho.is/')
+      .then(r => r.json())
+      .then(d => { if (d.ip) setDetectedIp(d.ip); })
+      .catch(() => {});
+  }, [detectedIp]);
+
+  // Save IP to profile once BOTH ip and user are available
   useEffect(() => {
     if (!detectedIp || !cu?.id) return;
-    supabase.rpc('log_my_ip', { p_ip: detectedIp }).catch(() => {});
+    supabase.rpc('log_my_ip', { p_ip: detectedIp })
+      .then(({ error }) => { if (error) console.warn('log_my_ip failed:', error.message); })
+      .catch(e => console.warn('log_my_ip error:', e));
   }, [detectedIp, cu?.id]);
 
   useEffect(() => {
