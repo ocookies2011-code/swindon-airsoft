@@ -115,17 +115,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     finally { setWaitlistBusy(false); }
   };
 
-  // Top-level rental agreement handler - must be outside if(ev) so React re-renders correctly
-  const handleRentalIncrease = useCallback((currentQty, maxQty, agreed) => {
-    const next = Math.min(currentQty + 1, maxQty);
-    if (next > currentQty && !agreed) {
-      setPendingRentalQty(next);
-      setRentalAgreementModal(true);
-    } else {
-      setBCart(p => ({ ...p, rental: next }));
-    }
-  }, []);
-
   if (ev) {
     const vipIsActive = cu?.vipStatus === "active" && (!cu?.vipExpiresAt || new Date(cu.vipExpiresAt) > new Date());
     const vipDisc   = vipIsActive ? 0.1 : 0;
@@ -842,7 +831,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                           <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
                             <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                             <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                            <button onClick={() => handleRentalIncrease(bCart.rental, rentalLeft, rentalAgreed)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
+                            <button onClick={() => setRental(bCart.rental + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
                           </div>
                         ) : rnHeldForOther ? (
                           <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", textAlign:"right" }}>🔒 SLOT HELD</span>
@@ -865,7 +854,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                         <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                           <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                           <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                          <button onClick={() => handleRentalIncrease(bCart.rental, rentalLeft, rentalAgreed)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
+                          <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
                         </div>
                       )}
                     </div>
@@ -1103,7 +1092,13 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   SIGN WAIVER TO CONTINUE
                 </button>
               )}
-              {!bookingBlocked && payTotal > 0 && (
+              {!bookingBlocked && bCart.rental > 0 && !rentalAgreed && (
+                <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em", background:"#c8a000", borderColor:"#c8a000" }}
+                  onClick={() => setRentalAgreementModal(true)}>
+                  ⚠ REVIEW RENTAL TERMS TO CONTINUE
+                </button>
+              )}
+              {!bookingBlocked && payTotal > 0 && (bCart.rental === 0 || rentalAgreed) && (
                 <SquareCheckoutButton
                   amount={payTotal}
                   description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
@@ -1112,7 +1107,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   onOpen={() => trackFunnel && trackFunnel("event:checkout")}
                 />
               )}
-              {!bookingBlocked && payTotal === 0 && !cartEmpty && (
+              {!bookingBlocked && payTotal === 0 && !cartEmpty && (bCart.rental === 0 || rentalAgreed) && (
                 <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }}
                   disabled={bookingBusy}
                   onClick={() => confirmBookingAfterPayment({ id: "CREDITS-" + Date.now(), status: "COMPLETED" })}>
