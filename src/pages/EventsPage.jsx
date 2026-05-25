@@ -5,8 +5,9 @@ import * as api from "../api";
 import { normaliseProfile, squareRefund, waitlistApi, holdApi } from "../api";
 import { QRCode, SkeletonCard, SquareCheckoutButton, TRACKING_CACHE_KEY, TRACKING_TTL_MS, TRACKING_TTL_SHORT_MS, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtDate, gmtShort, loadSquareConfig, renderMd, sendAdminBookingNotification, sendCancellationEmail, sendEmail, sendOrderEmail, sendTicketEmail, sendWaitlistNotifyEmail, stockLabel, uid, useMobile } from "../utils";
 
-function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage, trackFunnel }) {
+function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage, trackFunnel, initialEventId }) {
   const getInitDetail = () => {
+    if (initialEventId) return initialEventId;
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="events" && p[1] ? p[1] : null;
   };

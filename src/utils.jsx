@@ -2451,7 +2451,7 @@ function HomePage({ data, setPage, onProductClick }) {
 
                       {/* CTA */}
                       <div style={{ marginTop:20, display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
-                        <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => { window.location.hash = "events/" + nextEvent.id; setPage("events"); }}>DEPLOY →</button>
+                        <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => setPage("events", nextEvent.id)}>DEPLOY →</button>
                         {nextEvent.walkOnSlots > 0 && (
                           <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#5a6e42", letterSpacing:".1em" }}>
                             {nextEvent.walkOnSlots} slots available

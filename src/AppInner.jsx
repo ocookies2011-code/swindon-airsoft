@@ -55,6 +55,7 @@ function AppInner() {
     return PUBLIC_PAGES.includes(p) ? p : "home";
   };
   const [page, setPageState] = useState(getInitialPage);
+  const [initialEventId, setInitialEventId] = useState(null);
   const [resetToken, setResetToken] = useState(null);
   const [publicProfileId, setPublicProfileId] = useState(() => {
     const parts = window.location.hash.replace("#","").split("/");
@@ -70,7 +71,9 @@ function AppInner() {
   };
 
   // setPage writes the hash AND updates state
-  const setPage = (p) => {
+  const setPage = (p, eventId) => {
+    if (eventId) setInitialEventId(eventId);
+    else setInitialEventId(null);
     setPageState(p);
     window.scrollTo({ top: 0, behavior: "instant" });
     if (p !== "admin") window.location.hash = p;
@@ -612,7 +615,7 @@ function AppInner() {
 
       <div className="pub-page-wrap">
         {page === "home"        && <HomePage data={data} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; window.scrollTo({ top:0, behavior:"instant" }); }} />}
-        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} trackFunnel={trackFunnel} />}
+        {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} trackFunnel={trackFunnel} initialEventId={initialEventId} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />
         )}
