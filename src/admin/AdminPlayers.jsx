@@ -162,17 +162,30 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       })
     : roleFiltered;
 
-  // Total spend per player calculated from all booking totals
+  // Total spend per player: bookings + shop orders
+  const [allShopOrders, setAllShopOrders] = React.useState([]);
+  React.useEffect(() => {
+    supabase.from('shop_orders').select('user_id, total')
+      .then(({ data: orders }) => { if (orders) setAllShopOrders(orders); })
+      .catch(() => {});
+  }, []);
+
   const playerSpendMap = React.useMemo(() => {
     const map = {};
+    // Add event booking totals
     (data.events || []).forEach(ev => {
       (ev.bookings || []).forEach(b => {
         if (!b.userId) return;
         map[b.userId] = (map[b.userId] || 0) + Number(b.total || 0);
       });
     });
+    // Add shop order totals
+    allShopOrders.forEach(o => {
+      if (!o.user_id) return;
+      map[o.user_id] = (map[o.user_id] || 0) + Number(o.total || 0);
+    });
     return map;
-  }, [data.events]);
+  }, [data.events, allShopOrders]);
 
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {
     if (playerSort === "az")    return (a.name || "").localeCompare(b.name || "");
@@ -785,7 +798,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   checked={filteredPlayers.length > 0 && filteredPlayers.every(u => selectedPlayerIds.has(u.id))}
                   onChange={e => setSelectedPlayerIds(e.target.checked ? new Set(filteredPlayers.map(u=>u.id)) : new Set())} />
               </th>
-              <th>Name</th><th>Email</th><th>Games</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
+              <th>Name</th><th>Email</th><th>{playerSort === "spend" ? "Spend" : "Games"}</th><th>VIP / UKARA</th><th>Waiver</th><th>Credits</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {sortedPlayers.map(u => (
                 <React.Fragment key={u.id}>
@@ -793,12 +806,11 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
                   <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} /></td>
                   <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
-                  {playerSort === "spend" && (
-                    <td style={{ fontSize:12, color:"var(--accent)", fontWeight:700, fontFamily:"'Oswald',sans-serif" }}>
-                      £{(playerSpendMap[u.id] || 0).toFixed(2)}
-                    </td>
-                  )}
-                  <td>{u.gamesAttended}</td>
+                  <td style={{ fontSize:12, fontWeight:700, fontFamily:"'Oswald',sans-serif", color: playerSort === "spend" ? "var(--accent)" : "inherit" }}>
+                    {playerSort === "spend"
+                      ? `£${(playerSpendMap[u.id] || 0).toFixed(2)}`
+                      : u.gamesAttended}
+                  </td>
                   <td>
                     {u.vipStatus === "active" ? <span className="tag tag-gold">⭐ VIP</span> : u.vipApplied ? <span className="tag tag-blue">Applied</span> : "—"}
                     {u.vipStatus === "active" && u.vipExpiresAt && (
