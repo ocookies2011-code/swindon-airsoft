@@ -32,6 +32,34 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
     } catch(e) { showToast('Failed: ' + e.message, 'red'); }
   };
 
+  const loadIpBans = async () => {
+    const { data } = await supabase.from('ip_bans').select('*').order('created_at', { ascending: false });
+    if (data) setIpBans(data);
+  };
+
+  const banIp = async (ip, reason, expiresAt) => {
+    setIpBanBusy(true);
+    try {
+      const row = { ip, reason: reason || 'Banned by admin', banned_by: cu?.name || cu?.email };
+      if (expiresAt) row.expires_at = expiresAt;
+      const { error } = await supabase.from('ip_bans').upsert(row, { onConflict: 'ip' });
+      if (error) throw error;
+      showToast('🚫 IP ' + ip + ' banned');
+      setIpBanModal(null);
+      setIpBanReason('');
+      setIpBanExpiry('');
+      loadIpBans();
+    } catch(e) { showToast('Failed: ' + e.message, 'red'); }
+    finally { setIpBanBusy(false); }
+  };
+
+  const unbanIp = async (ip) => {
+    const { error } = await supabase.from('ip_bans').delete().eq('ip', ip);
+    if (error) { showToast('Failed: ' + error.message, 'red'); return; }
+    showToast('✅ IP ' + ip + ' unbanned');
+    loadIpBans();
+  };
+
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
@@ -69,6 +97,12 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [passwordModal, setPasswordModal] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
+  const [ipBanModal, setIpBanModal] = useState(null); // player to ban by IP
+  const [ipBanReason, setIpBanReason] = useState("");
+  const [ipBanExpiry, setIpBanExpiry] = useState(""); // "" = permanent
+  const [ipBanBusy, setIpBanBusy] = useState(false);
+  const [ipBans, setIpBans] = useState([]);
+  const [showIpBans, setShowIpBans] = useState(false);
 
   // ── Bulk sync all players to Square Customer Directory ────────
   const syncAllPlayersToSquare = async () => {
@@ -518,6 +552,52 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         </div>
       )}
 
+      {/* ── IP Bans Manager ── */}
+      <div style={{ marginBottom:16 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => { setShowIpBans(p => !p); if (!showIpBans) loadIpBans(); }}>
+          🚫 {showIpBans ? "Hide" : "Manage"} IP Bans {ipBans.length > 0 && `(${ipBans.length})`}
+        </button>
+        {showIpBans && (
+          <div style={{ marginTop:10, background:"var(--surface)", border:"1px solid var(--border)", padding:16 }}>
+            <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:700, fontSize:13, color:"var(--accent)", letterSpacing:".1em", marginBottom:12 }}>
+              🚫 BANNED IP ADDRESSES
+            </div>
+            {ipBans.length === 0 ? (
+              <div style={{ fontSize:12, color:"var(--muted)" }}>No IP bans active.</div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {ipBans.map(ban => (
+                  <div key={ban.id} style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", padding:"8px 12px", background:"rgba(239,68,68,.05)", border:"1px solid rgba(239,68,68,.2)" }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:"#ef4444" }}>{ban.ip}</div>
+                      <div style={{ fontSize:11, color:"var(--muted)" }}>
+                        {ban.reason} · Banned by {ban.banned_by} · {new Date(ban.created_at).toLocaleDateString("en-GB")}
+                        {ban.expires_at && ` · Expires ${new Date(ban.expires_at).toLocaleDateString("en-GB")}`}
+                        {!ban.expires_at && " · Permanent"}
+                      </div>
+                    </div>
+                    <button className="btn btn-ghost btn-sm" onClick={() => unbanIp(ban.ip)}>✅ Unban</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid var(--border)" }}>
+              <div style={{ fontSize:11, color:"var(--muted)", marginBottom:8 }}>Ban a custom IP:</div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <input type="text" placeholder="IP address" id="custom-ip-input" style={{ flex:1, minWidth:140, padding:"6px 10px", background:"var(--bg)", border:"1px solid var(--border)", color:"var(--text)", fontSize:12 }} />
+                <input type="text" placeholder="Reason" id="custom-ip-reason" style={{ flex:2, minWidth:140, padding:"6px 10px", background:"var(--bg)", border:"1px solid var(--border)", color:"var(--text)", fontSize:12 }} />
+                <button className="btn btn-danger btn-sm" onClick={() => {
+                  const ip = document.getElementById('custom-ip-input')?.value?.trim();
+                  const reason = document.getElementById('custom-ip-reason')?.value?.trim();
+                  if (!ip) { showToast("Enter an IP address", "red"); return; }
+                  banIp(ip, reason || "Manually banned", null);
+                }}>🚫 Ban</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="page-header">
         <div>
           <div className="page-title">Players</div>
@@ -732,6 +812,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                       <button className="btn btn-sm btn-ghost" onClick={() => setViewPlayer(u)}>View</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => { setPasswordModal(u); setNewPassword(""); }}>🔑 Password</button>
+                      <button className="btn btn-sm btn-danger" style={{ fontSize:10 }} onClick={() => { setIpBanModal(u); setIpBanReason(""); setIpBanExpiry(""); }}>🚫 Ban IP</button>
                     </div>
                   </td>
                 </tr>
@@ -1001,6 +1082,48 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
             <div className="gap-2">
               <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save Changes"}</button>
               <button className="btn btn-ghost" onClick={() => setEdit(null)} disabled={savingEdit}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── IP Ban Modal ── */}
+      {ipBanModal && (
+        <div className="overlay" onClick={() => setIpBanModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🚫 Ban IP Address</div>
+            <div style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
+              Ban all access from <strong style={{ color:"var(--text)" }}>{ipBanModal.name}</strong>'s IP address.
+            </div>
+            <div className="form-group">
+              <label>IP Address</label>
+              <input
+                type="text"
+                value={ipBanModal.ip || ""}
+                onChange={e => setIpBanModal(p => ({ ...p, ip: e.target.value }))}
+                placeholder="e.g. 123.456.789.0"
+              />
+              <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
+                Note: You need the player's actual IP address. Check your server logs or ask them to visit a site like whatismyip.com.
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Reason</label>
+              <input type="text" value={ipBanReason} onChange={e => setIpBanReason(e.target.value)} placeholder="e.g. Hacking attempt, abusive behaviour" />
+            </div>
+            <div className="form-group">
+              <label>Expiry (leave blank for permanent)</label>
+              <input type="datetime-local" value={ipBanExpiry} onChange={e => setIpBanExpiry(e.target.value)} />
+            </div>
+            <div className="gap-2 mt-2">
+              <button
+                className="btn btn-danger"
+                disabled={ipBanBusy || !ipBanModal.ip?.trim()}
+                onClick={() => banIp(ipBanModal.ip.trim(), ipBanReason, ipBanExpiry || null)}
+              >
+                {ipBanBusy ? "Banning…" : "🚫 Ban This IP"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setIpBanModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
