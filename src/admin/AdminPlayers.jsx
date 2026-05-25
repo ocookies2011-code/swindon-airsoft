@@ -162,10 +162,23 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       })
     : roleFiltered;
 
+  // Total spend per player calculated from all booking totals
+  const playerSpendMap = React.useMemo(() => {
+    const map = {};
+    (data.events || []).forEach(ev => {
+      (ev.bookings || []).forEach(b => {
+        if (!b.userId) return;
+        map[b.userId] = (map[b.userId] || 0) + Number(b.total || 0);
+      });
+    });
+    return map;
+  }, [data.events]);
+
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {
     if (playerSort === "az")    return (a.name || "").localeCompare(b.name || "");
     if (playerSort === "za")    return (b.name || "").localeCompare(a.name || "");
     if (playerSort === "games") return (b.gamesAttended || 0) - (a.gamesAttended || 0);
+    if (playerSort === "spend") return (playerSpendMap[b.id] || 0) - (playerSpendMap[a.id] || 0);
     if (playerSort === "ukara") {
       const au = a.ukara || "", bu = b.ukara || "";
       if (au && !bu) return -1;
@@ -657,6 +670,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               { val:"az",    label:"A → Z" },
               { val:"za",    label:"Z → A" },
               { val:"games", label:"Games Played" },
+              { val:"spend", label:"💰 Total Spent" },
               { val:"ukara", label:"UKARA ID" },
             ].map(s => (
               <button key={s.val} className={"btn btn-sm " + (playerSort === s.val ? "btn-primary" : "btn-ghost")}
@@ -779,6 +793,11 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
                   <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} /></td>
                   <td className="text-muted" style={{ fontSize: 12 }}>{u.email}</td>
+                  {playerSort === "spend" && (
+                    <td style={{ fontSize:12, color:"var(--accent)", fontWeight:700, fontFamily:"'Oswald',sans-serif" }}>
+                      £{(playerSpendMap[u.id] || 0).toFixed(2)}
+                    </td>
+                  )}
                   <td>{u.gamesAttended}</td>
                   <td>
                     {u.vipStatus === "active" ? <span className="tag tag-gold">⭐ VIP</span> : u.vipApplied ? <span className="tag tag-blue">Applied</span> : "—"}
