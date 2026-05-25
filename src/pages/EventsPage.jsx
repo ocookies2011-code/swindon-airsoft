@@ -1093,10 +1093,35 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </button>
               )}
               {!bookingBlocked && bCart.rental > 0 && !rentalAgreed && (
-                <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em", background:"#c8a000", borderColor:"#c8a000" }}
-                  onClick={() => setRentalAgreementModal(true)}>
-                  ⚠ REVIEW RENTAL TERMS TO CONTINUE
-                </button>
+                <div>
+                  <div style={{ background:"#0d1209", border:"2px solid #c8a000", padding:"20px 20px 16px", marginBottom:8 }}>
+                    <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"#c8a000", textTransform:"uppercase", marginBottom:12 }}>⚠ Rental Package Agreement</div>
+                    <div style={{ fontSize:12, color:"#c8d4b0", lineHeight:1.8, marginBottom:10 }}>
+                      <div style={{ marginBottom:8, paddingBottom:8, borderBottom:"1px solid #1e2e12" }}>
+                        <strong style={{ color:"#c8a000", fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".08em" }}>CANCELLATION 48h+:</strong> 90% refund to original payment (10% fee retained)
+                      </div>
+                      <div style={{ marginBottom:8, paddingBottom:8, borderBottom:"1px solid #1e2e12" }}>
+                        <strong style={{ color:"#c8a000", fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".08em" }}>CANCELLATION 24–48h:</strong> 90% as Game Day Credits (10% fee retained)
+                      </div>
+                      <div style={{ marginBottom:8, paddingBottom:8, borderBottom:"1px solid #1e2e12" }}>
+                        <strong style={{ color:"#ef4444", fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".08em" }}>⛔ WITHIN 24h:</strong> No cancellation permitted — no refund
+                      </div>
+                      <div>
+                        <strong style={{ color:"#ef4444", fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".08em" }}>⛔ EARLY DEPARTURE:</strong> No refund under any circumstances. Equipment must be returned to a marshal.
+                      </div>
+                    </div>
+                    <div style={{ fontSize:11, color:"#5a6e42", fontStyle:"italic", marginBottom:12 }}>
+                      By clicking agree you confirm you have read and accept these conditions.
+                    </div>
+                    <button
+                      className="btn btn-primary"
+                      style={{ width:"100%", padding:"11px" }}
+                      onClick={() => setRentalAgreed(true)}
+                    >
+                      ✅ I Agree — Continue to Payment
+                    </button>
+                  </div>
+                </div>
               )}
               {!bookingBlocked && payTotal > 0 && (bCart.rental === 0 || rentalAgreed) && (
                 <SquareCheckoutButton
