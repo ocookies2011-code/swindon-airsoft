@@ -2398,26 +2398,48 @@ function HomePage({ data, setPage, onProductClick }) {
                       <div style={{ height:1, background:"rgba(200,255,0,.15)", marginBottom:14 }} />
 
                       {/* Stats row */}
-                      <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
-                        {nextEvent.walkOnPrice > 0 && (
-                          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(200,255,0,.2)", padding:"8px 14px", flex:1, minWidth:80 }}>
-                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>WALK-ON</div>
-                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)" }}>£{Number(nextEvent.walkOnPrice).toFixed(2)}</div>
+                      {(() => {
+                        const STANDARD_WALK_ON = 25;
+                        const STANDARD_RENTAL  = 55;
+                        const walkOn = Number(nextEvent.walkOnPrice);
+                        const rental = Number(nextEvent.rentalPrice);
+                        const isEarlyBird = (walkOn > 0 && walkOn < STANDARD_WALK_ON) || (rental > 0 && rental < STANDARD_RENTAL);
+                        return (
+                          <div style={{ marginBottom:14 }}>
+                            {isEarlyBird && (
+                              <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(200,255,0,.12)", border:"1px solid rgba(200,255,0,.4)", padding:"3px 10px", marginBottom:8 }}>
+                                <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"var(--accent)", letterSpacing:".15em" }}>⚡ EARLY BIRD PRICING</span>
+                              </div>
+                            )}
+                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                              {walkOn > 0 && (
+                                <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(200,255,0,.2)", padding:"8px 14px", flex:1, minWidth:80 }}>
+                                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>WALK-ON</div>
+                                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)" }}>£{walkOn.toFixed(2)}</div>
+                                  {isEarlyBird && walkOn < STANDARD_WALK_ON && (
+                                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#5a6e42", textDecoration:"line-through", marginTop:1 }}>£{STANDARD_WALK_ON}.00</div>
+                                  )}
+                                </div>
+                              )}
+                              {rental > 0 && (
+                                <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(200,255,0,.2)", padding:"8px 14px", flex:1, minWidth:80 }}>
+                                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>RENTAL PKG</div>
+                                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)" }}>£{rental.toFixed(2)}</div>
+                                  {isEarlyBird && rental < STANDARD_RENTAL && (
+                                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"#5a6e42", textDecoration:"line-through", marginTop:1 }}>£{STANDARD_RENTAL}.00</div>
+                                  )}
+                                </div>
+                              )}
+                              {nextEvent.walkOnSlots > 0 && (
+                                <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(255,255,255,.08)", padding:"8px 14px", flex:1, minWidth:80 }}>
+                                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>SLOTS</div>
+                                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"#fff" }}>{nextEvent.walkOnSlots}</div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        {nextEvent.rentalPrice > 0 && (
-                          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(200,255,0,.2)", padding:"8px 14px", flex:1, minWidth:80 }}>
-                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>RENTAL PKG</div>
-                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)" }}>£{Number(nextEvent.rentalPrice).toFixed(2)}</div>
-                          </div>
-                        )}
-                        {nextEvent.walkOnSlots > 0 && (
-                          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(255,255,255,.08)", padding:"8px 14px", flex:1, minWidth:80 }}>
-                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>SLOTS</div>
-                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"#fff" }}>{nextEvent.walkOnSlots}</div>
-                          </div>
-                        )}
-                      </div>
+                        );
+                      })()}
 
                       {/* Countdown */}
                       <div style={{ marginBottom:"auto" }}>
@@ -2429,7 +2451,7 @@ function HomePage({ data, setPage, onProductClick }) {
 
                       {/* CTA */}
                       <div style={{ marginTop:20, display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
-                        <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => setPage("events")}>DEPLOY →</button>
+                        <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => { window.location.hash = "events/" + nextEvent.id; setPage("events"); }}>DEPLOY →</button>
                         {nextEvent.walkOnSlots > 0 && (
                           <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#5a6e42", letterSpacing:".1em" }}>
                             {nextEvent.walkOnSlots} slots available
