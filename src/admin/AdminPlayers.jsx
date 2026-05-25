@@ -10,6 +10,28 @@ import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 import { diffFields, logAction } from "./adminHelpers";
 
 function AdminPlayers({ data, save, updateUser, showToast, cu }) {
+  const pendingApprovals = (data.users || []).filter(u => u.approved === false && u.role !== 'admin');
+
+  const approvePlayer = async (userId, approve) => {
+    try {
+      await supabase.from('profiles').update({
+        approved: approve,
+        approved_at: approve ? new Date().toISOString() : null,
+        approved_by: cu?.name || cu?.email,
+      }).eq('id', userId);
+      showToast(approve ? '✅ Player approved' : '⛔ Player rejected');
+      // Send email to player
+      const player = (data.users || []).find(u => u.id === userId);
+      if (player?.email) {
+        const msg = approve
+          ? `<p>Hi ${player.name},</p><p>Your Swindon Airsoft account has been <strong style="color:#c8ff00">approved</strong>! You can now log in at swindon-airsoft.com</p>`
+          : `<p>Hi ${player.name},</p><p>Unfortunately your Swindon Airsoft account registration has not been approved at this time. Please contact us if you have any questions.</p>`;
+        sendEmail({ toEmail: player.email, toName: player.name, subject: approve ? '✅ Your Swindon Airsoft Account is Approved!' : '❌ Swindon Airsoft Registration Update', htmlContent: msg }).catch(() => {});
+      }
+      if (typeof refresh === 'function') refresh();
+    } catch(e) { showToast('Failed: ' + e.message, 'red'); }
+  };
+
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
@@ -468,6 +490,28 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
 
   return (
     <div>
+      {pendingApprovals.length > 0 && (
+        <div style={{ background:"rgba(200,255,0,.08)", border:"2px solid rgba(200,255,0,.4)", padding:"16px 20px", marginBottom:20 }}>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"#c8ff00", letterSpacing:".1em", marginBottom:12 }}>
+            ⏳ {pendingApprovals.length} PENDING APPROVAL{pendingApprovals.length !== 1 ? 'S' : ''}
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {pendingApprovals.map(p => (
+              <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", background:"#0d1209", padding:"10px 14px", border:"1px solid #2a4018" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:"#fff" }}>{p.name}</div>
+                  <div style={{ fontSize:11, color:"var(--muted)" }}>{p.email} · {p.phone || 'no phone'} · DOB: {p.dateOfBirth || '?'} · {p.postcode || 'no postcode'}</div>
+                </div>
+                <div style={{ display:"flex", gap:6 }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => approvePlayer(p.id, true)}>✅ Approve</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => approvePlayer(p.id, false)}>⛔ Reject</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="page-header">
         <div>
           <div className="page-title">Players</div>

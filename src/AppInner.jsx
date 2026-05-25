@@ -20,6 +20,8 @@ import { ProfilePage }        from "./pages/ProfilePage";
 import { PublicProfilePage }  from "./pages/PublicProfilePage";
 import { PasswordResetPage }  from "./pages/PasswordResetPage";
 import { SelfCheckInPage }   from "./pages/SelfCheckInPage";
+import { BlockedPage }        from "./pages/BlockedPage";
+import { PendingApprovalPage } from "./pages/PendingApprovalPage";
 import { PropsPage }          from "./pages/PropsPage";
 import { UKARAPage }          from "./pages/UKARAPage";
 
@@ -378,6 +380,20 @@ function AppInner() {
   }, [updateUser, cu, refreshCu, data]);
 
   const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
+  const [blockReason, setBlockReason] = useState(null); // "geo" | "vpn" | "tor"
+
+  useEffect(() => {
+    supabase.functions.invoke('geo-check', { body: {} })
+      .then(({ data }) => {
+        if (data?.allowed === false) {
+          setBlockReason(data.reason || "geo");
+          setGeoStatus("blocked");
+        } else {
+          setGeoStatus("allowed");
+        }
+      })
+      .catch(() => setGeoStatus("allowed"));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -500,15 +516,7 @@ function AppInner() {
   }
 
   if (geoStatus === "blocked" && cu?.role !== "admin") {
-    return (
-      <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:20, background:"#0d1117", padding:24, textAlign:"center" }}>
-        <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ width:80, height:"auto", objectFit:"contain" }} />
-        <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:28, fontWeight:900, letterSpacing:".1em", color:"#fff" }}>NOT AVAILABLE IN YOUR REGION</div>
-        <div style={{ fontSize:14, color:"#555", maxWidth:340, lineHeight:1.7 }}>
-          Swindon Airsoft is only available to visitors in the UK, Ireland, and EU member states.
-        </div>
-      </div>
-    );
+    return <BlockedPage reason={blockReason} />;
   }
 
   const isAdmin = cu?.role === "admin";

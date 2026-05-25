@@ -1675,28 +1675,56 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
   };
 
   const register = async () => {
-    if (!form.name || !form.email || !form.password) { showToast("All fields required", "red"); return; }
-    if (!form.email.includes("@") || !form.email.includes(".")) { showToast("Please enter a valid email address", "red"); return; }
-    if (form.password.length < 8) { showToast("Password must be at least 8 characters", "red"); return; }
-    if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) { showToast("Password must contain at least one letter and one number", "red"); return; }
+    if (!form.name?.trim())     { showToast("Full name is required", "red"); return; }
+    if (!form.email?.trim() || !form.email.includes("@")) { showToast("Valid email is required", "red"); return; }
+    if (!form.phone?.trim())    { showToast("Phone number is required", "red"); return; }
+    if (!form.dob?.trim())      { showToast("Date of birth is required", "red"); return; }
+    if (!form.postcode?.trim()) { showToast("Postcode is required", "red"); return; }
+    if (!form.password || form.password.length < 8) { showToast("Password must be at least 8 characters", "red"); return; }
+    if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) { showToast("Password must contain letters and numbers", "red"); return; }
+    if (form.password !== form.confirmPassword) { showToast("Passwords do not match", "red"); return; }
     setBusy(true);
     try {
-      await api.auth.signUp({ email: form.email, password: form.password, name: form.name, phone: form.phone });
-      showToast("🎉 Account created! You can now log in.");
-      // Send welcome email fire-and-forget — only on confirmed success, never blocks
-      setTimeout(() => {
-        sendWelcomeEmail({ name: form.name, email: form.email }).catch(() => {});
-      }, 500);
-      // Switch to login mode so player can sign in immediately
+      const { data, error } = await supabase.auth.signUp({ email: form.email.trim(), password: form.password });
+      if (error) throw error;
+      const userId = data.user?.id;
+      if (userId) {
+        await supabase.from("profiles").upsert({
+          id: userId,
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          phone: form.phone.trim(),
+          date_of_birth: form.dob,
+          postcode: form.postcode.trim().toUpperCase(),
+          role: "player",
+          approved: false,
+        });
+      }
+      await supabase.auth.signOut();
+      showToast("✅ Registration submitted! You'll be notified by email once approved.");
       setMode("login");
-      setForm(p => ({ ...p, password: "" }));
+      setForm(p => ({ ...p, password: "", confirmPassword: "", dob: "", postcode: "" }));
+      // Notify admin
+      setTimeout(() => {
+        sendEmail({
+          toEmail: "swindonairsoftfield@gmail.com",
+          toName: "Swindon Airsoft Admin",
+          subject: "🆕 New Registration: " + form.name.trim(),
+          htmlContent: "<div style='font-family:Arial'><h3>New Player Registration</h3>" +
+            "<p><b>Name:</b> " + form.name.trim() + "</p>" +
+            "<p><b>Email:</b> " + form.email.trim() + "</p>" +
+            "<p><b>Phone:</b> " + form.phone.trim() + "</p>" +
+            "<p><b>DOB:</b> " + form.dob + "</p>" +
+            "<p><b>Postcode:</b> " + form.postcode.trim().toUpperCase() + "</p>" +
+            "<p>Log in to <a href='https://swindon-airsoft.com'>Admin → Players</a> to approve or reject.</p></div>",
+        }).catch(() => {});
+      }, 500);
     } catch (e) {
-      console.error("Registration error:", e);
       const msg = e.message || "";
-      if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("too many") || msg.toLowerCase().includes("exceeded")) {
-        showToast("Too many sign-up attempts — please wait a few minutes and try again.", "red");
-      } else if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("already exists") || msg.toLowerCase().includes("user already")) {
-        showToast("An account with this email already exists. Try logging in instead.", "red");
+      if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("too many")) {
+        showToast("Too many attempts — please wait a few minutes.", "red");
+      } else if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("already exists")) {
+        showToast("An account with this email already exists.", "red");
       } else {
         showToast(msg || "Registration failed — please try again.", "red");
       }
@@ -1737,13 +1765,24 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
               <img src={SA_LOGO_SRC} alt="Swindon Airsoft" style={{ height:52, width:"auto", objectFit:"contain" }} />
             </div>
             <div className="modal-title">{mode === "login" ? "🔐 Sign In" : "🎯 Create Account"}</div>
-            {mode === "register" && (
-              <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} placeholder="John Smith" /></div>
-            )}
-            <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} /></div>
-            <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setField("password", e.target.value)} onKeyDown={e => e.key === "Enter" && (mode === "login" ? login() : register())} /></div>
-            {mode === "register" && (
-              <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="07700..." /></div>
+            {mode === "login" ? (
+              <>
+                <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} autoFocus /></div>
+                <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setField("password", e.target.value)} onKeyDown={e => e.key === "Enter" && login()} /></div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize:11, color:"var(--muted)", marginBottom:10, padding:"8px 12px", background:"rgba(200,255,0,.04)", border:"1px solid rgba(200,255,0,.1)", lineHeight:1.6 }}>
+                  All fields required. Your account will be reviewed by our team before you can log in.
+                </div>
+                <div className="form-group"><label>Full Name *</label><input value={form.name} onChange={e => setField("name", e.target.value)} placeholder="John Smith" autoFocus /></div>
+                <div className="form-group"><label>Email *</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} /></div>
+                <div className="form-group"><label>Phone Number *</label><input type="tel" value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="07xxx xxxxxx" /></div>
+                <div className="form-group"><label>Date of Birth *</label><input type="date" value={form.dob} onChange={e => setField("dob", e.target.value)} /></div>
+                <div className="form-group"><label>Postcode *</label><input type="text" value={form.postcode} onChange={e => setField("postcode", e.target.value)} placeholder="SN1 1AA" maxLength={8} /></div>
+                <div className="form-group"><label>Password * <span style={{fontSize:10,color:"var(--muted)"}}>(8+ chars, letters + numbers)</span></label><input type="password" value={form.password} onChange={e => setField("password", e.target.value)} /></div>
+                <div className="form-group"><label>Confirm Password *</label><input type="password" value={form.confirmPassword} onChange={e => setField("confirmPassword", e.target.value)} onKeyDown={e => e.key === "Enter" && register()} /></div>
+              </>
             )}
             {mode === "register" && (
               <div className="alert alert-blue" style={{ marginBottom: 12 }}>
