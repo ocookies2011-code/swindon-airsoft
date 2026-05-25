@@ -26,6 +26,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
   const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
+  const [rentalAgreementModal, setRentalAgreementModal] = useState(null); // pending qty to set after agreement
+  const [rentalAgreed, setRentalAgreed] = useState(false); // agreed this session
 
   // ── Discount code state (events checkout)
   const [discountInput, setDiscountInput] = useState('');
@@ -225,7 +227,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     };
 
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, Math.max(0, walkOnLeft))) }));
-    const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
+    const setRental = (n) => {
+      if (n > 0 && !rentalAgreed) {
+        // Show rental agreement before adding to cart
+        setRentalAgreementModal(n);
+        return;
+      }
+      setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
+    };
 
 
 
@@ -1369,6 +1378,53 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           );
         })()}
       </div>
+
+      {/* ── Rental Agreement Modal ── */}
+      {rentalAgreementModal !== null && (
+        <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:"#0d1209", border:"2px solid #c8a000", maxWidth:480, width:"100%", padding:"28px 28px 24px" }}>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#c8a000", textTransform:"uppercase", marginBottom:4 }}>
+              ⚠ Rental Package Agreement
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"#5a6e42", letterSpacing:".15em", marginBottom:20 }}>
+              PLEASE READ BEFORE ADDING RENTAL TO YOUR BOOKING
+            </div>
+            <div style={{ background:"#080b06", border:"1px solid #2a3a10", padding:"16px 18px", marginBottom:20, fontSize:13, color:"#c8d4b0", lineHeight:1.9 }}>
+              <div style={{ marginBottom:10 }}>
+                <strong style={{ color:"#ef4444" }}>⛔ No-Show Policy:</strong><br/>
+                If you book a rental package and <strong>do not attend</strong> on the day, <strong style={{ color:"#ef4444" }}>10% of your rental fee will be retained</strong> as a no-show charge. The remaining balance will be refunded.
+              </div>
+              <div>
+                <strong style={{ color:"#ef4444" }}>⛔ Early Departure Policy:</strong><br/>
+                If you leave the site early for any reason, <strong style={{ color:"#ef4444" }}>no refund will be issued under any circumstances.</strong> Rental equipment must be returned to a marshal before leaving.
+              </div>
+            </div>
+            <div style={{ fontSize:12, color:"#5a6e42", marginBottom:20, lineHeight:1.6, fontStyle:"italic" }}>
+              By clicking "I Agree & Continue" you confirm you have read and understood the above conditions. This agreement is binding at the time of booking.
+            </div>
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex:1 }}
+                onClick={() => {
+                  setRentalAgreed(true);
+                  setBCart(p => ({ ...p, rental: rentalAgreementModal }));
+                  setRentalAgreementModal(null);
+                }}
+              >
+                ✅ I Agree &amp; Continue
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setRentalAgreementModal(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
