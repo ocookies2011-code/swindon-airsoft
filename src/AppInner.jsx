@@ -110,6 +110,8 @@ function AppInner() {
     // Stable session ID for this browser tab
     let sid = sessionStorage.getItem("sa_sid");
     if (!sid) { sid = Math.random().toString(36).slice(2); sessionStorage.setItem("sa_sid", sid); }
+    // Don't count homepage hits — only track meaningful page visits
+    if (page === "home") return;
     api.visits.track({
       page,
       userId:    cu?.id   || null,

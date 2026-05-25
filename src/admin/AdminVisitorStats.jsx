@@ -345,7 +345,8 @@ function AdminVisitorStats() {
   // with no referrer and no user_id, heavily distorting location stats.
   const BOT_PATTERNS = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|yandex|duckduck|semrush|ahrefs|mj12|petalbot|bytespider/i;
   const filtered = visitData.filter(row =>
-    !row.user_agent || !BOT_PATTERNS.test(row.user_agent)
+    (!row.user_agent || !BOT_PATTERNS.test(row.user_agent)) &&
+    row.page !== "home"  // exclude homepage hits from stats
   );
 
   // ── Derived stats ──
