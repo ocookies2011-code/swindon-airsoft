@@ -387,8 +387,6 @@ function AppInner() {
   const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
   const [blockReason, setBlockReason] = useState(null); // "geo" | "vpn" | "tor"
 
-  const [detectedIp, setDetectedIp] = React.useState(null);
-
   // Geo-check for blocking
   useEffect(() => {
     supabase.functions.invoke('geo-check', { body: {} })
@@ -398,39 +396,14 @@ function AppInner() {
           setGeoStatus("blocked");
         } else {
           setGeoStatus("allowed");
-          if (data?.ip && data.ip !== 'unknown') setDetectedIp(data.ip);
         }
       })
       .catch(() => setGeoStatus("allowed"));
   }, []);
 
-  // Always fetch IP directly on mount — reliable regardless of edge function
-  useEffect(() => {
-    fetch('https://ipwho.is/')
-      .then(r => r.json())
-      .then(d => { if (d.ip) setDetectedIp(d.ip); })
-      .catch(() => {
-        // Try backup
-        fetch('https://api.ipify.org?format=json')
-          .then(r => r.json())
-          .then(d => { if (d.ip) setDetectedIp(d.ip); })
-          .catch(() => {});
-      });
-  }, []); // runs once on mount, no dependencies
-
-  // Save IP once we have BOTH the IP and the logged-in user
-  useEffect(() => {
-    if (!detectedIp || !cu?.id) return;
-    supabase
-      .from('profiles')
-      .update({ last_ip: detectedIp, last_seen_at: new Date().toISOString() })
-      .eq('id', cu.id)
-      .then(({ error }) => {
-        if (error) console.warn('IP save failed:', error.message);
-        else console.info('IP saved:', detectedIp);
-      })
-      .catch(e => console.warn('IP save error:', e));
-  }, [detectedIp, cu?.id]);
+  // IP logging is handled server-side in the track-visit edge function
+  // which reads the real IP from request headers (cf-connecting-ip / x-forwarded-for)
+  // and writes it to profiles.last_ip whenever userId is present.
 
   useEffect(() => {
     let cancelled = false;
