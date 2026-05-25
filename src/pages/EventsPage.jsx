@@ -1407,9 +1407,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 className="btn btn-primary"
                 style={{ flex:1 }}
                 onClick={() => {
+                  const qty = rentalAgreementModal;
                   setRentalAgreed(true);
-                  setBCart(p => ({ ...p, rental: rentalAgreementModal }));
                   setRentalAgreementModal(null);
+                  // Use setTimeout so rentalAgreed state is true before setBCart
+                  setTimeout(() => setBCart(p => ({ ...p, rental: qty })), 0);
                 }}
               >
                 ✅ I Agree &amp; Continue
