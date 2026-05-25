@@ -65,7 +65,8 @@ function AdminGallery({ data, save, showToast }) {
     if (!rawText.trim()) return;
     setBulkBusy(p => ({ ...p, [albumId]: true }));
     try {
-      const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
+      // Split on newlines OR commas (handles both formats)
+      const lines = rawText.split(/[\r\n,]+/).map(l => l.trim()).filter(l => l.startsWith("http"));
       // Build the full list of URLs first, converting Drive links
       const urls = [];
       for (const raw of lines) {
