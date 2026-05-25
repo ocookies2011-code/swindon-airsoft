@@ -2369,27 +2369,75 @@ function HomePage({ data, setPage, onProductClick }) {
                     </span>
                   </div>
                   <div style={{
-                    padding:"24px", display:"flex", flexDirection:"column", gap:16, flex:1,
-                    position:"relative", overflow:"hidden",
+                    display:"flex", flexDirection:"column", flex:1,
+                    position:"relative", overflow:"hidden", minHeight:320,
                     background: nextEvent.banner
-                      ? `linear-gradient(135deg, rgba(0,0,0,.82) 0%, rgba(10,15,5,.88) 100%), url('${nextEvent.banner}') center/cover no-repeat`
+                      ? `url('${nextEvent.banner}') center/cover no-repeat`
                       : "#111",
                   }}>
-                    <div>
-                      <div className="countdown-panel-label">▶ NEXT DEPLOYMENT</div>
-                      <div className="countdown-panel-title">{nextEvent.title}</div>
-                      <div className="countdown-panel-meta">
-                        📍 {nextEvent.location}<br />
-                        🗓 {fmtDate(nextEvent.date)} · {nextEvent.time} HRS GMT
+                    {/* Dark overlay */}
+                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg, rgba(0,0,0,.75) 0%, rgba(5,12,2,.92) 100%)" }} />
+
+                    {/* Content */}
+                    <div style={{ position:"relative", zIndex:1, display:"flex", flexDirection:"column", flex:1, padding:"20px 24px", gap:0 }}>
+
+                      {/* Title block */}
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:"var(--accent)", letterSpacing:".3em", marginBottom:6 }}>▶ NEXT DEPLOYMENT</div>
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(22px,4vw,34px)", letterSpacing:".04em", color:"#fff", textTransform:"uppercase", lineHeight:1, marginBottom:8 }}>
+                          {nextEvent.title}
+                        </div>
+                        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#8aaa60" }}>📍 {nextEvent.location}</span>
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#8aaa60" }}>🗓 {fmtDate(nextEvent.date)}</span>
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#8aaa60" }}>⏰ {nextEvent.time} HRS</span>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize:9, letterSpacing:".3em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:6 }}>T-MINUS</div>
-                      <div className="countdown-panel-timer">
-                        <CountdownPanel target={target} />
+
+                      {/* Divider */}
+                      <div style={{ height:1, background:"rgba(200,255,0,.15)", marginBottom:14 }} />
+
+                      {/* Stats row */}
+                      <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+                        {nextEvent.walkOnPrice > 0 && (
+                          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(200,255,0,.2)", padding:"8px 14px", flex:1, minWidth:80 }}>
+                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>WALK-ON</div>
+                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)" }}>£{Number(nextEvent.walkOnPrice).toFixed(2)}</div>
+                          </div>
+                        )}
+                        {nextEvent.rentalPrice > 0 && (
+                          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(200,255,0,.2)", padding:"8px 14px", flex:1, minWidth:80 }}>
+                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>RENTAL PKG</div>
+                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"var(--accent)" }}>£{Number(nextEvent.rentalPrice).toFixed(2)}</div>
+                          </div>
+                        )}
+                        {nextEvent.walkOnSlots > 0 && (
+                          <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(255,255,255,.08)", padding:"8px 14px", flex:1, minWidth:80 }}>
+                            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>SLOTS</div>
+                            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"#fff" }}>{nextEvent.walkOnSlots}</div>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Countdown */}
+                      <div style={{ marginBottom:"auto" }}>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".3em", color:"var(--muted)", marginBottom:8 }}>T-MINUS</div>
+                        <div className="countdown-panel-timer">
+                          <CountdownPanel target={target} />
+                        </div>
+                      </div>
+
+                      {/* CTA */}
+                      <div style={{ marginTop:20, display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+                        <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => setPage("events")}>DEPLOY →</button>
+                        {nextEvent.walkOnSlots > 0 && (
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#5a6e42", letterSpacing:".1em" }}>
+                            {nextEvent.walkOnSlots} slots available
+                          </span>
+                        )}
+                      </div>
+
                     </div>
-                    <button className="btn btn-primary" style={{ padding:"9px 28px", letterSpacing:".2em", alignSelf:"flex-start" }} onClick={() => setPage("events")}>DEPLOY →</button>
                   </div>
                 </div>
 
