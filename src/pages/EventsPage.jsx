@@ -26,8 +26,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
   const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
-  const [rentalAgreementModal, setRentalAgreementModal] = useState(null); // pending qty to set after agreement
-  const [rentalAgreed, setRentalAgreed] = useState(false); // agreed this session
+  const [rentalAgreementModal, setRentalAgreementModal] = useState(false);
+  const [rentalAgreed, setRentalAgreed] = useState(false);
+  const [pendingRentalQty, setPendingRentalQty] = useState(0);
 
   // ── Discount code state (events checkout)
   const [discountInput, setDiscountInput] = useState('');
@@ -227,10 +228,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     };
 
     const setWalkOn = (n) => setBCart(p => ({ ...p, walkOn: Math.max(0, Math.min(n, Math.max(0, walkOnLeft))) }));
-    const setRental = (n) => setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
-    const tryAddRental = (n) => {
-      if (n > 0 && !rentalAgreed) { setRentalAgreementModal({ qty: n, setFn: () => setRental(n) }); return; }
-      setRental(n);
+    const setRental = (n) => {
+      if (n > bCart.rental && !rentalAgreed) {
+        // Store pending qty and show agreement - handled at top level
+        setPendingRentalQty(n);
+        setRentalAgreementModal(true);
+        return;
+      }
+      setBCart(p => ({ ...p, rental: Math.max(0, Math.min(n, Math.max(0, rentalLeft))) }));
     };
 
 
@@ -834,7 +839,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                           <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid rgba(200,255,0,.4)", background:"#0a0f05" }}>
                             <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                             <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                            <button onClick={() => tryAddRental(bCart.rental + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
+                            <button onClick={() => setRental(bCart.rental + 1)} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>+</button>
                           </div>
                         ) : rnHeldForOther ? (
                           <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--gold)", textAlign:"right" }}>🔒 SLOT HELD</span>
@@ -857,7 +862,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                         <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                           <button onClick={() => setRental(bCart.rental - 1)} disabled={bCart.rental === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.rental===0?.4:1 }}>−</button>
                           <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.rental>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.rental}</span>
-                          <button onClick={() => tryAddRental(bCart.rental + 1)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
+                          <button onClick={() => setRental(bCart.rental + 1)} disabled={rentalLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: rentalLeft===0?.4:1 }}>+</button>
                         </div>
                       )}
                     </div>
@@ -1377,7 +1382,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
       </div>
 
       {/* ── Rental Agreement Modal ── */}
-      {rentalAgreementModal !== null && (
+      {rentalAgreementModal && (
         <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
           <div style={{ background:"#0d1209", border:"2px solid #c8a000", maxWidth:480, width:"100%", padding:"28px 28px 24px" }}>
             <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:20, letterSpacing:".1em", color:"#c8a000", textTransform:"uppercase", marginBottom:4 }}>
@@ -1412,17 +1417,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 className="btn btn-primary"
                 style={{ flex:1 }}
                 onClick={() => {
-                  const pending = rentalAgreementModal;
                   setRentalAgreed(true);
-                  setRentalAgreementModal(null);
-                  if (pending?.setFn) setTimeout(pending.setFn, 0);
+                  setRentalAgreementModal(false);
+                  setBCart(p => ({ ...p, rental: pendingRentalQty }));
                 }}
               >
                 ✅ I Agree &amp; Continue
               </button>
               <button
                 className="btn btn-ghost"
-                onClick={() => setRentalAgreementModal(null)}
+                onClick={() => { setRentalAgreementModal(false); setPendingRentalQty(0); }}
               >
                 Cancel
               </button>
