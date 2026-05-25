@@ -297,12 +297,18 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
     setRecalcBusy(true);
     try {
       const { data: allBookings, error } = await supabase
-        .from('bookings').select('user_id').eq('checked_in', true);
+        .from('bookings').select('user_id, event_id').eq('checked_in', true);
       if (error) throw error;
 
-      // Count per user
+      // Count UNIQUE events per user (not bookings — a player may have
+      // walk-on + rental for the same event = 2 bookings but 1 game)
       const counts = {};
-      allBookings.forEach(b => { counts[b.user_id] = (counts[b.user_id] || 0) + 1; });
+      allBookings.forEach(b => {
+        if (!counts[b.user_id]) counts[b.user_id] = new Set();
+        counts[b.user_id].add(b.event_id);
+      });
+      // Convert sets to counts
+      Object.keys(counts).forEach(uid => { counts[uid] = counts[uid].size; });
 
       // Update each player
       let updated = 0;

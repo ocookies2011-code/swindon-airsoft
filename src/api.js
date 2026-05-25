@@ -293,9 +293,11 @@ export const bookings = wrapWithTimeout({
       .from('bookings').update({ checked_in: true }).eq('id', bookingId)
     if (bErr) throw bErr
     const { data: checkedInBookings, error: cErr } = await supabase
-      .from('bookings').select('id').eq('user_id', userId).eq('checked_in', true)
+      .from('bookings').select('id, event_id').eq('user_id', userId).eq('checked_in', true)
     if (cErr) throw cErr
-    const actualCount = checkedInBookings.length
+    // Count unique events attended, not total bookings
+    const uniqueEvents = new Set(checkedInBookings.map(b => b.event_id));
+    const actualCount = uniqueEvents.size
     const { error: pErr } = await supabase
       .from('profiles').update({ games_attended: actualCount }).eq('id', userId)
     if (pErr) throw pErr
