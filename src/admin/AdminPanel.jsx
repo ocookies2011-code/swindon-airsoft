@@ -25,6 +25,7 @@ import { AdminContactDepts }       from "./AdminContactDepts";
 import { AdminLeaderboard }        from "./AdminLeaderboard";
 import { AdminMessages }           from "./AdminMessages";
 import { AdminSettings }           from "./AdminSettings";
+import { AdminSecurityEvents } from "./AdminSecurityEvents";
 import { AdminVisitorStats }       from "./AdminVisitorStats";
 import { AdminAuditLog }           from "./AdminAuditLog";
 import { AdminCheatReports }       from "./AdminCheatReports";
@@ -44,7 +45,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const getInitialSection = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","scan-waiver","players","shop",
-      "leaderboard-admin","revenue","visitor-stats","gallery-admin","qa-admin","staff-admin",
+      "leaderboard-admin","revenue","visitor-stats","security","gallery-admin","qa-admin","staff-admin",
       "contact-admin","messages","news-admin","marshal-admin","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
@@ -205,7 +206,8 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           <div style={{ display: section === "shop" ? "block" : "none" }}><AdminShop data={data} save={save} showToast={showToast} cu={cu} /></div>
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
-          {section === "visitor-stats" && <AdminVisitorStats />}
+          {section === "security" && <AdminSecurityEvents data={data} cu={cu} showToast={showToast} supabase={supabase} />}
+      {section === "visitor-stats" && <AdminVisitorStats />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}

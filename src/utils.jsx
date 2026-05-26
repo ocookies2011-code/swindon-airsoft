@@ -1657,19 +1657,31 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
 
   const login = async () => {
     if (!form.email || !form.password) { showToast("Email and password required", "red"); return; }
+    // Detect suspicious/malicious input before even trying to login
+    const isMalicious = (s) => /(<script|javascript:|on\w+=|alert\(|select\s+\*|union\s+select|drop\s+table|--\s|xp_)/i.test(s);
+    if (isMalicious(form.email) || isMalicious(form.password)) {
+      supabase.from("security_events").insert({
+        event_type: "injection_attempt", email: form.email,
+        payload: form.email, severity: "critical"
+      }).catch(() => {});
+      showToast("Invalid input detected.", "red");
+      return;
+    }
     setBusy(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
-      if (error) throw error;
-      // Fetch profile — if this fails, still close the modal.
-      // onAuthStateChange will also fire and set the user, so the UI will update either way.
+      if (error) {
+        // Log failed login for brute force detection
+        supabase.from("security_events").insert({
+          event_type: "failed_login", email: form.email.trim(),
+          payload: error.message, severity: "medium"
+        }).catch(() => {});
+        throw error;
+      }
       try {
         const profile = await api.profiles.getById(data.user.id);
         if (profile) onLogin(normaliseProfile(profile));
-      } catch {
-        // Profile fetch failed (e.g. timeout) — auth is still valid.
-        // onAuthStateChange will recover the session on next render.
-      }
+      } catch { /* Profile fetch failed — auth still valid */ }
       onClose();
     } catch (e) {
       showToast(e.message || "Login failed", "red");
