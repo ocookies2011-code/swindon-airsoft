@@ -52,7 +52,6 @@ function UKVisitorMap({ visitData }) {
   // ── Build pin clusters ────────────────────────────────────
   const buildPins = useCallback(() => {
     const pinMap = {};
-    // Use filtered data to exclude CDN nodes and bots
     const pinData = visitData.filter(row => !isCDNNode(row) && (!row.user_agent || !BOT_PATTERNS.test(row.user_agent)) && row.page !== 'home');
     pinData.forEach(row => {
       let lat = row.lat, lon = row.lon;
@@ -364,12 +363,6 @@ function AdminVisitorStats() {
   // Bots (Googlebot, Bingbot etc.) typically hit from US datacenters (San Jose)
   // with no referrer and no user_id, heavily distorting location stats.
   const BOT_PATTERNS = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|yandex|duckduck|semrush|ahrefs|mj12|petalbot|bytespider/i;
-  // Known CDN/infrastructure cities with no real IP = infrastructure node
-  const isCDNNode = (row) => !row.client_ip && row.country && row.country !== 'GB' &&
-    ['Prineville','Portland','Forest City','Gallatin','Luleå','Ashburn','San Jose',
-     'Seattle','Dallas','Chicago','Atlanta','Miami','Newark','Amsterdam','Frankfurt',
-     'Singapore','Tokyo','Sydney','São Paulo'].some(c => row.city?.includes(c));
-
   const filtered = visitData.filter(row =>
     (!row.user_agent || !BOT_PATTERNS.test(row.user_agent)) &&
     row.page !== "home" &&
