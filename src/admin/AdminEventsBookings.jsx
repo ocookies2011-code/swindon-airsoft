@@ -1699,7 +1699,20 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 <div className="modal-box wide" onClick={e => e.stopPropagation()}>
                   <div className="modal-title">🎟 Booking Details</div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))", gap:"10px 24px", background:"#0d0d0d", border:"1px solid #2a2a2a", padding:16, marginBottom:16, fontSize:13 }}>
-                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.userName}</div></div>
+                    <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>PLAYER</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.userName}{cb.isGuest && <span style={{ marginLeft:6, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#f97316", border:"1px solid rgba(249,115,22,.3)", padding:"1px 5px" }}>GUEST</span>}</div></div>
+                    {cb.isGuest && (
+                      <div style={{ gridColumn:"1/-1", background:"rgba(249,115,22,.06)", border:"1px solid rgba(249,115,22,.2)", padding:"10px 14px" }}>
+                        <div style={{ fontSize:10, color:"#f97316", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em", marginBottom:6 }}>GUEST DETAILS</div>
+                        <div style={{ fontSize:12, color:"#c8b090", lineHeight:1.8 }}>
+                          {cb.guestEmail && <div>📧 {cb.guestEmail}</div>}
+                          {cb.guestPhone && <div>📱 {cb.guestPhone}</div>}
+                          {cb.guestWaiverSigned
+                            ? <div style={{ marginTop:4, color:"#4fc3f7" }}>✅ Waiver signed as <strong>{cb.guestWaiverName}</strong> on {cb.guestWaiverSignedAt ? new Date(cb.guestWaiverSignedAt).toLocaleString("en-GB", { timeZone:"Europe/London" }) : "—"}</div>
+                            : <div style={{ color:"#ef4444", marginTop:4 }}>⚠ No waiver on record</div>
+                          }
+                        </div>
+                      </div>
+                    )}
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>EVENT</span><div style={{ fontWeight:700, marginTop:3 }}>{cb.eventTitle || evObj?.title}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>DATE</span><div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:12, marginTop:3 }}>{gmtShort(cb.date)}</div></div>
                     <div><span style={{ color:"var(--muted)", fontSize:11, letterSpacing:".1em" }}>STATUS</span><div style={{ marginTop:3 }}>{cb.checkedIn ? <span className="tag tag-green">✓ Checked In</span> : <span className="tag tag-blue">Booked</span>}</div></div>
