@@ -91,6 +91,9 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
 
   // Load config from Supabase on mount
   useEffect(() => {
+    // Reset cache flag so config is always freshly loaded
+    // (needed for guest users who may be anon when component mounts)
+    _squareConfigLoaded = false;
     loadSquareConfig().then(() => {
       setIsLive(_squareEnv === "production");
       setConfigLoaded(true);
