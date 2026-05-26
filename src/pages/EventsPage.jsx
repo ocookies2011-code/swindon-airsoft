@@ -27,6 +27,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
   const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
+  const [guestMode, setGuestMode] = useState(false);
+  const [guestForm, setGuestForm] = useState({ name:"", email:"", phone:"", dob:"" });
+  const [guestWaiverSigned, setGuestWaiverSigned] = useState(false);
+  const [guestWaiverSig, setGuestWaiverSig] = useState("");
+  const guestValid = guestMode && guestForm.name.trim() && guestForm.email.includes("@") && guestForm.phone.trim() && guestForm.dob && guestWaiverSigned;
   const [rentalAgreementModal, setRentalAgreementModal] = useState(false);
   const [rentalAgreed, setRentalAgreed] = useState(false);
   const [pendingRentalQty, setPendingRentalQty] = useState(0);
@@ -244,7 +249,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         // ── Waitlist hold check: if a hold exists for this event+ticketType and it's not for this user, block ──
         if (bCart.walkOn > 0) {
           const woHold = await holdApi.getHold(ev.id, "walkOn");
-          if (woHold && woHold.user_id !== cu.id) {
+          if (woHold && cu?.id && woHold.user_id !== cu.id) {
             const minsLeft = Math.ceil((new Date(woHold.held_until) - Date.now()) / 60000);
             clearTimeout(safety); setBookingBusy(false);
             setSquareError(`This Walk-On slot is currently reserved for a waitlisted player for ${minsLeft} more minute${minsLeft !== 1 ? "s" : ""}. If they don't book in time, it will open to everyone.`);
@@ -253,7 +258,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         }
         if (bCart.rental > 0) {
           const rnHold = await holdApi.getHold(ev.id, "rental");
-          if (rnHold && rnHold.user_id !== cu.id) {
+          if (rnHold && cu?.id && rnHold.user_id !== cu.id) {
             const minsLeft = Math.ceil((new Date(rnHold.held_until) - Date.now()) / 60000);
             clearTimeout(safety); setBookingBusy(false);
             setSquareError(`This Rental slot is currently reserved for a waitlisted player for ${minsLeft} more minute${minsLeft !== 1 ? "s" : ""}. If they don't book in time, it will open to everyone.`);
@@ -311,7 +316,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         const bookingPromises = [];
         if (bCart.walkOn > 0) {
           bookingPromises.push(api.bookings.create({
-            eventId: ev.id, userId: cu.id, userName: cu.name,
+            eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestForm.name,
+            guestEmail: cu ? null : guestForm.email,
+            guestPhone: cu ? null : guestForm.phone,
             type: "walkOn", qty: bCart.walkOn,
             extras: extrasSnapshot,
             total: Math.round(walkOnPaid * 100) / 100,
@@ -322,7 +329,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         }
         if (bCart.rental > 0) {
           bookingPromises.push(api.bookings.create({
-            eventId: ev.id, userId: cu.id, userName: cu.name,
+            eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestForm.name,
+            guestEmail: cu ? null : guestForm.email,
+            guestPhone: cu ? null : guestForm.phone,
             type: "rental", qty: bCart.rental,
             extras: bCart.walkOn > 0 ? {} : extrasSnapshot,
             total: Math.round(rentalPaid * 100) / 100,
@@ -340,7 +349,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           if (bCart.rental > 0) typesBooked.push("rental");
           for (const type of typesBooked) {
             // Remove the booker from the waitlist (in case they were next)
-            await waitlistApi.leave({ eventId: ev.id, userId: cu.id, ticketType: type }).catch(() => {});
+            if (cu?.id) await waitlistApi.leave({ eventId: ev.id, userId: cu.id, ticketType: type }).catch(() => {});
             // Clear the hold
             await holdApi.clearHold(ev.id, type);
             // Cascade: find the new first person on the waitlist (the slot is gone, so only if another slot exists)
@@ -350,7 +359,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
         // Deduct credits if used — uses a SECURITY DEFINER function to bypass
         // the prevent_role_escalation trigger which blocks direct credits updates
-        if (creditsApplied > 0) {
+        if (creditsApplied > 0 && cu?.id) {
           const { data: newCredits, error: credErr } = await supabase
             .rpc('deduct_credits', { p_user_id: cu.id, p_amount: creditsApplied });
           if (credErr) console.error('Credits deduction failed:', credErr.message);
@@ -448,7 +457,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   
   const isAdmin = cu?.role === "admin";
     const isEventPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
-    const bookingBlocked = isEventPast || !cu || isAdmin || !waiverValid || cartEmpty || (ev.vipOnly && cu?.vipStatus !== "active") || isCardBanned;
+    const bookingBlocked = isEventPast || (!cu && !guestValid) || isAdmin || (!cu && !guestMode) || (cu && !waiverValid) || cartEmpty || (ev.vipOnly && !cu) || isCardBanned;
 
     return (
       <div className="page-content">
@@ -1083,10 +1092,63 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               )}
 
-              {!cu && (
-                <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14, letterSpacing:".1em" }} onClick={() => setAuthModal("login")}>
-                  LOG IN TO BOOK
-                </button>
+              {!cu && !guestMode && (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14, letterSpacing:".1em" }} onClick={() => setAuthModal("login")}>
+                    LOG IN TO BOOK
+                  </button>
+                  <button className="btn btn-ghost" style={{ width:"100%", padding:"10px", fontSize:12, letterSpacing:".1em" }} onClick={() => setGuestMode(true)}>
+                    👤 BOOK AS GUEST
+                  </button>
+                </div>
+              )}
+
+              {!cu && guestMode && (
+                <div style={{ background:"#0d1209", border:"1px solid #2a4018", padding:"16px", marginBottom:8 }}>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"var(--accent)", letterSpacing:".1em", marginBottom:12 }}>👤 GUEST BOOKING</div>
+                  <div className="form-group" style={{ marginBottom:8 }}>
+                    <label style={{ fontSize:10 }}>Full Name *</label>
+                    <input value={guestForm.name} onChange={e => setGuestForm(p => ({...p, name:e.target.value}))} placeholder="John Smith" />
+                  </div>
+                  <div className="form-group" style={{ marginBottom:8 }}>
+                    <label style={{ fontSize:10 }}>Email *</label>
+                    <input type="email" value={guestForm.email} onChange={e => setGuestForm(p => ({...p, email:e.target.value}))} placeholder="your@email.com" />
+                  </div>
+                  <div className="form-group" style={{ marginBottom:8 }}>
+                    <label style={{ fontSize:10 }}>Phone *</label>
+                    <input type="tel" value={guestForm.phone} onChange={e => setGuestForm(p => ({...p, phone:e.target.value}))} placeholder="07xxx xxxxxx" />
+                  </div>
+                  <div className="form-group" style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:10 }}>Date of Birth *</label>
+                    <input type="date" value={guestForm.dob} onChange={e => setGuestForm(p => ({...p, dob:e.target.value}))} />
+                  </div>
+                  {/* Inline waiver */}
+                  <div style={{ background:"#080b06", border:"1px solid #1e2e12", padding:"10px 12px", marginBottom:10, maxHeight:120, overflowY:"auto", fontSize:11, color:"#5a6e42", lineHeight:1.6 }}>
+                    <strong style={{ color:"#8aaa60" }}>WAIVER & DISCLAIMER</strong><br/>
+                    I understand that airsoft involves physical activity and the use of replica firearms shooting plastic pellets. I acknowledge the risk of injury and agree to follow all site safety rules at all times. I confirm I am 18+ or have parental consent. I agree that Swindon Airsoft is not liable for any injury, loss or damage sustained during participation. I consent to my personal details being stored for booking purposes.
+                  </div>
+                  {!guestWaiverSigned ? (
+                    <div>
+                      <div className="form-group" style={{ marginBottom:8 }}>
+                        <label style={{ fontSize:10 }}>Type your full name to sign *</label>
+                        <input value={guestWaiverSig} onChange={e => setGuestWaiverSig(e.target.value)} placeholder="Your full name" />
+                      </div>
+                      <button className="btn btn-primary btn-sm" style={{ width:"100%" }}
+                        disabled={guestWaiverSig.trim().length < 3}
+                        onClick={() => { if (guestWaiverSig.trim()) setGuestWaiverSigned(true); }}>
+                        ✅ I Agree & Sign Waiver
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontSize:11, color:"var(--accent)" }}>✅ Waiver signed: {guestWaiverSig}</span>
+                      <button onClick={() => { setGuestWaiverSigned(false); setGuestWaiverSig(""); }} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:11 }}>edit</button>
+                    </div>
+                  )}
+                  <button className="btn btn-ghost btn-sm" style={{ width:"100%", marginTop:8 }} onClick={() => { setGuestMode(false); setGuestForm({name:"",email:"",phone:"",dob:""}); setGuestWaiverSigned(false); }}>
+                    ← Back / Log In Instead
+                  </button>
+                </div>
               )}
               {cu && !waiverValid && (
                 <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14 }} onClick={() => setWaiverModal(true)}>

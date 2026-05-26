@@ -765,7 +765,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
                       return (
                         <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
-                          <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: b.eventObj || bookingEv, eventTitle: b.eventTitle || bookingEv?.title })} /></td>
+                          <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: b.eventObj || bookingEv, eventTitle: b.eventTitle || bookingEv?.title })} />{b.isGuest && <span style={{ marginLeft:6, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#f97316", border:"1px solid rgba(249,115,22,.3)", padding:"1px 5px" }}>GUEST</span>}</td>
                           <td style={{ fontSize:12, color:"var(--muted)" }}>{bookingEv?.title || "—"}</td>
                           <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                           <td>{b.qty}</td>
