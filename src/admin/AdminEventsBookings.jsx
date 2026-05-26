@@ -1706,10 +1706,16 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <div style={{ fontSize:12, color:"#c8b090", lineHeight:1.8 }}>
                           {cb.guestEmail && <div>📧 {cb.guestEmail}</div>}
                           {cb.guestPhone && <div>📱 {cb.guestPhone}</div>}
-                          {cb.guestWaiverSigned
-                            ? <div style={{ marginTop:4, color:"#4fc3f7" }}>✅ Waiver signed as <strong>{cb.guestWaiverName}</strong> on {cb.guestWaiverSignedAt ? new Date(cb.guestWaiverSignedAt).toLocaleString("en-GB", { timeZone:"Europe/London" }) : "—"}</div>
-                            : <div style={{ color:"#ef4444", marginTop:4 }}>⚠ No waiver on record</div>
-                          }
+                          {cb.guestWaiverSignedAt && <div style={{ fontSize:11, color:"var(--muted)" }}>Signed: {new Date(cb.guestWaiverSignedAt).toLocaleString("en-GB", { timeZone:"Europe/London" })}</div>}
+                          {cb.guestWaiverData && Array.isArray(cb.guestWaiverData) && cb.guestWaiverData.map((w, i) => (
+                            <div key={i} style={{ marginTop:8, padding:"8px 10px", background:"rgba(0,0,0,.3)", border:"1px solid #2a4018" }}>
+                              <div style={{ color:"var(--accent)", fontSize:11, fontWeight:700, marginBottom:4 }}>Participant {i+1}: {w.name}</div>
+                              <div style={{ fontSize:10, color:"var(--muted)" }}>DOB: {w.dob}{w.medical ? ` · Medical: ${w.medical}` : ""}</div>
+                              {w.guardianName && <div style={{ fontSize:10, color:"#f97316" }}>Guardian: {w.guardianName} · {w.guardianPhone}</div>}
+                              <div style={{ fontSize:10, color:w.signed ? "#4fc3f7" : "#ef4444" }}>{w.signed ? "✅ Waiver signed" : "⚠ Not signed"}</div>
+                            </div>
+                          ))}
+                          {!cb.guestWaiverSigned && !cb.guestWaiverData && <div style={{ color:"#ef4444" }}>⚠ No waiver on record</div>}
                         </div>
                       </div>
                     )}

@@ -28,10 +28,15 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
   const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
   const [guestMode, setGuestMode] = useState(false);
-  const [guestForm, setGuestForm] = useState({ name:"", email:"", phone:"", dob:"" });
+  const [guestForm, setGuestForm] = useState({ email:"", phone:"" });
   const [guestWaiverSigned, setGuestWaiverSigned] = useState(false);
-  const [guestWaiverSig, setGuestWaiverSig] = useState("");
-  const guestValid = guestMode && guestForm.name.trim() && guestForm.email.includes("@") && guestForm.phone.trim() && guestForm.dob && guestWaiverSigned;
+  const [guestWaiverSig, setGuestWaiverSig] = useState([]);
+  const totalGuestTickets = bCart.walkOn + bCart.rental;
+  const guestValid = guestMode &&
+    guestForm.email?.includes("@") &&
+    guestForm.phone?.trim() &&
+    guestWaiverSig.length >= totalGuestTickets &&
+    guestWaiverSig.slice(0, totalGuestTickets).every(w => w?.signed);
   const [rentalAgreementModal, setRentalAgreementModal] = useState(false);
   const [rentalAgreed, setRentalAgreed] = useState(false);
   const [pendingRentalQty, setPendingRentalQty] = useState(0);
@@ -319,9 +324,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestForm.name,
             guestEmail: cu ? null : guestForm.email,
             guestPhone: cu ? null : guestForm.phone,
-            guestWaiverSigned: cu ? false : guestWaiverSigned,
-            guestWaiverName: cu ? null : guestWaiverSig,
+            guestWaiverSigned: cu ? false : true,
+            guestWaiverName: cu ? null : guestWaiverSig.slice(0, bCart.walkOn).map(w => w.name).join(", "),
             guestWaiverSignedAt: cu ? null : new Date().toISOString(),
+            guestWaiverData: cu ? null : JSON.stringify(guestWaiverSig.slice(0, bCart.walkOn)),
             type: "walkOn", qty: bCart.walkOn,
             extras: extrasSnapshot,
             total: Math.round(walkOnPaid * 100) / 100,
@@ -335,9 +341,10 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
             eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestForm.name,
             guestEmail: cu ? null : guestForm.email,
             guestPhone: cu ? null : guestForm.phone,
-            guestWaiverSigned: cu ? false : guestWaiverSigned,
-            guestWaiverName: cu ? null : guestWaiverSig,
+            guestWaiverSigned: cu ? false : true,
+            guestWaiverName: cu ? null : guestWaiverSig.slice(bCart.walkOn).map(w => w.name).join(", "),
             guestWaiverSignedAt: cu ? null : new Date().toISOString(),
+            guestWaiverData: cu ? null : JSON.stringify(guestWaiverSig.slice(bCart.walkOn)),
             type: "rental", qty: bCart.rental,
             extras: bCart.walkOn > 0 ? {} : extrasSnapshot,
             total: Math.round(rentalPaid * 100) / 100,
@@ -1110,53 +1117,92 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               )}
 
-              {!cu && guestMode && (
+              {!cu && guestMode && (() => {
+                const totalTickets = bCart.walkOn + bCart.rental;
+                const allSigned = guestWaiverSig.length >= totalTickets && guestWaiverSig.every(w => w.name?.trim().length >= 3 && w.signed);
+                return (
                 <div style={{ background:"#0d1209", border:"1px solid #2a4018", padding:"16px", marginBottom:8 }}>
-                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"var(--accent)", letterSpacing:".1em", marginBottom:12 }}>👤 GUEST BOOKING</div>
+                  <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"var(--accent)", letterSpacing:".1em", marginBottom:4 }}>👤 GUEST BOOKING</div>
+                  <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>A separate waiver is required for each ticket holder.</div>
+
+                  {/* Main booker details */}
                   <div className="form-group" style={{ marginBottom:8 }}>
-                    <label style={{ fontSize:10 }}>Full Name *</label>
-                    <input value={guestForm.name} onChange={e => setGuestForm(p => ({...p, name:e.target.value}))} placeholder="John Smith" />
-                  </div>
-                  <div className="form-group" style={{ marginBottom:8 }}>
-                    <label style={{ fontSize:10 }}>Email *</label>
+                    <label style={{ fontSize:10 }}>Booking Email * <span style={{ color:"var(--muted)" }}>(for confirmation)</span></label>
                     <input type="email" value={guestForm.email} onChange={e => setGuestForm(p => ({...p, email:e.target.value}))} placeholder="your@email.com" />
                   </div>
-                  <div className="form-group" style={{ marginBottom:8 }}>
-                    <label style={{ fontSize:10 }}>Phone *</label>
+                  <div className="form-group" style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:10 }}>Booking Phone *</label>
                     <input type="tel" value={guestForm.phone} onChange={e => setGuestForm(p => ({...p, phone:e.target.value}))} placeholder="07xxx xxxxxx" />
                   </div>
-                  <div className="form-group" style={{ marginBottom:12 }}>
-                    <label style={{ fontSize:10 }}>Date of Birth *</label>
-                    <input type="date" value={guestForm.dob} onChange={e => setGuestForm(p => ({...p, dob:e.target.value}))} />
-                  </div>
-                  {/* Inline waiver */}
-                  <div style={{ background:"#080b06", border:"1px solid #1e2e12", padding:"10px 12px", marginBottom:10, maxHeight:120, overflowY:"auto", fontSize:11, color:"#5a6e42", lineHeight:1.6 }}>
-                    <strong style={{ color:"#8aaa60" }}>WAIVER & DISCLAIMER</strong><br/>
-                    I understand that airsoft involves physical activity and the use of replica firearms shooting plastic pellets. I acknowledge the risk of injury and agree to follow all site safety rules at all times. I confirm I am 18+ or have parental consent. I agree that Swindon Airsoft is not liable for any injury, loss or damage sustained during participation. I consent to my personal details being stored for booking purposes.
-                  </div>
-                  {!guestWaiverSigned ? (
-                    <div>
-                      <div className="form-group" style={{ marginBottom:8 }}>
-                        <label style={{ fontSize:10 }}>Type your full name to sign *</label>
-                        <input value={guestWaiverSig} onChange={e => setGuestWaiverSig(e.target.value)} placeholder="Your full name" />
+
+                  {/* One waiver per ticket */}
+                  {Array.from({ length: totalTickets }).map((_, i) => {
+                    const w = guestWaiverSig[i] || {};
+                    const isMinor = w.dob && (new Date().getFullYear() - new Date(w.dob).getFullYear()) < 18;
+                    return (
+                      <div key={i} style={{ background:"#080b06", border:`1px solid ${w.signed ? "rgba(200,255,0,.3)" : "#1e2e12"}`, padding:"14px", marginBottom:10 }}>
+                        <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:700, fontSize:12, color:"var(--accent)", letterSpacing:".1em", marginBottom:10 }}>
+                          PARTICIPANT {i + 1} {i === 0 ? "(Lead Booker)" : ""} — {i < bCart.walkOn ? "Walk-On" : "Rental"}
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom:6 }}>
+                          <label style={{ fontSize:10 }}>Full Name *</label>
+                          <input value={w.name || ""} onChange={e => setGuestWaiverSig(prev => { const a=[...prev]; a[i]={...a[i],name:e.target.value,signed:false}; return a; })} placeholder="Full legal name" />
+                        </div>
+                        <div className="form-group" style={{ marginBottom:6 }}>
+                          <label style={{ fontSize:10 }}>Date of Birth *</label>
+                          <input type="date" value={w.dob || ""} onChange={e => setGuestWaiverSig(prev => { const a=[...prev]; a[i]={...a[i],dob:e.target.value,signed:false}; return a; })} />
+                        </div>
+
+                        {/* Minor guardian fields */}
+                        {isMinor && (
+                          <div style={{ background:"rgba(249,115,22,.08)", border:"1px solid rgba(249,115,22,.3)", padding:"10px", marginBottom:8 }}>
+                            <div style={{ fontSize:11, color:"#f97316", marginBottom:8 }}>⚠ Under 18 — Parent/Guardian consent required</div>
+                            <div className="form-group" style={{ marginBottom:6 }}>
+                              <label style={{ fontSize:10 }}>Parent/Guardian Full Name *</label>
+                              <input value={w.guardianName || ""} onChange={e => setGuestWaiverSig(prev => { const a=[...prev]; a[i]={...a[i],guardianName:e.target.value,signed:false}; return a; })} placeholder="Parent or guardian full name" />
+                            </div>
+                            <div className="form-group" style={{ marginBottom:4 }}>
+                              <label style={{ fontSize:10 }}>Parent/Guardian Phone *</label>
+                              <input type="tel" value={w.guardianPhone || ""} onChange={e => setGuestWaiverSig(prev => { const a=[...prev]; a[i]={...a[i],guardianPhone:e.target.value,signed:false}; return a; })} placeholder="07xxx xxxxxx" />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Medical conditions */}
+                        <div className="form-group" style={{ marginBottom:8 }}>
+                          <label style={{ fontSize:10 }}>Medical Conditions / Allergies</label>
+                          <input value={w.medical || ""} onChange={e => setGuestWaiverSig(prev => { const a=[...prev]; a[i]={...a[i],medical:e.target.value}; return a; })} placeholder="None, or describe any relevant conditions" />
+                        </div>
+
+                        {/* Waiver text */}
+                        <div style={{ fontSize:10, color:"#5a6e42", lineHeight:1.7, marginBottom:10, padding:"8px 10px", background:"rgba(255,255,255,.02)", border:"1px solid #1e2e12" }}>
+                          <strong style={{ color:"#8aaa60" }}>WAIVER & DISCLAIMER</strong><br/>
+                          I understand that airsoft involves physical activity and the use of replica firearms. I acknowledge the inherent risk of injury and agree to follow all site safety rules at all times.{isMinor ? " As parent/guardian I consent to this minor participating and accept full responsibility." : " I confirm I am 18 years of age or older."} I confirm that any medical conditions listed above are accurate. I agree that Swindon Airsoft is not liable for any injury, loss or damage during participation. I consent to personal details being stored for booking and safety purposes.
+                        </div>
+
+                        {!w.signed ? (
+                          <button className="btn btn-primary btn-sm" style={{ width:"100%" }}
+                            disabled={!w.name?.trim() || !w.dob || (isMinor && (!w.guardianName?.trim() || !w.guardianPhone?.trim()))}
+                            onClick={() => setGuestWaiverSig(prev => { const a=[...prev]; a[i]={...a[i],signed:true}; return a; })}>
+                            ✅ {isMinor ? `Sign as Guardian for ${w.name}` : `I Agree & Sign — ${w.name}`}
+                          </button>
+                        ) : (
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <span style={{ fontSize:11, color:"var(--accent)" }}>✅ Signed: {w.name}{isMinor ? ` (Guardian: ${w.guardianName})` : ""}{w.medical && w.medical !== "None" ? ` · Medical: ${w.medical}` : ""}</span>
+                            <button onClick={() => setGuestWaiverSig(prev => { const a=[...prev]; a[i]={...a[i],signed:false}; return a; })} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:11 }}>edit</button>
+                          </div>
+                        )}
                       </div>
-                      <button className="btn btn-primary btn-sm" style={{ width:"100%" }}
-                        disabled={guestWaiverSig.trim().length < 3}
-                        onClick={() => { if (guestWaiverSig.trim()) setGuestWaiverSigned(true); }}>
-                        ✅ I Agree & Sign Waiver
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontSize:11, color:"var(--accent)" }}>✅ Waiver signed: {guestWaiverSig}</span>
-                      <button onClick={() => { setGuestWaiverSigned(false); setGuestWaiverSig(""); }} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:11 }}>edit</button>
-                    </div>
-                  )}
-                  <button className="btn btn-ghost btn-sm" style={{ width:"100%", marginTop:8 }} onClick={() => { setGuestMode(false); setGuestForm({name:"",email:"",phone:"",dob:""}); setGuestWaiverSigned(false); }}>
+                    );
+                  })}
+
+                  <button className="btn btn-ghost btn-sm" style={{ width:"100%", marginTop:4 }} onClick={() => { setGuestMode(false); setGuestForm({name:"",email:"",phone:"",dob:""}); setGuestWaiverSig([]); setGuestWaiverSigned(false); }}>
                     ← Back / Log In Instead
                   </button>
                 </div>
-              )}
+                );
+              })()}
               {cu && !waiverValid && (
                 <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14 }} onClick={() => setWaiverModal(true)}>
                   SIGN WAIVER TO CONTINUE
