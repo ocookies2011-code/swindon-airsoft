@@ -269,6 +269,12 @@ function UKVisitorMap({ visitData }) {
 }
 
 
+// CDN node detection — no real IP + non-UK city = infrastructure traffic, not a real visitor
+const isCDNNode = (row) => !row.client_ip && row.country && row.country !== 'GB' &&
+  ['Prineville','Portland','Forest City','Gallatin','Luleå','Ashburn','San Jose',
+   'Seattle','Dallas','Chicago','Atlanta','Miami','Newark','Amsterdam','Frankfurt',
+   'Singapore','Tokyo','Sydney','São Paulo'].some(c => row.city?.includes(c));
+
 // ── Admin Visitor Stats ───────────────────────────────────
 function AdminVisitorStats() {
   const [visitData, setVisitData]         = useState([]);
