@@ -35,8 +35,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const guestValid = guestMode &&
     guestForm.email?.includes("@") &&
     guestForm.phone?.trim() &&
+    totalGuestTickets > 0 &&
     guestWaiverSig.length >= totalGuestTickets &&
-    guestWaiverSig.slice(0, totalGuestTickets).every(w => w?.signed);
+    Array.from({ length: totalGuestTickets }).every((_, i) => guestWaiverSig[i]?.signed === true);
   const [rentalAgreementModal, setRentalAgreementModal] = useState(false);
   const [rentalAgreed, setRentalAgreed] = useState(false);
   const [pendingRentalQty, setPendingRentalQty] = useState(0);
