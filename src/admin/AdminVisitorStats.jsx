@@ -300,7 +300,7 @@ function AdminVisitorStats() {
         const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { data } = await supabase
           .from('page_visits')
-          .select('session_id, user_id, user_name, page, country, city')
+          .select('session_id, user_id, user_name, page, country, city, client_ip')
           .gte('last_seen_at', since)
           .order('last_seen_at', { ascending: false });
         if (!data) return;
@@ -326,7 +326,7 @@ function AdminVisitorStats() {
         setLiveNames(sessions.map(s => ({
           name: s.user_name,
           page: s.page,
-          ip: s.user_id ? (ipMap[s.user_id] || null) : null,
+          ip: s.user_id ? (ipMap[s.user_id] || null) : (s.client_ip || null),
           country: s.country,
           city: s.city,
           isAnon: !s.user_id,
@@ -582,7 +582,13 @@ function AdminVisitorStats() {
                             <span style={{ color:"#4fc3f7", letterSpacing:".05em" }}>{s.ip}</span>
                           </>
                         )}
-                        {s.isAnon && s.city && (
+                        {s.ip && (
+                          <>
+                            <span style={{ color:"#2a4018" }}>·</span>
+                            <span style={{ color: s.isAnon ? "#5a8a40" : "#4fc3f7", letterSpacing:".05em" }}>{s.ip}</span>
+                          </>
+                        )}
+                        {(s.city || s.country) && (
                           <>
                             <span style={{ color:"#2a4018" }}>·</span>
                             <span style={{ color:"#3a5a20" }}>{s.city}{s.country ? `, ${s.country}` : ""}</span>
