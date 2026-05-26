@@ -269,6 +269,9 @@ function UKVisitorMap({ visitData }) {
 }
 
 
+// Module-level constants — must be outside components to be in scope everywhere
+const BOT_PATTERNS = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|yandex|duckduck|semrush|ahrefs|mj12|petalbot|bytespider/i;
+
 // CDN node detection — no real IP + non-UK city = infrastructure traffic, not a real visitor
 const isCDNNode = (row) => !row.client_ip && row.country && row.country !== 'GB' &&
   ['Prineville','Portland','Forest City','Gallatin','Luleå','Ashburn','San Jose',
@@ -368,7 +371,7 @@ function AdminVisitorStats() {
   // Filter out bot/crawler traffic — identified by user_agent strings.
   // Bots (Googlebot, Bingbot etc.) typically hit from US datacenters (San Jose)
   // with no referrer and no user_id, heavily distorting location stats.
-  const BOT_PATTERNS = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|yandex|duckduck|semrush|ahrefs|mj12|petalbot|bytespider/i;
+
   const filtered = visitData.filter(row =>
     (!row.user_agent || !BOT_PATTERNS.test(row.user_agent)) &&
     row.page !== "home" &&
