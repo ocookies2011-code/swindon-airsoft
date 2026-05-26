@@ -52,7 +52,9 @@ function UKVisitorMap({ visitData }) {
   // ── Build pin clusters ────────────────────────────────────
   const buildPins = useCallback(() => {
     const pinMap = {};
-    visitData.forEach(row => {
+    // Use filtered data to exclude CDN nodes and bots
+    const pinData = visitData.filter(row => !isCDNNode(row) && (!row.user_agent || !BOT_PATTERNS.test(row.user_agent)) && row.page !== 'home');
+    pinData.forEach(row => {
       let lat = row.lat, lon = row.lon;
       // 1. Use stored lat/lon if present
       // 2. Fall back to city name lookup
@@ -325,6 +327,7 @@ function AdminVisitorStats() {
         setLiveCount(sessions.length);
         setLiveNames(sessions.map(s => ({
           name: s.user_name,
+          isCDN: !s.client_ip && s.country && s.country !== 'GB',
           page: s.page,
           ip: s.user_id ? (ipMap[s.user_id] || null) : (s.client_ip || null),
           country: s.country,
@@ -361,9 +364,16 @@ function AdminVisitorStats() {
   // Bots (Googlebot, Bingbot etc.) typically hit from US datacenters (San Jose)
   // with no referrer and no user_id, heavily distorting location stats.
   const BOT_PATTERNS = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|yandex|duckduck|semrush|ahrefs|mj12|petalbot|bytespider/i;
+  // Known CDN/infrastructure cities with no real IP = infrastructure node
+  const isCDNNode = (row) => !row.client_ip && row.country && row.country !== 'GB' &&
+    ['Prineville','Portland','Forest City','Gallatin','Luleå','Ashburn','San Jose',
+     'Seattle','Dallas','Chicago','Atlanta','Miami','Newark','Amsterdam','Frankfurt',
+     'Singapore','Tokyo','Sydney','São Paulo'].some(c => row.city?.includes(c));
+
   const filtered = visitData.filter(row =>
     (!row.user_agent || !BOT_PATTERNS.test(row.user_agent)) &&
-    row.page !== "home"  // exclude homepage hits from stats
+    row.page !== "home" &&
+    !isCDNNode(row)  // exclude CDN infrastructure nodes
   );
 
   // ── Derived stats ──
@@ -573,7 +583,7 @@ function AdminVisitorStats() {
                   <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                     {liveNames.map((s, i) => (
                       <div key={i} style={{ display:"flex", alignItems:"center", gap:8, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"4px 8px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isAnon ? "#2a4018" : "#c8ff00"}` }}>
-                        <span style={{ color: s.isAnon ? "#3a5010" : "#c8ff00", minWidth:100 }}>{s.isAnon ? "👤 anon" : `🟢 ${s.name}`}</span>
+                        <span style={{ color: s.isCDN ? "#4a4a4a" : s.isAnon ? "#3a5010" : "#c8ff00", minWidth:120 }}>{s.isCDN ? `🌐 ${s.city || "CDN"} node` : s.isAnon ? "👤 anon" : `🟢 ${s.name}`}</span>
                         <span style={{ color:"#2a4018" }}>→</span>
                         <span style={{ color:"#5a7a30", textTransform:"uppercase", minWidth:80 }}>{PAGE_LABELS[s.page] || s.page || "—"}</span>
                         {s.ip && (
