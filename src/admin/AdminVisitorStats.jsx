@@ -300,20 +300,37 @@ function AdminVisitorStats() {
         const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { data } = await supabase
           .from('page_visits')
-          .select('session_id, user_id, user_name, page')
+          .select('session_id, user_id, user_name, page, country, city')
           .gte('last_seen_at', since)
           .order('last_seen_at', { ascending: false });
         if (!data) return;
-        // Deduplicate by user_id for logged-in users, session_id for anon
-        // to avoid counting one person multiple times (one row per page visited)
         const seen = new Map();
         data.forEach(row => {
           const key = row.user_id || row.session_id;
           if (!seen.has(key)) seen.set(key, row);
         });
         const sessions = [...seen.values()];
+
+        // Fetch IPs from profiles for logged-in users
+        const userIds = sessions.filter(s => s.user_id).map(s => s.user_id);
+        let ipMap = {};
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, last_ip')
+            .in('id', userIds);
+          if (profiles) profiles.forEach(p => { ipMap[p.id] = p.last_ip; });
+        }
+
         setLiveCount(sessions.length);
-        setLiveNames(sessions.map(s => ({ name: s.user_name, page: s.page })));
+        setLiveNames(sessions.map(s => ({
+          name: s.user_name,
+          page: s.page,
+          ip: s.user_id ? (ipMap[s.user_id] || null) : null,
+          country: s.country,
+          city: s.city,
+          isAnon: !s.user_id,
+        })));
       } catch { /* non-fatal */ }
     };
     fetchLive();
@@ -540,28 +557,39 @@ function AdminVisitorStats() {
         {activeTab === "overview" && (
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
-              {/* Live viewers card */}
-              <div style={{ background:"#0a0f05", border:"1px solid #1a2808", padding:"18px 20px", position:"relative", overflow:"hidden" }}>
-                <div style={{ marginBottom:10 }}>
+              {/* Live viewers card — spans 2 columns */}
+              <div style={{ background:"#0a0f05", border:"1px solid #1a2808", padding:"18px 20px", position:"relative", overflow:"hidden", gridColumn:"span 2" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
                   <span className={`live-badge${liveCount > 0 ? "" : ""}`} style={{ opacity: liveCount > 0 ? 1 : 0.4 }}>
                     <span className={`pulse-dot${liveCount > 0 ? "" : " offline"}`} />
                     {liveCount > 0 ? "LIVE" : "IDLE"}
                   </span>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:38, color:"#c8ff00", lineHeight:1 }}>
+                    {liveCount === null ? "—" : liveCount}
+                  </div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>active in last 5 min</div>
                 </div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:38, color:"#c8ff00", lineHeight:1 }}>
-                  {liveCount === null ? "—" : liveCount}
-                </div>
-                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010", marginTop:4 }}>active in last 5 min</div>
                 {liveNames.length > 0 && (
-                  <div style={{ marginTop:10, display:"flex", flexDirection:"column", gap:3 }}>
-                    {liveNames.slice(0, 5).map((s, i) => (
-                      <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontFamily:"'Share Tech Mono',monospace", color:"#5a7a30" }}>
-                        <span style={{ color: s.name ? "#c8ff00" : "#3a5010" }}>{s.name ? s.name : "anon"}</span>
-                        <span style={{ color:"#2a3a10" }}>→</span>
-                        <span style={{ textTransform:"uppercase", fontSize:10 }}>{PAGE_LABELS[s.page] || s.page}</span>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    {liveNames.map((s, i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:8, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"4px 8px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isAnon ? "#2a4018" : "#c8ff00"}` }}>
+                        <span style={{ color: s.isAnon ? "#3a5010" : "#c8ff00", minWidth:100 }}>{s.isAnon ? "👤 anon" : `🟢 ${s.name}`}</span>
+                        <span style={{ color:"#2a4018" }}>→</span>
+                        <span style={{ color:"#5a7a30", textTransform:"uppercase", minWidth:80 }}>{PAGE_LABELS[s.page] || s.page || "—"}</span>
+                        {s.ip && (
+                          <>
+                            <span style={{ color:"#2a4018" }}>·</span>
+                            <span style={{ color:"#4fc3f7", letterSpacing:".05em" }}>{s.ip}</span>
+                          </>
+                        )}
+                        {s.isAnon && s.city && (
+                          <>
+                            <span style={{ color:"#2a4018" }}>·</span>
+                            <span style={{ color:"#3a5a20" }}>{s.city}{s.country ? `, ${s.country}` : ""}</span>
+                          </>
+                        )}
                       </div>
                     ))}
-                    {liveNames.length > 5 && <div style={{ fontSize:10, color:"#2a3a10", fontFamily:"'Share Tech Mono',monospace" }}>+{liveNames.length - 5} more</div>}
                   </div>
                 )}
               </div>
