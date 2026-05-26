@@ -45,22 +45,27 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     showToast(`📧 Waitlist emailed: ${sent} sent${failed > 0 ? `, ${failed} failed` : ""}. Slots held for 30 mins.`);
   };
 
-  const resendTicket = async (b, ev) => {
+  const resendTicket = async (b, ev, sendToAdmin = false) => {
     const player = data.users.find(u => u.id === b.userId);
-    if (!player?.email) { showToast("No email address found for this player.", "red"); return; }
-    setResendBusy(prev => ({ ...prev, [b.id]: true }));
+    const playerEmail = b.guestEmail || player?.email;
+    const playerName = b.userName || player?.name || "Player";
+    if (!playerEmail && !sendToAdmin) { showToast("No email address found for this player.", "red"); return; }
+    setResendBusy(prev => ({ ...prev, [b.id + (sendToAdmin?"_admin":"")] : true }));
     try {
+      const recipient = sendToAdmin
+        ? { email: "swindonairsoftfield@gmail.com", name: "Swindon Airsoft Admin" }
+        : { email: playerEmail, name: playerName };
       await sendTicketEmail({
-        cu: player,
+        cu: { ...player, email: recipient.email, name: recipient.name },
         ev,
         bookings: [{ id: b.id, type: b.type, qty: b.qty, total: b.total }],
         extras: b.extras || {},
       });
-      showToast(`📧 Ticket resent to ${player.email}`);
+      showToast(`📧 Ticket sent to ${recipient.email}`);
     } catch (e) {
-      showToast("Failed to resend ticket: " + e.message, "red");
+      showToast("Failed to send ticket: " + e.message, "red");
     } finally {
-      setResendBusy(prev => ({ ...prev, [b.id]: false }));
+      setResendBusy(prev => ({ ...prev, [b.id + (sendToAdmin?"_admin":"")] : false }));
     }
   };
 
@@ -784,10 +789,16 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                               <button style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", whiteSpace:"nowrap" }}
                                 onClick={() => downloadTicket(b, bookingEv)}>⬇ Ticket</button>
                               <button
-                                disabled={resendBusy[b.id]}
+                                disabled={resendBusy[b.id] || resendBusy[b.id+"_admin"]}
                                 style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.25)", color: resendBusy[b.id] ? "#555" : "#4fc3f7", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id] ? "default" : "pointer", whiteSpace:"nowrap" }}
-                                onClick={() => resendTicket(b, bookingEv)}>
-                                {resendBusy[b.id] ? "…" : "📧 Resend"}
+                                onClick={() => resendTicket(b, bookingEv, false)}>
+                                {resendBusy[b.id] ? "…" : "📧 Player"}
+                              </button>
+                              <button
+                                disabled={resendBusy[b.id+"_admin"]}
+                                style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color: resendBusy[b.id+"_admin"] ? "#555" : "#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id+"_admin"] ? "default" : "pointer", whiteSpace:"nowrap" }}
+                                onClick={() => resendTicket(b, bookingEv, true)}>
+                                {resendBusy[b.id+"_admin"] ? "…" : "📧 Me"}
                               </button>
                             </div>
                           </td>
