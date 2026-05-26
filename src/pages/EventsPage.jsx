@@ -463,7 +463,8 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   
   const isAdmin = cu?.role === "admin";
     const isEventPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
-    const bookingBlocked = isEventPast || (!cu && !guestValid) || isAdmin || (!cu && !guestMode) || (cu && !waiverValid) || cartEmpty || (ev.vipOnly && !cu) || isCardBanned;
+    const userReady = (cu && waiverValid) || guestValid;
+    const bookingBlocked = isEventPast || !userReady || isAdmin || cartEmpty || (ev.vipOnly && !cu) || isCardBanned;
 
     return (
       <div className="page-content">
