@@ -295,7 +295,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
 
   // Build detail lines for a transaction
   const getLines = (t) => {
-    if (t.source === "cash") {
+    if (t.source === "cash" || t.source === "ukara") {
       return t.items.map(i => ({ name: resolveItemName(i), qty: i.qty, price: i.price, line: i.price * i.qty }));
     } else if (t.source === "shop" || t.source === "terminal") {
       return t.items.map(i => ({ name: resolveItemName(i), qty: i.qty, price: Number(i.price), line: Number(i.price) * i.qty }));
@@ -469,6 +469,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                         ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
                         : (() => {
                             const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
+                            if (t.source === "ukara") return t.eventTitle;
                             return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
                           })()
                       }
@@ -693,7 +694,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                   ? `Cash Sale — ${delConfirm.items?.length || 0} item(s)`
                   : delConfirm.source === "shop"
                   ? `Shop Order — ${delConfirm.items?.length || 0} item(s)`
-                  : `${delConfirm.eventTitle} — ${delConfirm.ticketType} ×${delConfirm.qty}`
+                  : delConfirm.source === "ukara" ? delConfirm.eventTitle : `${delConfirm.eventTitle} — ${delConfirm.ticketType} ×${delConfirm.qty}`
                 }
               </div>
               <div style={{ fontSize:14, fontWeight:900, color:"var(--accent)", marginTop:6 }}>£{delConfirm.total.toFixed(2)}</div>
@@ -728,6 +729,7 @@ function AdminRevenue({ data, save, showToast, cu }) {
                         ? <span title={t.items?.map(i => `${resolveItemName(i)} ×${i.qty}`).join(', ')}>{fmtItems(t.items)}</span>
                         : (() => {
                             const extrasCount = Object.values(t.extras || {}).filter(v => v > 0).length;
+                            if (t.source === "ukara") return t.eventTitle;
                             return `${t.eventTitle} — ${t.ticketType} ×${t.qty}${extrasCount ? ` + ${extrasCount} extra${extrasCount > 1 ? "s" : ""}` : ""}`;
                           })()
                       }

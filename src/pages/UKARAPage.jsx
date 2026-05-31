@@ -124,8 +124,15 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
       ]);
       await api.ukaraApplications.update(app.id, { gov_id_url: govIdUrl, face_photo_url: faceUrl });
 
-      api.settings.get("contact_email").then(adminEmail => {
-        if (adminEmail) sendAdminUkaraNotification({ adminEmail, app: { ...app, gov_id_url: govIdUrl, face_photo_url: faceUrl } }).catch(() => {});
+      // Notify admin of new UKARA application
+      sendAdminUkaraNotification({
+        adminEmail: "swindonairsoftfield@gmail.com",
+        user: {
+          name: app.name,
+          email: app.email,
+          id: app.user_id,
+          game_days: app.games_attended,
+        }
       }).catch(() => {});
 
       setExistingApp({ ...app, gov_id_url: govIdUrl, face_photo_url: faceUrl });
