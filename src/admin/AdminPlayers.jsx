@@ -23,10 +23,43 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       // Send email to player
       const player = (data.users || []).find(u => u.id === userId);
       if (player?.email) {
-        const msg = approve
-          ? `<p>Hi ${player.name},</p><p>Your Swindon Airsoft account has been <strong style="color:#c8ff00">approved</strong>! You can now log in at swindon-airsoft.com</p>`
-          : `<p>Hi ${player.name},</p><p>Unfortunately your Swindon Airsoft account registration has not been approved at this time. Please contact us if you have any questions.</p>`;
-        sendEmail({ toEmail: player.email, toName: player.name, subject: approve ? '✅ Your Swindon Airsoft Account is Approved!' : '❌ Swindon Airsoft Registration Update', htmlContent: msg }).catch(() => {});
+        const approvedHtml = `
+          <div style="font-family:Arial,sans-serif;background:#080b06;padding:32px;max-width:520px;margin:0 auto">
+            <div style="text-align:center;margin-bottom:20px">
+              <img src="https://www.swindon-airsoft.com/logo.png" alt="Swindon Airsoft" style="height:60px" onerror="this.style.display='none'"/>
+            </div>
+            <div style="background:#0d1209;border:2px solid rgba(200,255,0,.4);padding:28px;color:#c8d4b0">
+              <h2 style="color:#c8ff00;font-size:22px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 16px">✅ ACCOUNT APPROVED</h2>
+              <p style="margin:0 0 12px;font-size:14px;line-height:1.7">Hi ${player.name},</p>
+              <p style="margin:0 0 20px;font-size:14px;line-height:1.7">Welcome to <strong style="color:#c8ff00">Swindon Airsoft</strong>! Your account has been approved and you can now log in and book game days.</p>
+              <div style="text-align:center;margin:24px 0">
+                <a href="https://www.swindon-airsoft.com" style="background:#c8ff00;color:#000;font-weight:900;font-size:14px;letter-spacing:.15em;text-transform:uppercase;padding:14px 32px;text-decoration:none;display:inline-block">LOG IN NOW →</a>
+              </div>
+              <p style="margin:20px 0 0;font-size:12px;color:#5a6e42;line-height:1.6">See you on the field! If you have any questions, contact us at swindonairsoftfield@gmail.com</p>
+            </div>
+            <p style="text-align:center;font-size:11px;color:#3a5010;margin-top:16px">◈ SWINDON AIRSOFT · FIELD COMMAND ◈</p>
+          </div>`;
+
+        const rejectedHtml = `
+          <div style="font-family:Arial,sans-serif;background:#080b06;padding:32px;max-width:520px;margin:0 auto">
+            <div style="text-align:center;margin-bottom:20px">
+              <img src="https://www.swindon-airsoft.com/logo.png" alt="Swindon Airsoft" style="height:60px" onerror="this.style.display='none'"/>
+            </div>
+            <div style="background:#0d1209;border:1px solid rgba(239,68,68,.3);padding:28px;color:#c8d4b0">
+              <h2 style="color:#ef4444;font-size:22px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 16px">❌ REGISTRATION UPDATE</h2>
+              <p style="margin:0 0 12px;font-size:14px;line-height:1.7">Hi ${player.name},</p>
+              <p style="margin:0 0 20px;font-size:14px;line-height:1.7">Unfortunately your Swindon Airsoft account registration has not been approved at this time.</p>
+              <p style="margin:0 0 0;font-size:13px;color:#5a6e42;line-height:1.6">If you believe this is an error or have any questions, please contact us at <a href="mailto:swindonairsoftfield@gmail.com" style="color:#c8ff00">swindonairsoftfield@gmail.com</a></p>
+            </div>
+            <p style="text-align:center;font-size:11px;color:#3a5010;margin-top:16px">◈ SWINDON AIRSOFT · FIELD COMMAND ◈</p>
+          </div>`;
+
+        sendEmail({
+          toEmail: player.email,
+          toName: player.name,
+          subject: approve ? '✅ Your Swindon Airsoft Account is Approved!' : '❌ Swindon Airsoft Registration Update',
+          htmlContent: approve ? approvedHtml : rejectedHtml,
+        }).catch(() => {});
       }
       if (typeof refresh === 'function') refresh();
     } catch(e) { showToast('Failed: ' + e.message, 'red'); }
