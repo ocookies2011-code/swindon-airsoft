@@ -461,7 +461,7 @@ function AdminVisitorStats({ data, cu, showToast }) {
     u.pages[row.page] = (u.pages[row.page] || 0) + (row.visit_count || 1);
     if (ts && (!u.last || ts > u.last)) { u.last = ts; u.lastPage = row.page; }
   });
-  const userRows = Object.values(userVisitMap).sort((aa, bb) => bb.count - aa.count).slice(0, 20);
+  const userRows = Object.values(userVisitMap).sort((aa, bb) => new Date(bb.last) - new Date(aa.last)).slice(0, 20);
 
   // Recent feed — sorted by last_seen_at desc
   const recentRows = [...filtered].sort((a, b) => {
