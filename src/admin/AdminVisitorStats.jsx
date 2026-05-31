@@ -442,16 +442,23 @@ function AdminVisitorStats() {
 
   // Logged-in user breakdown — now multiple rows per user (one per page visited).
   // Aggregate: sum visit_count across all their page rows, find most-visited page and last seen.
+  // Build user email lookup map from data.users
+  const userEmailMap = {};
+  (data?.users || []).forEach(u => { userEmailMap[u.id] = u.email; });
+
   const userVisitMap = {};
   filtered.filter(row => row.user_id).forEach(row => {
     const ts = row.last_seen_at || row.created_at;
     if (!userVisitMap[row.user_id]) {
-      userVisitMap[row.user_id] = { name: row.user_name || row.user_id, count: 0, pages: {}, last: ts, lastPage: row.page };
+      userVisitMap[row.user_id] = {
+        name: row.user_name || row.user_id,
+        email: userEmailMap[row.user_id] || null,
+        count: 0, pages: {}, last: ts, lastPage: row.page
+      };
     }
     const u = userVisitMap[row.user_id];
     u.count += (row.visit_count || 1);
     u.pages[row.page] = (u.pages[row.page] || 0) + (row.visit_count || 1);
-    // Track most recently seen page
     if (ts && (!u.last || ts > u.last)) { u.last = ts; u.lastPage = row.page; }
   });
   const userRows = Object.values(userVisitMap).sort((aa, bb) => bb.count - aa.count).slice(0, 20);
@@ -727,6 +734,7 @@ function AdminVisitorStats() {
                 return (
                   <div key={userIdx} style={{ borderBottom:"1px solid #0f1a08", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8, alignItems:"center" }}>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}>{userRow.name}</div>
+                    {userRow.email && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", marginTop:1 }}>{userRow.email}</div>}
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, fontWeight:900, color:"#c8ff00" }}>{userRow.count}</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#3a5010", textTransform:"uppercase" }}>{PAGE_ICONS[lastPage] || "▸"} {lastPage}</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>{new Date(userRow.last).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}</div>
