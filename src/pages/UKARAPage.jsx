@@ -21,6 +21,10 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
     phone:       cu?.waiverData?.phone || cu?.phone || "",
     dob:         cu?.waiverData?.dob   || "",
     address:     waiverAddress,
+      addressLine1: waiverAddress ? waiverAddress.split(",")[0]?.trim() : "",
+      addressLine2: "",
+      city:         waiverAddress ? waiverAddress.split(",")[1]?.trim() : "",
+      postcode:     waiverAddress ? waiverAddress.split(",").pop()?.trim() : "",
     declaration: false,
   });
   const [govIdFile, setGovIdFile]         = useState(null);
@@ -83,7 +87,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
   // Step 1 — validate details & docs, advance to payment
   const handleProceedToPayment = () => {
     if (!cu) { setAuthModal("login"); return; }
-    if (!form.name.trim() || !form.email.trim() || !form.dob || !form.address.trim() || !form.phone.trim()) {
+    if (!form.name.trim() || !form.email.trim() || !form.dob || !form.addressLine1?.trim() || !form.city?.trim() || !form.postcode?.trim() || !form.phone.trim()) {
       showToast("Please fill in all required fields.", "red"); return;
     }
     if (!govIdFile) { showToast("Please upload a Government ID photo.", "red"); return; }
@@ -109,7 +113,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
         email:             form.email.trim(),
         phone:             form.phone.trim(),
         dob:               form.dob,
-        address:           form.address.trim(),
+        address:           [form.addressLine1, form.addressLine2, form.city, form.postcode].filter(Boolean).join(", "),
         games_attended:    gamesAtSwindon,
         proof_description: `${gamesAtSwindon} games verified at Swindon Airsoft`,
         declaration_signed: true,
@@ -455,7 +459,7 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                     ["Email",   form.email],
                     ["Phone",   form.phone],
                     ["DOB",     form.dob],
-                    ["Address", form.address],
+                    ["Address", [form.addressLine1, form.addressLine2, form.city, form.postcode].filter(Boolean).join(", ")],
                     ["Games at Swindon Airsoft", `${cu?.gamesAttended || 0} (verified)`],
                     ["Gov ID",  govIdFile?.name || "Uploaded"],
                     ["Photo",   faceFile?.name  || "Uploaded"],
@@ -555,8 +559,20 @@ function UKARAPage({ cu, setPage, showToast, setAuthModal }) {
                     <input style={inputStyle} type="date" value={form.dob} onChange={e => set("dob", e.target.value)} onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
                   </div>
                   <div style={{ gridColumn: isMobile ? undefined : "1 / -1" }}>
-                    <label style={labelStyle}>Full Address & Postcode *</label>
-                    <textarea style={{ ...inputStyle, resize: "vertical", minHeight: 80 }} value={form.address} onChange={e => set("address", e.target.value)} placeholder="Full home address including postcode" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                    <label style={labelStyle}>Address Line 1 *</label>
+                    <input style={inputStyle} value={form.addressLine1 || ""} onChange={e => set("addressLine1", e.target.value)} placeholder="House number and street" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Address Line 2</label>
+                    <input style={inputStyle} value={form.addressLine2 || ""} onChange={e => set("addressLine2", e.target.value)} placeholder="Village, area (optional)" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Town / City *</label>
+                    <input style={inputStyle} value={form.city || ""} onChange={e => set("city", e.target.value)} placeholder="e.g. Swindon" onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Postcode *</label>
+                    <input style={inputStyle} value={form.postcode || ""} onChange={e => set("postcode", e.target.value.toUpperCase())} placeholder="e.g. SN1 1AA" maxLength={8} onFocus={e => e.target.style.borderColor="#c8ff00"} onBlur={e => e.target.style.borderColor="#2a3a10"} />
                   </div>
                 </div>
 
