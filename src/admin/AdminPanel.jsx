@@ -208,7 +208,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "security" && <AdminSecurityEvents data={data} cu={cu} showToast={showToast} supabase={supabase} />}
-      {section === "visitor-stats" && <AdminVisitorStats />}
+      {section === "visitor-stats" && <AdminVisitorStats data={data} cu={cu} showToast={showToast} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
           {section === "qa-admin" && <AdminQA data={data} save={save} showToast={showToast} cu={cu} />}
           {section === "staff-admin" && <AdminStaff showToast={showToast} cu={cu} />}

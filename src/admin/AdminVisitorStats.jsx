@@ -279,7 +279,7 @@ const isCDNNode = (row) => !row.client_ip && row.country && row.country !== 'GB'
    'Singapore','Tokyo','Sydney','São Paulo'].some(c => row.city?.includes(c));
 
 // ── Admin Visitor Stats ───────────────────────────────────
-function AdminVisitorStats() {
+function AdminVisitorStats({ data, cu, showToast }) {
   const [visitData, setVisitData]         = useState([]);
   const [allTimeCounts, setAllTimeCounts] = useState(null);
   const [loading, setLoading]             = useState(true);
