@@ -2418,6 +2418,11 @@ function HomePage({ data, setPage, onProductClick }) {
                         const STANDARD_RENTAL  = 55;
                         const walkOn = Number(nextEvent.walkOnPrice);
                         const rental = Number(nextEvent.rentalPrice);
+                        // Calculate remaining slots from actual bookings
+                        const walkOnBooked = (nextEvent.bookings || []).filter(b => b.type === "walkOn").reduce((s, b) => s + (b.qty || 1), 0);
+                        const rentalBooked = (nextEvent.bookings || []).filter(b => b.type === "rental").reduce((s, b) => s + (b.qty || 1), 0);
+                        const walkOnLeft = Math.max(0, (nextEvent.walkOnSlots || 0) - walkOnBooked);
+                        const rentalLeft = Math.max(0, (nextEvent.rentalSlots || 0) - rentalBooked);
                         const isEarlyBird = (walkOn > 0 && walkOn < STANDARD_WALK_ON) || (rental > 0 && rental < STANDARD_RENTAL);
                         return (
                           <div style={{ marginBottom:14 }}>
@@ -2446,9 +2451,9 @@ function HomePage({ data, setPage, onProductClick }) {
                                 </div>
                               )}
                               {nextEvent.walkOnSlots > 0 && (
-                                <div style={{ background:"rgba(0,0,0,.4)", border:"1px solid rgba(255,255,255,.08)", padding:"8px 14px", flex:1, minWidth:80 }}>
-                                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>SLOTS</div>
-                                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"#fff" }}>{nextEvent.walkOnSlots}</div>
+                                <div style={{ background:"rgba(0,0,0,.4)", border:`1px solid ${walkOnLeft < 5 ? "rgba(239,68,68,.3)" : "rgba(255,255,255,.08)"}`, padding:"8px 14px", flex:1, minWidth:80 }}>
+                                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>SLOTS LEFT</div>
+                                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color: walkOnLeft < 5 ? "#ef4444" : "#fff" }}>{walkOnLeft}</div>
                                 </div>
                               )}
                             </div>
@@ -2467,9 +2472,14 @@ function HomePage({ data, setPage, onProductClick }) {
                       {/* CTA */}
                       <div style={{ marginTop:20, display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
                         <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => setPage("events", nextEvent.id)}>DEPLOY →</button>
-                        {nextEvent.walkOnSlots > 0 && (
-                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#5a6e42", letterSpacing:".1em" }}>
-                            {nextEvent.walkOnSlots} slots available
+                        {walkOnLeft > 0 && (
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color: walkOnLeft < 5 ? "#ef4444" : "#5a6e42", letterSpacing:".1em" }}>
+                            {walkOnLeft} slot{walkOnLeft !== 1 ? "s" : ""} remaining
+                          </span>
+                        )}
+                        {walkOnLeft === 0 && nextEvent.walkOnSlots > 0 && (
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#ef4444", letterSpacing:".1em" }}>
+                            ⛔ SOLD OUT
                           </span>
                         )}
                       </div>
