@@ -73,6 +73,28 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
   const [showForm, setShowForm] = useState(false);
   const [editAd, setEditAd]     = useState(null);
   const [busy, setBusy]         = useState(false);
+  const [msgBody, setMsgBody]   = useState("");
+  const [msgSending, setMsgSending] = useState(false);
+  const [msgSent, setMsgSent]   = useState(false);
+
+  const sendMessage = async (ad) => {
+    if (!msgBody.trim() || !cu) return;
+    setMsgSending(true);
+    try {
+      const { error } = await supabase.from("messages").insert({
+        from_user_id: cu.id,
+        to_user_id: ad.user_id,
+        ad_id: ad.id,
+        body: msgBody.trim(),
+        read: false,
+      });
+      if (error) throw error;
+      setMsgSent(true);
+      setMsgBody("");
+      showToast("✅ Message sent!");
+    } catch(e) { showToast("Failed: " + e.message, "red"); }
+    finally { setMsgSending(false); }
+  };
 
   const emptyForm = { title:"", description:"", price:"", condition:"used", category:"other", contact_method:"site", contact_details:"", images:[] };
   const [form, setForm] = useState(emptyForm);
@@ -82,10 +104,19 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
     setLoading(true);
     const { data } = await supabase
       .from("classifieds")
-      .select("*, profiles(name, callsign, profile_pic)")
+      .select("*")
       .eq("status", "active")
       .order("created_at", { ascending: false });
-    if (data) setAds(data);
+    if (data) {
+      // Fetch seller names separately
+      const userIds = [...new Set(data.map(a => a.user_id).filter(Boolean))];
+      let profileMap = {};
+      if (userIds.length) {
+        const { data: profiles } = await supabase.from("profiles").select("id, name, callsign, profile_pic").in("id", userIds);
+        if (profiles) profiles.forEach(p => { profileMap[p.id] = p; });
+      }
+      setAds(data.map(a => ({ ...a, profiles: profileMap[a.user_id] || null })));
+    }
     setLoading(false);
   };
 
@@ -279,6 +310,26 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
               </div>
             )}
 
+            {/* Message seller */}
+            {cu && cu.id !== viewAd.user_id && (
+              <div style={{ marginBottom:12, background:"#0d1209", border:"1px solid #2a4018", padding:"12px 14px" }}>
+                <div style={{ ...MIL, fontSize:12, color:"var(--accent)", letterSpacing:".08em", marginBottom:8 }}>💬 MESSAGE SELLER</div>
+                {msgSent ? (
+                  <div style={{ ...MONO, fontSize:11, color:"#c8ff00" }}>✅ Message sent! Check your Messages tab for replies.</div>
+                ) : (
+                  <div style={{ display:"flex", gap:8 }}>
+                    <input value={msgBody} onChange={e => setMsgBody(e.target.value)} placeholder={`Ask about "${viewAd.title}"…`}
+                      onKeyDown={e => e.key === "Enter" && sendMessage(viewAd)}
+                      style={{ flex:1, padding:"8px 12px", background:"#080b06", border:"1px solid var(--border)", color:"var(--text)", fontSize:12 }} />
+                    <button className="btn btn-primary btn-sm" onClick={() => sendMessage(viewAd)} disabled={msgSending || !msgBody.trim()}>
+                      {msgSending ? "…" : "Send"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {!cu && <div style={{ ...MONO, fontSize:10, color:"var(--muted)", marginBottom:12 }}>Log in to message the seller</div>}
+
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
               {cu?.id === viewAd.user_id && (
                 <>
@@ -290,7 +341,7 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
               {cu?.role === "admin" && cu?.id !== viewAd.user_id && (
                 <button className="btn btn-danger btn-sm" onClick={() => deleteAd(viewAd.id)}>🗑 Remove Ad</button>
               )}
-              <button className="btn btn-ghost btn-sm" onClick={() => setViewAd(null)}>Close</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setViewAd(null); setMsgSent(false); setMsgBody(""); }}>Close</button>
             </div>
           </div>
         </div>

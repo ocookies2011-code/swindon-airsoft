@@ -26,9 +26,17 @@ export function AdminClassifieds({ showToast }) {
     setLoading(true);
     const { data } = await supabase
       .from("classifieds")
-      .select("*, profiles(name, email, callsign)")
+      .select("*")
       .order("created_at", { ascending: false });
-    if (data) setAds(data);
+    if (data) {
+      const userIds = [...new Set(data.map(a => a.user_id).filter(Boolean))];
+      let profileMap = {};
+      if (userIds.length) {
+        const { data: profiles } = await supabase.from("profiles").select("id, name, email, callsign").in("id", userIds);
+        if (profiles) profiles.forEach(p => { profileMap[p.id] = p; });
+      }
+      setAds(data.map(a => ({ ...a, profiles: profileMap[a.user_id] || null })));
+    }
     setLoading(false);
   };
 

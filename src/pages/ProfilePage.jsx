@@ -6,14 +6,15 @@ import { DesignationInsignia, QRCode, QRScanner, RankInsignia, SquareCheckoutBut
 import { LoadoutTab } from "./LoadoutTab";
 import { ReportCheatTab } from "./ReportCheatTab";
 import { PlayerOrders } from "./PlayerOrders";
-import { PlayerWaitlist } from "./PlayerWaitlist";
+import { PlayerMessages } from "./PlayerMessages";
 
 function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }) {
   const getInitTab = () => {
     const p = window.location.hash.replace("#","").split("/");
-    return p[0]==="profile" && ["profile","waiver","bookings","orders","waitlist","vip","loadout","report"].includes(p[1]) ? p[1] : "profile";
+    return p[0]==="profile" && ["profile","waiver","bookings","orders","messages","vip","loadout","report"].includes(p[1]) ? p[1] : "profile";
   };
   const [tab, setTabState] = useState(getInitTab);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const setTab = (t) => { setTabState(t); window.location.hash = "profile/" + t; };
 
   // Parse stored address string back into structured fields
@@ -364,7 +365,7 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
       </div>
 
       <div className="nav-tabs profile-tabs">
-        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],...(!data.shopClosed ? [["orders","📦 Orders"]] : []),["waitlist","🔔 Waitlist"],["vip","⭐ VIP"],["loadout","🎒 Loadout"],["report","🚩 Report Player"]].map(([t, label]) => (
+        {[["profile","👤 Profile"],["waiver","📋 Waiver"],["bookings","🎟 Bookings"],...(!data.shopClosed ? [["orders","📦 Orders"]] : []),["messages", unreadMsgCount > 0 ? `💬 Messages (${unreadMsgCount})` : "💬 Messages"],["vip","⭐ VIP"],["loadout","🎒 Loadout"],["report","🚩 Report Player"]].map(([t, label]) => (
           <button key={t} className={`nav-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{label}</button>
         ))}
       </div>
@@ -377,7 +378,7 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
         <option value="waiver">📋 Waiver</option>
         <option value="bookings">🎟 Bookings</option>
         {!data.shopClosed && <option value="orders">📦 Orders</option>}
-        <option value="waitlist">🔔 Waitlist</option>
+        <option value="messages">💬 Messages</option>
         <option value="vip">⭐ VIP</option>
         <option value="loadout">🎒 Loadout</option>
         <option value="report">🚩 Report Player</option>
@@ -975,7 +976,7 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
       })()}
 
       {tab === "orders" && <PlayerOrders cu={cu} />}
-      {tab === "waitlist" && <PlayerWaitlist cu={cu} showToast={showToast} />}
+      {tab === "messages" && <PlayerMessages cu={cu} showToast={showToast} />}
 
       {tab === "vip" && (() => {
         const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
