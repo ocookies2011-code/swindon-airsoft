@@ -588,7 +588,7 @@ function AppInner() {
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} data={data} />
 
       <div className="pub-page-wrap">
-        {page === "home"        && <HomePage data={data} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; window.scrollTo({ top:0, behavior:"instant" }); }} />}
+        {page === "home"        && <HomePage data={data} cu={cu} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; window.scrollTo({ top:0, behavior:"instant" }); }} />}
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} trackFunnel={trackFunnel} initialEventId={initialEventId} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />

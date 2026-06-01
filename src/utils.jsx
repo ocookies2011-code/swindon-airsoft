@@ -2222,7 +2222,7 @@ function LatestAdsSection({ setPage, cu }) {
   );
 }
 
-function HomePage({ data, setPage, onProductClick }) {
+function HomePage({ data, cu, setPage, onProductClick }) {
   const isMobile = useMobile(700);
   const nextEvent = data.events
     .filter(e => e.published && new Date(e.date + "T" + e.time) > new Date())
