@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { SA_LOGO_SRC } from "../assets/logoImage";
 import { supabase } from "../supabaseClient";
 
 const MIL  = { fontFamily:"'Oswald','Barlow Condensed',sans-serif" };
@@ -74,6 +75,7 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
   const [showForm, setShowForm] = useState(false);
   const [editAd, setEditAd]     = useState(null);
   const [busy, setBusy]         = useState(false);
+  const [lightbox, setLightbox]  = useState(null); // { images:[], index:0 }
   const [msgBody, setMsgBody]   = useState("");
   const [msgSending, setMsgSending] = useState(false);
   const [msgSent, setMsgSent]   = useState(false);
@@ -296,6 +298,45 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
         </div>
       )}
 
+      {/* ── Image Lightbox ── */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.96)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          {/* Corner brackets */}
+          {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+            <div key={v+h} style={{ position:"absolute", width:28, height:28, zIndex:601,
+              top:v==="top"?12:"auto", bottom:v==="bottom"?12:"auto",
+              left:h==="left"?12:"auto", right:h==="right"?12:"auto",
+              borderTop:v==="top"?"2px solid rgba(200,255,0,.4)":"none",
+              borderBottom:v==="bottom"?"2px solid rgba(200,255,0,.4)":"none",
+              borderLeft:h==="left"?"2px solid rgba(200,255,0,.4)":"none",
+              borderRight:h==="right"?"2px solid rgba(200,255,0,.4)":"none" }} />
+          ))}
+          {lightbox.images.length > 1 && (
+            <button onClick={e => { e.stopPropagation(); setLightbox(p => ({ ...p, index:(p.index-1+p.images.length)%p.images.length })); }}
+              style={{ position:"absolute", left:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer" }}>‹</button>
+          )}
+          <div style={{ position:"relative", display:"inline-block", maxWidth:"88vw", maxHeight:"84vh" }} onClick={e => e.stopPropagation()}>
+            <img src={lightbox.images[lightbox.index]} alt="" style={{ maxWidth:"88vw", maxHeight:"84vh", objectFit:"contain", display:"block", boxShadow:"0 0 80px rgba(0,0,0,.9),0 0 0 1px #1a2808" }} />
+            {/* Watermark */}
+            <div style={{ position:"absolute", inset:0, pointerEvents:"none", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+              <img src={SA_LOGO_SRC} alt="" style={{ width:"clamp(100px,16vw,200px)", height:"auto", opacity:0.18, transform:"rotate(-30deg)", filter:"saturate(0) brightness(10)", userSelect:"none", pointerEvents:"none" }} />
+            </div>
+          </div>
+          {lightbox.images.length > 1 && (
+            <button onClick={e => { e.stopPropagation(); setLightbox(p => ({ ...p, index:(p.index+1)%p.images.length })); }}
+              style={{ position:"absolute", right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:24, width:48, height:48, cursor:"pointer" }}>›</button>
+          )}
+          <button onClick={() => setLightbox(null)}
+            style={{ position:"absolute", top:16, right:16, background:"rgba(200,255,0,.08)", border:"1px solid #2a3a10", color:"#c8ff00", fontSize:14, width:36, height:36, cursor:"pointer", zIndex:602 }}>✕</button>
+          {lightbox.images.length > 1 && (
+            <div style={{ position:"absolute", bottom:16, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"rgba(200,255,0,.4)", letterSpacing:".2em" }}>
+              {lightbox.index+1} / {lightbox.images.length}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* View Ad Modal */}
       {viewAd && (
         <div className="overlay" onClick={() => setViewAd(null)}>
@@ -310,11 +351,18 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
               <div style={{ ...MIL, fontWeight:900, fontSize:28, color:"#c8ff00" }}>£{Number(viewAd.price).toFixed(2)}</div>
             </div>
 
-            {/* Images */}
+            {/* Images — click to open lightbox */}
             {viewAd.images?.length > 0 && (
               <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
                 {viewAd.images.map((img, i) => (
-                  <img key={i} src={img} alt="" style={{ height:120, width:160, objectFit:"cover", border:"1px solid #2a4018" }} />
+                  <div key={i} style={{ position:"relative", cursor:"zoom-in" }}
+                    onClick={() => setLightbox({ images: viewAd.images, index: i })}>
+                    <img src={img} alt="" style={{ height:120, width:160, objectFit:"cover", border:"1px solid #2a4018", display:"block" }} />
+                    <div style={{ position:"absolute", inset:0, pointerEvents:"none", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+                      <img src={SA_LOGO_SRC} alt="" style={{ width:60, height:"auto", opacity:0.15, transform:"rotate(-25deg)", filter:"saturate(0) brightness(10)", userSelect:"none" }} />
+                    </div>
+                    <div style={{ position:"absolute", bottom:4, right:4, background:"rgba(0,0,0,.6)", color:"#c8ff00", fontSize:8, fontFamily:"'Share Tech Mono',monospace", padding:"1px 4px" }}>🔍</div>
+                  </div>
                 ))}
               </div>
             )}
