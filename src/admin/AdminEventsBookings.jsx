@@ -364,7 +364,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             let label;
             if (exDef) { label = varDef ? `${exDef.name} — ${varDef.name}` : exDef.name; }
             else if (shopP) { label = varDef ? `${shopP.name} — ${varDef.name}` : shopP.name; }
-            else { const fallbackEx = ev.extras?.find(e => e.productId === xId); label = fallbackEx ? fallbackEx.name : xId; }
+            else {
+              const fallbackEx = ev.extras?.find(e => e.productId === xId);
+              let fb = fallbackEx?.name || xId;
+              if (fb && fb.startsWith('{')) { try { fb = JSON.parse(fb)?.n || fb; } catch {} }
+              label = fb;
+            }
             return `${label} ×${v}`;
           }).join(", ")
         : "—";
@@ -897,7 +902,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         const varDef = variantId && shopProd
                           ? (shopProd.variants || []).find(vv => vv.id === variantId)
                           : null;
-                        const name  = exDef?.name || shopProd?.name || baseId;
+                        // Parse name if it's stored as JSON (legacy format)
+                        let rawName = exDef?.name || shopProd?.name || null;
+                        if (rawName && rawName.startsWith('{')) {
+                          try { rawName = JSON.parse(rawName)?.n || rawName; } catch { /* keep as is */ }
+                        }
+                        const name = rawName || '(deleted item)';
                         const label = varDef ? `${name} — ${varDef.name}` : name;
                         resolvedExtras.push({ key, label, qty });
                       });
