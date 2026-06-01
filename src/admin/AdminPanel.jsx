@@ -27,6 +27,7 @@ import { AdminMessages }           from "./AdminMessages";
 import { AdminSettings }           from "./AdminSettings";
 import { AdminSecurityEvents } from "./AdminSecurityEvents";
 import { AdminClassifieds }    from "./AdminClassifieds";
+import { AdminReportedMessages } from "./AdminReportedMessages";
 import { AdminVisitorStats }       from "./AdminVisitorStats";
 import { AdminAuditLog }           from "./AdminAuditLog";
 import { AdminCheatReports }       from "./AdminCheatReports";
@@ -46,7 +47,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const getInitialSection = () => {
     const parts = window.location.hash.replace("#","").split("/");
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","scan-waiver","players","shop",
-      "leaderboard-admin","revenue","visitor-stats","security","classifieds-admin","gallery-admin","qa-admin","staff-admin",
+      "leaderboard-admin","revenue","visitor-stats","security","classifieds-admin","reported-messages","gallery-admin","qa-admin","staff-admin",
       "contact-admin","messages","news-admin","marshal-admin","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
     return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
   };
@@ -136,7 +137,8 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
     // ── ANALYTICS ────────────────────────────────────────
     { id: "leaderboard-admin", label: "Leaderboard",       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>, group: "ANALYTICS" },
-    { id: "classifieds-admin", label: "Classifieds",      icon: "🛒", group: "COMMUNITY" },
+    { id: "classifieds-admin",  label: "Classifieds",      icon: "🛒", group: "COMMUNITY" },
+    { id: "reported-messages",  label: "Reports",          icon: "🚩", group: "COMMUNITY" },
     { id: "visitor-stats",     label: "Visitor Stats",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, group: "ANALYTICS" },
     { id: "security",           label: "Security",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, group: "ANALYTICS" },
     ...(isSuperAdmin ? [{ id: "revenue", label: "Revenue", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, group: "ANALYTICS" }] : []),
@@ -209,7 +211,8 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           <div style={{ display: section === "shop" ? "block" : "none" }}><AdminShop data={data} save={save} showToast={showToast} cu={cu} /></div>
           {section === "leaderboard-admin" && <AdminLeaderboard data={data} updateUser={updateUser} showToast={showToast} />}
           {section === "revenue" && isSuperAdmin && <AdminRevenue data={data} save={save} showToast={showToast} cu={cu} />}
-          {section === "classifieds-admin" && <AdminClassifieds data={data} cu={cu} showToast={showToast} />}
+          {section === "reported-messages" && <AdminReportedMessages showToast={showToast} />}
+      {section === "classifieds-admin" && <AdminClassifieds data={data} cu={cu} showToast={showToast} />}
       {section === "security" && <AdminSecurityEvents data={data} cu={cu} showToast={showToast} supabase={supabase} />}
       {section === "visitor-stats" && <AdminVisitorStats data={data} cu={cu} showToast={showToast} />}
           {section === "gallery-admin" && <AdminGallery data={data} save={save} showToast={showToast} />}
