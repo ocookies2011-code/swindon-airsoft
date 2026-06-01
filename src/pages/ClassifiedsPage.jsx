@@ -22,6 +22,49 @@ const CONDITIONS = {
   spares:    { label:"Spares/Repair", color:"#ef4444" },
 };
 
+function ImageUploader({ images, onChange }) {
+  const [uploading, setUploading] = React.useState(false);
+  const MAX = 4;
+
+  const upload = async (file) => {
+    if (!file) return;
+    if (images.length >= MAX) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `classifieds/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('classifieds').upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from('classifieds').getPublicUrl(path);
+      onChange([...images, data.publicUrl]);
+    } catch(e) {
+      // Fallback: if bucket doesn't exist, use object URL for preview
+      const url = URL.createObjectURL(file);
+      onChange([...images, url]);
+    } finally { setUploading(false); }
+  };
+
+  const remove = (i) => onChange(images.filter((_,idx) => idx !== i));
+
+  return (
+    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+      {images.map((img, i) => (
+        <div key={i} style={{ position:"relative", width:100, height:80 }}>
+          <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", border:"1px solid var(--border)" }} />
+          <button onClick={() => remove(i)}
+            style={{ position:"absolute", top:2, right:2, background:"rgba(0,0,0,.8)", border:"none", color:"#ef4444", cursor:"pointer", fontSize:12, width:18, height:18, lineHeight:"18px", textAlign:"center", padding:0 }}>✕</button>
+        </div>
+      ))}
+      {images.length < MAX && (
+        <label style={{ width:100, height:80, border:"1px dashed var(--border)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"var(--muted)", fontSize:11, gap:4 }}>
+          {uploading ? "Uploading…" : <>📷<span>Add photo</span></>}
+          <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => upload(e.target.files[0])} disabled={uploading} />
+        </label>
+      )}
+    </div>
+  );
+}
+
 export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
   const [ads, setAds]           = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -305,14 +348,8 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
             </div>
 
             <div className="form-group">
-              <label>Image URLs <span style={{ color:"var(--muted)", fontSize:10 }}>(paste URLs, one per line)</span></label>
-              <textarea
-                value={(form.images||[]).join("\n")}
-                onChange={e => setF("images", e.target.value.split("\n").map(s=>s.trim()).filter(Boolean))}
-                placeholder="https://i.imgur.com/example.jpg"
-                rows={3}
-                style={{ resize:"vertical", fontFamily:"monospace", fontSize:11 }}
-              />
+              <label>Photos <span style={{ color:"var(--muted)", fontSize:10 }}>(up to 4 images)</span></label>
+              <ImageUploader images={form.images||[]} onChange={imgs => setF("images", imgs)} />
             </div>
 
             <div className="gap-2 mt-2">
