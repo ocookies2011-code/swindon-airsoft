@@ -2667,82 +2667,8 @@ function HomePage({ data, setPage, onProductClick }) {
       </div>
 
       {/* READY TO DEPLOY — CTA section */}
-      {nextEvent && (() => {
-        const target = nextEvent.date + "T" + nextEvent.time + ":00";
-        const diff = Math.max(0, new Date(target) - new Date());
-        const cdDays  = Math.floor(diff / 86400000);
-        const cdHours = Math.floor((diff % 86400000) / 3600000);
-        const cdMins  = Math.floor((diff % 3600000) / 60000);
-        const spotsLeft = (nextEvent.walkOnSlots + nextEvent.rentalSlots) - nextEvent.bookings.reduce((s, b) => s + (b.qty || 1), 0);
-        return (
-          <div style={{ background:"linear-gradient(180deg,#070b04 0%,#040604 100%)", borderTop:"1px solid #1a2808", padding:"56px 20px", position:"relative", overflow:"hidden" }}>
-            {/* Background grid */}
-            <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(200,255,0,.015) 40px,rgba(200,255,0,.015) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(200,255,0,.015) 40px,rgba(200,255,0,.015) 41px)", pointerEvents:"none" }} />
-            {/* Corner brackets */}
-            {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
-              <div key={v+h} style={{ position:"absolute", width:20, height:20, zIndex:2,
-                top:v==="top"?16:"auto", bottom:v==="bottom"?16:"auto",
-                left:h==="left"?16:"auto", right:h==="right"?16:"auto",
-                borderTop:v==="top"?"1px solid rgba(200,255,0,.4)":"none",
-                borderBottom:v==="bottom"?"1px solid rgba(200,255,0,.4)":"none",
-                borderLeft:h==="left"?"1px solid rgba(200,255,0,.4)":"none",
-                borderRight:h==="right"?"1px solid rgba(200,255,0,.4)":"none",
-              }} />
-            ))}
-            <div style={{ maxWidth:900, margin:"0 auto", position:"relative", zIndex:1 }}>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".35em", color:"rgba(200,255,0,.4)", marginBottom:14, textTransform:"uppercase", textAlign:"center" }}>◆ NEXT OPERATION ◆</div>
-              <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:24 }}>
-                {/* Left: event info + book button */}
-                <div style={{ flex:"1 1 260px" }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:"clamp(28px,5vw,48px)", letterSpacing:".06em", textTransform:"uppercase", color:"#fff", lineHeight:.95, marginBottom:12 }}>
-                    {nextEvent.title}
-                  </div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"rgba(200,255,0,.6)", marginBottom:6 }}>
-                    📍 {nextEvent.location}
-                  </div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"rgba(200,255,0,.6)", marginBottom:20 }}>
-                    🗓 {new Date(nextEvent.date + "T12:00:00").toLocaleDateString("en-GB",{timeZone:"Europe/London",weekday:"long",day:"numeric",month:"long"})} · {nextEvent.time} HRS GMT
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-                    <button
-                      style={{ background:"#c8ff00", color:"#000", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, letterSpacing:".2em", padding:"13px 36px", border:"none", cursor:"pointer", textTransform:"uppercase", display:"inline-flex", alignItems:"center", gap:8 }}
-                      onMouseEnter={e => e.currentTarget.style.background="#d8ff33"}
-                      onMouseLeave={e => e.currentTarget.style.background="#c8ff00"}
-                      onClick={() => setPage("events")}
-                    >
-                      ▸ BOOK NOW
-                    </button>
-                    {spotsLeft > 0 && spotsLeft <= 10 && (
-                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#ef5350", letterSpacing:".1em", border:"1px solid rgba(239,83,80,.4)", padding:"4px 10px", background:"rgba(239,83,80,.06)" }}>
-                        ⚠ {spotsLeft} SPOTS LEFT
-                      </span>
-                    )}
-                    {spotsLeft <= 0 && (
-                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#ef5350", letterSpacing:".1em", border:"1px solid rgba(239,83,80,.4)", padding:"4px 10px", background:"rgba(239,83,80,.06)" }}>
-                        ✕ FULLY BOOKED
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {/* Right: compact countdown */}
-                <div style={{ flex:"0 0 auto", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".3em", color:"rgba(200,255,0,.4)", textTransform:"uppercase" }}>T-MINUS</div>
-                  <div style={{ display:"flex", gap:6 }}>
-                    {[["DAYS",cdDays],["HRS",cdHours],["MIN",cdMins]].map(([l,n]) => (
-                      <div key={l} style={{ textAlign:"center", background:"#0a0f06", border:"1px solid #2a4018", padding:"14px 16px", minWidth:72 }}>
-                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:48, fontWeight:900, color:diff < 86400000 ? "#c8ff00" : "#fff", lineHeight:1, letterSpacing:".02em", textShadow: diff < 86400000 ? "0 0 20px rgba(200,255,0,.3)" : "none" }}>
-                          {String(n).padStart(2,"0")}
-                        </div>
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, letterSpacing:".2em", color:"#3a5010", marginTop:4 }}>{l}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* ── LATEST ADS ── */}
+      <LatestAdsSection setPage={setPage} cu={cu} />
 
       {/* VIP BANNER */}
       <div style={{ background:"linear-gradient(180deg,#0c1009 0%,#080d05 100%)", borderTop:"2px solid #2a3a10", borderBottom:"2px solid #2a3a10", padding:"52px 20px", position:"relative", overflow:"hidden" }}>
