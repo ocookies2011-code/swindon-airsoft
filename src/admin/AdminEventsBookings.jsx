@@ -1804,23 +1804,31 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       {extras.map(([key, qty]) => {
                         const [extraId, variantId] = key.includes(":") ? key.split(":") : [key, null];
                         // 1. Match event extra by its own id
-                        let exDef    = evObj?.extras?.find(e => e.id === extraId);
-                        // 2. Match shop product via event extra's productId, or directly by extraId
+                        let exDef = evObj?.extras?.find(e => e.id === extraId);
+                        // 2. Try matching by productId (key may be productId not extra id)
+                        if (!exDef) exDef = evObj?.extras?.find(e => e.productId === extraId);
+                        // 3. Match shop product via event extra's productId, or directly by extraId
                         let shopProd = exDef
                           ? (data?.shop || []).find(p => p.id === exDef.productId)
                           : (data?.shop || []).find(p => p.id === extraId);
-                        // 3. Search by variantId across all products
+                        // 4. Search by variantId across all products
                         if (!shopProd && variantId)
                           shopProd = (data?.shop || []).find(p => (p.variants || []).some(vv => vv.id === variantId));
-                        // 4. Match event extra by productId if still missing
+                        // 5. Try extraId as a variant id
+                        if (!shopProd)
+                          shopProd = (data?.shop || []).find(p => (p.variants || []).some(vv => vv.id === extraId));
+                        // 6. Match event extra by productId if still missing
                         if (!exDef && shopProd)
                           exDef = evObj?.extras?.find(e => e.productId === shopProd.id);
-                        const varDef    = variantId && shopProd
+                        const varDef = variantId && shopProd
                           ? (shopProd.variants || []).find(vv => vv.id === variantId)
                           : null;
-                        const name      = exDef?.name || shopProd?.name || extraId;
-                        const label     = varDef ? `${name} — ${varDef.name}` : name;
-                        const unitPrice = varDef ? Number(varDef.price) : (shopProd ? Number(shopProd.price) : 0);
+                        // Parse JSON name if stored as legacy format
+                        let rawName = exDef?.name || shopProd?.name || null;
+                        if (rawName?.startsWith('{')) { try { rawName = JSON.parse(rawName)?.n || rawName; } catch {} }
+                        const name  = rawName || '⚠ Unknown extra';
+                        const label = varDef ? `${name} — ${varDef.name}` : name;
+                        const unitPrice = varDef ? Number(varDef.price) : exDef ? Number(exDef.price) : (shopProd ? Number(shopProd.price) : 0);
                         return (
                           <div key={key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #1a1a1a", fontSize:13 }}>
                             <span style={{ color:"var(--muted)" }}>+ {label} ×{qty}</span>
