@@ -2155,6 +2155,73 @@ function PublicNav(props) {
 
 
 // ── Home Page ─────────────────────────────────────────────
+// ── Latest Ads Section (homepage) ─────────────────────────────────────────
+function LatestAdsSection({ setPage, cu }) {
+  const [ads, setAds] = React.useState([]);
+  const MIL  = { fontFamily:"'Oswald','Barlow Condensed',sans-serif" };
+  const MONO = { fontFamily:"'Share Tech Mono',monospace" };
+
+  React.useEffect(() => {
+    import("./supabaseClient").then(({ supabase }) => {
+      supabase.from("classifieds").select("id, title, price, condition, category, images, created_at")
+        .eq("status", "active").order("created_at", { ascending: false }).limit(4)
+        .then(({ data }) => { if (data) setAds(data); });
+    });
+  }, []);
+
+  const CONDITION_COLOR = { new:"#c8ff00", like_new:"#4fc3f7", used:"#f97316", spares:"#ef4444" };
+  const CAT_ICON = { rifle:"🔫", pistol:"🔫", gear:"🦺", clothing:"👕", accessories:"🔧", ammo:"⚙️", other:"📦" };
+
+  if (ads.length === 0) return null;
+
+  return (
+    <div style={{ background:"linear-gradient(180deg,#070b04 0%,#040604 100%)", borderTop:"1px solid #1a2808", padding:"52px 20px", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(200,255,0,.015) 40px,rgba(200,255,0,.015) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(200,255,0,.015) 40px,rgba(200,255,0,.015) 41px)", pointerEvents:"none" }} />
+      <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
+          <div>
+            <div style={{ ...MONO, fontSize:9, letterSpacing:".35em", color:"rgba(200,255,0,.4)", marginBottom:6, textTransform:"uppercase" }}>◆ MEMBER CLASSIFIEDS ◆</div>
+            <div style={{ ...MIL, fontWeight:900, fontSize:28, color:"#fff", letterSpacing:".06em", textTransform:"uppercase" }}>LATEST ADS</div>
+          </div>
+          <button onClick={() => setPage("classifieds")}
+            style={{ ...MIL, fontWeight:700, fontSize:13, letterSpacing:".15em", background:"transparent", border:"1px solid rgba(200,255,0,.4)", color:"#c8ff00", padding:"8px 20px", cursor:"pointer", textTransform:"uppercase" }}
+            onMouseEnter={e => e.currentTarget.style.background="rgba(200,255,0,.08)"}
+            onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+            VIEW ALL ADS →
+          </button>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:12 }}>
+          {ads.map(ad => (
+            <div key={ad.id} onClick={() => setPage("classifieds")}
+              style={{ background:"#0d1209", border:"1px solid #1e2e12", cursor:"pointer", transition:"border-color .15s", overflow:"hidden" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor="#c8ff00"}
+              onMouseLeave={e => e.currentTarget.style.borderColor="#1e2e12"}>
+              <div style={{ height:130, background:"#080b06", overflow:"hidden", position:"relative" }}>
+                {ad.images?.[0]
+                  ? <img src={ad.images[0]} alt={ad.title} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => e.target.style.display="none"} />
+                  : <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, color:"#1e2e12" }}>{CAT_ICON[ad.category] || "📦"}</div>
+                }
+                <div style={{ position:"absolute", top:6, right:6, background: CONDITION_COLOR[ad.condition] || "#f97316", color:"#000", fontWeight:900, fontSize:8, fontFamily:"'Share Tech Mono',monospace", padding:"2px 5px", letterSpacing:".08em" }}>
+                  {ad.condition === "like_new" ? "LIKE NEW" : (ad.condition || "USED").toUpperCase()}
+                </div>
+              </div>
+              <div style={{ padding:"10px 12px" }}>
+                <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:700, fontSize:13, color:"#c8d4b0", lineHeight:1.2, marginBottom:6, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ad.title}</div>
+                <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:900, fontSize:20, color:"#c8ff00" }}>£{Number(ad.price).toFixed(2)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {!cu && (
+          <div style={{ marginTop:20, textAlign:"center", fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>
+            Log in and attend a game day to post your own ads
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function HomePage({ data, setPage, onProductClick }) {
   const isMobile = useMobile(700);
   const nextEvent = data.events
