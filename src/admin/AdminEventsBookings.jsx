@@ -907,7 +907,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         if (rawName && rawName.startsWith('{')) {
                           try { rawName = JSON.parse(rawName)?.n || rawName; } catch { /* keep as is */ }
                         }
-                        const name = rawName || '(deleted item)';
+                        const name = rawName || '⚠ Unknown extra';
                         const label = varDef ? `${name} — ${varDef.name}` : name;
                         resolvedExtras.push({ key, label, qty });
                       });
