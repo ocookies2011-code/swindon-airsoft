@@ -75,7 +75,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
 
           {/* Desktop links */}
           <div className="pub-nav-links" ref={dropdownRef} style={{ flex:"0 0 auto", overflow:"visible" }}>
-            {allLinks.map(l => (
+            {allLinks.filter(l => !l.adminOnly || cu?.role === 'admin').map(l => (
               l.children ? (
                 <div key={l.id} className="pub-nav-link-wrap">
                   <button
@@ -182,7 +182,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
           <div style={{ padding:"8px 16px 12px", borderBottom:"1px solid #1a2808" }}>
             <SiteSearch data={data} setPage={(p) => { setPage(p); setDrawerOpen(false); }} />
           </div>
-          {allLinks.map(l => (
+          {allLinks.filter(l => !l.adminOnly || cu?.role === 'admin').map(l => (
             l.children ? (
               <div key={l.id}>
                 <div style={{ padding:"10px 20px 4px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:9, fontWeight:600, letterSpacing:".25em", color:"var(--muted)", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
