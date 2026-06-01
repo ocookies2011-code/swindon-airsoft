@@ -32,7 +32,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
         { id: "gift-vouchers", label: "Gift Vouchers", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8a000" strokeWidth="2"><rect x="2" y="9" width="20" height="13" rx="1"/><path d="M12 9V22M2 14h20M7 9c0-2.8 2.2-5 5-5s5 2.2 5 5" strokeLinecap="round"/></svg> },
       ]
     },
-    { id: "classifieds", label: "ADS", adminOnly: true, icon: "🛒" },
+    { id: "classifieds", label: "ADS", icon: "🛒" },
     { id: "leaderboard", label: "Leaderboard", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg> },
     { id: "news",        label: "News",        icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg> },
     { id: "gallery",     label: "Gallery",     icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },

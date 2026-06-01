@@ -642,7 +642,7 @@ function AppInner() {
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
         {page === "reset"       && <PasswordResetPage token={resetToken} setPage={setPage} showToast={showToast} />}
         {page === "checkin"     && <SelfCheckInPage cu={cu} setAuthModal={setAuthModal} />}
-        {page === "classifieds" && cu?.role === "admin" && <ClassifiedsPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
+        {page === "classifieds" && <ClassifiedsPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "props"       && (propsEnabled ? <PropsPage /> : <div style={{padding:60,textAlign:"center",color:"var(--muted)"}}>This page is currently unavailable.</div>)}
         {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "about"       && <AboutPage setPage={setPage} />}

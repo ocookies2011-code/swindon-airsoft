@@ -69,6 +69,7 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
   const [ads, setAds]           = useState([]);
   const [loading, setLoading]   = useState(true);
   const [catFilter, setCatFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [viewAd, setViewAd]     = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editAd, setEditAd]     = useState(null);
@@ -105,7 +106,7 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
     const { data } = await supabase
       .from("classifieds")
       .select("*")
-      .eq("status", "active")
+      .in("status", ["active", "sold"])
       .order("created_at", { ascending: false });
     if (data) {
       // Fetch seller names separately
@@ -122,7 +123,7 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = catFilter === "all" ? ads : ads.filter(a => a.category === catFilter);
+  const filtered = ads.filter(a => a.status === statusFilter && (catFilter === "all" || a.category === catFilter));
 
   const openForm = (ad = null) => {
     if (!cu) { setAuthModal("login"); return; }
@@ -174,6 +175,14 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
     load();
   };
 
+  const markUnsold = async (id) => {
+    await supabase.from("classifieds").update({ status:"active" }).eq("id", id);
+    showToast("🔄 Ad relisted as for sale");
+    setViewAd(null);
+    setStatusFilter("active");
+    load();
+  };
+
   const deleteAd = async (id) => {
     if (!window.confirm("Delete this ad?")) return;
     await supabase.from("classifieds").delete().eq("id", id);
@@ -200,6 +209,7 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
             {cond.label.toUpperCase()}
           </div>
           {isOwn && <div style={{ position:"absolute", top:8, left:8, background:"rgba(200,255,0,.15)", border:"1px solid rgba(200,255,0,.4)", color:"#c8ff00", fontSize:9, ...MONO, padding:"2px 6px" }}>YOUR AD</div>}
+          {ad.status === "sold" && <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center" }}><div style={{ ...MIL, fontWeight:900, fontSize:22, color:"#4fc3f7", border:"2px solid #4fc3f7", padding:"4px 14px", letterSpacing:".15em", transform:"rotate(-15deg)" }}>SOLD</div></div>}
         </div>
         {/* Info */}
         <div style={{ padding:"12px 14px" }}>
@@ -213,6 +223,31 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
       </div>
     );
   };
+
+  // Gate: must have attended at least 1 game day
+  if (!cu) return (
+    <div className="page-content">
+      <div style={{ textAlign:"center", padding:60, background:"#0d1209", border:"1px solid #1e2e12" }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
+        <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:900, fontSize:22, color:"var(--accent)", marginBottom:8 }}>MEMBERS ONLY</div>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", marginBottom:20 }}>You must be logged in to access the classifieds.</div>
+        <button className="btn btn-primary" onClick={() => setAuthModal("login")}>Log In</button>
+      </div>
+    </div>
+  );
+
+  if (cu.gamesAttended === 0 && cu.role !== "admin") return (
+    <div className="page-content">
+      <div style={{ textAlign:"center", padding:60, background:"#0d1209", border:"1px solid #1e2e12" }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🎯</div>
+        <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:900, fontSize:22, color:"var(--accent)", marginBottom:8 }}>GAME DAY REQUIRED</div>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", lineHeight:1.8, marginBottom:20 }}>
+          The classifieds section is available to members who have<br/>attended at least one game day at Swindon Airsoft.
+        </div>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>Book your first game day to unlock access.</div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="page-content">
@@ -230,7 +265,13 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
         )}
       </div>
 
-      {/* Category filter */}
+      {/* Status + Category filter */}
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:12 }}>
+        {[["active","🟢 For Sale"],["sold","✅ Sold"]].map(([s,l]) => (
+          <button key={s} className={`btn btn-sm ${statusFilter === s ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setStatusFilter(s)}>{l}</button>
+        ))}
+      </div>
       <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
         {CATEGORIES.map(c => (
           <button key={c.id} className={`btn btn-sm ${catFilter === c.id ? "btn-primary" : "btn-ghost"}`}
@@ -334,7 +375,10 @@ export function ClassifiedsPage({ cu, showToast, setAuthModal }) {
               {cu?.id === viewAd.user_id && (
                 <>
                   <button className="btn btn-primary btn-sm" onClick={() => { setViewAd(null); openForm(viewAd); }}>✏️ Edit</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => markSold(viewAd.id)}>✅ Mark Sold</button>
+                  {viewAd.status === "active"
+                    ? <button className="btn btn-ghost btn-sm" onClick={() => markSold(viewAd.id)}>✅ Mark Sold</button>
+                    : <button className="btn btn-primary btn-sm" onClick={() => markUnsold(viewAd.id)}>🔄 Relist</button>
+                  }
                   <button className="btn btn-danger btn-sm" onClick={() => deleteAd(viewAd.id)}>🗑 Delete</button>
                 </>
               )}
