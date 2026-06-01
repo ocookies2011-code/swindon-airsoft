@@ -888,15 +888,20 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       Object.entries(b.extras).filter(([, v]) => v > 0).forEach(([key, qty]) => {
                         const [baseId, variantId] = key.includes(":") ? key.split(":") : [key, null];
                         // 1. Match event extra by its own id
-                        let exDef    = ev.extras?.find(e => e.id === baseId);
-                        // 2. Match shop product — via event extra's productId, or directly by baseId
+                        let exDef = ev.extras?.find(e => e.id === baseId);
+                        // 2. If not found, try matching by productId (key may be productId not extra id)
+                        if (!exDef) exDef = ev.extras?.find(e => e.productId === baseId);
+                        // 3. Match shop product
                         let shopProd = exDef
                           ? (data.shop || []).find(p => p.id === exDef.productId)
                           : (data.shop || []).find(p => p.id === baseId);
-                        // 3. If still no shopProd, search by variantId across all products
+                        // 4. Search by variantId across all products
                         if (!shopProd && variantId)
                           shopProd = (data.shop || []).find(p => (p.variants || []).some(vv => vv.id === variantId));
-                        // 4. If no exDef yet, try matching event extra by productId
+                        // 5. If still no shopProd, try baseId as a variant id
+                        if (!shopProd)
+                          shopProd = (data.shop || []).find(p => (p.variants || []).some(vv => vv.id === baseId));
+                        // 6. If no exDef yet, try matching event extra by productId
                         if (!exDef && shopProd)
                           exDef = ev.extras?.find(e => e.productId === shopProd.id);
                         const varDef = variantId && shopProd
