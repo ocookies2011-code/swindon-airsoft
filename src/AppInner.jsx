@@ -183,6 +183,9 @@ function AppInner() {
   useEffect(() => {
     // Only track public pages, not admin
     if (page === "admin") return;
+    // Wait for auth to resolve so we capture user identity correctly
+    // authLoading=true means we don't yet know if the visitor is logged in
+    if (authLoading) return;
     // Stable session ID for this browser tab
     let sid = sessionStorage.getItem("sa_sid");
     if (!sid) { sid = Math.random().toString(36).slice(2); sessionStorage.setItem("sa_sid", sid); }
@@ -194,7 +197,7 @@ function AppInner() {
       userName:  cu?.name || null,
       sessionId: sid,
     });
-  }, [page, cu?.id]);
+  }, [page, cu?.id, authLoading]);
 
   // ── Funnel tracking helper (passed to child pages) ───────
   // Call this from any page when the visitor reaches a deeper funnel step
