@@ -68,9 +68,9 @@ function NewsCard({ post, full, onClick }) {
   );
 }
 
-export function NewsPage({ data }) {
+export function NewsPage({ data, initialPostId }) {
   const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(initialPostId || null);
   const news = (data.news || []);
   const filtered = filter === "all" ? news : news.filter(p => p.category === filter);
 
@@ -79,7 +79,7 @@ export function NewsPage({ data }) {
     if (!post) { setSelected(null); return null; }
     return (
       <div className="page-content-sm" style={{ paddingTop:32 }}>
-        <button className="btn btn-ghost btn-sm" style={{ marginBottom:20 }} onClick={() => setSelected(null)}>← Back to News</button>
+        <button className="btn btn-ghost btn-sm" style={{ marginBottom:20 }} onClick={() => { setSelected(null); window.history.pushState(null, "", "/news"); window.scrollTo({ top: 0, behavior: "instant" }); }}>← Back to News</button>
         <NewsCard post={post} full/>
       </div>
     );
@@ -120,7 +120,7 @@ export function NewsPage({ data }) {
         ) : (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:16 }}>
             {filtered.map(post => (
-              <NewsCard key={post.id} post={post} onClick={() => setSelected(post.id)}/>
+              <NewsCard key={post.id} post={post} onClick={() => { setSelected(post.id); window.history.pushState(null, "", "/news/" + post.id); window.scrollTo({ top: 0, behavior: "instant" }); }}/>
             ))}
           </div>
         )}

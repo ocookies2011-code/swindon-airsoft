@@ -4,8 +4,17 @@ import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { SA_LOGO_SRC } from "../assets/logoImage";
 
-function GalleryPage({ data }) {
-  const [openAlbum, setOpenAlbum] = useState(null);
+function GalleryPage({ data, initialAlbumId }) {
+  const [openAlbum, setOpenAlbum] = useState(() => {
+    if (!initialAlbumId) return null;
+    return null; // resolved after data loads
+  });
+  // Resolve initialAlbumId once data is available
+  React.useEffect(() => {
+    if (!initialAlbumId || !data.albums?.length) return;
+    const found = data.albums.find(a => a.id === initialAlbumId);
+    if (found) setOpenAlbum(found);
+  }, [initialAlbumId, data.albums]);
   const [lightbox, setLightbox]   = useState(null);
   const getAlbumImages = (album) => album.images;
 
@@ -13,6 +22,8 @@ function GalleryPage({ data }) {
 
   const handleOpenAlbum = (album) => {
     setOpenAlbum(album);
+    window.history.pushState(null, "", "/gallery/" + album.id);
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
   const closeLightbox = () => setLightbox(null);
   const prevImg = () => {
@@ -130,7 +141,7 @@ function GalleryPage({ data }) {
       <PageHeader />
       <div style={{ maxWidth:1100, margin:'0 auto', padding:'24px 16px 80px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:24, flexWrap:'wrap' }}>
-          <button onClick={() => setOpenAlbum(null)}
+          <button onClick={() => { setOpenAlbum(null); window.history.pushState(null, "", "/gallery"); window.scrollTo({ top: 0, behavior: "instant" }); }}
             style={{ background:'transparent', border:'1px solid #2a3a10', color:'#5a7a30', fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:'.15em', padding:'6px 14px', cursor:'pointer' }}>
             ← ALL ALBUMS
           </button>

@@ -89,9 +89,21 @@ function AppInner() {
     return p === "events" && parts[1] ? parts[1] : null;
   };
 
+  const getInitialAlbumId = () => {
+    const { p, parts } = parsePath();
+    return p === "gallery" && parts[1] ? parts[1] : null;
+  };
+
+  const getInitialPostId = () => {
+    const { p, parts } = parsePath();
+    return p === "news" && parts[1] ? parts[1] : null;
+  };
+
   const [page, setPageState] = useState(getInitialPage);
   const [initialEventId, setInitialEventId] = useState(getInitialEventId);
   const [initialProductId, setInitialProductId] = useState(getInitialProductId);
+  const [initialAlbumId, setInitialAlbumId] = useState(getInitialAlbumId);
+  const [initialPostId, setInitialPostId] = useState(getInitialPostId);
   const [resetToken, setResetToken] = useState(() => {
     const { p, parts } = parsePath();
     return p === "reset" ? (parts[1] || null) : null;
@@ -149,6 +161,16 @@ function AppInner() {
       if (p === "events") {
         setPageState("events");
         setInitialEventId(parts[1] || null);
+        return;
+      }
+      if (p === "gallery") {
+        setPageState("gallery");
+        setInitialAlbumId(parts[1] || null);
+        return;
+      }
+      if (p === "news") {
+        setPageState("news");
+        setInitialPostId(parts[1] || null);
         return;
       }
       if (PUBLIC_PAGES.includes(p)) { setPageState(p); return; }
@@ -709,9 +731,9 @@ function AppInner() {
         {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} onPlayerClick={id => { goToPlayer(id); }} />}
         {page === "marshal"     && cu?.canMarshal && <MarshalCheckinPage data={data} showToast={showToast} save={save} updateUser={updateUserAndRefresh} />}
         {page === "marshal"     && !cu?.canMarshal && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Access denied.</div>}
-        {page === "news"           && <NewsPage data={data} />}
+        {page === "news"           && <NewsPage data={data} initialPostId={initialPostId} />}
         {page === "marshal-schedule" && <MarshalSchedulePage data={data} cu={cu} showToast={showToast} />}
-        {page === "gallery"     && <GalleryPage data={data} />}
+        {page === "gallery"     && <GalleryPage data={data} initialAlbumId={initialAlbumId} />}
         {page === "qa"          && <QAPage data={data} />}
         {page === "gift-vouchers" && <GiftVoucherPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
