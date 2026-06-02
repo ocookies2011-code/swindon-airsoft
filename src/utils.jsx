@@ -1715,25 +1715,57 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
           approved: false,
         });
       }
+      // Notify admin BEFORE signOut so the email fires while page is still active
+      try {
+        await sendEmail({
+          toEmail: "swindonairsoftfield@gmail.com",
+          toName: "Swindon Airsoft Admin",
+          subject: "🆕 New Player Registration: " + form.name.trim(),
+          htmlContent: `
+            <div style="font-family:'Courier New',monospace;max-width:600px;background:#000;padding:0">
+              <div style="background:#0a1a0a;padding:24px 32px;border-bottom:1px solid #2a3a2a">
+                <p style="margin:0 0 6px;color:#8aaa8a;font-size:11px;letter-spacing:3px;text-transform:uppercase">Swindon Airsoft · Admin Notification</p>
+                <h1 style="margin:0;color:#c8ff00;font-size:26px;font-weight:900;letter-spacing:2px;text-transform:uppercase">New Player Registration</h1>
+              </div>
+              <div style="padding:0 32px">
+                <table style="width:100%;border-collapse:collapse">
+                  <tr style="border-bottom:1px solid #1a2a1a">
+                    <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase;width:120px">Name</td>
+                    <td style="padding:12px 0;color:#e0e0e0;font-weight:bold">${form.name.trim()}</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid #1a2a1a">
+                    <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Email</td>
+                    <td style="padding:12px 0"><a href="mailto:${form.email.trim()}" style="color:#c8ff00">${form.email.trim()}</a></td>
+                  </tr>
+                  <tr style="border-bottom:1px solid #1a2a1a">
+                    <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Phone</td>
+                    <td style="padding:12px 0;color:#e0e0e0">${form.phone.trim()}</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid #1a2a1a">
+                    <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Date of Birth</td>
+                    <td style="padding:12px 0;color:#e0e0e0">${form.dob}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Postcode</td>
+                    <td style="padding:12px 0;color:#e0e0e0">${form.postcode.trim().toUpperCase()}</td>
+                  </tr>
+                </table>
+              </div>
+              <div style="padding:20px 32px;border-top:1px solid #2a3a2a;text-align:center">
+                <a href="https://swindon-airsoft.com/admin#players" style="display:inline-block;background:#c8ff00;color:#000;padding:12px 28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-size:12px">Approve / Reject in Admin</a>
+              </div>
+              <div style="padding:12px 32px;text-align:center">
+                <p style="margin:0;color:#4a6a4a;font-size:10px;letter-spacing:2px;text-transform:uppercase">Swindon Airsoft · Auto-Generated Notification</p>
+              </div>
+            </div>`,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send registration notification email:", emailErr);
+      }
       await supabase.auth.signOut();
       showToast("✅ Registration submitted! You'll be notified by email once approved.");
       setMode("login");
       setForm(p => ({ ...p, password: "", confirmPassword: "", dob: "", postcode: "" }));
-      // Notify admin
-      setTimeout(() => {
-        sendEmail({
-          toEmail: "swindonairsoftfield@gmail.com",
-          toName: "Swindon Airsoft Admin",
-          subject: "🆕 New Registration: " + form.name.trim(),
-          htmlContent: "<div style='font-family:Arial'><h3>New Player Registration</h3>" +
-            "<p><b>Name:</b> " + form.name.trim() + "</p>" +
-            "<p><b>Email:</b> " + form.email.trim() + "</p>" +
-            "<p><b>Phone:</b> " + form.phone.trim() + "</p>" +
-            "<p><b>DOB:</b> " + form.dob + "</p>" +
-            "<p><b>Postcode:</b> " + form.postcode.trim().toUpperCase() + "</p>" +
-            "<p>Log in to <a href='https://swindon-airsoft.com'>Admin → Players</a> to approve or reject.</p></div>",
-        }).catch(() => {});
-      }, 500);
     } catch (e) {
       const msg = e.message || "";
       if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("too many")) {
