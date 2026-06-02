@@ -123,23 +123,25 @@ function AdminShop({ data, save, showToast, cu }) {
   const updateVariant = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: key === "name" ? val : Number(val) } : v));
   const updateVariantRaw = (id, key, val) => setField("variants", form.variants.map(v => v.id === id ? { ...v, [key]: val } : v));
 
-  const handleVariantImg = (id, e) => {
+  const handleVariantImg = async (id, e) => {
     const file = e.target.files[0]; if (!file) return;
-    const img2 = new Image();
+    // Show preview immediately while uploading
     const reader2 = new FileReader();
-    reader2.onload = ev => {
-      img2.onload = () => {
-        const MAX2 = 900;
-        const scale2 = Math.min(1, MAX2 / Math.max(img2.width, img2.height));
-        const canvas2 = document.createElement("canvas");
-        canvas2.width  = Math.round(img2.width  * scale2);
-        canvas2.height = Math.round(img2.height * scale2);
-        canvas2.getContext("2d").drawImage(img2, 0, 0, canvas2.width, canvas2.height);
-        updateVariantRaw(id, "image", canvas2.toDataURL("image/jpeg", 0.75));
-      };
-      img2.src = ev.target.result;
-    };
+    reader2.onload = ev => updateVariantRaw(id, "image", ev.target.result);
     reader2.readAsDataURL(file);
+    // Upload to Supabase Storage if product already exists
+    if (form.id) {
+      try {
+        const uniqueId = Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `shop/${form.id}/variant_${id}_${uniqueId}.${ext}`;
+        const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true, contentType: file.type });
+        if (!error) {
+          const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+          updateVariantRaw(id, "image", urlData.publicUrl);
+        }
+      } catch (err) { console.warn("Variant image upload failed, keeping local preview:", err.message); }
+    }
   };
 
   const hasVariants = (form.variants || []).length > 0;
@@ -168,15 +170,34 @@ function AdminShop({ data, save, showToast, cu }) {
     reader2.readAsDataURL(file);
   });
 
-  const handleImg = (e) => {
+  const handleImg = async (e) => {
     const files = Array.from(e.target.files); if (!files.length) return;
-    Promise.all(files.map(compressImage)).then(newImgs => {
-      setForm(prev => {
-        const merged = [...(prev.images || []), ...newImgs];
-        return { ...prev, images: merged, image: merged[0] || prev.image };
-      });
+    // Show base64 previews immediately
+    const previews = await Promise.all(files.map(compressImage));
+    setForm(prev => {
+      const merged = [...(prev.images || []), ...previews];
+      return { ...prev, images: merged.slice(0, 8) };
     });
-    e.target.value = ""; // allow re-selecting same file
+    // If product already exists, upload to Storage and replace previews with URLs
+    if (form.id) {
+      const urls = await Promise.all(files.map(async (file) => {
+        try {
+          return await api.shop.uploadProductImage(form.id, file);
+        } catch (err) {
+          console.warn("Image upload failed, keeping base64 preview:", err.message);
+          return null;
+        }
+      }));
+      const uploadedUrls = urls.filter(Boolean);
+      if (uploadedUrls.length > 0) {
+        setForm(prev => {
+          // Replace the base64 previews we just added with the real URLs
+          const withoutPreviews = (prev.images || []).filter(img => !img.startsWith("data:"));
+          const merged = [...withoutPreviews, ...uploadedUrls];
+          return { ...prev, images: merged.slice(0, 8) };
+        });
+      }
+    }
   };
 
   const removeProductImage = (idx) => {
@@ -280,11 +301,20 @@ function AdminShop({ data, save, showToast, cu }) {
     setSavingProduct(true);
     try {
       const origProduct = modal !== "new" ? (data.shop || []).find(p => p.id === form.id) : null;
+      // Strip any lingering base64 images before writing to DB — images must be Storage URLs
+      const cleanForm = {
+        ...form,
+        images: (form.images || []).filter(img => !String(img).startsWith("data:")),
+        variants: (form.variants || []).map(v => ({
+          ...v,
+          image: String(v.image || "").startsWith("data:") ? "" : (v.image || ""),
+        })),
+      };
       if (modal === "new") {
-        const created = await api.shop.create(form);
+        const created = await api.shop.create(cleanForm);
         setForm(prev => ({ ...prev, id: created.id }));
       } else {
-        await api.shop.update(form.id, form);
+        await api.shop.update(form.id, cleanForm);
       }
       const freshShop = await api.shop.getAll();
       save({ shop: freshShop });
