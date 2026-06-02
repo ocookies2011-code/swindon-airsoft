@@ -8,11 +8,11 @@ import { AdminOrdersInline } from "./AdminOrders";
 
 function AdminShop({ data, save, showToast, cu }) {
   const getInitTab = () => {
-    const p = window.location.hash.replace("#","").split("/");
+    const p = window.location.pathname.replace(/^\//, "").split("/");
     return p[0]==="admin" && p[1]==="shop" && ["products","postage","orders"].includes(p[2]) ? p[2] : "products";
   };
   const [tab, setTabState] = useState(getInitTab);
-  const setTab = (t) => { setTabState(t); window.location.hash = "admin/shop/" + t; };
+  const setTab = (t) => { setTabState(t); window.history.pushState(null, "", "/admin/shop/" + t); };
 
   // Live pending order count for the Orders tab badge
   const [orderCount, setOrderCount] = useState(0);

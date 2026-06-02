@@ -46,16 +46,19 @@ const SUPERADMIN_EMAIL = "c-pullen@outlook.com";
 
 function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPage, refresh }) {
   const getInitialSection = () => {
-    const parts = window.location.hash.replace("#","").split("/");
+    const parts = window.location.pathname.replace(/^\//, "").split("/");
+    // Also support legacy hash URLs
+    const hashParts = window.location.hash.replace("#","").split("/");
+    const src = parts[0] === "admin" ? parts : (hashParts[0] === "admin" ? hashParts : []);
     const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","scan-waiver","players","shop",
       "leaderboard-admin","revenue","visitor-stats","security","classifieds-admin","reported-messages","gallery-admin","qa-admin","staff-admin",
       "contact-inbox","contact-admin","messages","news-admin","marshal-admin","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
-    return parts[0] === "admin" && ADMIN_SECTIONS.includes(parts[1]) ? parts[1] : "dashboard";
+    return src[1] && ADMIN_SECTIONS.includes(src[1]) ? src[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
   const setSection = (s) => {
     setSectionState(s);
-    window.location.hash = "admin/" + s;
+    window.history.pushState(null, "", "/admin/" + s);
   };
 
   const isMain = cu.role === "admin";

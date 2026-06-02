@@ -94,7 +94,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   };
 
   const getInitTab = () => {
-    const p = window.location.hash.replace("#","").split("/");
+    const p = window.location.pathname.replace(/^\//, "").split("/");
     return p[0]==="admin" && p[1]==="players" && ["all","vip","del","waivers"].includes(p[2]) ? p[2] : "all";
   };
   const [edit, setEdit] = useState(null);
@@ -113,7 +113,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [contactMsg, setContactMsg] = useState("");
   const [contactSending, setContactSending] = useState(false);
   const [tab, setTabState] = useState(getInitTab);
-  const setTab = (t) => { setTabState(t); window.location.hash = "admin/players/" + t; };
+  const setTab = (t) => { setTabState(t); window.history.pushState(null, "", "/admin/players/" + t); };
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
   const [playerSearch, setPlayerSearch] = useState("");

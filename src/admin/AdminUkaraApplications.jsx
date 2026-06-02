@@ -15,7 +15,7 @@ function AdminUkaraApplications({ showToast, cu }) {
     return p[0] === "admin" && p[1] === "ukara" && ["pending", "approved"].includes(p[2]) ? p[2] : "pending";
   };
   const [tab, setTabState] = React.useState(getInitTab);
-  const setTab = (t) => { setTabState(t); window.location.hash = "admin/ukara/" + t; };
+  const setTab = (t) => { setTabState(t); window.history.pushState(null, "", "/admin/ukara/" + t); };
   const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState(null);
   const [approveModal, setApproveModal] = React.useState(null);

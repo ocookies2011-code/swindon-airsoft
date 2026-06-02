@@ -45,46 +45,118 @@ function AppInner() {
     return () => { window.removeEventListener("offline", goOffline); window.removeEventListener("online", goOnline); };
   }, []);
 
-  // ── Hash routing ──────────────────────────────────────────
-  // Format: #page  |  #admin/section  |  #admin/section/tab
-  //         #profile/tab  |  #events/eventId
+  // ── History API routing ───────────────────────────────────
+  // URL structure:
+  //   /              → home
+  //   /events        → events list
+  //   /events/:id    → specific event (deep link)
+  //   /shop          → shop list
+  //   /shop/:id      → product page (refresh-safe)
+  //   /player/:id    → public profile
+  //   /admin         → admin panel
+  //   /admin/:section → admin section
+  //   /reset/:token  → password reset
+  //   /checkin       → self check-in
+  //   /:page         → any other named page
+
   const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","reset","checkin","props","classifieds"];
+
+  const parsePath = () => {
+    // Support both legacy hash URLs (#shop, #events/id) and new path URLs (/shop, /shop/id)
+    let raw = window.location.pathname;
+    // Migrate old hash URLs transparently
+    if (raw === "/" && window.location.hash.startsWith("#")) {
+      raw = "/" + window.location.hash.replace("#", "");
+    }
+    const parts = raw.replace(/^\//, "").split("/").filter(Boolean);
+    const p = parts[0] || "home";
+    return { p, parts };
+  };
+
   const getInitialPage = () => {
-    const parts = window.location.hash.replace("#","").split("/");
-    const p = parts[0];
+    const { p } = parsePath();
     if (p === "admin") return "admin";
     return PUBLIC_PAGES.includes(p) ? p : "home";
   };
+
+  const getInitialProductId = () => {
+    const { p, parts } = parsePath();
+    return p === "shop" && parts[1] ? parts[1] : null;
+  };
+
+  const getInitialEventId = () => {
+    const { p, parts } = parsePath();
+    return p === "events" && parts[1] ? parts[1] : null;
+  };
+
   const [page, setPageState] = useState(getInitialPage);
-  const [initialEventId, setInitialEventId] = useState(null);
-  const [resetToken, setResetToken] = useState(null);
+  const [initialEventId, setInitialEventId] = useState(getInitialEventId);
+  const [initialProductId, setInitialProductId] = useState(getInitialProductId);
+  const [resetToken, setResetToken] = useState(() => {
+    const { p, parts } = parsePath();
+    return p === "reset" ? (parts[1] || null) : null;
+  });
   const [publicProfileId, setPublicProfileId] = useState(() => {
-    const parts = window.location.hash.replace("#","").split("/");
-    return parts[0] === "player" ? (parts[1] || null) : null;
+    const { p, parts } = parsePath();
+    return p === "player" ? (parts[1] || null) : null;
   });
   const [prevPage, setPrevPage] = useState("leaderboard");
+
+  const navigate = (path, replace = false) => {
+    if (replace) window.history.replaceState(null, "", path);
+    else window.history.pushState(null, "", path);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+
   const goToPlayer = (id) => {
     setPrevPage(page === "admin" ? "admin" : page);
     setPublicProfileId(id);
     setPageState("player");
-    window.location.hash = "player/" + id;
-    window.scrollTo({ top: 0, behavior: "instant" });
+    navigate("/player/" + id);
   };
 
-  // setPage writes the hash AND updates state
+  // setPage — updates state AND pushes to history
   const setPage = (p, eventId) => {
     if (eventId) setInitialEventId(eventId);
     else setInitialEventId(null);
     setPageState(p);
-    window.scrollTo({ top: 0, behavior: "instant" });
-    if (p !== "admin") window.location.hash = p;
-    else {
-      const cur = window.location.hash.replace("#","").split("/");
+    if (p === "home") navigate("/");
+    else if (p === "admin") {
+      const cur = window.location.pathname.split("/").filter(Boolean);
       const sec = cur[0] === "admin" && cur[1] ? cur[1] : "dashboard";
-      const tab = cur[2] || "";
-      window.location.hash = "admin/" + sec + (tab ? "/" + tab : "");
+      navigate("/admin/" + sec);
+    } else if (eventId) {
+      navigate("/events/" + eventId);
+    } else {
+      navigate("/" + p);
     }
   };
+
+  // popstate — handle browser back/forward buttons
+  useEffect(() => {
+    const onPop = () => {
+      const { p, parts } = parsePath();
+      window.scrollTo({ top: 0, behavior: "instant" });
+      if (p === "admin") { setPageState("admin"); return; }
+      if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); return; }
+      if (p === "reset")  { setResetToken(parts[1] || null); setPageState("reset"); return; }
+      if (p === "shop") {
+        setPageState("shop");
+        setInitialProductId(parts[1] || null);
+        if (!parts[1]) setSelectedProduct(null);
+        return;
+      }
+      if (p === "events") {
+        setPageState("events");
+        setInitialEventId(parts[1] || null);
+        return;
+      }
+      if (PUBLIC_PAGES.includes(p)) { setPageState(p); return; }
+      setPageState("home");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const [cu, setCu] = useState(null);          // current user profile
   const [authLoading, setAuthLoading] = useState(true);
@@ -154,19 +226,6 @@ function AppInner() {
   }, [cu?.id, page]);
 
 
-  useEffect(() => {
-    const onHash = () => {
-      const parts = window.location.hash.replace("#","").split("/");
-      const p = parts[0];
-      if (p === "admin") { setPageState("admin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
-      if (p === "player") { setPublicProfileId(parts[1] || null); setPageState("player"); window.scrollTo({ top:0, behavior:"instant" }); return; }
-      if (p === "reset" && parts[1]) { setResetToken(parts[1]); setPageState("reset"); window.scrollTo({ top:0, behavior:"instant" }); return; }
-      if (p === "checkin") { setPageState("checkin"); window.scrollTo({ top:0, behavior:"instant" }); return; }
-      if (PUBLIC_PAGES.includes(p)) { setPageState(p); window.scrollTo({ top:0, behavior:"instant" }); }
-    };
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
   // Shop state — lifted to App level so cart persists between shop & product page
   const [shopCart, setShopCart] = useState([]);
   const [shopCartOpen, setShopCartOpen] = useState(false);
@@ -186,8 +245,23 @@ function AppInner() {
   }, [shopCart.length, shopCartOpen, page]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
-  // Reset product view when navigating away from shop
+  // Clear product when leaving shop
   useEffect(() => { if (page !== "shop") setSelectedProduct(null); }, [page]);
+
+  // When data loads, resolve initialProductId to an actual product object
+  useEffect(() => {
+    if (!initialProductId || !data?.shop) return;
+    const found = data.shop.find(p => p.id === initialProductId);
+    if (found) { setSelectedProduct(found); trackRecentlyViewed(found); }
+    setInitialProductId(null);
+  }, [initialProductId, data?.shop]);
+
+  // Navigate to a product — updates URL and state
+  const goToProduct = useCallback((item) => {
+    setSelectedProduct(item);
+    trackRecentlyViewed(item);
+    navigate("/shop/" + item.id);
+  }, []);
 
   // Listen for NAVIGATE messages from the push notification service worker
   useEffect(() => {
@@ -195,8 +269,9 @@ function AppInner() {
     const handler = (event) => {
       if (event.data?.type === 'NAVIGATE') {
         const path = event.data.url || '/';
-        const page = path.replace(/^\/|#/g, '') || 'home';
-        setPage(page);
+        const p = path.replace(/^\//, '').split('/')[0] || 'home';
+        navigate(path);
+        setPageState(p);
         window.scrollTo(0, 0);
       }
     };
@@ -588,7 +663,7 @@ function AppInner() {
       <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} data={data} />
 
       <div className="pub-page-wrap">
-        {page === "home"        && <HomePage data={data} cu={cu} setPage={setPage} onProductClick={(item) => { setSelectedProduct(item); setPageState("shop"); window.location.hash = "shop"; window.scrollTo({ top:0, behavior:"instant" }); }} />}
+        {page === "home"        && <HomePage data={data} cu={cu} setPage={setPage} onProductClick={(item) => { goToProduct(item); setPageState("shop"); }} />}
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} trackFunnel={trackFunnel} initialEventId={initialEventId} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />
@@ -599,7 +674,7 @@ function AppInner() {
             recentlyViewed={recentlyViewed}
             cart={shopCart} setCart={setShopCart}
             cartOpen={shopCartOpen} setCartOpen={setShopCartOpen}
-            onProductClick={(item) => { setSelectedProduct(item); trackRecentlyViewed(item); window.scrollTo({ top:0, behavior:"instant" }); }}
+            onProductClick={(item) => goToProduct(item)}
             setPage={setPage}
           />
         )}
@@ -608,10 +683,10 @@ function AppInner() {
             item={selectedProduct}
             cu={cu}
             shopItems={data.shop || []}
-            onProductClick={(p) => { setSelectedProduct(p); trackRecentlyViewed(p); window.scrollTo({ top:0, behavior:"instant" }); }}
-            onBack={() => setSelectedProduct(null)}
+            onProductClick={(p) => goToProduct(p)}
+            onBack={() => { setSelectedProduct(null); navigate("/shop"); }}
             cartCount={shopCart.reduce((s, i) => s + i.qty, 0)}
-            onCartOpen={() => { setShopCartOpen(true); setSelectedProduct(null); }}
+            onCartOpen={() => { setShopCartOpen(true); setSelectedProduct(null); navigate("/shop"); }}
             onAddToCart={(item, variant, qty) => {
               const key = variant ? `${item.id}::${variant.id}` : item.id;
               const price = variant ? Number(variant.price) : (item.onSale && item.salePrice ? item.salePrice : item.price);
@@ -628,7 +703,7 @@ function AppInner() {
             }}
           />
         )}
-        {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} onPlayerClick={id => { setPrevPage("leaderboard"); setPublicProfileId(id); setPageState("player"); window.location.hash = "player/" + id; window.scrollTo({ top:0, behavior:"instant" }); }} />}
+        {page === "leaderboard" && <LeaderboardPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} onPlayerClick={id => { goToPlayer(id); }} />}
         {page === "marshal"     && cu?.canMarshal && <MarshalCheckinPage data={data} showToast={showToast} save={save} updateUser={updateUserAndRefresh} />}
         {page === "marshal"     && !cu?.canMarshal && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Access denied.</div>}
         {page === "news"           && <NewsPage data={data} />}

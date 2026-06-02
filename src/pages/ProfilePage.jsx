@@ -10,12 +10,12 @@ import { PlayerMessages } from "./PlayerMessages";
 
 function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }) {
   const getInitTab = () => {
-    const p = window.location.hash.replace("#","").split("/");
+    const p = window.location.pathname.replace(/^\//, "").split("/");
     return p[0]==="profile" && ["profile","waiver","bookings","orders","messages","vip","loadout","report"].includes(p[1]) ? p[1] : "profile";
   };
   const [tab, setTabState] = useState(getInitTab);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-  const setTab = (t) => { setTabState(t); window.location.hash = "profile/" + t; };
+  const setTab = (t) => { setTabState(t); window.history.pushState(null, "", "/profile/" + t); };
 
   // Parse stored address string back into structured fields
   const parseAddress = (addr) => {
@@ -62,8 +62,8 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
 
   // Auto-open scanner when player arrives via QR code scan (#checkin)
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash === "#checkin" || hash.startsWith("#checkin")) {
+    const hash = window.location.pathname;
+    if (hash === "/checkin" || hash.startsWith("/checkin")) {
       window.history.replaceState(null, "", "/#profile");
       const _n = new Date();
       const todayStr = _n.getFullYear() + "-" + String(_n.getMonth()+1).padStart(2,"0") + "-" + String(_n.getDate()).padStart(2,"0");

@@ -70,11 +70,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   };
 
   const getInitTab = () => {
-    const p = window.location.hash.replace("#","").split("/");
+    const p = window.location.pathname.replace(/^\//, "").split("/");
     return p[0]==="admin" && p[1]==="events" && ["events","bookings","checkin"].includes(p[2]) ? p[2] : "events";
   };
   const [tab, setTabState] = useState(getInitTab);
-  const setTab = (t) => { setTabState(t); window.location.hash = "admin/events/" + t; };
+  const setTab = (t) => { setTabState(t); window.history.pushState(null, "", "/admin/events/" + t); };
 
   // ── Shared ticket download helper ──────────────────────
   const downloadTicket = (b, ev) => {

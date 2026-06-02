@@ -8,14 +8,14 @@ import { QRCode, SkeletonCard, SquareCheckoutButton, TRACKING_CACHE_KEY, TRACKIN
 function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal, save, setPage, trackFunnel, initialEventId }) {
   const getInitDetail = () => {
     if (initialEventId) return initialEventId;
-    const p = window.location.hash.replace("#","").split("/");
+    const p = window.location.pathname.replace(/^\//, "").split("/");
     return p[0]==="events" && p[1] ? p[1] : null;
   };
   const isMobile = useMobile();
   const [detail, setDetailState] = useState(getInitDetail);
   const setDetail = (id) => {
     setDetailState(id);
-    window.location.hash = id ? "events/" + id : "events";
+    window.history.pushState(null, "", id ? "/events/" + id : "/events");
     window.scrollTo({ top: 0, behavior: "instant" });
   };
   const [waiverModal, setWaiverModal] = useState(false);
