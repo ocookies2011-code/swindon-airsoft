@@ -1270,7 +1270,7 @@ function ProductPage({ item, cu, onBack, onAddToCart, cartCount, onCartOpen, sho
     {/* Related Products */}
     {(() => {
       const related = shopItems
-        .filter(p => p.id !== item.id && p.published !== false && p.category && p.category === item.category)
+        .filter(p => p.id !== item.id && p.published !== false && !p.hiddenFromShop && p.category && p.category === item.category)
         .slice(0, 3);
       if (related.length === 0) return null;
       return (
