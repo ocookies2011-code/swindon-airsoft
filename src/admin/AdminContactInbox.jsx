@@ -97,6 +97,15 @@ export function AdminContactInbox({ showToast, cu }) {
     }
   };
 
+  const deleteMessage = async (id) => {
+    if (!window.confirm("Delete this message permanently?")) return;
+    const { error } = await supabase.from("contact_messages").delete().eq("id", id);
+    if (error) { showToast("Failed to delete: " + error.message, "red"); return; }
+    setMessages(prev => prev.filter(m => m.id !== id));
+    if (selected?.id === id) setSelected(null);
+    showToast("Message deleted");
+  };
+
   const setStatus = async (id, status) => {
     await supabase.from("contact_messages").update({ status }).eq("id", id);
     setMessages(prev => prev.map(m => m.id === id ? { ...m, status } : m));
@@ -189,6 +198,10 @@ export function AdminContactInbox({ showToast, cu }) {
                         REOPEN
                       </button>
                   }
+                  <button onClick={() => deleteMessage(selected.id)}
+                    style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".1em", padding: "6px 12px", background: "transparent", border: "1px solid #4a1a1a", color: "#ef5350", cursor: "pointer" }}>
+                    DELETE
+                  </button>
                 </div>
               </div>
             </div>
