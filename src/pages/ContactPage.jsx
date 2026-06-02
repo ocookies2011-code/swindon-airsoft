@@ -1,19 +1,18 @@
 // pages/ContactPage.jsx
 import React, { useRef, useState } from "react";
 import { sendEmail, useMobile } from "../utils";
+import { supabase } from "../supabaseClient";
 
 function ContactPage({ data, cu, showToast }) {
   const isMobile = useMobile(640);
   const departments = data.contactDepartments || [];
 
   const blank = { name: cu?.name || "", email: cu?.email || "", department: "", subject: "", message: "" };
-  const [form, setForm]     = useState(blank);
+  const [form, setForm]       = useState(blank);
   const [sending, setSending] = useState(false);
-  const [sent, setSent]     = useState(false);
+  const [sent, setSent]       = useState(false);
   const lastSentRef = useRef(0);
   const ff = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-  const selectedDept = departments.find(d => d.name === form.department);
 
   const handleSend = async () => {
     const now = Date.now();
@@ -25,31 +24,69 @@ function ContactPage({ data, cu, showToast }) {
     if (!form.department)     { showToast("Please select a department", "red"); return; }
     if (!form.subject.trim()) { showToast("Please enter a subject", "red"); return; }
     if (!form.message.trim()) { showToast("Please enter a message", "red"); return; }
-    if (!selectedDept?.email) { showToast("This department has no email configured yet", "red"); return; }
 
     setSending(true);
     try {
+      // 1. Save to DB (works for guests too — RLS allows anon INSERT)
+      const { data: saved, error: dbErr } = await supabase
+        .from("contact_messages")
+        .insert({
+          sender_name:  form.name.trim(),
+          sender_email: form.email.trim(),
+          subject:      `[${form.department}] ${form.subject.trim()}`,
+          body:         form.message.trim(),
+          user_id:      cu?.id || null,
+        })
+        .select("id")
+        .single();
+
+      if (dbErr) console.warn("contact_messages insert:", dbErr.message);
+
+      // 2. Email notification to admin
       await sendEmail({
-        toEmail: selectedDept.email,
-        toName:  selectedDept.name,
-        subject: `[${selectedDept.name}] ${form.subject}`,
-        replyTo: form.email,
-        replyToName: form.name,
+        toEmail:     "swindonairsoftfield@gmail.com",
+        toName:      "Swindon Airsoft Admin",
+        subject:     `[Contact] [${form.department}] ${form.subject.trim()} — ${form.name.trim()}`,
         htmlContent: `
-          <div style="font-family:sans-serif;max-width:600px">
-            <h2 style="color:#c8ff00;font-family:'Oswald','Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">
-              New Contact Message — ${selectedDept.name}
-            </h2>
-            <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-              <tr><td style="padding:8px;background:#111a0a;color:#888;font-size:12px;width:120px">FROM</td><td style="padding:8px;background:#111;color:#fff">${form.name}</td></tr>
-              <tr><td style="padding:8px;background:#111a0a;color:#888;font-size:12px">EMAIL</td><td style="padding:8px;background:#111;color:#fff"><a href="mailto:${form.email}" style="color:#c8ff00">${form.email}</a></td></tr>
-              <tr><td style="padding:8px;background:#111a0a;color:#888;font-size:12px">DEPT</td><td style="padding:8px;background:#111;color:#fff">${selectedDept.name}</td></tr>
-              <tr><td style="padding:8px;background:#111a0a;color:#888;font-size:12px">SUBJECT</td><td style="padding:8px;background:#111;color:#fff">${form.subject}</td></tr>
-            </table>
-            <div style="background:#111;border-left:3px solid #c8ff00;padding:16px;white-space:pre-wrap;color:#ccc;line-height:1.6">${form.message}</div>
+          <div style="font-family:'Courier New',monospace;max-width:600px;background:#000;padding:0">
+            <div style="background:#0a1a0a;padding:24px 32px;border-bottom:1px solid #2a3a2a">
+              <p style="margin:0 0 6px;color:#8aaa8a;font-size:11px;letter-spacing:3px;text-transform:uppercase">Swindon Airsoft · Contact Form</p>
+              <h1 style="margin:0;color:#c8ff00;font-size:26px;font-weight:900;letter-spacing:2px;text-transform:uppercase">New Message</h1>
+            </div>
+            <div style="padding:0 32px">
+              <table style="width:100%;border-collapse:collapse">
+                <tr style="border-bottom:1px solid #2a3a2a">
+                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase;width:120px">From</td>
+                  <td style="padding:12px 0;color:#e0e0e0;font-weight:bold">${form.name.trim()}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #2a3a2a">
+                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Reply To</td>
+                  <td style="padding:12px 0"><a href="mailto:${form.email.trim()}" style="color:#c8ff00">${form.email.trim()}</a></td>
+                </tr>
+                <tr style="border-bottom:1px solid #2a3a2a">
+                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Department</td>
+                  <td style="padding:12px 0;color:#e0e0e0">${form.department}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #2a3a2a">
+                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Subject</td>
+                  <td style="padding:12px 0;color:#e0e0e0">${form.subject.trim()}</td>
+                </tr>
+              </table>
+            </div>
+            <div style="padding:20px 32px">
+              <p style="margin:0 0 10px;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Message</p>
+              <div style="background:#0a1a0a;border:1px solid #2a3a2a;padding:18px;color:#e0e0e0;line-height:1.7;white-space:pre-wrap">${form.message.trim()}</div>
+            </div>
+            <div style="padding:16px 32px;border-top:1px solid #2a3a2a;text-align:center">
+              <a href="https://swindon-airsoft.com/admin#admin/contact-inbox" style="display:inline-block;background:#c8ff00;color:#000;padding:12px 28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-size:12px">Reply in Admin Panel</a>
+            </div>
+            <div style="padding:12px 32px;text-align:center">
+              <p style="margin:0;color:#4a6a4a;font-size:10px;letter-spacing:2px;text-transform:uppercase">Swindon Airsoft · Auto-Generated Notification</p>
+            </div>
           </div>
         `,
       });
+
       lastSentRef.current = Date.now();
       setSent(true);
       showToast("Message sent successfully!");
@@ -59,6 +96,8 @@ function ContactPage({ data, cu, showToast }) {
       setSending(false);
     }
   };
+
+  const selectedDept = departments.find(d => d.name === form.department);
 
   if (sent) {
     return (
@@ -76,7 +115,7 @@ function ContactPage({ data, cu, showToast }) {
         </div>
         <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 32, letterSpacing: ".2em", textTransform: "uppercase", color: "#e8f0d8", marginBottom: 12 }}>TRANSMISSION SENT</div>
         <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: "#3a5010", letterSpacing: ".1em", marginBottom: 8 }}>MESSAGE ROUTED TO: <span style={{ color: "#c8ff00" }}>{form.department.toUpperCase()}</span></div>
-        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#2a3a10", letterSpacing: ".08em", marginBottom: 32 }}>REPLY WILL BE SENT TO: {form.email}</div>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#2a3a10", letterSpacing: ".08em", marginBottom: 32 }}>WE'LL REPLY TO: {form.email}</div>
         <button className="btn btn-primary" style={{ letterSpacing: ".15em" }} onClick={() => { setSent(false); setForm(blank); }}>SEND ANOTHER TRANSMISSION</button>
       </div>
     );
@@ -100,7 +139,7 @@ function ContactPage({ data, cu, showToast }) {
           <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(30px,6vw,56px)", letterSpacing: ".18em", textTransform: "uppercase", color: "#e8f0d8", lineHeight: 1, marginBottom: 6 }}>
             OPEN <span style={{ color: "#c8ff00", textShadow: "0 0 30px rgba(200,255,0,.35)" }}>CHANNEL</span>
           </div>
-          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ SECURE TRANSMISSION LINE — ALL COMMS MONITORED ◂</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: ".25em", color: "#3a5010", marginTop: 12 }}>▸ SECURE TRANSMISSION LINE — WE'LL REPLY TO YOUR EMAIL ◂</div>
         </div>
       </div>
 
@@ -169,6 +208,15 @@ function ContactPage({ data, cu, showToast }) {
               </div>
             )}
 
+            <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "20px 18px" }}>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: ".3em", color: "#c8ff00", marginBottom: 14, textTransform: "uppercase" }}>◈ HOW IT WORKS</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#3a5010", lineHeight: 1.8 }}>
+                <div style={{ marginBottom: 8 }}>01 — Fill in the form and send</div>
+                <div style={{ marginBottom: 8 }}>02 — We receive it instantly</div>
+                <div>03 — Reply arrives in your email inbox</div>
+              </div>
+            </div>
+
             {(data.contactAddress || data.contactPhone || data.contactEmail) && (
               <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "20px 18px" }}>
                 <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: ".3em", color: "#c8ff00", marginBottom: 14, textTransform: "uppercase" }}>◈ BASE COORDINATES</div>
@@ -207,7 +255,5 @@ function ContactPage({ data, cu, showToast }) {
     </div>
   );
 }
-
-// ── Admin Contact Departments ──────────────────────────────
 
 export { ContactPage };
