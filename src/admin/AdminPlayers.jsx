@@ -221,10 +221,14 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   }, [data.events, allShopOrders]);
 
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-    if (playerSort === "az")    return (a.name || "").localeCompare(b.name || "");
-    if (playerSort === "za")    return (b.name || "").localeCompare(a.name || "");
-    if (playerSort === "games") return (b.gamesAttended || 0) - (a.gamesAttended || 0);
-    if (playerSort === "spend") return (playerSpendMap[b.id] || 0) - (playerSpendMap[a.id] || 0);
+    if (playerSort === "az")       return (a.name || "").localeCompare(b.name || "");
+    if (playerSort === "za")       return (b.name || "").localeCompare(a.name || "");
+    if (playerSort === "games")    return (b.gamesAttended || 0) - (a.gamesAttended || 0);
+    if (playerSort === "spend")    return (playerSpendMap[b.id] || 0) - (playerSpendMap[a.id] || 0);
+    if (playerSort === "newest")   return new Date(b.joinDate || 0) - new Date(a.joinDate || 0);
+    if (playerSort === "oldest")   return new Date(a.joinDate || 0) - new Date(b.joinDate || 0);
+    if (playerSort === "waiver")   { const aw = a.waiverSigned ? 0 : 1; const bw = b.waiverSigned ? 0 : 1; return aw - bw || (a.name || "").localeCompare(b.name || ""); }
+    if (playerSort === "nowaiver") { const aw = a.waiverSigned ? 1 : 0; const bw = b.waiverSigned ? 1 : 0; return aw - bw || (a.name || "").localeCompare(b.name || ""); }
     if (playerSort === "ukara") {
       const au = a.ukara || "", bu = b.ukara || "";
       if (au && !bu) return -1;
@@ -710,14 +714,18 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               {sortedPlayers.length} / {roleFiltered.length}
             </span>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, flexWrap:"wrap" }}>
             <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"var(--muted)", letterSpacing:".12em" }}>SORT:</span>
             {[
-              { val:"az",    label:"A → Z" },
-              { val:"za",    label:"Z → A" },
-              { val:"games", label:"Games Played" },
-              { val:"spend", label:"💰 Total Spent" },
-              { val:"ukara", label:"UKARA ID" },
+              { val:"az",       label:"A → Z" },
+              { val:"za",       label:"Z → A" },
+              { val:"games",    label:"Games Played" },
+              { val:"spend",    label:"💰 Total Spent" },
+              { val:"ukara",    label:"UKARA ID" },
+              { val:"newest",   label:"📅 Newest First" },
+              { val:"oldest",   label:"📅 Oldest First" },
+              { val:"waiver",   label:"✅ Waiver Signed" },
+              { val:"nowaiver", label:"⚠️ No Waiver" },
             ].map(s => (
               <button key={s.val} className={"btn btn-sm " + (playerSort === s.val ? "btn-primary" : "btn-ghost")}
                 style={{ fontSize:11, padding:"5px 12px" }}
