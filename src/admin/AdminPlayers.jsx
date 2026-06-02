@@ -1480,12 +1480,37 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               </div>
 
               {/* Address */}
-              {u.address && (
-                <div style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:6 }}>Delivery Address</div>
-                  <div style={{ fontSize:12, whiteSpace:"pre-line", background:"var(--bg4)", padding:"10px 12px", borderRadius:3, fontFamily:"'Share Tech Mono',monospace" }}>{u.address}</div>
-                </div>
-              )}
+              {(() => {
+                const waiverAddr = u.waiverData ? [u.waiverData.addr1, u.waiverData.addr2, u.waiverData.city, u.waiverData.county, u.waiverData.postcode].filter(Boolean).join("\n") : null;
+                const regPostcode = u.postcode || null;
+                const deliveryAddr = u.address || null;
+                if (!waiverAddr && !regPostcode && !deliveryAddr) return null;
+                return (
+                  <div style={{ marginBottom:16 }}>
+                    <div style={{ fontSize:10, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:8 }}>📍 Address</div>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:10 }}>
+                      {waiverAddr && (
+                        <div style={{ background:"var(--bg4)", padding:"10px 12px", borderRadius:3 }}>
+                          <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:5 }}>Waiver Address</div>
+                          <div style={{ fontSize:12, whiteSpace:"pre-line", fontFamily:"'Share Tech Mono',monospace", lineHeight:1.6 }}>{waiverAddr}</div>
+                        </div>
+                      )}
+                      {regPostcode && (
+                        <div style={{ background:"var(--bg4)", padding:"10px 12px", borderRadius:3 }}>
+                          <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:5 }}>Registration Postcode</div>
+                          <div style={{ fontSize:13, fontFamily:"'Share Tech Mono',monospace", fontWeight:700, color:"var(--accent)" }}>{regPostcode}</div>
+                        </div>
+                      )}
+                      {deliveryAddr && (
+                        <div style={{ background:"var(--bg4)", padding:"10px 12px", borderRadius:3 }}>
+                          <div style={{ fontSize:9, color:"var(--muted)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:5 }}>Delivery Address</div>
+                          <div style={{ fontSize:12, whiteSpace:"pre-line", fontFamily:"'Share Tech Mono',monospace", lineHeight:1.6 }}>{deliveryAddr}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* VIP ID photos */}
               {u.vipIdImages?.length > 0 && (
