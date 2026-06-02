@@ -272,17 +272,26 @@ export const events = wrapWithTimeout({
 // ── Bookings ──────────────────────────────────────────────────
 export const bookings = wrapWithTimeout({
   async create(booking) {
+    const isGuest = !booking.userId && !!booking.guestEmail;
     const { data, error } = await supabase.from('bookings').insert({
-      event_id:       booking.eventId,
-      user_id:        booking.userId,
-      user_name:      booking.userName,
-      ticket_type:    booking.type,
-      qty:            booking.qty,
-      extras:         booking.extras,
-      total:          booking.total,
-      square_order_id:     booking.squareOrderId    || null,
-      square_payment_id:   booking.squarePaymentId  || null,
-      square_receipt_url:  booking.squareReceiptUrl || null,
+      event_id:             booking.eventId,
+      user_id:              booking.userId              || null,
+      user_name:            booking.userName            || null,
+      ticket_type:          booking.type,
+      qty:                  booking.qty,
+      extras:               booking.extras,
+      total:                booking.total,
+      square_order_id:      booking.squareOrderId       || null,
+      square_payment_id:    booking.squarePaymentId     || null,
+      square_receipt_url:   booking.squareReceiptUrl    || null,
+      is_guest:             isGuest,
+      guest_email:          booking.guestEmail          || null,
+      guest_phone:          booking.guestPhone          || null,
+      guest_waiver_signed:  booking.guestWaiverSigned   || false,
+      guest_waiver_name:    booking.guestWaiverName     || null,
+      guest_waiver_signed_at: booking.guestWaiverSignedAt || null,
+      guest_waiver_data:    booking.guestWaiverData
+        ? JSON.parse(booking.guestWaiverData) : null,
     }).select().single()
     if (error) throw error
     return data

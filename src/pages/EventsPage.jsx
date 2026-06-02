@@ -319,10 +319,22 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         const walkOnPaid = Math.max(0, (walkOnTotal + extrasTotal) - totalDeductions * walkOnShare);
         const rentalPaid = Math.max(0, (rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal)) - totalDeductions * rentalShare);
 
+        // Idempotency: check if booking already exists for this payment to prevent double-booking
+        if (squarePayment?.id && !squarePayment.id.startsWith('CREDITS-') && !squarePayment.id.startsWith('ADMIN-')) {
+          const { data: existingBooking } = await supabase
+            .from('bookings').select('id').eq('square_order_id', squarePayment.id).limit(1).maybeSingle();
+          if (existingBooking) {
+            clearTimeout(safety); setBookingBusy(false);
+            setBookingDone(true);
+            showToast('✅ Booking already recorded!');
+            return;
+          }
+        }
+
         const bookingPromises = [];
         if (bCart.walkOn > 0) {
           bookingPromises.push(api.bookings.create({
-            eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestForm.name,
+            eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestWaiverSig[0]?.name || guestForm.email || 'Guest',
             guestEmail: cu ? null : guestForm.email,
             guestPhone: cu ? null : guestForm.phone,
             guestWaiverSigned: cu ? false : true,
@@ -339,7 +351,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         }
         if (bCart.rental > 0) {
           bookingPromises.push(api.bookings.create({
-            eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestForm.name,
+            eventId: ev.id, userId: cu?.id || null, userName: cu?.name || guestWaiverSig[0]?.name || guestForm.email || 'Guest',
             guestEmail: cu ? null : guestForm.email,
             guestPhone: cu ? null : guestForm.phone,
             guestWaiverSigned: cu ? false : true,
