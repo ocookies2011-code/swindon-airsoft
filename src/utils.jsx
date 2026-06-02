@@ -2549,9 +2549,10 @@ function HomePage({ data, cu, setPage, onProductClick }) {
                                   )}
                                 </div>
                               )}
-{nextEvent.walkOnSlots > 0 && (() => {
-                                const wb = (nextEvent.bookings||[]).filter(b=>b.type==="walkOn").reduce((s,b)=>s+(b.qty||1),0);
-                                const wl = Math.max(0,(nextEvent.walkOnSlots||0)-wb);
+{((nextEvent.walkOnSlots||0) + (nextEvent.rentalSlots||0)) > 0 && (() => {
+                                const totalSlots  = (nextEvent.walkOnSlots||0) + (nextEvent.rentalSlots||0);
+                                const totalBooked = (nextEvent.bookings||[]).reduce((s,b)=>s+(b.qty||1),0);
+                                const wl = Math.max(0, totalSlots - totalBooked);
                                 return (
                                   <div style={{ background:"rgba(0,0,0,.4)", border:`1px solid ${wl < 5 ? "rgba(239,68,68,.3)" : "rgba(255,255,255,.08)"}`, padding:"8px 14px", flex:1, minWidth:80 }}>
                                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:"var(--muted)", letterSpacing:".15em", marginBottom:3 }}>SLOTS LEFT</div>
@@ -2576,9 +2577,10 @@ function HomePage({ data, cu, setPage, onProductClick }) {
                       <div style={{ marginTop:20, display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
                         <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => setPage("events", nextEvent.id)}>DEPLOY →</button>
 {(() => {
-                          const wb = (nextEvent.bookings||[]).filter(b=>b.type==="walkOn").reduce((s,b)=>s+(b.qty||1),0);
-                          const wl = Math.max(0,(nextEvent.walkOnSlots||0)-wb);
-                          if (wl === 0 && nextEvent.walkOnSlots > 0) return <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#ef4444", letterSpacing:".1em" }}>⛔ SOLD OUT</span>;
+                          const totalSlots  = (nextEvent.walkOnSlots||0) + (nextEvent.rentalSlots||0);
+                          const totalBooked = (nextEvent.bookings||[]).reduce((s,b)=>s+(b.qty||1),0);
+                          const wl = Math.max(0, totalSlots - totalBooked);
+                          if (totalSlots > 0 && wl === 0) return <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#ef4444", letterSpacing:".1em" }}>⛔ SOLD OUT</span>;
                           if (wl > 0) return <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color: wl < 5 ? "#ef4444" : "#5a6e42", letterSpacing:".1em" }}>{wl} slot{wl !== 1 ? "s" : ""} remaining</span>;
                           return null;
                         })()}
