@@ -161,7 +161,7 @@ export const profiles = wrapWithTimeout({
 export const events = wrapWithTimeout({
   async getAll() {
     const { data: evs, error } = await supabase
-      .from('events').select('*, event_extras(*), bookings(id, user_id, qty, ticket_type, is_guest, guest_email)').order('date')
+      .from('events').select('*, event_extras(*), bookings(id, user_id, user_name, qty, ticket_type, total, extras, checked_in, created_at, square_order_id, admin_notes, is_guest, guest_email)').order('date')
     if (error) throw error
     // Normalise to camelCase shape the app expects
     return evs.map(normaliseEvent)
