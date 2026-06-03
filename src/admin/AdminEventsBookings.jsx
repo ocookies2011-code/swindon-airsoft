@@ -1016,7 +1016,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             </div>
           )}
 
-          {/* ── Edit Booking Modal ── */}
+        </div>
+      )}
+
+      {/* ── Edit Booking Modal ── (rendered outside tab blocks so it works from any tab) */}
           {editBooking && (
             <div className="overlay" onClick={() => setEditBooking(null)}>
               <div className="modal-box" onClick={e => e.stopPropagation()}>
