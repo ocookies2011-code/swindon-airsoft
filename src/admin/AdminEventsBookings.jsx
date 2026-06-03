@@ -1862,7 +1862,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             );
           })()}
 
-    </div>
   );
 }
 
