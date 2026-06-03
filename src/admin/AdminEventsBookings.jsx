@@ -734,7 +734,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       )}
 
       {/* ── ALL BOOKINGS TAB ── */}
-      {tab === "bookings" && (
+      {tab === "bookings" && (() => {
+        // Local state using a closure trick — use component-level state defined above
+        const now = new Date();
+        const eventsWithBookings = data.events.filter(e => e.bookings?.length > 0);
+        const upcomingEvs = eventsWithBookings.filter(e => new Date(e.date + "T23:59:00") > now).sort((a,b) => new Date(a.date)-new Date(b.date));
+        const pastEvs     = eventsWithBookings.filter(e => new Date(e.date + "T23:59:00") <= now).sort((a,b) => new Date(b.date)-new Date(a.date));
+        return (
           <div>
             {/* Event selector */}
             <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:16, flexWrap:"wrap" }}>
@@ -742,12 +748,12 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 <select value={evId} onChange={e => setEvId(e.target.value)}
                   style={{ width:"100%", fontSize:13, padding:"9px 12px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)" }}>
                   <option value="">— All events ({allBookings.reduce((s,b) => s+(b.qty||1),0)} tickets) —</option>
-                  {data.events.filter(e=>e.bookings?.length>0&&new Date(e.date+"T23:59:00")>new Date()).sort((a,b)=>new Date(a.date)-new Date(b.date)).map(e=>(
+                  {upcomingEvs.map(e => (
                     <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
-                  {data.events.filter(e=>e.bookings?.length>0&&new Date(e.date+"T23:59:00")<=new Date()).length>0&&<option disabled>── Past Events ──────────────</option>}
-                  {data.events.filter(e=>e.bookings?.length>0&&new Date(e.date+"T23:59:00")<=new Date()).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>(
-                    <option key={e.id} value={e.id} style={{color:"#ef5350"}}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
+                  {pastEvs.length > 0 && <option disabled>── Past Events ──────────────</option>}
+                  {pastEvs.map(e => (
+                    <option key={e.id} value={e.id} style={{ color:"#ef5350" }}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
                 </select>
               </div>
@@ -766,9 +772,15 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 <th>Player</th><th>Event</th><th>Type</th><th>Qty</th><th>Total</th><th>Booked</th><th>Status</th><th>Actions</th>
               </tr></thead>
                 <tbody>
-                  {[...(evId ? (data.events.find(e=>e.id===evId)?.bookings || []) : allBookings)]
-                    .sort((a,b) => new Date(b.date||b.created_at) - new Date(a.date||a.created_at))
-                    .map(b => {
+                  {(() => {
+                    const rows = evId
+                      ? (data.events.find(e=>e.id===evId)?.bookings || [])
+                      : allBookings;
+                    const sorted = [...rows].sort((a,b) => new Date(b.date||b.created_at) - new Date(a.date||a.created_at));
+                    if (sorted.length === 0) return (
+                      <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No bookings found</td></tr>
+                    );
+                    return sorted.map(b => {
                       const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
                       return (
                         <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
@@ -806,15 +818,14 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                           </td>
                         </tr>
                       );
-                    })}
-                  {(evId ? (data.events.find(e=>e.id===evId)?.bookings||[]) : allBookings).length === 0 && (
-                    <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No bookings found</td></tr>
-                  )}
+                    });
+                  })()}
                 </tbody>
               </table></div>
             </div>
           </div>
-      )}
+        );
+      })()}
 
       {/* ── CHECK-IN TAB ── */}
       {tab === "checkin" && (
@@ -1004,9 +1015,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               </table></div>
             </div>
           )}
-
-        </div>
-      )}
 
           {/* ── Edit Booking Modal ── */}
           {editBooking && (
@@ -1851,6 +1859,93 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               </div>
             );
           })()}
+
+      {/* ── Edit/Delete modals duplicated outside tab blocks for ALL BOOKINGS tab ── */}
+      {/* ── Edit Booking Modal ── */}
+      {editBooking && (
+        <div className="overlay" onClick={() => setEditBooking(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">✏️ Edit Booking</div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+              {editBooking.userName} — {editBooking.eventTitle}
+            </div>
+            <div className="form-group">
+              <label>Transfer to Different Event</label>
+              <select
+                value={editBooking.newEventId || editBooking.eventId || ""}
+                onChange={e => {
+                  const val = e.target.value;
+                  setEditBooking(p => ({ ...p, newEventId: val === p.eventId ? null : val }));
+                }}
+              >
+                {data.events
+                  .slice()
+                  .sort((a, b) => new Date(a.date) - new Date(b.date))
+                  .map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+                    </option>
+                  ))
+                }
+              </select>
+              {editBooking.newEventId && editBooking.newEventId !== editBooking.eventId && (
+                <div style={{ marginTop:6, padding:"6px 10px", background:"rgba(255,160,0,.1)", border:"1px solid rgba(255,160,0,.35)", borderRadius:3, fontSize:12, color:"#ffc060" }}>
+                  ⚠️ This booking will be moved from <strong>{editBooking._orig.eventTitle}</strong> to <strong>{data.events.find(e => e.id === editBooking.newEventId)?.title}</strong>.
+                </div>
+              )}
+            </div>
+            <div className="form-group">
+              <label>Ticket Type</label>
+              <select value={editBooking.type} onChange={e => setEditBooking(p => ({ ...p, type: e.target.value }))}>
+                <option value="walkOn">Walk-On</option>
+                <option value="rental">Rental</option>
+              </select>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Quantity</label>
+                <input type="number" min={1} value={editBooking.qty}
+                  onChange={e => setEditBooking(p => ({ ...p, qty: +e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Total (£)</label>
+                <input type="number" step="0.01" min={0} value={editBooking.total}
+                  onChange={e => setEditBooking(p => ({ ...p, total: +e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input type="checkbox" id="ci-edit-checkin" checked={editBooking.checkedIn}
+                onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
+              <label htmlFor="ci-edit-checkin" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
+            </div>
+            <div className="gap-2 mt-2">
+              <button className="btn btn-primary" disabled={bookingBusy} onClick={saveEdit}>
+                {bookingBusy ? "Saving…" : "Save Changes"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setEditBooking(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirm Modal ── */}
+      {delConfirm && (
+        <div className="overlay" onClick={() => setDelConfirm(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🗑 Delete Booking?</div>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "12px 0 20px" }}>
+              Delete <strong style={{ color: "var(--text)" }}>{delConfirm.userName}</strong>'s booking for <strong style={{ color: "var(--text)" }}>{delConfirm.eventTitle || delConfirm.eventObj?.title}</strong>? This cannot be undone.
+            </p>
+            <div className="gap-2">
+              <button className="btn btn-danger" disabled={bookingBusy} onClick={confirmDelete}>
+                {bookingBusy ? "Deleting…" : "Yes, Delete"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setDelConfirm(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
     </div>
   );
