@@ -825,12 +825,6 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           </div>
         </div>
       )}
-                </tbody>
-              </table></div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ── CHECK-IN TAB ── */}
       {tab === "checkin" && (
