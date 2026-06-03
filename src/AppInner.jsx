@@ -202,15 +202,29 @@ function AppInner() {
   }, []);
 
   // ── Page visit tracking ──────────────────────────────────
+  // Helper: get a stable session ID, resilient to restricted browser contexts
+  // (Facebook in-app browser, iOS private mode etc block sessionStorage)
+  const getSessionId = useCallback(() => {
+    const KEY = "sa_sid";
+    // Try sessionStorage first (per-tab), fall back to localStorage (persists)
+    for (const store of [sessionStorage, localStorage]) {
+      try {
+        let sid = store.getItem(KEY);
+        if (!sid) { sid = Math.random().toString(36).slice(2, 14); store.setItem(KEY, sid); }
+        return sid;
+      } catch { /* storage blocked */ }
+    }
+    // Last resort: in-memory ID (won't persist across navigations but better than nothing)
+    if (!window.__sa_sid) window.__sa_sid = Math.random().toString(36).slice(2, 14);
+    return window.__sa_sid;
+  }, []);
+
   useEffect(() => {
     // Only track public pages, not admin
     if (page === "admin") return;
     // Wait for auth to resolve so we capture user identity correctly
-    // authLoading=true means we don't yet know if the visitor is logged in
     if (authLoading) return;
-    // Stable session ID for this browser tab
-    let sid = sessionStorage.getItem("sa_sid");
-    if (!sid) { sid = Math.random().toString(36).slice(2); sessionStorage.setItem("sa_sid", sid); }
+    const sid = getSessionId();
     // Don't count homepage hits — only track meaningful page visits
     if (page === "home") return;
     api.visits.track({
@@ -226,7 +240,7 @@ function AppInner() {
   // e.g. "event:basket", "event:checkout", "shop:basket", "shop:checkout"
   const trackFunnel = useCallback((funnelPage) => {
     if (page === "admin") return;
-    const sid = sessionStorage.getItem("sa_sid");
+    const sid = getSessionId();
     if (!sid) return;
     api.visits.track({
       page:      funnelPage,
@@ -241,7 +255,7 @@ function AppInner() {
   // for the current page. Claims ALL null-user rows for this session.
   useEffect(() => {
     if (!cu?.id || page === "admin") return;
-    const sid = sessionStorage.getItem("sa_sid");
+    const sid = getSessionId();
     if (!sid) return;
     // Small delay so track() fires first and inserts the row before we claim it
     const t = setTimeout(() => {
@@ -257,7 +271,7 @@ function AppInner() {
   // ── Shop cart funnel tracking ──────────────────────────────
   useEffect(() => {
     if (page !== "shop") return;
-    const sid = sessionStorage.getItem("sa_sid");
+    const sid = getSessionId();
     const itemCount = shopCart.reduce((s, i) => s + i.qty, 0);
     if (itemCount === 0) return; // nothing in cart — already tracked as 'shop'
     const funnelPage = shopCartOpen ? "shop:checkout" : "shop:basket";
