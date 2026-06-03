@@ -182,6 +182,8 @@ function AppInner() {
   const [authModal, setAuthModal] = useState(null);
   const [hitCount, setHitCount] = useState(null);
   const [toast, showToast] = useToast();
+  const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
+  const [blockReason, setBlockReason] = useState(null);
 
   // ── Total hit counter ───────────────────────────────────────
   useEffect(() => {
@@ -497,9 +499,6 @@ function AppInner() {
       } catch {}
     }
   }, [updateUser, cu, refreshCu, data]);
-
-  const [geoStatus, setGeoStatus] = useState("checking"); // "checking" | "allowed" | "blocked"
-  const [blockReason, setBlockReason] = useState(null); // "geo" | "vpn" | "tor"
 
   // Geo-check for blocking
   useEffect(() => {
