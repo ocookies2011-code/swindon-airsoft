@@ -120,7 +120,9 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ allowed: true, reason: "error" }), {
+    // Fail closed on errors — don't silently allow unknown origins
+    console.error("geo-check error:", err);
+    return new Response(JSON.stringify({ allowed: false, reason: "error" }), {
       headers: { ...CORS, "Content-Type": "application/json" }
     });
   }

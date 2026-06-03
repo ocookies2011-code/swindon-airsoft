@@ -27,10 +27,7 @@ import { PropsPage }          from "./pages/PropsPage";
 import { UKARAPage }          from "./pages/UKARAPage";
 
 const ALLOWED_COUNTRY_CODES = new Set([
-  "GB","IE",                                           // UK + Ireland
-  "AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR",  // EU
-  "DE","GR","HU","IE","IT","LV","LT","LU","MT","NL",
-  "PL","PT","RO","SK","SI","ES","SE",
+  "GB",  // UK only — this is a UK airsoft field
 ]);
 
 function AppInner() {
@@ -224,6 +221,8 @@ function AppInner() {
     if (page === "admin") return;
     // Wait for auth to resolve so we capture user identity correctly
     if (authLoading) return;
+    // Don't track blocked/checking visitors — geo-check not resolved yet or blocked
+    if (geoStatus !== "allowed") return;
     const sid = getSessionId();
     // Don't count homepage hits — only track meaningful page visits
     if (page === "home") return;
@@ -233,7 +232,7 @@ function AppInner() {
       userName:  cu?.name || null,
       sessionId: sid,
     });
-  }, [page, cu?.id, authLoading]);
+  }, [page, cu?.id, authLoading, geoStatus]);
 
   // ── Funnel tracking helper (passed to child pages) ───────
   // Call this from any page when the visitor reaches a deeper funnel step
@@ -513,7 +512,10 @@ function AppInner() {
           setGeoStatus("allowed");
         }
       })
-      .catch(() => setGeoStatus("allowed"));
+      .catch(() => {
+        // Edge function failed — fall through to the client-side IP check below
+        // Don't set "allowed" here; let the second check make the call
+      });
   }, []);
 
   // IP logging is handled server-side in the track-visit edge function
