@@ -332,52 +332,16 @@ function AppInner() {
 
     const loadSession = async () => {
       try {
-        // Try getSession first — Supabase will auto-refresh if the access token is expired
+        // getSession() — Supabase auto-refreshes the access token if needed
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           clearTimeout(timeout);
-          try {
-            const profile = await api.profiles.getById(session.user.id);
-            setCu(normaliseProfile(profile));
-          } catch { /* profile fetch failed — session is still valid, user stays logged in */ }
+          const profile = await api.profiles.getById(session.user.id).catch(() => null);
+          if (profile) setCu(normaliseProfile(profile));
           setAuthLoading(false);
           return;
         }
-
-        // getSession returned null — could be a noopLock issue or the access token
-        // was cleared. Try using the refresh_token from localStorage to get a new session.
-        const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-        if (storageKey) {
-          try {
-            const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
-            // Try refresh_token first (most reliable — gets a brand new access token)
-            if (raw?.refresh_token) {
-              const { data: refreshed } = await supabase.auth.refreshSession({ refresh_token: raw.refresh_token });
-              if (refreshed?.session?.user) {
-                const profile = await api.profiles.getById(refreshed.session.user.id).catch(() => null);
-                if (profile) setCu(normaliseProfile(profile));
-                clearTimeout(timeout);
-                setAuthLoading(false);
-                return;
-              }
-            }
-            // Fall back to setSession with stored tokens
-            if (raw?.access_token) {
-              const { data: restored } = await supabase.auth.setSession({
-                access_token: raw.access_token,
-                refresh_token: raw.refresh_token,
-              });
-              if (restored?.session?.user) {
-                const profile = await api.profiles.getById(restored.session.user.id).catch(() => null);
-                if (profile) setCu(normaliseProfile(profile));
-                clearTimeout(timeout);
-                setAuthLoading(false);
-                return;
-              }
-            }
-          } catch { /* localStorage entry malformed or tokens truly expired */ }
-        }
-      } catch { /* getSession threw — network error, stay with current state */ }
+      } catch { /* network error — fall through */ }
 
       clearTimeout(timeout);
       setAuthLoading(false);
@@ -392,24 +356,11 @@ function AppInner() {
       if (event === "TOKEN_REFRESHED") return;
 
       // SIGNED_OUT fired by Supabase's own refresh logic (e.g. tab sleep, network blip).
-      // We do NOT log the user out here — only the Logout button should do that.
-      // Instead, try to recover the session from localStorage so the user stays in.
+      // SIGNED_OUT — only clear cu if there's genuinely no session
+      // (Supabase sometimes fires this on tab focus/token refresh — don't log out on it)
       if (event === "SIGNED_OUT") {
-        try {
-          const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-          if (storageKey) {
-            const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
-            if (raw?.refresh_token) {
-              const { data: refreshed } = await supabase.auth.refreshSession({ refresh_token: raw.refresh_token });
-              if (refreshed?.session?.user) {
-                // Session recovered — keep the user logged in silently
-                return;
-              }
-            }
-          }
-        } catch { /* recovery failed — fall through, but still don't force logout */ }
-        // Only truly log out if we genuinely have no session at all
-        const { data: { session: currentSession } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+          .catch(() => ({ data: { session: null } }));
         if (!currentSession) setCu(null);
         return;
       }
