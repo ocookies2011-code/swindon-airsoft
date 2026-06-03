@@ -193,8 +193,17 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   const confirmDelete = async () => {
     setBookingBusy(true);
     try {
-      const { error } = await supabase.from("bookings").delete().eq("id", delConfirm.id);
+      const { data: deleted, error } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", delConfirm.id)
+        .select("id");
       if (error) throw new Error(error.message);
+      if (!deleted || deleted.length === 0) {
+        // RLS silently blocked the delete — try via service-role API function
+        const { error: rpcErr } = await supabase.rpc("admin_delete_booking", { booking_id: delConfirm.id });
+        if (rpcErr) throw new Error("Permission denied — " + rpcErr.message);
+      }
       const evList = await api.events.getAll();
       save({ events: evList });
       showToast("Booking deleted!");
