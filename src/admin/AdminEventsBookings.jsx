@@ -735,96 +735,87 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
       {/* ── ALL BOOKINGS TAB ── */}
       {tab === "bookings" && (
-        <div>
-          {/* Event selector */}
-          <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:16, flexWrap:"wrap" }}>
-            <div style={{ flex:1, minWidth:260 }}>
-              <select value={evId} onChange={e => setEvId(e.target.value)}
-                style={{ width:"100%", fontSize:13, padding:"9px 12px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)" }}>
-                <option value="">— All events ({allBookings.reduce((s,b) => s+(b.qty||1),0)} tickets) —</option>
-                {data.events
-                  .filter(e => e.bookings?.length > 0 && new Date(e.date + "T23:59:00") > new Date())
-                  .sort((a,b) => new Date(a.date)-new Date(b.date))
-                  .map(e => (
+          <div>
+            {/* Event selector */}
+            <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:16, flexWrap:"wrap" }}>
+              <div style={{ flex:1, minWidth:260 }}>
+                <select value={evId} onChange={e => setEvId(e.target.value)}
+                  style={{ width:"100%", fontSize:13, padding:"9px 12px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)" }}>
+                  <option value="">— All events ({allBookings.reduce((s,b) => s+(b.qty||1),0)} tickets) —</option>
+                  {data.events.filter(e=>e.bookings?.length>0&&new Date(e.date+"T23:59:00")>new Date()).sort((a,b)=>new Date(a.date)-new Date(b.date)).map(e=>(
                     <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
-                {data.events.filter(e => e.bookings?.length > 0 && new Date(e.date + "T23:59:00") <= new Date()).length > 0 && (
-                  <option disabled>── Past Events ──────────────</option>
-                )}
-                {data.events
-                  .filter(e => e.bookings?.length > 0 && new Date(e.date + "T23:59:00") <= new Date())
-                  .sort((a,b) => new Date(b.date)-new Date(a.date))
-                  .map(e => (
-                    <option key={e.id} value={e.id} style={{ color:"#ef5350" }}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
+                  {data.events.filter(e=>e.bookings?.length>0&&new Date(e.date+"T23:59:00")<=new Date()).length>0&&<option disabled>── Past Events ──────────────</option>}
+                  {data.events.filter(e=>e.bookings?.length>0&&new Date(e.date+"T23:59:00")<=new Date()).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>(
+                    <option key={e.id} value={e.id} style={{color:"#ef5350"}}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
-              </select>
+                </select>
+              </div>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", flexShrink:0 }}>
+                {evId
+                  ? `${(data.events.find(e=>e.id===evId)?.bookings||[]).reduce((s,b)=>s+(b.qty||1),0)} tickets`
+                  : `${allBookings.reduce((s,b)=>s+(b.qty||1),0)} tickets total`
+                }
+              </div>
             </div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)", flexShrink:0 }}>
-              {evId
-                ? `${(data.events.find(e=>e.id===evId)?.bookings||[]).reduce((s,b)=>s+(b.qty||1),0)} tickets`
-                : `${allBookings.reduce((s,b)=>s+(b.qty||1),0)} tickets total`
-              }
-            </div>
-          </div>
-          {/* Bookings table */}
-          <div className="card" style={{ padding:0 }}>
-            <div className="table-wrap"><table className="data-table">
-              <thead><tr>
+
+            {/* Bookings table */}
+            <div className="card" style={{ padding:0 }}>
+              <div className="table-wrap"><table className="data-table">
+                <thead><tr>
                 <th>Player</th><th>Event</th><th>Type</th><th>Qty</th><th>Total</th><th>Booked</th><th>Status</th><th>Actions</th>
               </tr></thead>
-              <tbody>
-                {[...(evId ? (data.events.find(e=>e.id===evId)?.bookings || []) : allBookings)]
-                  .sort((a,b) => new Date(b.date||b.created_at) - new Date(a.date||a.created_at))
-                  .map(b => {
-                    const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
-                    return (
-                      <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
-                        <td style={{ fontWeight:600 }}>
-                          <PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: b.eventObj || bookingEv, eventTitle: b.eventTitle || bookingEv?.title })} />
-                          {b.isGuest && <span style={{ marginLeft:6, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#f97316", border:"1px solid rgba(249,115,22,.3)", padding:"1px 5px" }}>GUEST</span>}
-                        </td>
-                        <td style={{ fontSize:12, color:"var(--muted)" }}>{bookingEv?.title || "—"}</td>
-                        <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
-                        <td>{b.qty}</td>
-                        <td className="text-green">£{Number(b.total||0).toFixed(2)}</td>
-                        <td className="mono" style={{ fontSize:11 }}>{gmtShort(b.date||b.created_at)}</td>
-                        <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
-                        <td>
-                          <div style={{ display:"flex", gap:5, flexWrap:"wrap", alignItems:"center" }}>
-                            <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => setViewBooking({ ...b, eventObj: bookingEv, eventTitle: bookingEv?.title })}>View</button>
-                            <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => openEdit({ ...b, eventTitle: bookingEv?.title, eventObj: bookingEv })}>Edit</button>
-                            {b.squareOrderId && Number(b.total) > 0 && (
-                              <button style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
-                                onClick={() => { setRefundModal({ booking: b }); setRefundAmt(Number(b.total).toFixed(2)); setRefundNote(""); }}>£ Refund</button>
-                            )}
-                            <button className="btn btn-sm btn-danger" style={{fontSize:10}} onClick={() => setDelConfirm(b)}>Del</button>
-                            <button style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", whiteSpace:"nowrap" }}
-                              onClick={() => downloadTicket(b, bookingEv)}>⬇ Ticket</button>
-                            <button
-                              disabled={resendBusy[b.id] || resendBusy[b.id+"_admin"]}
-                              style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.25)", color: resendBusy[b.id] ? "#555" : "#4fc3f7", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id] ? "default" : "pointer", whiteSpace:"nowrap" }}
-                              onClick={() => resendTicket(b, bookingEv, false)}>
-                              {resendBusy[b.id] ? "…" : "📧 Player"}
-                            </button>
-                            <button
-                              disabled={resendBusy[b.id+"_admin"]}
-                              style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color: resendBusy[b.id+"_admin"] ? "#555" : "#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id+"_admin"] ? "default" : "pointer", whiteSpace:"nowrap" }}
-                              onClick={() => resendTicket(b, bookingEv, true)}>
-                              {resendBusy[b.id+"_admin"] ? "…" : "📧 Me"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                {(evId ? (data.events.find(e=>e.id===evId)?.bookings||[]) : allBookings).length === 0 && (
-                  <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No bookings found</td></tr>
-                )}
-              </tbody>
-            </table></div>
+                <tbody>
+                  {[...(evId ? (data.events.find(e=>e.id===evId)?.bookings || []) : allBookings)]
+                    .sort((a,b) => new Date(b.date||b.created_at) - new Date(a.date||a.created_at))
+                    .map(b => {
+                      const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
+                      return (
+                        <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
+                          <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: b.eventObj || bookingEv, eventTitle: b.eventTitle || bookingEv?.title })} />{b.isGuest && <span style={{ marginLeft:6, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#f97316", border:"1px solid rgba(249,115,22,.3)", padding:"1px 5px" }}>GUEST</span>}</td>
+                          <td style={{ fontSize:12, color:"var(--muted)" }}>{bookingEv?.title || "—"}</td>
+                          <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
+                          <td>{b.qty}</td>
+                          <td className="text-green">£{Number(b.total||0).toFixed(2)}</td>
+                          <td className="mono" style={{ fontSize:11 }}>{gmtShort(b.date||b.created_at)}</td>
+                          <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                          <td>
+                            <div style={{ display:"flex", gap:5, flexWrap:"wrap", alignItems:"center" }}>
+                              <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => setViewBooking({ ...b, eventObj: bookingEv, eventTitle: bookingEv?.title })}>View</button>
+                              <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => openEdit({ ...b, eventTitle: bookingEv?.title, eventObj: bookingEv })}>Edit</button>
+                              {b.squareOrderId && Number(b.total) > 0 && (
+                                <button style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
+                                  onClick={() => { setRefundModal({ booking: b }); setRefundAmt(Number(b.total).toFixed(2)); setRefundNote(""); }}>£ Refund</button>
+                              )}
+                              <button className="btn btn-sm btn-danger" style={{fontSize:10}} onClick={() => setDelConfirm(b)}>Del</button>
+                              <button style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.25)", color:"#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor:"pointer", whiteSpace:"nowrap" }}
+                                onClick={() => downloadTicket(b, bookingEv)}>⬇ Ticket</button>
+                              <button
+                                disabled={resendBusy[b.id] || resendBusy[b.id+"_admin"]}
+                                style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.25)", color: resendBusy[b.id] ? "#555" : "#4fc3f7", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id] ? "default" : "pointer", whiteSpace:"nowrap" }}
+                                onClick={() => resendTicket(b, bookingEv, false)}>
+                                {resendBusy[b.id] ? "…" : "📧 Player"}
+                              </button>
+                              <button
+                                disabled={resendBusy[b.id+"_admin"]}
+                                style={{ background:"rgba(200,255,0,.06)", border:"1px solid rgba(200,255,0,.2)", color: resendBusy[b.id+"_admin"] ? "#555" : "#c8ff00", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:10, letterSpacing:".1em", padding:"3px 8px", cursor: resendBusy[b.id+"_admin"] ? "default" : "pointer", whiteSpace:"nowrap" }}
+                                onClick={() => resendTicket(b, bookingEv, true)}>
+                                {resendBusy[b.id+"_admin"] ? "…" : "📧 Me"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {(evId ? (data.events.find(e=>e.id===evId)?.bookings||[]) : allBookings).length === 0 && (
+                    <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No bookings found</td></tr>
+                  )}
+                </tbody>
+              </table></div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── CHECK-IN TAB ── */}
       {tab === "checkin" && (
@@ -1018,7 +1009,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
         </div>
       )}
 
-      {/* ── Edit Booking Modal ── (rendered outside tab blocks so it works from any tab) */}
+          {/* ── Edit Booking Modal ── */}
           {editBooking && (
             <div className="overlay" onClick={() => setEditBooking(null)}>
               <div className="modal-box" onClick={e => e.stopPropagation()}>
@@ -1862,6 +1853,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
             );
           })()}
 
+    </div>
   );
 }
 
