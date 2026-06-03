@@ -511,51 +511,28 @@ function AppInner() {
           setGeoStatus("allowed");
         }
       })
-      .catch(() => {
-        // Edge function failed — fall through to the client-side IP check below
-        // Don't set "allowed" here; let the second check make the call
+      .catch(async () => {
+        // Edge function failed — do a lightweight client-side check as fallback
+        // Fail OPEN (allow) if all checks fail so UK users are never false-blocked
+        try {
+          const res = await fetch("https://api.country.is/", { signal: AbortSignal.timeout(4000) });
+          if (res.ok) {
+            const g = await res.json();
+            const code = (g.country || "").toUpperCase();
+            // Only block if we got a definitive non-GB result
+            if (code && code !== "GB") {
+              setBlockReason("geo");
+              setGeoStatus("blocked");
+            } else {
+              setGeoStatus("allowed"); // GB or unknown — allow through
+            }
+          } else {
+            setGeoStatus("allowed"); // API failed — allow through
+          }
+        } catch {
+          setGeoStatus("allowed"); // All checks failed — allow through
+        }
       });
-  }, []);
-
-  // IP logging is handled server-side in the track-visit edge function
-  // which reads the real IP from request headers (cf-connecting-ip / x-forwarded-for)
-  // and writes it to profiles.last_ip whenever userId is present.
-
-  useEffect(() => {
-    let cancelled = false;
-    const check = async () => {
-      // SECURITY NOTE: This geo-check is client-side and can be bypassed with a VPN or DevTools.
-      // It is a UX-level restriction only, not a security control.
-      // For legally binding geo-restriction, enforce it server-side:
-      //   - Supabase Edge Function: check CF-IPCountry header
-      //   - Or your hosting provider's edge rules (Vercel, Netlify, Cloudflare)
-
-      const apis = [
-        { url: "https://ipwho.is/",             getCode: g => g.success ? g.country_code : null },
-        { url: "https://freeipapi.com/api/json", getCode: g => g.countryCode || null },
-        { url: "https://api.country.is/",        getCode: g => g.country || null },
-      ];
-
-      // Race all three APIs in parallel — use whichever responds first with a valid code
-      const tryApi = async ({ url, getCode }) => {
-        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) throw new Error("non-ok");
-        const g = await res.json();
-        const code = (getCode(g) || "").toUpperCase();
-        if (!code) throw new Error("no code");
-        return code;
-      };
-
-      try {
-        const code = await Promise.any(apis.map(tryApi));
-        if (!cancelled) setGeoStatus(ALLOWED_COUNTRY_CODES.has(code) ? "allowed" : "blocked");
-      } catch {
-        // All APIs failed (network issue) — fail open so real UK/EU visitors aren't locked out
-        if (!cancelled) setGeoStatus("allowed");
-      }
-    };
-    check();
-    return () => { cancelled = true; };
   }, []);
 
   const [loadingSeconds, setLoadingSeconds] = useState(0);
