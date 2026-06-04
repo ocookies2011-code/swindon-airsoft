@@ -1406,13 +1406,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         const extras = form.extras || [];
                         if (e.target.checked) {
                           if (existingExtra) {
-                            // Re-enable existing row
                             f("extras", extras.map(ex => ex.productId === p.id ? { ...ex, enabled: true } : ex));
                           } else {
                             f("extras", [...extras, { id: uid(), name: p.name, price: p.price, noPost: p.noPost, productId: p.id, variantId: null, enabled: true }]);
                           }
                         } else {
-                          // Disable rather than remove — preserves the row in DB
                           f("extras", extras.map(ex => ex.productId === p.id ? { ...ex, enabled: false } : ex));
                         }
                       }} />
@@ -1422,10 +1420,49 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         <span style={{ fontSize:11, color:"var(--muted)", marginLeft:8 }}>£{p.price} · stock: {p.stock}</span>
                         {p.variants?.length > 0 && <span style={{ fontSize:11, color:"var(--accent)", marginLeft:8 }}>{p.variants.length} variants</span>}
                       </div>
-
                     </div>
                   );
                 })}
+
+                {/* ── Custom / legacy extras (no product link) ── */}
+                {(form.extras || []).filter(ex => !ex.productId && ex.enabled !== false).length > 0 && (
+                  <div style={{ marginTop: data.shop.filter(p => p.gameExtra).length > 0 ? 12 : 0 }}>
+                    <div style={{ fontSize:9, letterSpacing:".2em", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", marginBottom:8, textTransform:"uppercase" }}>Custom Extras</div>
+                    {(form.extras || []).filter(ex => !ex.productId && ex.enabled !== false).map(ex => (
+                      <div key={ex.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:"1px solid #1a1a1a" }}>
+                        <input
+                          value={ex.name}
+                          onChange={e => f("extras", (form.extras||[]).map(x => x.id === ex.id ? { ...x, name: e.target.value } : x))}
+                          style={{ flex:1, fontSize:12, background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", padding:"4px 8px" }}
+                        />
+                        <input
+                          type="number"
+                          value={ex.price}
+                          onChange={e => f("extras", (form.extras||[]).map(x => x.id === ex.id ? { ...x, price: parseFloat(e.target.value)||0 } : x))}
+                          style={{ width:70, fontSize:12, background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", padding:"4px 8px" }}
+                          placeholder="£"
+                        />
+                        <label style={{ display:"flex", alignItems:"center", gap:4, fontSize:11, color:"var(--muted)", cursor:"pointer", whiteSpace:"nowrap" }}>
+                          <input type="checkbox" checked={!!ex.noPost}
+                            onChange={e => f("extras", (form.extras||[]).map(x => x.id === ex.id ? { ...x, noPost: e.target.checked } : x))} />
+                          Collect Only
+                        </label>
+                        <button
+                          onClick={() => f("extras", (form.extras||[]).map(x => x.id === ex.id ? { ...x, enabled: false } : x))}
+                          style={{ background:"rgba(239,68,68,.15)", border:"1px solid rgba(239,68,68,.35)", color:"#ef4444", padding:"3px 8px", fontSize:11, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add custom extra */}
+                <button
+                  onClick={() => f("extras", [...(form.extras||[]), { id: uid(), name: "New Extra", price: 0, noPost: true, productId: null, variantId: null, enabled: true }])}
+                  style={{ marginTop:10, background:"transparent", border:"1px dashed #333", color:"var(--muted)", padding:"5px 12px", fontSize:11, cursor:"pointer", width:"100%", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>
+                  + Add Custom Extra
+                </button>
               </div>
             </div>
 
