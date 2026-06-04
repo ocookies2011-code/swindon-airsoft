@@ -327,8 +327,8 @@ export const bookings = wrapWithTimeout({
       total:       patch.total,
       checked_in:  patch.checkedIn,
     }
-    // Allow transferring a booking to a different event
     if (patch.newEventId) fields.event_id = patch.newEventId
+    if (patch.extras !== undefined) fields.extras = patch.extras
     const { error } = await supabase
       .from('bookings').update(fields).eq('id', bookingId)
     if (error) throw error

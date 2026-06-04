@@ -8,6 +8,56 @@ import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
 import { diffFields, logAction } from "./adminHelpers";
 
+
+// Module-level component for editing booking extras
+function ExtrasEditor({ editBooking, setEditBooking, data }) {
+  const evObj = data.events.find(e => e.id === (editBooking.newEventId || editBooking.eventId));
+  const allExtras = (evObj?.extras || []).filter(ex => ex.enabled !== false);
+  const booked = Object.entries(editBooking.extras || {}).filter(([,v]) => v > 0);
+  if (allExtras.length === 0 && booked.length === 0) return null;
+  return (
+    <div className="form-group">
+      <label>Extras</label>
+      <div style={{ border:"1px solid var(--border)", borderRadius:3 }}>
+        {allExtras.map(ex => {
+          let nm = ex.name || "";
+          if (nm.startsWith("{")) { try { nm = JSON.parse(nm)?.n || nm; } catch { /**/ } }
+          const qty = editBooking.extras?.[ex.id] || 0;
+          return (
+            <div key={ex.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 10px", borderBottom:"1px solid var(--border)" }}>
+              <span style={{ flex:1, fontSize:13 }}>{nm}</span>
+              <span style={{ fontSize:11, color:"var(--muted)" }}>£{Number(ex.price).toFixed(2)}</span>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <button onClick={() => setEditBooking(p => ({ ...p, extras: { ...p.extras, [ex.id]: Math.max(0, (p.extras?.[ex.id]||0) - 1) } }))}
+                  style={{ width:24, height:24, background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", cursor:"pointer", fontSize:14 }}>−</button>
+                <span style={{ minWidth:20, textAlign:"center", fontSize:13 }}>{qty}</span>
+                <button onClick={() => setEditBooking(p => ({ ...p, extras: { ...p.extras, [ex.id]: (p.extras?.[ex.id]||0) + 1 } }))}
+                  style={{ width:24, height:24, background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", cursor:"pointer", fontSize:14 }}>+</button>
+              </div>
+            </div>
+          );
+        })}
+        {booked.filter(([k]) => !allExtras.some(ex => ex.id === k)).map(([k, qty]) => (
+          <div key={k} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px", borderBottom:"1px solid var(--border)", background:"rgba(239,68,68,.06)" }}>
+            <span style={{ fontSize:11, color:"#ef4444", flex:1 }}>⚠ Unknown extra ×{qty}</span>
+            <select style={{ fontSize:11, background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)", padding:"2px 4px" }}
+              defaultValue="" onChange={ev => {
+                if (!ev.target.value) return;
+                const nx = { ...editBooking.extras }; delete nx[k]; nx[ev.target.value] = (nx[ev.target.value]||0) + qty;
+                setEditBooking(p => ({ ...p, extras: nx }));
+              }}>
+              <option value="">— Reassign to →</option>
+              {allExtras.map(ex => { let n=ex.name||""; if(n.startsWith("{")){ try{n=JSON.parse(n)?.n||n;}catch{/**/} } return <option key={ex.id} value={ex.id}>{n}</option>; })}
+            </select>
+            <button onClick={() => { const nx={...editBooking.extras}; delete nx[k]; setEditBooking(p=>({...p,extras:nx})); }}
+              style={{ fontSize:11, background:"rgba(239,68,68,.15)", border:"1px solid rgba(239,68,68,.35)", color:"#ef4444", padding:"2px 8px", cursor:"pointer" }}>Remove</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
   const [waitlistLoading, setWaitlistLoading] = useState(false);
@@ -165,6 +215,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
     eventId: b.eventObj?.id || null,
     newEventId: null,
     type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn,
+    extras: b.extras || {},
     _orig: { type: b.type, qty: b.qty, total: b.total, checkedIn: b.checkedIn, eventId: b.eventObj?.id || null, eventTitle: b.eventTitle || b.eventObj?.title },
   });
 
@@ -1073,6 +1124,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
                   <label htmlFor="ci-edit-checkin" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
                 </div>
+                <ExtrasEditor editBooking={editBooking} setEditBooking={setEditBooking} data={data} />
                 <div className="gap-2 mt-2">
                   <button className="btn btn-primary" disabled={bookingBusy} onClick={saveEdit}>
                     {bookingBusy ? "Saving…" : "Save Changes"}
@@ -1955,6 +2007,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 onChange={e => setEditBooking(p => ({ ...p, checkedIn: e.target.checked }))} />
               <label htmlFor="ci-edit-checkin" style={{ cursor: "pointer", fontSize: 13 }}>Checked In</label>
             </div>
+            <ExtrasEditor editBooking={editBooking} setEditBooking={setEditBooking} data={data} />
             <div className="gap-2 mt-2">
               <button className="btn btn-primary" disabled={bookingBusy} onClick={saveEdit}>
                 {bookingBusy ? "Saving…" : "Save Changes"}
