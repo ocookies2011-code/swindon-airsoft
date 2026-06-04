@@ -919,7 +919,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                           {/* Extra name header — use live product name if linked, else fall back to saved name */}
                           <div style={{ fontSize:13, fontWeight:600, color:"#fff", marginBottom:8 }}>
                             {lp?.name || ex.name}
-                            {liveNoPost && <span className="tag tag-gold" style={{ fontSize:10, marginLeft:6 }}>Collect Only</span>}
+                            
                           </div>
                           {hasVariants ? (
                             /* One counter row per variant */
