@@ -56,7 +56,7 @@ function AppInner() {
   //   /checkin       → self check-in
   //   /:page         → any other named page
 
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","reset","checkin","props","classifieds"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","marshal","reset","checkin","props","classifieds"];
 
   const parsePath = () => {
     // Support both legacy hash URLs (#shop, #events/id) and new path URLs (/shop, /shop/id)
