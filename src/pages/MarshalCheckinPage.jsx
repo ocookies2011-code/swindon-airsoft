@@ -79,16 +79,40 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
             {upcomingEvents.length === 0 ? <option value="">No upcoming events</option> : upcomingEvents.map(e => <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)}</option>)}
           </select>
         </div>
-        {ev && (
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 15, color: "#9ab870" }}>
-              {checkedInCount} / {ev.bookings.length} checked in
+        {ev && (() => {
+          const walkOnBooked   = ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + (b.qty||1), 0);
+          const rentalBooked   = ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + (b.qty||1), 0);
+          const walkOnChecked  = ev.bookings.filter(b => b.type === "walkOn" && b.checkedIn).reduce((s,b) => s + (b.qty||1), 0);
+          const rentalChecked  = ev.bookings.filter(b => b.type === "rental" && b.checkedIn).reduce((s,b) => s + (b.qty||1), 0);
+          return (
+            <div style={{ marginTop: 12 }}>
+              {/* Breakdown badges */}
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:10 }}>
+                <div style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.2)", padding:"6px 14px", borderRadius:3 }}>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#6a8a40", textTransform:"uppercase", display:"block", marginBottom:2 }}>Walk-On</span>
+                  <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"#c8ff00" }}>{walkOnChecked}</span>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#4a6a20" }}> / {walkOnBooked}</span>
+                </div>
+                <div style={{ background:"rgba(79,195,247,.08)", border:"1px solid rgba(79,195,247,.2)", padding:"6px 14px", borderRadius:3 }}>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"#2a6a8a", textTransform:"uppercase", display:"block", marginBottom:2 }}>Rental</span>
+                  <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"#4fc3f7" }}>{rentalChecked}</span>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"#1a4a6a" }}> / {rentalBooked}</span>
+                </div>
+                <div style={{ background:"rgba(255,255,255,.04)", border:"1px solid #222", padding:"6px 14px", borderRadius:3 }}>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".2em", color:"var(--muted)", textTransform:"uppercase", display:"block", marginBottom:2 }}>Total</span>
+                  <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:800, fontSize:20, color:"#e8f0d8" }}>{checkedInCount}</span>
+                  <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:"var(--muted)" }}> / {walkOnBooked + rentalBooked}</span>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div className="progress-bar" style={{ flex:1 }}>
+                  <div className="progress-fill" style={{ width: (walkOnBooked + rentalBooked) ? (checkedInCount / (walkOnBooked + rentalBooked) * 100) + "%" : "0%" }} />
+                </div>
+              </div>
             </div>
-            <div className="progress-bar" style={{ flex: 1, minWidth: 80 }}>
-              <div className="progress-fill" style={{ width: ev.bookings.length ? (checkedInCount / ev.bookings.length * 100) + "%" : "0%" }} />
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* QR Scan button */}
