@@ -2264,7 +2264,17 @@ function HomePage({ data, cu, setPage, onProductClick }) {
   const upcomingEvents = data.events.filter(e => e.published && new Date(e.date + "T" + (e.time || "23:59")) > now);
   const totalPlayers  = data.users.filter(u => u.role === "player").length;
   const totalEvents   = upcomingEvents.length;
-  const totalBookings = upcomingEvents.flatMap(e => e.bookings).reduce((s, b) => s + (b.qty || 1), 0);
+  // For admins bookings are loaded via RLS, for anon users we use a public aggregate function
+  const [publicBookingCount, setPublicBookingCount] = React.useState(null);
+  React.useEffect(() => {
+    import("./supabaseClient").then(({ supabase }) => {
+      supabase.rpc("get_upcoming_booking_counts").then(({ data }) => {
+        if (data) setPublicBookingCount(data.reduce((s, r) => s + Number(r.total_booked), 0));
+      }).catch(() => {});
+    });
+  }, []);
+  const adminBookingCount = upcomingEvents.flatMap(e => e.bookings || []).reduce((s, b) => s + (b.qty || 1), 0);
+  const totalBookings = adminBookingCount > 0 ? adminBookingCount : (publicBookingCount ?? null);
 
   return (
     <div>
