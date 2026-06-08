@@ -332,16 +332,31 @@ function AdminVisitorStats({ data, cu, showToast }) {
           if (profiles) profiles.forEach(p => { ipMap[p.id] = p.last_ip; });
         }
 
+        // For anon sessions with an IP, check if it matches a known player's last_ip
+        const anonIps = sessions.filter(s => !s.user_id && s.client_ip).map(s => s.client_ip);
+        let ipToProfile = {};
+        if (anonIps.length > 0) {
+          const { data: matchedProfiles } = await supabase
+            .from('profiles')
+            .select('id, name, last_ip')
+            .in('last_ip', anonIps);
+          if (matchedProfiles) matchedProfiles.forEach(p => { if (p.last_ip) ipToProfile[p.last_ip] = p; });
+        }
+
         setLiveCount(sessions.length);
-        setLiveNames(sessions.map(s => ({
-          name: s.user_name,
-          isCDN: !s.client_ip && s.country && s.country !== 'GB',
-          page: s.page,
-          ip: s.user_id ? (ipMap[s.user_id] || null) : (s.client_ip || null),
-          country: s.country,
-          city: s.city,
-          isAnon: !s.user_id,
-        })));
+        setLiveNames(sessions.map(s => {
+          const anonProfile = (!s.user_id && s.client_ip) ? ipToProfile[s.client_ip] : null;
+          return {
+            name: s.user_name || anonProfile?.name || null,
+            isCDN: !s.client_ip && s.country && s.country !== 'GB',
+            page: s.page,
+            ip: s.user_id ? (ipMap[s.user_id] || null) : (s.client_ip || null),
+            country: s.country,
+            city: s.city,
+            isAnon: !s.user_id,
+            resolvedFromIp: !!anonProfile,
+          };
+        }));
       } catch { /* non-fatal */ }
     };
     fetchLive();
@@ -592,8 +607,8 @@ function AdminVisitorStats({ data, cu, showToast }) {
                 <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
                   {liveNames.map((s, i) => (
                     <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"5px 10px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isCDN ? "#2a2a2a" : s.isAnon ? "#2a4018" : "#c8ff00"}`, overflow:"hidden", minWidth:0 }}>
-                      <span style={{ color: s.isCDN ? "#4a4a4a" : s.isAnon ? "#3a8040" : "#c8ff00", width:110, flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        {s.isCDN ? `🌐 ${s.city || "CDN"}` : s.isAnon ? "👤 anon" : `🟢 ${s.name}`}
+                      <span style={{ color: s.isCDN ? "#4a4a4a" : (s.isAnon && !s.resolvedFromIp) ? "#3a8040" : "#c8ff00", width:110, flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {s.isCDN ? `🌐 ${s.city || "CDN"}` : (s.isAnon && s.name) ? `🔍 ${s.name}` : s.isAnon ? "👤 anon" : `🟢 ${s.name}`}
                       </span>
                       <span style={{ color:"#2a4018", flexShrink:0 }}>→</span>
                       <span style={{ color:"#5a7a30", textTransform:"uppercase", width:80, flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PAGE_LABELS[s.page] || s.page || "—"}</span>
