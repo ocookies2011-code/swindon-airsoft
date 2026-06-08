@@ -1197,7 +1197,7 @@ export const visits = wrapWithTimeout({
   async getStats(days = 7) {
     let q = supabase
       .from('page_visits')
-      .select('id, page, user_id, user_name, session_id, referrer, country, city, lat, lon, user_agent, visit_count, last_seen_at, created_at')
+      .select('id, page, user_id, user_name, session_id, referrer, country, city, lat, lon, user_agent, visit_count, last_seen_at, created_at, client_ip')
       .order('last_seen_at', { ascending: false })
       .limit(10000);
     if (days > 0) {

@@ -380,6 +380,7 @@ function AdminVisitorStats({ data, cu, showToast }) {
 
   // ── Derived stats ──
   // Each row = one user+page pair. Sum visit_count for totals; deduplicate for unique visitors.
+  const uniqueSessions = new Set(filtered.map(row => row.session_id).filter(Boolean)).size;
   const totalVisits    = (dateRange === "all" && allTimeCounts)
     ? allTimeCounts.totalRows
     : filtered.reduce((s, r) => s + (r.visit_count || 1), 0);
@@ -734,8 +735,20 @@ function AdminVisitorStats({ data, cu, showToast }) {
                 return (
                   <div key={userIdx} style={{ borderBottom:"1px solid #0f1a08", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8, alignItems:"center" }}>
                     <div>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}>{userRow.name}</div>
-                      {userRow.email && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", marginTop:1 }}>{userRow.email}</div>}
+                      {userRow.isAnon ? (
+                        <>
+                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, fontWeight:700, color:"#5a6e42" }}>
+                            👤 {userRow.city ? `${userRow.city}, ${userRow.country}` : (userRow.ip || "Anonymous")}
+                          </div>
+                          {userRow.ip && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", marginTop:1 }}>{userRow.ip}</div>}
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:14, fontWeight:700, color:"#b0c090" }}>{userRow.name}</div>
+                          {userRow.email && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#3a5010", marginTop:1 }}>{userRow.email}</div>}
+                          {userRow.ip && <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#2a4a3a", marginTop:1 }}>{userRow.ip}</div>}
+                        </>
+                      )}
                     </div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:18, fontWeight:900, color:"#c8ff00" }}>{userRow.count}</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, color:"#3a5010", textTransform:"uppercase" }}>{PAGE_ICONS[lastPage] || "▸"} {lastPage}</div>
