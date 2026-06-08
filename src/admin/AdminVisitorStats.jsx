@@ -380,7 +380,7 @@ function AdminVisitorStats({ data, cu, showToast }) {
 
   // ── Derived stats ──
   // Each row = one user+page pair. Sum visit_count for totals; deduplicate for unique visitors.
-  const uniqueSessions = new Set(filtered.map(row => row.session_id).filter(Boolean)).size;
+  const uniqueSessionsFiltered = new Set(filtered.map(row => row.session_id).filter(Boolean)).size;
   const totalVisits    = (dateRange === "all" && allTimeCounts)
     ? allTimeCounts.totalRows
     : filtered.reduce((s, r) => s + (r.visit_count || 1), 0);
