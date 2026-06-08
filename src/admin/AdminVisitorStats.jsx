@@ -589,7 +589,7 @@ function AdminVisitorStats({ data, cu, showToast }) {
                 <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>active in last 5 min</div>
               </div>
               {liveNames.length > 0 && (
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))", gap:4 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
                   {liveNames.map((s, i) => (
                     <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"5px 10px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isCDN ? "#2a2a2a" : s.isAnon ? "#2a4018" : "#c8ff00"}`, overflow:"hidden", minWidth:0 }}>
                       <span style={{ color: s.isCDN ? "#4a4a4a" : s.isAnon ? "#3a8040" : "#c8ff00", width:110, flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
