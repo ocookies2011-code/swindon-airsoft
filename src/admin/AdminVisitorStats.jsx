@@ -576,49 +576,35 @@ function AdminVisitorStats({ data, cu, showToast }) {
         {/* ── OVERVIEW ── */}
         {activeTab === "overview" && (
           <div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
-              {/* Live viewers card — spans 2 columns */}
-              <div style={{ background:"#0a0f05", border:"1px solid #1a2808", padding:"18px 20px", position:"relative", overflow:"hidden", gridColumn:"span 2" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
-                  <span className={`live-badge${liveCount > 0 ? "" : ""}`} style={{ opacity: liveCount > 0 ? 1 : 0.4 }}>
-                    <span className={`pulse-dot${liveCount > 0 ? "" : " offline"}`} />
-                    {liveCount > 0 ? "LIVE" : "IDLE"}
-                  </span>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:38, color:"#c8ff00", lineHeight:1 }}>
-                    {liveCount === null ? "—" : liveCount}
-                  </div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>active in last 5 min</div>
+            {/* Live box — full width above the stat cards */}
+            <div style={{ background:"#0a0f05", border:"1px solid #1a2808", padding:"16px 20px", marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom: liveNames.length > 0 ? 10 : 0 }}>
+                <span className={`live-badge${liveCount > 0 ? "" : ""}`} style={{ opacity: liveCount > 0 ? 1 : 0.4 }}>
+                  <span className={`pulse-dot${liveCount > 0 ? "" : " offline"}`} />
+                  {liveCount > 0 ? "LIVE" : "IDLE"}
+                </span>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:900, fontSize:32, color:"#c8ff00", lineHeight:1 }}>
+                  {liveCount === null ? "—" : liveCount}
                 </div>
-                {liveNames.length > 0 && (
-                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                    {liveNames.map((s, i) => (
-                      <div key={i} style={{ display:"flex", alignItems:"center", gap:8, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"4px 8px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isAnon ? "#2a4018" : "#c8ff00"}` }}>
-                        <span style={{ color: s.isCDN ? "#4a4a4a" : s.isAnon ? "#3a5010" : "#c8ff00", minWidth:120 }}>{s.isCDN ? `🌐 ${s.city || "CDN"} node` : s.isAnon ? "👤 anon" : `🟢 ${s.name}`}</span>
-                        <span style={{ color:"#2a4018" }}>→</span>
-                        <span style={{ color:"#5a7a30", textTransform:"uppercase", minWidth:80 }}>{PAGE_LABELS[s.page] || s.page || "—"}</span>
-                        {s.ip && (
-                          <>
-                            <span style={{ color:"#2a4018" }}>·</span>
-                            <span style={{ color:"#4fc3f7", letterSpacing:".05em" }}>{s.ip}</span>
-                          </>
-                        )}
-                        {s.ip && (
-                          <>
-                            <span style={{ color:"#2a4018" }}>·</span>
-                            <span style={{ color: s.isAnon ? "#5a8a40" : "#4fc3f7", letterSpacing:".05em" }}>{s.ip}</span>
-                          </>
-                        )}
-                        {(s.city || s.country) && (
-                          <>
-                            <span style={{ color:"#2a4018" }}>·</span>
-                            <span style={{ color:"#3a5a20" }}>{s.city}{s.country ? `, ${s.country}` : ""}</span>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:"#3a5010" }}>active in last 5 min</div>
               </div>
+              {liveNames.length > 0 && (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))", gap:4 }}>
+                  {liveNames.map((s, i) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:8, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"5px 10px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isCDN ? "#2a2a2a" : s.isAnon ? "#2a4018" : "#c8ff00"}` }}>
+                      <span style={{ color: s.isCDN ? "#4a4a4a" : s.isAnon ? "#3a8040" : "#c8ff00", minWidth:130, flexShrink:0 }}>
+                        {s.isCDN ? `🌐 ${s.city || "CDN"} node` : s.isAnon ? "👤 anon" : `🟢 ${s.name}`}
+                      </span>
+                      <span style={{ color:"#2a4018" }}>→</span>
+                      <span style={{ color:"#5a7a30", textTransform:"uppercase", minWidth:90, flexShrink:0 }}>{PAGE_LABELS[s.page] || s.page || "—"}</span>
+                      {s.ip && <span style={{ color: s.isAnon ? "#4a9a60" : "#4fc3f7", letterSpacing:".04em", flexShrink:0 }}>· {s.ip}</span>}
+                      {(s.city || s.country) && <span style={{ color:"#3a5a20", flexShrink:0 }}>· {s.city}{s.country && s.country !== "GB" ? `, ${s.country}` : ""}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
               {statCard("Unique Visitors", uniqueSessions.toLocaleString(), "distinct sessions", "#c8ff00")}
               {statCard("Total Page Views", totalVisits.toLocaleString(), `across ${dateRange === "all" ? "all time" : dateRange}`, "#4fc3f7")}
               {statCard("Logged-In Visits", loggedInVisits.toLocaleString(), `${uniqueUsers} unique members`, "#c8a000")}
