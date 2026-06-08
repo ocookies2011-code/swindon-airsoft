@@ -591,14 +591,14 @@ function AdminVisitorStats({ data, cu, showToast }) {
               {liveNames.length > 0 && (
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))", gap:4 }}>
                   {liveNames.map((s, i) => (
-                    <div key={i} style={{ display:"flex", alignItems:"center", gap:8, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"5px 10px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isCDN ? "#2a2a2a" : s.isAnon ? "#2a4018" : "#c8ff00"}` }}>
-                      <span style={{ color: s.isCDN ? "#4a4a4a" : s.isAnon ? "#3a8040" : "#c8ff00", minWidth:130, flexShrink:0 }}>
-                        {s.isCDN ? `🌐 ${s.city || "CDN"} node` : s.isAnon ? "👤 anon" : `🟢 ${s.name}`}
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:10, fontFamily:"'Share Tech Mono',monospace", padding:"5px 10px", background:"rgba(0,0,0,.3)", borderLeft:`2px solid ${s.isCDN ? "#2a2a2a" : s.isAnon ? "#2a4018" : "#c8ff00"}`, overflow:"hidden", minWidth:0 }}>
+                      <span style={{ color: s.isCDN ? "#4a4a4a" : s.isAnon ? "#3a8040" : "#c8ff00", width:110, flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {s.isCDN ? `🌐 ${s.city || "CDN"}` : s.isAnon ? "👤 anon" : `🟢 ${s.name}`}
                       </span>
-                      <span style={{ color:"#2a4018" }}>→</span>
-                      <span style={{ color:"#5a7a30", textTransform:"uppercase", minWidth:90, flexShrink:0 }}>{PAGE_LABELS[s.page] || s.page || "—"}</span>
-                      {s.ip && <span style={{ color: s.isAnon ? "#4a9a60" : "#4fc3f7", letterSpacing:".04em", flexShrink:0 }}>· {s.ip}</span>}
-                      {(s.city || s.country) && <span style={{ color:"#3a5a20", flexShrink:0 }}>· {s.city}{s.country && s.country !== "GB" ? `, ${s.country}` : ""}</span>}
+                      <span style={{ color:"#2a4018", flexShrink:0 }}>→</span>
+                      <span style={{ color:"#5a7a30", textTransform:"uppercase", width:80, flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PAGE_LABELS[s.page] || s.page || "—"}</span>
+                      {s.ip && <span style={{ color: s.isAnon ? "#4a9a60" : "#4fc3f7", letterSpacing:".03em", flexShrink:0 }}>· {s.ip}</span>}
+                      {(s.city || s.country) && <span style={{ color:"#3a5a20", flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:100 }}>· {s.city}{s.country && s.country !== "GB" ? `, ${s.country}` : ""}</span>}
                     </div>
                   ))}
                 </div>
