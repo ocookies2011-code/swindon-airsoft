@@ -77,6 +77,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       if (expiresAt) row.expires_at = expiresAt;
       const { error } = await supabase.from('ip_bans').upsert(row, { onConflict: 'ip' });
       if (error) throw error;
+      await auditLog('ban_ip', ipBanModal, `IP banned: ${ip} — ${reason || 'No reason given'}`, null, ip);
       showToast('🚫 IP ' + ip + ' banned');
       setIpBanModal(null);
       setIpBanReason('');
@@ -99,7 +100,20 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   };
   const [edit, setEdit] = useState(null);
   const [viewPlayer, setViewPlayer] = useState(null);
-  const [playerSpend, setPlayerSpend] = useState(null); // { bookings, shopOrders, total }
+  const [playerAuditLog, setPlayerAuditLog] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [playerSpend, setPlayerSpend] = useState(null);
+
+  useEffect(() => {
+    if (!viewPlayer?.id) { setPlayerAuditLog([]); return; }
+    setAuditLoading(true);
+    supabase.from("admin_audit_log").select("*")
+      .eq("player_id", viewPlayer.id)
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then(({ data }) => { setPlayerAuditLog(data || []); setAuditLoading(false); })
+      .catch(() => setAuditLoading(false));
+  }, [viewPlayer?.id]); // { bookings, shopOrders, total }
   const [waiverViewPlayer, setWaiverViewPlayer] = useState(null); // inline waiver panel
   const [savingEdit, setSavingEdit] = useState(false);
   const [delAccountConfirm, setDelAccountConfirm] = useState(null);
@@ -117,7 +131,20 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [recalcBusy, setRecalcBusy] = useState(false);
   const [localUsers, setLocalUsers] = useState(null); // null = not yet fetched
   const [playerSearch, setPlayerSearch] = useState("");
-  const [playerSort, setPlayerSort] = useState("az"); // az | za | games | ukara
+  const [playerSort, setPlayerSort] = useState("az");
+
+  const auditLog = async (action, player, details, oldValue = null, newValue = null) => {
+    await supabase.from("admin_audit_log").insert({
+      admin_id:    cu?.id,
+      admin_name:  cu?.name,
+      player_id:   player?.id,
+      player_name: player?.name,
+      action,
+      details,
+      old_value:   oldValue ? String(oldValue) : null,
+      new_value:   newValue ? String(newValue) : null,
+    }).catch(() => {});
+  }; // az | za | games | ukara
   const [roleFilter, setRoleFilter] = useState("all"); // all | player | admin
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(new Set());
   const [bulkAction, setBulkAction] = useState("");
@@ -770,6 +797,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                           const { error: updateErr } = await supabase
                             .from("profiles").update({ credits: newCredits }).eq("id", u.id);
                           if (updateErr) throw updateErr;
+                          await auditLog('add_credits', u, `Bulk: +£5.00 credits added`, `£${Number(fresh?.credits||0).toFixed(2)}`, `£${newCredits.toFixed(2)}`);
                           // Update local state
                           save({ users: (data.users||[]).map(x => x.id === u.id ? { ...x, credits: newCredits } : x) });
                         } else {
@@ -1603,7 +1631,45 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   )
               }
 
-              <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, display:"flex", justifyContent:"flex-end" }}>
+              {/* ── Admin Audit Log ── */}
+              <div style={{ borderTop:"1px solid var(--border)", paddingTop:16, marginTop:8 }}>
+                <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:700, fontSize:13, color:"var(--accent)", letterSpacing:".1em", marginBottom:10 }}>
+                  📋 ADMIN ACTION LOG
+                </div>
+                {auditLoading ? (
+                  <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>Loading…</div>
+                ) : playerAuditLog.length === 0 ? (
+                  <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace" }}>No admin actions recorded yet.</div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:5, maxHeight:240, overflowY:"auto" }}>
+                    {playerAuditLog.map(log => (
+                      <div key={log.id} style={{ background:"#080b06", border:"1px solid var(--border)", padding:"8px 12px" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, flexWrap:"wrap" }}>
+                          <div>
+                            <span style={{ fontWeight:700, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:".08em", marginRight:8 }}>
+                              {log.action?.replace(/_/g," ").toUpperCase()}
+                            </span>
+                            <span style={{ color:"var(--muted)", fontSize:10 }}>by {log.admin_name || "Admin"}</span>
+                          </div>
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", flexShrink:0 }}>
+                            {new Date(log.created_at).toLocaleString("en-GB", { timeZone:"Europe/London", day:"2-digit", month:"short", year:"2-digit", hour:"2-digit", minute:"2-digit" })}
+                          </span>
+                        </div>
+                        {log.details && <div style={{ fontSize:11, color:"#8aaa60", marginTop:3 }}>{log.details}</div>}
+                        {(log.old_value || log.new_value) && (
+                          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", marginTop:2 }}>
+                            {log.old_value && <span style={{ color:"#ef4444" }}>{log.old_value}</span>}
+                            {log.old_value && log.new_value && <span style={{ margin:"0 6px" }}>→</span>}
+                            {log.new_value && <span style={{ color:"#c8ff00" }}>{log.new_value}</span>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, display:"flex", justifyContent:"flex-end", marginTop:8 }}>
                 <button className="btn btn-ghost" onClick={() => setViewPlayer(null)}>Close</button>
               </div>
             </div>
