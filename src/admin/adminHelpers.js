@@ -8,15 +8,22 @@ function diffFields(before = {}, after = {}, labels = {}) {
     .join(" | ");
 }
 
-async function logAction({ adminEmail, adminName, action, detail }) {
+async function logAction({ adminEmail, adminName, action, detail, playerId, playerName, oldValue, newValue }) {
   try {
-    await supabase.from("audit_log").insert({
+    await supabase.from("admin_audit_log").insert({
       admin_email: adminEmail || "",
       admin_name:  adminName  || "",
       action,
       detail:      detail     || "",
+      details:     detail     || "",
+      player_id:   playerId   || null,
+      player_name: playerName || null,
+      old_value:   oldValue   ? String(oldValue) : null,
+      new_value:   newValue   ? String(newValue) : null,
     });
-  } catch {}
+  } catch(e) {
+    console.warn("audit log failed:", e.message);
+  }
 }
 
 export { diffFields, logAction };

@@ -299,7 +299,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       save({ users: data.users.filter(x => x.id !== deletedId) });
       setDelAccountConfirm(null);
       showToast(`✓ Account permanently deleted: ${deletedName}`, "red");
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player account deleted", detail: `${deletedName} (${deletedEmail}) — ID: ${deletedId}` });
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player account deleted", detail: `${deletedName} (${deletedEmail})`, playerName: deletedName });
     } catch (e) { showToast("Delete failed: " + e.message, "red"); }
     finally { setDeletingAccount(false); }
   };
@@ -402,7 +402,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         deleteRequest: "Delete request",
       };
       const diff = diffFields(before, after, LABELS);
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player updated", detail: `${edit.name}${diff ? ` — ${diff}` : " (no field changes)"}` });
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Player updated", detail: `${edit.name}${diff ? ` — ${diff}` : " (no field changes)"}`, playerId: origUser?.id, playerName: edit.name });
       // Sync to Square Customer Directory in background
       const updatedPlayer = updated.find(u => u.id === edit.id) || edit;
       supabase.functions.invoke("square-customer-sync", {
