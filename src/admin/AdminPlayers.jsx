@@ -991,7 +991,18 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               <div className="form-group"><label>UKARA ID</label><input value={edit.ukara || ""} onChange={e => setEdit(p => ({ ...p, ukara: e.target.value }))} /></div>
             </div>
             <div className="form-row">
-              <div className="form-group"><label>Credits (£)</label><input type="number" value={edit.credits || 0} onChange={e => setEdit(p => ({ ...p, credits: +e.target.value }))} /></div>
+              <div className="form-group">
+                <label>Credits (£) <span style={{ color:"var(--muted)", fontSize:10 }}>— only set intentionally</span></label>
+                <input type="number" value={edit.credits || 0}
+                  onChange={e => setEdit(p => ({ ...p, credits: +e.target.value }))}
+                  style={{ borderColor: edit.credits > 0 ? "rgba(200,255,0,.4)" : undefined }}
+                />
+                {edit.credits > 0 && edit.credits !== origUser?.credits && (
+                  <div style={{ fontSize:10, color:"#f97316", marginTop:4 }}>
+                    ⚠ You are setting credits to £{Number(edit.credits).toFixed(2)} — this will allow the player to book for free
+                  </div>
+                )}
+              </div>
               <div className="form-group">
                 <label>Role</label>
                 <select value={edit.role || "player"} onChange={e => setEdit(p => ({ ...p, role: e.target.value }))}

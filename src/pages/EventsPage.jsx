@@ -388,8 +388,12 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         if (creditsApplied > 0 && cu?.id) {
           const { data: newCredits, error: credErr } = await supabase
             .rpc('deduct_credits', { p_user_id: cu.id, p_amount: creditsApplied });
-          if (credErr) console.error('Credits deduction failed:', credErr.message);
-          else updateUser(cu.id, { credits: newCredits });
+          if (credErr) {
+            console.error('Credits deduction failed:', credErr.message);
+            showToast(`⚠ Credits not deducted — please manually remove £${creditsApplied.toFixed(2)} from ${cu.name}'s account. Error: ${credErr.message}`, 'red');
+          } else {
+            updateUser(cu.id, { credits: newCredits });
+          }
         }
 
         // Record discount code / gift voucher redemption
