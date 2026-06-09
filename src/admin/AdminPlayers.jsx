@@ -1655,7 +1655,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                             {new Date(log.created_at).toLocaleString("en-GB", { timeZone:"Europe/London", day:"2-digit", month:"short", year:"2-digit", hour:"2-digit", minute:"2-digit" })}
                           </span>
                         </div>
-                        {log.details && <div style={{ fontSize:11, color:"#8aaa60", marginTop:3 }}>{log.details}</div>}
+                        {(log.details || log.detail) && <div style={{ fontSize:11, color:"#8aaa60", marginTop:3 }}>{log.details || log.detail}</div>}
                         {(log.old_value || log.new_value) && (
                           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"var(--muted)", marginTop:2 }}>
                             {log.old_value && <span style={{ color:"#ef4444" }}>{log.old_value}</span>}
