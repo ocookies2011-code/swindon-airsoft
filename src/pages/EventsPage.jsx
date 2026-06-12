@@ -27,6 +27,18 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
   // ── Booking cart: { walkOn: qty, rental: qty, extras: { [id]: qty } }
   const [bCart, setBCart] = useState({ walkOn: 0, rental: 0, extras: {} });
+  const [realBookingCounts, setRealBookingCounts] = useState({});
+
+  // Fetch real booking counts via public RPC (bypasses RLS which hides other users' bookings)
+  useEffect(() => {
+    supabase.rpc('get_upcoming_booking_counts').then(({ data }) => {
+      if (data) {
+        const map = {};
+        data.forEach(r => { map[r.event_id] = { walkOn: Number(r.walkon_booked||0), rental: Number(r.rental_booked||0) }; });
+        setRealBookingCounts(map);
+      }
+    }).catch(() => {});
+  }, []);
   const [guestMode, setGuestMode] = useState(false);
   const [guestForm, setGuestForm] = useState({ email:"", phone:"" });
   const [guestWaiverSigned, setGuestWaiverSigned] = useState(false);
@@ -133,9 +145,11 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const waiverValid = (cu?.waiverSigned === true && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
     const myBookings  = cu ? ev.bookings.filter(b => b.userId === cu.id) : [];
 
-    // Per-type slots remaining
-    const walkOnBooked = ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + b.qty, 0);
-    const rentalBooked = ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + b.qty, 0);
+    // Per-type slots remaining — use server-side counts to bypass RLS
+    // (RLS only shows the current user's bookings, so ev.bookings is incomplete)
+    const realCounts   = realBookingCounts[ev.id] || {};
+    const walkOnBooked = realCounts.walkOn ?? ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + b.qty, 0);
+    const rentalBooked = realCounts.rental ?? ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + b.qty, 0);
     const walkOnLeft   = ev.walkOnSlots - walkOnBooked;
     const rentalLeft   = ev.rentalSlots - rentalBooked;
     const totalBooked  = walkOnBooked + rentalBooked;
@@ -318,6 +332,29 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
         const totalDeductions = discountSaving + creditsApplied;
         const walkOnPaid = Math.max(0, (walkOnTotal + extrasTotal) - totalDeductions * walkOnShare);
         const rentalPaid = Math.max(0, (rentalTotal + (bCart.walkOn > 0 ? 0 : extrasTotal)) - totalDeductions * rentalShare);
+
+        // ── Server-side slots check — final guard before charging ──
+        // Client-side check can be wrong due to RLS hiding other users' bookings
+        const { data: serverCounts } = await supabase.rpc('get_upcoming_booking_counts');
+        const evCounts = serverCounts?.find(r => r.event_id === ev.id);
+        if (evCounts) {
+          if (bCart.walkOn > 0) {
+            const woLeft = ev.walkOnSlots - Number(evCounts.walkon_booked || 0);
+            if (bCart.walkOn > woLeft) {
+              clearTimeout(safety); setBookingBusy(false);
+              setSquareError(`Sorry — only ${woLeft} Walk-On slot${woLeft === 1 ? '' : 's'} remaining. Please reduce your quantity.`);
+              return;
+            }
+          }
+          if (bCart.rental > 0) {
+            const rnLeft = ev.rentalSlots - Number(evCounts.rental_booked || 0);
+            if (bCart.rental > rnLeft) {
+              clearTimeout(safety); setBookingBusy(false);
+              setSquareError(`Sorry — only ${rnLeft} Rental slot${rnLeft === 1 ? '' : 's'} remaining. Please reduce your quantity.`);
+              return;
+            }
+          }
+        }
 
         // Idempotency: check if booking already exists for this payment to prevent double-booking
         if (squarePayment?.id && !squarePayment.id.startsWith('CREDITS-') && !squarePayment.id.startsWith('ADMIN-')) {
