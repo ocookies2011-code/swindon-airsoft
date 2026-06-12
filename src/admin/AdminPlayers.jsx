@@ -434,12 +434,15 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       // Convert sets to counts
       Object.keys(counts).forEach(uid => { counts[uid] = counts[uid].size; });
 
-      // Update each player
+      // Update each player — only increase, never decrease manually-set values
       let updated = 0;
       for (const u of players) {
-        const correct = counts[u.id] || 0;
-        if (u.gamesAttended !== correct) {
-          await updateUser(u.id, { gamesAttended: correct });
+        const checkedInCount = counts[u.id] || 0;
+        const current = u.gamesAttended || 0;
+        // If admin manually set a higher count, keep it
+        // Only update if the checked-in count is higher than current
+        if (checkedInCount > current) {
+          await updateUser(u.id, { gamesAttended: checkedInCount });
           updated++;
         }
       }
