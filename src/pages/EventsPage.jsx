@@ -30,14 +30,16 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const [realBookingCounts, setRealBookingCounts] = useState({});
 
   // Fetch real booking counts via public RPC (bypasses RLS which hides other users' bookings)
+  const [countsLoaded, setCountsLoaded] = useState(false);
   useEffect(() => {
     supabase.rpc('get_upcoming_booking_counts').then(({ data }) => {
+      const map = {};
       if (data) {
-        const map = {};
         data.forEach(r => { map[r.event_id] = { walkOn: Number(r.walkon_booked||0), rental: Number(r.rental_booked||0) }; });
-        setRealBookingCounts(map);
       }
-    }).catch(() => {});
+      setRealBookingCounts(map);
+      setCountsLoaded(true);
+    }).catch(() => { setCountsLoaded(true); }); // fail open so page still works
   }, []);
   const [guestMode, setGuestMode] = useState(false);
   const [guestForm, setGuestForm] = useState({ email:"", phone:"" });
@@ -147,9 +149,12 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
     // Per-type slots remaining — use server-side counts to bypass RLS
     // (RLS only shows the current user's bookings, so ev.bookings is incomplete)
-    const realCounts   = realBookingCounts[ev.id] || {};
-    const walkOnBooked = realCounts.walkOn ?? ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + b.qty, 0);
-    const rentalBooked = realCounts.rental ?? ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + b.qty, 0);
+    // While counts are loading, use max of own bookings vs slots (safe default)
+    const realCounts   = countsLoaded ? (realBookingCounts[ev.id] || { walkOn: 0, rental: 0 }) : null;
+    const walkOnBookedOwn = ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + b.qty, 0);
+    const rentalBookedOwn = ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + b.qty, 0);
+    const walkOnBooked = realCounts ? realCounts.walkOn : walkOnBookedOwn;
+    const rentalBooked = realCounts ? realCounts.rental : rentalBookedOwn;
     const walkOnLeft   = ev.walkOnSlots - walkOnBooked;
     const rentalLeft   = ev.rentalSlots - rentalBooked;
     const totalBooked  = walkOnBooked + rentalBooked;
@@ -866,7 +871,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                         <div style={{ display:"flex", alignItems:"center", gap:0, border:"1px solid #2a3a10", background:"#0a0f05" }}>
                           <button onClick={() => setWalkOn(bCart.walkOn - 1)} disabled={bCart.walkOn === 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: bCart.walkOn===0?.4:1 }}>−</button>
                           <span style={{ padding:"0 14px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:18, color: bCart.walkOn>0?"var(--accent)":"var(--text)", minWidth:36, textAlign:"center" }}>{bCart.walkOn}</span>
-                          <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={walkOnLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
+                          <button onClick={() => setWalkOn(bCart.walkOn + 1)} disabled={!countsLoaded || walkOnLeft <= 0} style={{ background:"none", border:"none", color:"var(--text)", padding:"8px 14px", fontSize:18, cursor:"pointer", opacity: walkOnLeft===0?.4:1 }}>+</button>
                         </div>
                       )}
                     </div>
