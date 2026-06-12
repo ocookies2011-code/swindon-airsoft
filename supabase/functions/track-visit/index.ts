@@ -5,6 +5,7 @@ const BOT=/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|y
 const GEO=(ip:string)=>`http://ip-api.com/json/${ip}?fields=status,countryCode,city,lat,lon`;
 function getIp(req:Request):string|null{const h=['cf-connecting-ip','x-real-ip','x-forwarded-for'];for(const k of h){const v=req.headers.get(k);if(v)return v.split(',')[0].trim();}return null;}
 function isPriv(ip:string):boolean{return ip==="127.0.0.1"||ip==="::1"||ip.startsWith("10.")||ip.startsWith("192.168.")||/^172\.(1[6-9]|2\d|3[01])\./.test(ip);}
+
 serve(async(req)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:CORS});
   try{
@@ -14,33 +15,41 @@ serve(async(req)=>{
     const sb=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const now=new Date().toISOString();
     const clientIp=getIp(req);
+
+    // Resolve userId: use provided userId, OR look up by IP if anon
     let resolvedUserId=userId||null;
     let resolvedUserName=userName||null;
 
     // Log IP to profile for logged-in users
-    if(userId&&clientIp&&!isPriv(clientIp)){
-      await sb.from("profiles").update({last_ip:clientIp,last_seen_at:now}).eq("id",userId).catch(()=>{});
+    if(resolvedUserId&&clientIp&&!isPriv(clientIp)){
+      await sb.from("profiles").update({last_ip:clientIp,last_seen_at:now}).eq("id",resolvedUserId).catch(()=>{});
     }
 
-    // If anon, try to identify from recent bookings by IP
-    if(!userId&&clientIp&&!isPriv(clientIp)){
-      const threeHoursAgo=new Date(Date.now()-3*60*60*1000).toISOString();
-      const{data:booking}=await sb.from("bookings")
-        .select("user_id, user_name")
-        .gte("created_at",threeHoursAgo)
-        .not("user_id","is",null)
-        .limit(1)
-        .maybeSingle();
-      // Check if any recent page visit from this IP matches
-      const{data:ipVisit}=await sb.from("page_visits")
+    // If anon but we have an IP, check if this IP belongs to a known logged-in user
+    // This handles the "stays logged in" case where a new session starts before auth loads
+    if(!resolvedUserId&&clientIp&&!isPriv(clientIp)){
+      // 1. Check if this IP has a recent identified visit (within last hour)
+      const{data:recentVisit}=await sb.from("page_visits")
         .select("user_id,user_name")
         .eq("client_ip",clientIp)
         .not("user_id","is",null)
+        .gte("last_seen_at",new Date(Date.now()-3600000).toISOString())
+        .order("last_seen_at",{ascending:false})
         .limit(1)
         .maybeSingle();
-      if(ipVisit?.user_id){resolvedUserId=ipVisit.user_id;resolvedUserName=ipVisit.user_name;}
-      else if(booking?.user_id){resolvedUserId=booking.user_id;resolvedUserName=booking.user_name;}
-      // Update profile IP if we identified the user
+      if(recentVisit?.user_id){
+        resolvedUserId=recentVisit.user_id;
+        resolvedUserName=recentVisit.user_name;
+      } else {
+        // 2. Check profiles.last_ip for this IP
+        const{data:profile}=await sb.from("profiles")
+          .select("id,name")
+          .eq("last_ip",clientIp)
+          .limit(1)
+          .maybeSingle();
+        if(profile){resolvedUserId=profile.id;resolvedUserName=profile.name;}
+      }
+      // Update profile last_seen if we resolved the user
       if(resolvedUserId){
         await sb.from("profiles").update({last_ip:clientIp,last_seen_at:now}).eq("id",resolvedUserId).catch(()=>{});
       }
