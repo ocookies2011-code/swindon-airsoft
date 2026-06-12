@@ -239,7 +239,7 @@ function ContactPage({ data, cu, showToast }) {
                   </div>
                 )}
                 {data.contactAddress && (
-                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
                     <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#2a3a10", letterSpacing: ".1em", flexShrink: 0, marginTop: 1 }}>⊕</div>
                     <div>
                       <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".15em", marginBottom: 3 }}>GRID REF</div>
@@ -247,6 +247,19 @@ function ContactPage({ data, cu, showToast }) {
                     </div>
                   </div>
                 )}
+                {/* Field commander direct contact */}
+                <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 4, paddingTop: 14, borderTop: "1px solid #1a2808" }}>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#2a3a10", letterSpacing: ".1em", flexShrink: 0, marginTop: 1 }}>👤</div>
+                  <div>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".15em", marginBottom: 3 }}>FIELD COMMANDER</div>
+                    <a href="https://www.facebook.com/profile.php?id=100080225624146" target="_blank" rel="noreferrer"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#4fc3f7", fontSize: 12, fontFamily: "'Share Tech Mono',monospace", textDecoration: "none" }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#4fc3f7"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                      Find me on Facebook
+                    </a>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", marginTop: 3 }}>Direct message for general enquiries</div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
