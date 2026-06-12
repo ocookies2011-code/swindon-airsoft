@@ -153,32 +153,41 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
       if (isRental) refundAmount = refundAmount * 0.9; // 10% charge on rentals
       refundAmount = Math.round(refundAmount * 100) / 100;
 
+      // ── IMPORTANT: Delete booking FIRST before awarding credits ──
+      // This prevents credits being awarded if the delete fails
+      await api.bookings.delete(b.id);
+      save({ events: data.events.map(ev => ({ ...ev, bookings: ev.bookings.filter(bk => bk.id !== b.id) })) });
+
+      // Award credits or refund only after booking is confirmed deleted
+      let creditAwarded = false;
       if (within48) {
-        // Within 48h (but outside 24h) — always give credits
-        const newCredits = (Number(cu.credits) || 0) + refundAmount;
-        await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
-        updateUser(cu.id, { credits: newCredits });
-      } else if (b.squareOrderId) {
-        // Outside 48h — try Square refund via edge function
+        // Within 48h — give credits (use RPC to bypass RLS cleanly)
+        const { data: newCredits } = await supabase.rpc("award_cancellation_credit", {
+          p_user_id: cu.id, p_amount: refundAmount
+        });
+        updateUser(cu.id, { credits: newCredits ?? ((Number(cu.credits) || 0) + refundAmount) });
+        creditAwarded = true;
+      } else if (b.squareOrderId && !b.squareOrderId.startsWith("ADMIN-") && !b.squareOrderId.startsWith("CREDITS-")) {
+        // Outside 48h — try Square refund
         try {
           const locationId = await api.settings.get("square_location_id");
           await squareRefund({ squarePaymentId: b.squareOrderId, amount: refundAmount, locationId });
         } catch {
           // Square refund failed — fall back to credits
-          const newCredits = (Number(cu.credits) || 0) + refundAmount;
-          await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
-          updateUser(cu.id, { credits: newCredits });
+          const { data: newCredits } = await supabase.rpc("award_cancellation_credit", {
+            p_user_id: cu.id, p_amount: refundAmount
+          });
+          updateUser(cu.id, { credits: newCredits ?? ((Number(cu.credits) || 0) + refundAmount) });
+          creditAwarded = true;
         }
       } else {
-        // No Square payment ID (manual/admin booking) — give credits
-        const newCredits = (Number(cu.credits) || 0) + refundAmount;
-        await supabase.from("profiles").update({ credits: newCredits }).eq("id", cu.id);
-        updateUser(cu.id, { credits: newCredits });
+        // No Square payment (manual/admin booking) — give credits
+        const { data: newCredits } = await supabase.rpc("award_cancellation_credit", {
+          p_user_id: cu.id, p_amount: refundAmount
+        });
+        updateUser(cu.id, { credits: newCredits ?? ((Number(cu.credits) || 0) + refundAmount) });
+        creditAwarded = true;
       }
-
-      // Delete booking
-      await api.bookings.delete(b.id);
-      save({ events: data.events.map(ev => ({ ...ev, bookings: ev.bookings.filter(bk => bk.id !== b.id) })) });
 
       // Create a 30-min hold for the first person on the waitlist for this ticket type
       try {
@@ -209,7 +218,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
           : `Booking cancelled. £${refundAmount.toFixed(2)} refunded.`
       );
 
-      // Send cancellation confirmation email (fire & forget)
+      // Send cancellation confirmation to player (fire & forget)
       if (cu.email) {
         sendCancellationEmail({
           cu,
@@ -221,6 +230,38 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
           isRental,
         }).then(() => showToast("📧 Cancellation confirmation sent.")).catch(() => {});
       }
+
+      // Notify admin of cancellation
+      sendEmail({
+        toEmail: "swindonairsoftfield@gmail.com",
+        toName:  "Swindon Airsoft Admin",
+        subject: `❌ Booking Cancelled — ${cu.name} (${b.eventTitle})`,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;padding:20px">
+            <h2 style="color:#c8550000">❌ Booking Cancelled</h2>
+            <table style="font-size:14px;border-collapse:collapse">
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Player</td><td><strong>${cu.name}</strong> (${cu.email})</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Event</td><td>${b.eventTitle}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Ticket</td><td>${b.qty}x ${b.type} — £${Number(b.total).toFixed(2)}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Refund</td><td>${creditAwarded ? `£${refundAmount.toFixed(2)} game credits added to account` : `£${refundAmount.toFixed(2)} Square refund issued`}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Within 48h</td><td>${within48 ? "Yes — credits given" : "No — refund issued"}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Time</td><td>${new Date().toLocaleString("en-GB", { timeZone:"Europe/London" })}</td></tr>
+            </table>
+            <p style="color:#666;font-size:12px;margin-top:16px">This is an automated notification from Swindon Airsoft.</p>
+          </div>`,
+      }).catch(() => {});
+
+      // Audit log
+      supabase.from("admin_audit_log").insert({
+        admin_name:  cu.name,
+        admin_email: cu.email,
+        player_id:   cu.id,
+        player_name: cu.name,
+        action:      "booking_cancelled",
+        details:     `Self-cancelled: ${b.qty}x ${b.type} — ${b.eventTitle}`,
+        old_value:   `Booked, total: £${Number(b.total).toFixed(2)}`,
+        new_value:   creditAwarded ? `Credits added: £${refundAmount.toFixed(2)}` : `Refunded: £${refundAmount.toFixed(2)}`,
+      }).catch(() => {});
 
       setCancelModal(null);
     } catch (e) {
