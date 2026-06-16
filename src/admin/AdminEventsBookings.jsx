@@ -13,6 +13,30 @@ import { diffFields, logAction } from "./adminHelpers";
 function ExtrasEditor({ editBooking, setEditBooking, data }) {
   const evObj = data.events.find(e => e.id === (editBooking.newEventId || editBooking.eventId));
   const allExtras = (evObj?.extras || []).filter(ex => ex.enabled !== false);
+
+  // Auto-remap unknown extra keys by name match (handles re-saved events with new IDs)
+  const remapRef = React.useRef(false);
+  React.useEffect(() => {
+    if (remapRef.current || allExtras.length === 0) return;
+    const bookedEntries = Object.entries(editBooking.extras || {}).filter(([,v]) => v > 0);
+    const unknowns = bookedEntries.filter(([k]) => !allExtras.some(ex => ex.id === k || String(ex.id) === String(k)));
+    if (unknowns.length === 0) return;
+    remapRef.current = true;
+    const nx = { ...editBooking.extras };
+    unknowns.forEach(([k, qty]) => {
+      // Try match by productId first, then by name
+      const byProduct = allExtras.find(ex => ex.productId && ex.productId === k);
+      const getName = ex => { let n = ex.name || ''; if (n.startsWith('{')) { try { n = JSON.parse(n)?.n || n; } catch {} } return n.toLowerCase().trim(); };
+      const byName = allExtras.find(ex => getName(ex) === (k || '').toLowerCase().trim());
+      const match = byProduct || byName;
+      if (match) {
+        delete nx[k];
+        nx[match.id] = (nx[match.id] || 0) + qty;
+      }
+    });
+    setEditBooking(p => ({ ...p, extras: nx }));
+  }, [allExtras, editBooking.extras, setEditBooking]);
+
   const booked = Object.entries(editBooking.extras || {}).filter(([,v]) => v > 0);
   if (allExtras.length === 0 && booked.length === 0) return null;
   return (
