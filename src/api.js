@@ -211,19 +211,39 @@ export const events = wrapWithTimeout({
       }
     }
     if (extras !== undefined) {
-      await supabase.from('event_extras').delete().eq('event_id', id)
+      // Delete only rows that are no longer present (preserve IDs for existing extras)
+      const keepIds = extras.filter(ex => ex.id).map(ex => ex.id)
+      if (keepIds.length > 0) {
+        await supabase.from('event_extras').delete().eq('event_id', id).not('id', 'in', `(${keepIds.join(',')})`)
+      } else {
+        await supabase.from('event_extras').delete().eq('event_id', id)
+      }
       if (extras.length) {
-        // Always encode productId/variantId in name field — works without migration
-        const rows = extras.map((ex, i) => ({
+        const toUpsert = extras.filter(ex => ex.id).map((ex, i) => ({
+          id:         ex.id,
           event_id:   id,
           name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
           price:      Number(ex.price) || 0,
           no_post:    ex.noPost ?? ex.no_post ?? false,
-          sort_order: i,
+          sort_order: extras.indexOf(ex),
           enabled:    ex.enabled !== false,
         }))
-        const { error: ie } = await supabase.from('event_extras').insert(rows)
-        if (ie) throw ie
+        const toInsert = extras.filter(ex => !ex.id).map((ex, i) => ({
+          event_id:   id,
+          name:       JSON.stringify({ n: ex.name, pid: ex.productId || null, vid: ex.variantId || null }),
+          price:      Number(ex.price) || 0,
+          no_post:    ex.noPost ?? ex.no_post ?? false,
+          sort_order: extras.indexOf(ex),
+          enabled:    ex.enabled !== false,
+        }))
+        if (toUpsert.length) {
+          const { error: ue } = await supabase.from('event_extras').upsert(toUpsert)
+          if (ue) throw ue
+        }
+        if (toInsert.length) {
+          const { error: ie } = await supabase.from('event_extras').insert(toInsert)
+          if (ie) throw ie
+        }
       }
     }
   },
