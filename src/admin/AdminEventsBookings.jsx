@@ -1487,6 +1487,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                             f("extras", [...extras, { id: uid(), name: p.name, price: p.price, noPost: p.noPost, productId: p.id, variantId: null, enabled: true }]);
                           }
                         } else {
+                          const extraRow = (form.extras || []).find(ex => ex.productId === p.id);
+                          const bookedCount = extraRow ? (ev?.bookings || []).filter(b =>
+                            b.extras && Number(b.extras[extraRow.id]) > 0
+                          ).length : 0;
+                          if (bookedCount > 0 && !window.confirm(`⚠️ ${bookedCount} booking(s) have ordered "${p.name}". Removing it will make their extra show as unknown. Rename it instead if you want to keep bookings intact. Continue?`)) return;
                           f("extras", extras.map(ex => ex.productId === p.id ? { ...ex, enabled: false } : ex));
                         }
                       }} />
@@ -1524,7 +1529,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                           Collect Only
                         </label>
                         <button
-                          onClick={() => f("extras", (form.extras||[]).map(x => x.id === ex.id ? { ...x, enabled: false } : x))}
+                          onClick={() => {
+                            const bookedCount = (ev?.bookings || []).filter(b =>
+                              b.extras && Number(b.extras[ex.id]) > 0
+                            ).length;
+                            if (bookedCount > 0 && !window.confirm(`⚠️ ${bookedCount} booking(s) have ordered "${ex.name}". Removing it will make their extra show as unknown. Rename it instead if you want to keep bookings intact. Continue?`)) return;
+                            f("extras", (form.extras||[]).map(x => x.id === ex.id ? { ...x, enabled: false } : x));
+                          }}
                           style={{ background:"rgba(239,68,68,.15)", border:"1px solid rgba(239,68,68,.35)", color:"#ef4444", padding:"3px 8px", fontSize:11, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700 }}>
                           Remove
                         </button>
