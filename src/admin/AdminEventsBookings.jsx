@@ -1059,7 +1059,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
                     return (
                       <tr key={b.id} style={{ background: b.checkedIn ? "#1a0e08" : "transparent" }}>
-                        <td style={{ fontWeight: 600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking(b)} /></td>
+                        <td style={{ fontWeight: 600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: ev, eventTitle: ev?.title })} /></td>
                         <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                         <td>{b.qty}</td>
                         <td style={{ fontSize: 11 }}>
