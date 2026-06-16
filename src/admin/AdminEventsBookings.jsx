@@ -856,7 +856,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                       <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--muted)", padding:30 }}>No bookings found</td></tr>
                     );
                     return sorted.map(b => {
-                      const bookingEv = data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
+                      const bookingEv = b.eventObj || data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
                       return (
                         <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
                           <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: b.eventObj || bookingEv, eventTitle: b.eventTitle || bookingEv?.title })} />{b.isGuest && <span style={{ marginLeft:6, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#f97316", border:"1px solid rgba(249,115,22,.3)", padding:"1px 5px" }}>GUEST</span>}</td>
