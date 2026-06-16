@@ -11,7 +11,7 @@ import { diffFields, logAction } from "./adminHelpers";
 
 // Module-level component for editing booking extras
 function ExtrasEditor({ editBooking, setEditBooking, data }) {
-  const evObj = data.events.find(e => e.id === (editBooking.newEventId || editBooking.eventId));
+  const evObj = data.events.find(e => e.id === editBooking.eventId);
   const allExtras = (evObj?.extras || []).filter(ex => ex.enabled !== false);
 
   // Auto-remap unknown extra keys by name match (handles re-saved events with new IDs)
