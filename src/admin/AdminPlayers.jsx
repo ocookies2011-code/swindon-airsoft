@@ -1107,74 +1107,40 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               <input type="checkbox" checked={edit.deleteRequest || false} onChange={e => setEdit(p => ({ ...p, deleteRequest: e.target.checked }))} />
               <label style={{ fontSize: 13, color: "var(--red)" }}>Account deletion requested</label>
             </div>
-            {/* Rank & Designation — shown on public profile */}
-            <div style={{ background: "rgba(200,255,0,.03)", border: "1px solid rgba(200,255,0,.15)", padding: "12px 14px", marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: ".12em", fontFamily: "'Oswald','Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 10 }}>🎖 Public Profile Rank &amp; Designation</div>
-
-              {/* Standard Rank */}
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6 }}>RANK — leave as Auto to use games-played calculation</label>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  {(edit.customRank || "CIVILIAN") && (
-                    <div style={{ flexShrink: 0, border: "1px solid #2a3a10", borderRadius: 4, overflow: "hidden" }}>
-                      <RankInsignia rank={edit.customRank || "CIVILIAN"} size={44}/>
-                    </div>
-                  )}
-                  <select
-                    value={edit.customRank || ""}
-                    onChange={e => setEdit(p => ({ ...p, customRank: e.target.value || null }))}
-                    style={{ flex: 1, background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
-                  >
-                    <option value="">— Auto (based on games played) —</option>
-                    <option value="CIVILIAN">CIVILIAN</option>
-                    <option value="PRIVATE">PRIVATE</option>
-                    <option value="RECRUIT">RECRUIT</option>
-                    <option value="OPERATIVE">OPERATIVE</option>
-                    <option value="SENIOR OPERATIVE">SENIOR OPERATIVE</option>
-                    <option value="FIELD COMMANDER">FIELD COMMANDER</option>
-                  </select>
-                </div>
+            {/* Designation — optional badge shown on public profile */}
+            <div style={{ background: "rgba(79,195,247,.03)", border: "1px solid rgba(79,195,247,.15)", padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#4fc3f7", letterSpacing: ".12em", fontFamily: "'Oswald','Barlow Condensed',sans-serif", textTransform: "uppercase", marginBottom: 10 }}>🎖 Designation</div>
+              <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6 }}>Optional special role badge displayed on player profile</label>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                {edit.designation ? (
+                  <div style={{ flexShrink: 0, border: "1px solid rgba(79,195,247,.3)", borderRadius: 4, overflow: "hidden" }}>
+                    <DesignationInsignia desig={edit.designation} size={44}/>
+                  </div>
+                ) : (
+                  <div style={{ flexShrink: 0, width: 44, height: 44, border: "1px solid #1a2808", borderRadius: 4, background: "#080a06", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 18, opacity: .3 }}>—</span>
+                  </div>
+                )}
+                <select
+                  value={edit.designation || ""}
+                  onChange={e => setEdit(p => ({ ...p, designation: e.target.value || null }))}
+                  style={{ flex: 1, background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
+                >
+                  <option value="">— None —</option>
+                  <option value="GHOST">👻 GHOST</option>
+                  <option value="SNIPER">🎯 SNIPER</option>
+                  <option value="MEDIC">🩹 MEDIC</option>
+                  <option value="DEMOLITIONS">💥 DEMOLITIONS</option>
+                  <option value="RECON">🔭 RECON</option>
+                  <option value="HEAVY GUNNER">🔫 HEAVY GUNNER</option>
+                  <option value="SUPPORT">🛡 SUPPORT</option>
+                  <option value="SQUAD LEADER">⚔️ SQUAD LEADER</option>
+                  <option value="VETERAN">🎖 VETERAN</option>
+                  <option value="LEGEND">🏆 LEGEND</option>
+                </select>
               </div>
-
-              {/* Special Designation */}
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 6 }}>DESIGNATION — optional special role badge displayed alongside rank</label>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  {edit.designation && (
-                    <div style={{ flexShrink: 0, border: "1px solid rgba(79,195,247,.3)", borderRadius: 4, overflow: "hidden" }}>
-                      <DesignationInsignia desig={edit.designation} size={44}/>
-                    </div>
-                  )}
-                  {!edit.designation && (
-                    <div style={{ flexShrink: 0, width: 44, height: 44, border: "1px solid #1a2808", borderRadius: 4, background: "#080a06", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 18, opacity: .3 }}>—</span>
-                    </div>
-                  )}
-                  <select
-                    value={edit.designation || ""}
-                    onChange={e => setEdit(p => ({ ...p, designation: e.target.value || null }))}
-                    style={{ flex: 1, background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
-                  >
-                    <option value="">— None —</option>
-                    <option value="GHOST">👻 GHOST</option>
-                    <option value="SNIPER">🎯 SNIPER</option>
-                    <option value="MEDIC">🩹 MEDIC</option>
-                    <option value="DEMOLITIONS">💥 DEMOLITIONS</option>
-                    <option value="RECON">🔭 RECON</option>
-                    <option value="HEAVY GUNNER">🔫 HEAVY GUNNER</option>
-                    <option value="SUPPORT">🛡 SUPPORT</option>
-                    <option value="SQUAD LEADER">⚔️ SQUAD LEADER</option>
-                    <option value="VETERAN">🎖 VETERAN</option>
-                    <option value="LEGEND">🏆 LEGEND</option>
-                  </select>
-                </div>
-              </div>
-
-              {(edit.customRank || edit.designation) && (
-                <div style={{ marginTop: 10, fontSize: 11, color: "var(--accent)", display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {edit.customRank && <span>✓ Rank override: <strong>{edit.customRank}</strong></span>}
-                  {edit.designation && <span>✓ Designation: <strong>{edit.designation}</strong></span>}
-                </div>
+              {edit.designation && (
+                <div style={{ marginTop: 8, fontSize: 11, color: "#4fc3f7" }}>✓ Designation: <strong>{edit.designation}</strong></div>
               )}
             </div>
             {/* Marshal permission — admin only, never visible to player */}
