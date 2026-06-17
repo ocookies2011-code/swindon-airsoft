@@ -1127,6 +1127,9 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   style={{ flex: 1, background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
                 >
                   <option value="">— None —</option>
+                  <optgroup label="── Special ──">
+                    <option value="SITE OWNER">🏅 SITE OWNER</option>
+                  </optgroup>
                   <optgroup label="── Achievement ──">
                     <option value="VETERAN">🎖 VETERAN</option>
                     <option value="LEGEND">🏆 LEGEND</option>

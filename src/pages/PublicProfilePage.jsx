@@ -145,7 +145,8 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
                 )}
                 {designation && (() => {
                   const DESIG_ICONS = { "GHOST":"👻","SNIPER":"🎯","MEDIC":"🩹","DEMOLITIONS":"💥","RECON":"🔭","HEAVY GUNNER":"🔫","SUPPORT":"🛡","SQUAD LEADER":"⚔️","VETERAN":"🎖","LEGEND":"🏆" };
-                  return <span style={{ background: "rgba(79,195,247,.1)", border: "1px solid rgba(79,195,247,.4)", color: "#4fc3f7", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>{DESIG_ICONS[designation] || "◆"} {designation}</span>;
+                  const isSiteOwner = designation === "SITE OWNER";
+                  return <span style={{ background: isSiteOwner ? "rgba(200,160,0,.15)" : "rgba(79,195,247,.1)", border: isSiteOwner ? "1px solid rgba(200,160,0,.5)" : "1px solid rgba(79,195,247,.4)", color: isSiteOwner ? "#c8a000" : "#4fc3f7", fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: ".15em", padding: "2px 8px" }}>{DESIG_ICONS[designation] || "◆"} {designation}</span>;
                 })()}
                 {profile.join_date && (
                   <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3a10", letterSpacing: ".1em" }}>ENLISTED {new Date(profile.join_date).getFullYear()}</span>
@@ -193,7 +194,7 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
               <div style={{ background: "#0c1009", border: "1px solid rgba(79,195,247,.25)", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#1a3a4a" }}>DESIGNATION</div>
                 <DesignationInsignia desig={designation} size={48}/>
-                <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
+                <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: designation === "SITE OWNER" ? "#c8a000" : "#4fc3f7", lineHeight: 1.1, letterSpacing: ".06em" }}>{designation}</div>
               </div>
             )}
 

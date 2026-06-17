@@ -399,7 +399,7 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
             {cu.designation && (
               <div style={{ display:"flex", alignItems:"center", gap:6, margin:"8px 0 6px" }}>
                 <DesignationInsignia desig={cu.designation} size={36}/>
-                <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:11, fontWeight:700, letterSpacing:".18em", textTransform:"uppercase", color:"#4fc3f7", opacity:.9 }}>{cu.designation}</span>
+                <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:11, fontWeight:700, letterSpacing:".18em", textTransform:"uppercase", color: cu.designation === "SITE OWNER" ? "#c8a000" : "#4fc3f7", opacity:.9 }}>{cu.designation}</span>
               </div>
             )}
             <div className="gap-2 mt-1">
