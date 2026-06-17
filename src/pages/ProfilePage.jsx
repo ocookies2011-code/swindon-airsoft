@@ -396,6 +396,25 @@ ${w.sigData ? `<img class="sig-img" src="${w.sigData}" alt="Signature" />` : '<d
           </div>
           <div>
             <div className="page-title">{cu.name}</div>
+            {(cu.customRank || cu.designation) && (
+              <div style={{ display:"flex", alignItems:"center", gap:10, margin:"8px 0 6px" }}>
+                {cu.customRank && (
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <RankInsignia rank={cu.customRank} size={36}/>
+                    <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:11, fontWeight:700, letterSpacing:".18em", textTransform:"uppercase", color:"#c8ff00", opacity:.9 }}>{cu.customRank}</span>
+                  </div>
+                )}
+                {cu.customRank && cu.designation && (
+                  <span style={{ color:"#2a4010", fontSize:11 }}>|</span>
+                )}
+                {cu.designation && (
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <DesignationInsignia desig={cu.designation} size={36}/>
+                    <span style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:11, fontWeight:700, letterSpacing:".18em", textTransform:"uppercase", color:"#4fc3f7", opacity:.9 }}>{cu.designation}</span>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="gap-2 mt-1">
               {cu.vipStatus === "active" && <span className="tag tag-gold">⭐ VIP</span>}
               <span className="tag tag-green">{gamesAttended} Games</span>
