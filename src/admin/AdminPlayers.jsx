@@ -1127,16 +1127,29 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   style={{ flex: 1, background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 10px", fontSize: 13, borderRadius: 3 }}
                 >
                   <option value="">— None —</option>
-                  <option value="GHOST">👻 GHOST</option>
-                  <option value="SNIPER">🎯 SNIPER</option>
-                  <option value="MEDIC">🩹 MEDIC</option>
-                  <option value="DEMOLITIONS">💥 DEMOLITIONS</option>
-                  <option value="RECON">🔭 RECON</option>
-                  <option value="HEAVY GUNNER">🔫 HEAVY GUNNER</option>
-                  <option value="SUPPORT">🛡 SUPPORT</option>
-                  <option value="SQUAD LEADER">⚔️ SQUAD LEADER</option>
-                  <option value="VETERAN">🎖 VETERAN</option>
-                  <option value="LEGEND">🏆 LEGEND</option>
+                  <optgroup label="── Achievement ──">
+                    <option value="VETERAN">🎖 VETERAN</option>
+                    <option value="LEGEND">🏆 LEGEND</option>
+                    <option value="FOUNDING MEMBER">🏛 FOUNDING MEMBER</option>
+                    <option value="CENTURION">💯 CENTURION</option>
+                  </optgroup>
+                  <optgroup label="── Role ──">
+                    <option value="MARSHAL">🟢 MARSHAL</option>
+                    <option value="REFEREE">⚖️ REFEREE</option>
+                    <option value="PHOTOGRAPHER">📷 PHOTOGRAPHER</option>
+                    <option value="CONTENT CREATOR">🎬 CONTENT CREATOR</option>
+                  </optgroup>
+                  <optgroup label="── Honour ──">
+                    <option value="MOST VALUABLE PLAYER">⭐ MOST VALUABLE PLAYER</option>
+                    <option value="FAIR PLAY">🤝 FAIR PLAY</option>
+                    <option value="IRON MAN">🔩 IRON MAN</option>
+                    <option value="SNIPER ELITE">🎯 SNIPER ELITE</option>
+                  </optgroup>
+                  <optgroup label="── Fun ──">
+                    <option value="WALK-ON KING">👑 WALK-ON KING</option>
+                    <option value="LAST STAND">🔥 LAST STAND</option>
+                    <option value="RESPAWN">♻️ RESPAWN</option>
+                  </optgroup>
                 </select>
               </div>
               {edit.designation && (
