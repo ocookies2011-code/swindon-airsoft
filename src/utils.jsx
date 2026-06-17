@@ -3841,34 +3841,49 @@ function RankInsignia({ rank, size = 56 }) {
     );
   };
   const gap = s * .135;
-  const insig = {
-    "CIVILIAN": (
-      <circle cx={cx} cy={cy} r={s*.1} fill="none" stroke={dim} strokeWidth={s*.025} strokeDasharray={`${s*.05},${s*.05}`}/>
-    ),
-    "PRIVATE": (<Beret/>),
-    "RECRUIT": (<Beret col="#6ab030"/>),
-    "OPERATIVE": (
-      <g><Chevron y={cy - gap*1.6}/><Chevron y={cy - gap*.45}/><Chevron y={cy + gap*.7}/></g>
-    ),
-    "SENIOR OPERATIVE": (
-      <g>
-        <Pip px={cx - s*.18} py={cy}/>
-        <Pip px={cx}         py={cy}/>
-        <Pip px={cx + s*.18} py={cy}/>
-      </g>
-    ),
-    "FIELD COMMANDER": (
-      <g>
-        <Crown px={cx} py={cy - s*.12}/>
-        <Pip px={cx - s*.15} py={cy + s*.2} filled/>
-        <Pip px={cx + s*.15} py={cy + s*.2} filled/>
-      </g>
-    ),
+  // Map military ranks to tier-based insignia
+  const RANK_TIERS = {
+    "Private":           1,
+    "Lance Corporal":    2, "Corporal":           2,
+    "Sergeant":          3, "Staff Sergeant":     3,
+    "Warrant Officer I": 4, "Warrant Officer II": 4,
+    "Second Lieutenant": 5, "Lieutenant":         5,
+    "Captain":           6, "Major":              6,
+    "Lieutenant Colonel":7, "Colonel":            7,
+    "Brigadier":         8, "Major General":      8,
+    "Lieutenant General":9, "General":            9,
+    "Field Marshal":     10,
   };
+  const tier = RANK_TIERS[rank] || 1;
+  // Also keep old names working
+  const oldInsig = {
+    "CIVILIAN":         <circle cx={cx} cy={cy} r={s*.1} fill="none" stroke={dim} strokeWidth={s*.025} strokeDasharray={`${s*.05},${s*.05}`}/>,
+    "PRIVATE":          <Beret/>,
+    "RECRUIT":          <Beret col="#6ab030"/>,
+    "OPERATIVE":        <g><Chevron y={cy - gap*1.6}/><Chevron y={cy - gap*.45}/><Chevron y={cy + gap*.7}/></g>,
+    "SENIOR OPERATIVE": <g><Pip px={cx - s*.18} py={cy}/><Pip px={cx} py={cy}/><Pip px={cx + s*.18} py={cy}/></g>,
+    "FIELD COMMANDER":  <g><Crown px={cx} py={cy - s*.12}/><Pip px={cx - s*.15} py={cy + s*.2} filled/><Pip px={cx + s*.15} py={cy + s*.2} filled/></g>,
+  };
+  if (oldInsig[rank]) { return (<svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}><rect width={s} height={s} fill="#080a06" rx={s * .04}/>{oldInsig[rank]}</svg>); }
+  // Military rank insignia by tier
+  const militaryInsig = () => {
+    if (tier === 1)  return <Beret/>;
+    if (tier === 2)  return <g><Chevron y={cy - gap*.6}/>{tier >= 2 && rank === "Corporal" ? <Chevron y={cy + gap*.7}/> : null}</g>;
+    if (tier === 3)  return <g><Chevron y={cy - gap*1.6}/><Chevron y={cy - gap*.45}/><Chevron y={cy + gap*.7}/></g>;
+    if (tier === 4)  return <g><Pip px={cx - s*.1} py={cy}/><Pip px={cx + s*.1} py={cy}/></g>;
+    if (tier === 5)  return <g><Pip px={cx} py={cy - s*.12}/><Pip px={cx - s*.12} py={cy + s*.08}/><Pip px={cx + s*.12} py={cy + s*.08}/></g>;
+    if (tier === 6)  return <g><Pip px={cx - s*.18} py={cy}/><Pip px={cx} py={cy}/><Pip px={cx + s*.18} py={cy}/></g>;
+    if (tier === 7)  return <g><Crown px={cx} py={cy - s*.08}/><Pip px={cx} py={cy + s*.15}/></g>;
+    if (tier === 8)  return <g><Crown px={cx} py={cy - s*.12}/><Pip px={cx - s*.15} py={cy + s*.2} filled/><Pip px={cx + s*.15} py={cy + s*.2} filled/></g>;
+    if (tier === 9)  return <g><Crown px={cx} py={cy - s*.15}/><Pip px={cx - s*.18} py={cy + s*.15} filled/><Pip px={cx} py={cy + s*.15} filled/><Pip px={cx + s*.18} py={cy + s*.15} filled/></g>;
+    if (tier === 10) return <g><Crown px={cx} py={cy - s*.18}/><Pip px={cx - s*.22} py={cy + s*.1} filled/><Pip px={cx - s*.08} py={cy + s*.18} filled/><Pip px={cx + s*.08} py={cy + s*.18} filled/><Pip px={cx + s*.22} py={cy + s*.1} filled/></g>;
+    return <circle cx={cx} cy={cy} r={s*.08} fill={dim}/>;
+  };
+  const insig = {};
   return (
     <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{ display: "block" }}>
       <rect width={s} height={s} fill="#080a06" rx={s * .04}/>
-      {insig[rank] || <circle cx={cx} cy={cy} r={s*.08} fill={dim}/>}
+      {militaryInsig()}
     </svg>
   );
 }

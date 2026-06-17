@@ -47,8 +47,29 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
   const games       = profile.games_attended || 0;
   const customRank  = profile.custom_rank || null;
   const designation = profile.designation || null;
-  const autoRank    = games === 0 ? "CIVILIAN" : games < 3 ? "PRIVATE" : games < 6 ? "RECRUIT" : games < 10 ? "OPERATIVE" : games < 20 ? "SENIOR OPERATIVE" : "FIELD COMMANDER";
-  const rankTitle   = customRank || autoRank;
+  const BRIT_RANKS = [
+    { min:400, rank:"Field Marshal",      abbr:"FM"    },
+    { min:300, rank:"General",            abbr:"Gen"   },
+    { min:250, rank:"Lieutenant General", abbr:"Lt Gen"},
+    { min:200, rank:"Major General",      abbr:"Maj Gen"},
+    { min:160, rank:"Brigadier",          abbr:"Brig"  },
+    { min:130, rank:"Colonel",            abbr:"Col"   },
+    { min:100, rank:"Lieutenant Colonel", abbr:"Lt Col"},
+    { min:80,  rank:"Major",              abbr:"Maj"   },
+    { min:60,  rank:"Captain",            abbr:"Cpt"   },
+    { min:45,  rank:"Lieutenant",         abbr:"Lt"    },
+    { min:35,  rank:"Second Lieutenant",  abbr:"2Lt"   },
+    { min:28,  rank:"Warrant Officer I",  abbr:"WO1"   },
+    { min:20,  rank:"Warrant Officer II", abbr:"WO2"   },
+    { min:15,  rank:"Staff Sergeant",     abbr:"S/Sgt" },
+    { min:10,  rank:"Sergeant",           abbr:"Sgt"   },
+    { min:6,   rank:"Corporal",           abbr:"Cpl"   },
+    { min:3,   rank:"Lance Corporal",     abbr:"L/Cpl" },
+    { min:0,   rank:"Private",            abbr:"Pte"   },
+  ];
+  const autoRankObj = BRIT_RANKS.find(r => games >= r.min) || BRIT_RANKS[BRIT_RANKS.length - 1];
+  const rankTitle   = autoRankObj.rank;
+  const rankAbbr    = autoRankObj.abbr;
   const hasWeapons  = profile.primary_name || profile.secondary_name || profile.support_name;
   const hasGear     = ["helmet","vest","camo","eyepro","comms","boots","other_gear"].some(f => profile[f]);
 
@@ -163,7 +184,8 @@ function PublicProfilePage({ userId, prevPage, setPage }) {
             <div style={{ background: "#0c1009", border: "1px solid #1a2808", padding: "14px 12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: ".2em", color: "#2a3a10" }}>RANK</div>
               <RankInsignia rank={rankTitle} size={48}/>
-              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".06em" }}>{rankTitle}</div>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 12, color: "#c8ff00", lineHeight: 1.1, letterSpacing: ".06em" }}>{rankAbbr}</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3a5010", letterSpacing: ".1em" }}>{rankTitle.toUpperCase()}</div>
             </div>
 
             {/* Designation — only if set */}
