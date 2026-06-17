@@ -1712,7 +1712,8 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
           date_of_birth: form.dob,
           postcode: form.postcode.trim().toUpperCase(),
           role: "player",
-          approved: false,
+          approved: true,
+          approved_at: new Date().toISOString(),
         });
       }
       // Notify admin BEFORE signOut so the email fires while page is still active
@@ -1752,7 +1753,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
                 </table>
               </div>
               <div style="padding:20px 32px;border-top:1px solid #2a3a2a;text-align:center">
-                <a href="https://swindon-airsoft.com/admin#players" style="display:inline-block;background:#c8ff00;color:#000;padding:12px 28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-size:12px">Approve / Reject in Admin</a>
+                <a href="https://swindon-airsoft.com/admin#players" style="display:inline-block;background:#c8ff00;color:#000;padding:12px 28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-size:12px">View in Admin</a>
               </div>
               <div style="padding:12px 32px;text-align:center">
                 <p style="margin:0;color:#4a6a4a;font-size:10px;letter-spacing:2px;text-transform:uppercase">Swindon Airsoft · Auto-Generated Notification</p>
@@ -1763,7 +1764,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
         console.error("Failed to send registration notification email:", emailErr);
       }
       await supabase.auth.signOut();
-      showToast("✅ Registration submitted! You'll be notified by email once approved.");
+      showToast("✅ Registration complete! You can now log in.");
       setMode("login");
       setForm(p => ({ ...p, password: "", confirmPassword: "", dob: "", postcode: "" }));
     } catch (e) {
