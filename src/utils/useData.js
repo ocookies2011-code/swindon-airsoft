@@ -204,7 +204,7 @@ function useData() {
               // Only selects non-sensitive fields; email, phone, credits etc. are excluded.
               supabase
                 .from("profiles")
-                .select("id, name, callsign, role, games_attended, vip_status, vip_expires_at, profile_pic, public_profile, leaderboard_opt_out")
+                .select("id, name, callsign, role, games_attended, vip_status, vip_expires_at, profile_pic, public_profile, leaderboard_opt_out, ukara, nationality, designation")
                 .eq("role", "player")
                 .then(({ data: rows }) => {
                   if (!rows || rows.length === 0) return;
@@ -222,6 +222,9 @@ function useData() {
                     profilePic:        r.profile_pic       || null,
                     publicProfile:     r.public_profile    ?? false,
                     leaderboardOptOut: r.leaderboard_opt_out ?? false,
+                    ukara:             r.ukara             || null,
+                    nationality:       r.nationality       || "GB",
+                    designation:       r.designation       || null,
                   }));
                   setData(prev => prev ? { ...prev, users: publicProfiles } : prev);
                 })

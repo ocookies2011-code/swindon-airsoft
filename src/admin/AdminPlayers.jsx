@@ -343,7 +343,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         card_reason:    edit.cardReason  || null,
         card_issued_at: (edit.cardStatus && edit.cardStatus !== 'none') ? (edit.cardIssuedAt || new Date().toISOString()) : null,
         can_marshal:    edit.canMarshal  || false,
-        custom_rank:    edit.customRank  || null,
         designation:    edit.designation || null,
       }).eq('id', edit.id);
       if (error) throw new Error(error.message);
@@ -372,7 +371,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         cardStatus:    origUser?.cardStatus,
         cardReason:    origUser?.cardReason,
         canMarshal:    origUser?.canMarshal,
-        customRank:    origUser?.customRank,
         designation:   origUser?.designation,
         deleteRequest: origUser?.deleteRequest,
       };
@@ -389,7 +387,6 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         cardStatus:    edit.cardStatus,
         cardReason:    edit.cardReason,
         canMarshal:    edit.canMarshal,
-        customRank:    edit.customRank,
         designation:   edit.designation,
         deleteRequest: edit.deleteRequest,
       };
@@ -398,7 +395,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
         gamesAttended: "Games", vipStatus: "VIP status", ukara: "UKARA",
         credits: "Credits", adminNotes: "Admin notes", cardStatus: "Card status",
         cardReason: "Card reason", canMarshal: "Can marshal",
-        customRank: "Custom rank", designation: "Designation",
+        designation: "Designation",
         deleteRequest: "Delete request",
       };
       const diff = diffFields(before, after, LABELS);

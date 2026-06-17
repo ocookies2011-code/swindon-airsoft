@@ -1078,6 +1078,7 @@ body { font-family:'Oswald','Barlow Condensed',sans-serif; background:#080b06; c
             { label: "VIP Status", value: cu.vipStatus === "active" ? "Active" : cu.vipApplied ? "Application Pending" : "Not Applied", ok: cu.vipStatus === "active" },
             cu.vipStatus === "active" && expiry && { label: "Expires", value: expiry.toLocaleDateString("en-GB"), ok: !isExpired },
             { label: "UKARA ID", value: cu.ukara || "Not assigned", ok: !!cu.ukara },
+            cu.ukara && cu.ukaraExpiresAt && { label: "UKARA Expires", value: new Date(cu.ukaraExpiresAt).toLocaleDateString("en-GB"), ok: new Date(cu.ukaraExpiresAt) > new Date() },
             { label: "VIP Discount", value: "10% off game days & Airsoft Armoury UK", ok: cu.vipStatus === "active" },
             cu.vipStatus === "active" && bd && { label: "Birthday Perk", value: birthdayCreditAwarded ? `Free game day awarded ${thisYear} 🎂` : `Free game day in birthday week`, ok: true },
           ].filter(Boolean).map(({ label, value, ok }) => (

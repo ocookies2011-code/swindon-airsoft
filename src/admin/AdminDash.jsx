@@ -59,6 +59,16 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
     // failed payments alert removed — managed separately in Failed Payments section
   ].filter(Boolean);
 
+  // UKARA expiring in ≤30 days
+  const ukaraExpiringSoon = (data.users || []).filter(u => {
+    if (!u.ukara || !u.ukaraExpiresAt) return false;
+    const daysLeft = Math.ceil((new Date(u.ukaraExpiresAt) - new Date()) / 86400000);
+    return daysLeft >= 0 && daysLeft <= 30;
+  });
+  if (ukaraExpiringSoon.length > 0) {
+    alerts.push({ msg: `${ukaraExpiringSoon.length} player(s) have UKARA expiring within 30 days.`, section: 'players', color: 'orange' });
+  }
+
   // Quick action state
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
@@ -67,6 +77,12 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
   const nextEvent = data.events
     .filter(e => e.published && new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+  // Auto-reminder nudge: is next event within 48h?
+  const hoursToNextEvent = nextEvent
+    ? Math.round((new Date(nextEvent.date) - new Date()) / 3600000)
+    : null;
+  const reminderDue = hoursToNextEvent !== null && hoursToNextEvent <= 48 && hoursToNextEvent > 0 && nextEvent.bookings.length > 0;
 
   const sendRemindersNow = async () => {
     if (!nextEvent) return;
@@ -122,7 +138,10 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
       {nextEvent && (
         <div style={{ background: "rgba(200,255,0,.04)", border: "1px solid rgba(200,255,0,.15)", padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".12em", color: "#c8ff00", textTransform: "uppercase" }}>📅 Next Event: {nextEvent.title}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13, letterSpacing: ".12em", color: "#c8ff00", textTransform: "uppercase" }}>📅 Next Event: {nextEvent.title}</div>
+              {reminderDue && <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"2px 7px", background:"rgba(249,115,22,.15)", border:"1px solid rgba(249,115,22,.5)", color:"#f97316", letterSpacing:".1em" }}>⚡ {hoursToNextEvent}H — SEND REMINDERS</span>}
+            </div>
             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
               {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {nextEvent.bookings.length} player(s) booked
             </div>

@@ -160,6 +160,7 @@ function PodiumCard({ player, rank, isMe, onPlayerClick, topScore }) {
         <div style={{ display:"flex", gap:4, justifyContent:"center", marginTop:8, flexWrap:"wrap" }}>
           {player.ukara && <span style={{ ...MONO, fontSize:7, letterSpacing:".1em", padding:"2px 6px", border:"1px solid rgba(79,195,247,.3)", color:"#4fc3f7" }}>UKARA</span>}
           {player.vipStatus==="active" && <span style={{ ...MONO, fontSize:7, letterSpacing:".1em", padding:"2px 6px", border:`1px solid ${GOLD}44`, color:GOLD }}>★ VIP</span>}
+          {player.designation && <span style={{ ...MONO, fontSize:7, letterSpacing:".1em", padding:"2px 6px", border: player.designation==="SITE OWNER"?"1px solid rgba(200,160,0,.5)":"1px solid rgba(79,195,247,.3)", color: player.designation==="SITE OWNER"?"#c8a000":"#4fc3f7" }}>{player.designation}</span>}
         </div>
       </div>
 
@@ -400,6 +401,7 @@ function LeaderboardPage({ data, cu, updateUser, showToast, onPlayerClick }) {
                         {isMe && <span style={{ ...MONO, fontSize:7, color:ACCENT, background:"rgba(200,255,0,.1)", border:"1px solid rgba(200,255,0,.3)", padding:"1px 5px", flexShrink:0 }}>YOU</span>}
                         {!mobile && player.ukara && <span style={{ ...MONO, fontSize:7, padding:"1px 5px", border:"1px solid rgba(79,195,247,.3)", color:"#4fc3f7", flexShrink:0 }}>UKARA</span>}
                         {!mobile && player.vipStatus==="active" && <span style={{ ...MONO, fontSize:7, padding:"1px 5px", border:`1px solid ${GOLD}44`, color:GOLD, flexShrink:0 }}>★ VIP</span>}
+                        {player.designation && <span style={{ ...MONO, fontSize:7, padding:"1px 5px", border: player.designation==="SITE OWNER"?"1px solid rgba(200,160,0,.5)":"1px solid rgba(79,195,247,.3)", color: player.designation==="SITE OWNER"?"#c8a000":"#4fc3f7", flexShrink:0 }}>{player.designation}</span>}
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:5 }}>
                         <NationalityFlag code={player.nationality || "GB"} size={mobile?11:13}/>

@@ -420,6 +420,19 @@ function AdminRevenue({ data, save, showToast, cu }) {
                 placeholder="Search name, event, email…"
                 style={{ flex: 1, minWidth: 160, background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontSize: 12, borderRadius: 3, outline: "none" }} />
               <button className="btn btn-sm btn-ghost" onClick={() => { setTxDateFrom(firstOfMonth); setTxDateTo(today); setTxSource('all'); setTxSearch(''); setTxPage(1); }}>Reset</button>
+              <button className="btn btn-sm btn-ghost" style={{ color: 'var(--accent)', borderColor: 'rgba(200,255,0,.3)' }} onClick={() => {
+                const rows = [['Date (GMT)', 'Customer', 'Email', 'Description', 'Source', 'Total (£)']];
+                filtered.forEach(t => {
+                  const desc = t.source === 'cash' || t.source === 'terminal' || t.source === 'shop'
+                    ? (t.items || []).map(i => `${i.name||'Item'} x${i.qty}`).join('; ')
+                    : `${t.eventTitle||''} — ${t.ticketType||''} x${t.qty||1}`;
+                  rows.push([gmtFull(t.date), t.userName||'', t.customerEmail||'', desc, t.source||'', t.total.toFixed(2)]);
+                });
+                const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('
+');
+                const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                a.download = `swindon-airsoft-revenue-${txDateFrom||'all'}-to-${txDateTo||'all'}.csv`; a.click();
+              }}>⬇ CSV</button>
             </div>
 
             {/* Quick date presets */}
