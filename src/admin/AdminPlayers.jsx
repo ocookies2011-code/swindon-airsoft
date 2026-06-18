@@ -1025,7 +1025,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   onChange={e => setEdit(p => ({ ...p, credits: +e.target.value }))}
                   style={{ borderColor: edit.credits > 0 ? "rgba(200,255,0,.4)" : undefined }}
                 />
-                {edit.credits > 0 && edit.credits !== origUser?.credits && (
+                {edit.credits > 0 && edit.credits !== (localUsers || data.users || []).find(u => u.id === edit.id)?.credits && (
                   <div style={{ fontSize:10, color:"#f97316", marginTop:4 }}>
                     ⚠ You are setting credits to £{Number(edit.credits).toFixed(2)} — this will allow the player to book for free
                   </div>
