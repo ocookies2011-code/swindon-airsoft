@@ -29,7 +29,6 @@ function AdminShop({ data, save, showToast, cu }) {
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
   const [modal, setModal] = useState(null);
-  const uid = () => Math.random().toString(36).slice(2,10);
   const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", supplierCode: "", variants: [] };
 
   // Drag-to-reorder state for products
@@ -232,6 +231,7 @@ function AdminShop({ data, save, showToast, cu }) {
   };
 
   const [savingProduct, setSavingProduct] = useState(false);
+  const saveTimeoutRef = useRef(null);
   const [squareSyncStatus, setSquareSyncStatus] = useState(null); // null|"syncing"|"ok"|"error"
   const [bulkSyncing, setBulkSyncing] = useState(false);
 
@@ -287,18 +287,13 @@ function AdminShop({ data, save, showToast, cu }) {
     }
   };
 
-  // Reset any stuck saving state when the tab becomes visible again
-  // (browser can freeze JS mid-async when tab is hidden, leaving busy=true forever)
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") setSavingProduct(false);
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+  // Cleanup save timeout on unmount
+  useEffect(() => { return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); }; }, []);
   const saveItem = async () => {
     if (!form.name) { showToast("Name required", "red"); return; }
     setSavingProduct(true);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => { setSavingProduct(false); showToast("Save timed out — please try again", "red"); }, 20000);
     try {
       const origProduct = modal !== "new" ? (data.shop || []).find(p => p.id === form.id) : null;
       // Strip any lingering base64 images before writing to DB — images must be Storage URLs
@@ -351,6 +346,7 @@ function AdminShop({ data, save, showToast, cu }) {
       console.error("saveItem FAILED at:", e?.message, e);
       showToast("Save failed: " + fmtErr(e), "red");
     } finally {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       setSavingProduct(false);
     }
   };
@@ -402,7 +398,7 @@ function AdminShop({ data, save, showToast, cu }) {
               {bulkSyncing ? "⏳ Syncing…" : "🔄 Sync All to Square"}
             </button>
           )}
-          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+          {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", supplierCode:"" }); setSavingProduct(false); setModalTab("details"); setModal("new"); }}>+ Add Product</button>}
           {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
         </div>
       </div>
@@ -481,7 +477,7 @@ function AdminShop({ data, save, showToast, cu }) {
                   <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 12px", marginTop:6 }}>
                     {lowStockItems.map((item, i) => (
                       <span key={i} style={{ fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:item.stock===0?"var(--red)":"var(--gold)", cursor:"pointer" }}
-                        onClick={() => { setForm({ ...shopOrder.find(p=>p.id===item.id), variants:shopOrder.find(p=>p.id===item.id)?.variants||[] }); setNewVariant({name:"",price:"",stock:"",supplierCode:""}); setSavingProduct(false); setModal(item.id); }}>
+                        onClick={() => { setForm({ ...shopOrder.find(p=>p.id===item.id), variants:shopOrder.find(p=>p.id===item.id)?.variants||[] }); setNewVariant({name:"",price:"",stock:"",supplierCode:""}); setSavingProduct(false); setModalTab("details"); setModal(item.id); }}>
                         {item.stock===0?"🔴":"🟡"} {item.name}{item.variant?` (${item.variant})`:""}: <strong>{item.stock}</strong>
                       </span>
                     ))}
@@ -516,7 +512,7 @@ function AdminShop({ data, save, showToast, cu }) {
           </div>
 
           {(() => {
-            const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", supplierCode:"" }); setSavingProduct(false); setModal(item.id); };
+            const openEdit = (item) => { setForm({ ...item, variants: item.variants || [] }); setNewVariant({ name:"", price:"", stock:"", supplierCode:"" }); setSavingProduct(false); setModalTab("details"); setModal(item.id); };
 
             // Stock summary for a product
             const stockSummary = (item) => {
@@ -795,7 +791,26 @@ function AdminShop({ data, save, showToast, cu }) {
           <div className="modal-box wide" onClick={e => e.stopPropagation()}>
             <div className="modal-title">{modal === "new" ? "Add Product" : "Edit Product"}</div>
 
-            <div className="form-row">
+            {/* ── Modal section tabs ── */}
+            <div style={{ display:"flex", borderBottom:"2px solid #1a1a1a", marginBottom:18 }}>
+              {[
+                { id:"details", label:"📋 Details" },
+                { id:"variants", label:"⚡ Variants" },
+                { id:"images", label:"📷 Images" },
+              ].map(t => (
+                <button key={t.id} type="button" onClick={() => setModalTab(t.id)}
+                  style={{ padding:"8px 18px", fontSize:11, fontWeight:700, letterSpacing:".12em", textTransform:"uppercase",
+                    fontFamily:"'Oswald','Barlow Condensed',sans-serif", background:"none", border:"none",
+                    borderBottom: modalTab===t.id ? "2px solid var(--accent)" : "2px solid transparent",
+                    color: modalTab===t.id ? "var(--accent)" : "#555", cursor:"pointer", marginBottom:-2 }}>
+                  {t.id === "variants" ? `⚡ Variants${(form.variants||[]).length > 0 ? " ("+(form.variants||[]).length+")" : ""}` :
+                   t.id === "images" ? `📷 Images${(form.images||[]).length > 0 ? " ("+(form.images||[]).length+")" : ""}` : t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── DETAILS TAB ── */}
+            {modalTab === "details" && <><div className="form-row">
               <div className="form-group"><label>Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} /></div>
               <div className="form-group">
                 <label>Category <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(optional — e.g. BBs, Guns, Accessories)</span></label>
@@ -911,7 +926,10 @@ function AdminShop({ data, save, showToast, cu }) {
               <label style={{fontSize:13}}>🔒 Hidden from Public Shop <span style={{color:"var(--muted)",fontSize:11}}>(only visible in Cash Sales &amp; Game Day Extras)</span></label>
             </div>
 
-            {/* ── VARIANTS EDITOR ── */}
+            </> /* end details tab */}
+
+            {/* ── VARIANTS TAB ── */}
+            {modalTab === "variants" && <>
             <div style={{border:"1px solid #2a2a2a",borderLeft:"3px solid var(--accent)",marginBottom:14}}>
               <div style={{background:"#0d0d0d",padding:"8px 14px",fontSize:9,letterSpacing:".25em",color:"var(--accent)",fontFamily:"'Oswald','Barlow Condensed',sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #2a2a2a"}}>
                 VARIANTS (optional) — e.g. sizes, colours &nbsp;<span style={{fontWeight:400,fontSize:10,color:"var(--muted)",letterSpacing:".05em"}}>☰ drag to reorder</span>
@@ -986,6 +1004,10 @@ function AdminShop({ data, save, showToast, cu }) {
               </div>
             </div>
 
+            </> /* end variants tab */}
+
+            {/* ── IMAGES TAB ── */}
+            {modalTab === "images" && <>
             <div className="form-group">
               <label>Product Images <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(first image shown on shop card — drag to reorder)</span></label>
               {(form.images || []).length > 0 && (
@@ -1009,7 +1031,9 @@ function AdminShop({ data, save, showToast, cu }) {
               </label>
             </div>
 
-            <div className="gap-2">
+            </> /* end images tab */}
+
+            <div className="gap-2" style={{marginTop:18}}>
               <button className="btn btn-primary" onClick={saveItem} disabled={savingProduct}>{savingProduct ? "Saving…" : "Save Product"}</button>
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Cancel</button>
             </div>
