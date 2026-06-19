@@ -32,6 +32,13 @@ function AdminShop({ data, save, showToast, cu }) {
   const uid = () => Math.random().toString(36).slice(2,10);
   const blank = { name: "", description: "", price: 0, salePrice: null, onSale: false, image: "", images: [], stock: 0, noPost: false, gameExtra: false, hiddenFromShop: false, category: "", supplierCode: "", variants: [] };
 
+  // ── Bulk Upload state ──────────────────────────────────
+  const [bulkModal, setBulkModal]     = useState(false);
+  const [bulkRows,  setBulkRows]      = useState([]);   // parsed preview rows
+  const [bulkError, setBulkError]     = useState("");
+  const [bulkSaving, setBulkSaving]   = useState(false);
+  const bulkFileRef = useRef(null);
+
   // Drag-to-reorder state for products
   const [shopOrder, setShopOrder] = useState(data.shop);
   const dragProductIdx = useRef(null);
@@ -87,6 +94,88 @@ function AdminShop({ data, save, showToast, cu }) {
     });
   }, [shopOrder]);
   const toggleCat = (cat) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
+
+  // ── Bulk Upload helpers ────────────────────────────────
+  const BULK_TEMPLATE_HEADERS = ["name","category","description","price","salePrice","onSale","stock","supplierCode","noPost","gameExtra","hiddenFromShop"];
+  const downloadBulkTemplate = () => {
+    const exampleRow = ["Example Product","Accessories","A short description",9.99,"",false,10,"ABC123",false,false,false];
+    const csv = [BULK_TEMPLATE_HEADERS.join(","), exampleRow.join(",")].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "product_upload_template.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const parseBulkCSV = (text) => {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return { error: "CSV must have a header row and at least one product row.", rows: [] };
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g,""));
+    const nameIdx = headers.indexOf("name");
+    if (nameIdx === -1) return { error: "CSV must have a 'name' column.", rows: [] };
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(",").map(v => v.trim());
+      const get = (col, fallback="") => { const idx = headers.indexOf(col); return idx >= 0 && vals[idx] !== undefined ? vals[idx] : fallback; };
+      const bool = (v) => ["true","yes","1"].includes(String(v).toLowerCase());
+      const num  = (v, fb=0) => { const n = parseFloat(v); return isNaN(n) ? fb : n; };
+      const name = get("name");
+      if (!name) continue;
+      rows.push({
+        _rowNum: i + 1,
+        id: Math.random().toString(36).slice(2,10),
+        name,
+        category:      get("category"),
+        description:   get("description"),
+        price:         num(get("price")),
+        salePrice:     get("saleprice","") !== "" ? num(get("saleprice")) : null,
+        onSale:        bool(get("onsale","false")),
+        stock:         num(get("stock"), 0),
+        supplierCode:  get("suppliercode"),
+        noPost:        bool(get("nopost","false")),
+        gameExtra:     bool(get("gameextra","false")),
+        hiddenFromShop:bool(get("hiddenfromshop","false")),
+        image: "", images: [], variants: [],
+      });
+    }
+    if (rows.length === 0) return { error: "No valid product rows found (all rows missing a name?).", rows: [] };
+    return { error: null, rows };
+  };
+  const handleBulkFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const { error, rows } = parseBulkCSV(ev.target.result);
+      setBulkError(error || "");
+      setBulkRows(rows);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+  const updateBulkRow = (idx, key, val) => {
+    setBulkRows(prev => prev.map((r, i) => i === idx ? { ...r, [key]: val } : r));
+  };
+  const removeBulkRow = (idx) => setBulkRows(prev => prev.filter((_, i) => i !== idx));
+  const confirmBulkUpload = async () => {
+    if (bulkRows.length === 0) return;
+    setBulkSaving(true);
+    try {
+      const inserts = bulkRows.map(r => ({
+        id: r.id, name: r.name, category: r.category, description: r.description,
+        price: r.price, salePrice: r.salePrice, onSale: r.onSale, stock: r.stock,
+        supplierCode: r.supplierCode, noPost: r.noPost, gameExtra: r.gameExtra,
+        hiddenFromShop: r.hiddenFromShop, image: "", images: [], variants: [],
+      }));
+      const { error } = await supabase.from("shop_products").insert(inserts);
+      if (error) throw error;
+      await save();
+      setBulkModal(false); setBulkRows([]); setBulkError("");
+      showToast(`✅ ${inserts.length} product${inserts.length !== 1 ? "s" : ""} uploaded successfully!`);
+    } catch (err) {
+      setBulkError("Upload failed: " + fmtErr(err));
+    } finally {
+      setBulkSaving(false);
+    }
+  };
 
   // Low stock alert — items (or variants) at or below 5 units
   const lowStockItems = useMemo(() => {
@@ -403,6 +492,7 @@ function AdminShop({ data, save, showToast, cu }) {
             </button>
           )}
           {tab === "products" && <button className="btn btn-primary" onClick={() => { setForm(blank); setNewVariant({ name:"", price:"", stock:"", supplierCode:"" }); setSavingProduct(false); setModal("new"); }}>+ Add Product</button>}
+          {tab === "products" && <button className="btn btn-sm btn-ghost" onClick={() => { setBulkRows([]); setBulkError(""); setBulkModal(true); }} style={{ fontSize:12, borderColor:"rgba(255,255,255,.2)" }}>📥 Bulk Upload</button>}
           {tab === "postage" && <button className="btn btn-primary" onClick={() => { setPostForm(blankPost); setPostModal("new"); }}>+ Add Postage</button>}
         </div>
       </div>
@@ -1051,6 +1141,108 @@ function AdminShop({ data, save, showToast, cu }) {
           </div>
         </div>
       )}
+      {/* ── Bulk Upload Modal ───────────────────────────── */}
+      {bulkModal && (
+        <div className="modal-backdrop" onClick={() => !bulkSaving && setBulkModal(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: bulkRows.length > 0 ? 900 : 520, width:"95vw" }}>
+            <div className="modal-title">📥 Bulk Upload Products</div>
+
+            {bulkRows.length === 0 ? (
+              <div>
+                <p style={{ fontSize:13, color:"var(--text-muted)", marginBottom:16, lineHeight:1.6 }}>
+                  Upload a CSV file to add multiple products at once. Download the template below, fill it in, then upload it here.
+                  After uploading you can review and edit each row before confirming.
+                </p>
+                <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+                  <button className="btn btn-ghost btn-sm" onClick={downloadBulkTemplate} style={{ fontSize:12 }}>
+                    ⬇️ Download CSV Template
+                  </button>
+                </div>
+                <div style={{ border:"2px dashed var(--border)", borderRadius:6, padding:24, textAlign:"center", marginBottom:16, cursor:"pointer" }}
+                  onClick={() => bulkFileRef.current?.click()}>
+                  <div style={{ fontSize:28, marginBottom:8 }}>📂</div>
+                  <div style={{ fontSize:13, color:"var(--text-muted)" }}>Click to choose CSV file</div>
+                  <input ref={bulkFileRef} type="file" accept=".csv,text/csv" style={{ display:"none" }} onChange={handleBulkFile} />
+                </div>
+                {bulkError && <div style={{ color:"var(--red)", fontSize:12, marginTop:8 }}>{bulkError}</div>}
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize:12, color:"var(--text-muted)", marginBottom:12 }}>
+                  Review and edit the {bulkRows.length} product{bulkRows.length !== 1 ? "s" : ""} below before confirming. Use ✕ to remove any row you don't want.
+                </p>
+                <div style={{ overflowX:"auto", marginBottom:16 }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                    <thead>
+                      <tr style={{ borderBottom:"1px solid var(--border)", textAlign:"left" }}>
+                        {["Name","Category","Price (£)","Sale £","Stock","Supplier","Description",""].map(h => (
+                          <th key={h} style={{ padding:"6px 8px", color:"var(--text-muted)", fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bulkRows.map((row, idx) => (
+                        <tr key={row.id} style={{ borderBottom:"1px solid var(--border)", verticalAlign:"middle" }}>
+                          <td style={{ padding:"4px 6px" }}>
+                            <input value={row.name} onChange={e => updateBulkRow(idx,"name",e.target.value)}
+                              style={{ width:130, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                          </td>
+                          <td style={{ padding:"4px 6px" }}>
+                            <input value={row.category} onChange={e => updateBulkRow(idx,"category",e.target.value)}
+                              style={{ width:100, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                          </td>
+                          <td style={{ padding:"4px 6px" }}>
+                            <input type="number" step="0.01" value={row.price} onChange={e => updateBulkRow(idx,"price",+e.target.value)}
+                              style={{ width:70, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                          </td>
+                          <td style={{ padding:"4px 6px" }}>
+                            <input type="number" step="0.01" placeholder="—" value={row.salePrice ?? ""} onChange={e => updateBulkRow(idx,"salePrice",e.target.value===""?null:+e.target.value)}
+                              style={{ width:70, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                          </td>
+                          <td style={{ padding:"4px 6px" }}>
+                            <input type="number" value={row.stock} onChange={e => updateBulkRow(idx,"stock",+e.target.value)}
+                              style={{ width:55, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                          </td>
+                          <td style={{ padding:"4px 6px" }}>
+                            <input value={row.supplierCode} onChange={e => updateBulkRow(idx,"supplierCode",e.target.value)}
+                              style={{ width:85, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                          </td>
+                          <td style={{ padding:"4px 6px" }}>
+                            <input value={row.description} onChange={e => updateBulkRow(idx,"description",e.target.value)}
+                              style={{ width:180, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                          </td>
+                          <td style={{ padding:"4px 6px" }}>
+                            <button onClick={() => removeBulkRow(idx)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--red)", fontSize:15, lineHeight:1 }}>✕</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {bulkError && <div style={{ color:"var(--red)", fontSize:12, marginBottom:10 }}>{bulkError}</div>}
+                <div style={{ fontSize:11, color:"var(--text-muted)", marginBottom:14 }}>
+                  💡 Images, variants and toggles (on sale, hidden, no post) can be set individually after upload via the normal Edit Product panel.
+                </div>
+              </div>
+            )}
+
+            <div className="gap-2">
+              {bulkRows.length > 0 && (
+                <button className="btn btn-primary" onClick={confirmBulkUpload} disabled={bulkSaving || bulkRows.length === 0}>
+                  {bulkSaving ? "Uploading…" : `✅ Confirm & Upload ${bulkRows.length} Product${bulkRows.length !== 1 ? "s" : ""}`}
+                </button>
+              )}
+              {bulkRows.length > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkRows([]); setBulkError(""); }} disabled={bulkSaving} style={{ fontSize:12 }}>
+                  ← Choose Different File
+                </button>
+              )}
+              <button className="btn btn-ghost" onClick={() => !bulkSaving && setBulkModal(false)} disabled={bulkSaving}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
