@@ -1110,10 +1110,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                   >
                     {data.events
                       .slice()
+                      .filter(ev => ev.id === editBooking.eventId || new Date(ev.date + "T" + (ev.time || "23:59")) > new Date())
                       .sort((a, b) => new Date(a.date) - new Date(b.date))
                       .map(ev => (
                         <option key={ev.id} value={ev.id}>
-                          {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+                          {ev.id === editBooking.eventId ? "★ CURRENT — " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
                         </option>
                       ))
                     }
@@ -2004,10 +2005,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               >
                 {data.events
                   .slice()
+                  .filter(ev => ev.id === editBooking.eventId || new Date(ev.date + "T" + (ev.time || "23:59")) > new Date())
                   .sort((a, b) => new Date(a.date) - new Date(b.date))
                   .map(ev => (
                     <option key={ev.id} value={ev.id}>
-                      {ev.id === editBooking.eventId ? "★ " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+                      {ev.id === editBooking.eventId ? "★ CURRENT — " : ""}{ev.title} — {new Date(ev.date).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
                     </option>
                   ))
                 }
