@@ -96,47 +96,80 @@ function AdminShop({ data, save, showToast, cu }) {
   const toggleCat = (cat) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
 
   // ── Bulk Upload helpers ────────────────────────────────
-  const BULK_TEMPLATE_HEADERS = ["name","category","description","price","salePrice","onSale","stock","supplierCode","noPost","gameExtra","hiddenFromShop"];
+  const BULK_TEMPLATE_HEADERS = ["name","category","description","price","stock","supplierCode","noPost","gameExtra","hiddenFromShop","variant_name","variant_price","variant_stock","variant_cost"];
   const downloadBulkTemplate = () => {
-    const exampleRow = ["Example Product","Accessories","A short description",9.99,"",false,10,"ABC123",false,false,false];
-    const csv = [BULK_TEMPLATE_HEADERS.join(","), exampleRow.join(",")].join("\n");
+    const cats = [...new Set(shopOrder.map(p => p.category).filter(Boolean))].sort().join(" | ");
+    const note = `# Categories: ${cats}`;
+    const note2 = "# For variants: repeat the product name on extra rows and fill variant_name/variant_price/variant_stock/variant_cost. Leave blank if no variants.";
+    const rows = [
+      note,
+      note2,
+      BULK_TEMPLATE_HEADERS.join(","),
+      // Simple product (no variants)
+      `Simple Product,Parts & Accessories,A product with no variants,19.99,10,ABC123,false,false,false,,,, `,
+      // Product with variants — same name repeated
+      `BB Pack,BBs & Gas,High quality BBs,0,0,,,false,false,false,0.20g x3500,8.99,20,5.86`,
+      `BB Pack,BBs & Gas,High quality BBs,0,0,,,false,false,false,0.25g x3500,10.99,15,7.18`,
+    ];
+    const csv = rows.join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "product_upload_template.csv"; a.click();
     URL.revokeObjectURL(url);
   };
   const parseBulkCSV = (text) => {
-    const lines = text.trim().split(/\r?\n/);
+    const lines = text.trim().split(/\r?\n/).filter(l => !l.trim().startsWith("#"));
     if (lines.length < 2) return { error: "CSV must have a header row and at least one product row.", rows: [] };
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g,""));
     const nameIdx = headers.indexOf("name");
     if (nameIdx === -1) return { error: "CSV must have a 'name' column.", rows: [] };
-    const rows = [];
+    const get = (vals, col, fallback="") => { const idx = headers.indexOf(col); return idx >= 0 && vals[idx] !== undefined ? vals[idx].trim() : fallback; };
+    const bool = (v) => ["true","yes","1"].includes(String(v).toLowerCase());
+    const num  = (v, fb=0) => { const n = parseFloat(v); return isNaN(n) ? fb : n; };
+    // Group rows by product name (variants share the same name)
+    const productMap = new Map();
+    const productOrder = [];
     for (let i = 1; i < lines.length; i++) {
       const vals = lines[i].split(",").map(v => v.trim());
-      const get = (col, fallback="") => { const idx = headers.indexOf(col); return idx >= 0 && vals[idx] !== undefined ? vals[idx] : fallback; };
-      const bool = (v) => ["true","yes","1"].includes(String(v).toLowerCase());
-      const num  = (v, fb=0) => { const n = parseFloat(v); return isNaN(n) ? fb : n; };
-      const name = get("name");
+      const name = get(vals, "name");
       if (!name) continue;
-      rows.push({
-        _rowNum: i + 1,
-        id: Math.random().toString(36).slice(2,10),
-        name,
-        category:      get("category"),
-        description:   get("description"),
-        price:         num(get("price")),
-        salePrice:     get("saleprice","") !== "" ? num(get("saleprice")) : null,
-        onSale:        bool(get("onsale","false")),
-        stock:         num(get("stock"), 0),
-        supplierCode:  get("suppliercode"),
-        noPost:        bool(get("nopost","false")),
-        gameExtra:     bool(get("gameextra","false")),
-        hiddenFromShop:bool(get("hiddenfromshop","false")),
-        image: "", images: [], variants: [],
-      });
+      const variantName  = get(vals, "variant_name");
+      const variantPrice = get(vals, "variant_price");
+      const variantStock = get(vals, "variant_stock");
+      const variantCost  = get(vals, "variant_cost");
+      if (!productMap.has(name)) {
+        productOrder.push(name);
+        productMap.set(name, {
+          id: Math.random().toString(36).slice(2,10),
+          name,
+          category:       get(vals, "category"),
+          description:    get(vals, "description"),
+          price:          num(get(vals, "price")),
+          salePrice:      null,
+          onSale:         false,
+          stock:          num(get(vals, "stock"), 0),
+          supplierCode:   get(vals, "suppliercode"),
+          noPost:         bool(get(vals, "nopost","false")),
+          gameExtra:      bool(get(vals, "gameextra","false")),
+          hiddenFromShop: bool(get(vals, "hiddenfromshop","false")),
+          image: "", images: [], variants: [],
+        });
+      }
+      // If this row has a variant, add it
+      if (variantName) {
+        const prod = productMap.get(name);
+        prod.variants.push({
+          id: Math.random().toString(36).slice(2,10),
+          name: variantName,
+          price: num(variantPrice),
+          stock: num(variantStock, 0),
+          costPrice: num(variantCost),
+          supplierCode: "", image: "",
+        });
+      }
     }
-    if (rows.length === 0) return { error: "No valid product rows found (all rows missing a name?).", rows: [] };
+    const rows = productOrder.map(n => productMap.get(n));
+    if (rows.length === 0) return { error: "No valid product rows found.", rows: [] };
     return { error: null, rows };
   };
   const handleBulkFile = (e) => {
@@ -154,6 +187,25 @@ function AdminShop({ data, save, showToast, cu }) {
   const updateBulkRow = (idx, key, val) => {
     setBulkRows(prev => prev.map((r, i) => i === idx ? { ...r, [key]: val } : r));
   };
+  const updateBulkVariant = (rowIdx, vIdx, key, val) => {
+    setBulkRows(prev => prev.map((r, i) => {
+      if (i !== rowIdx) return r;
+      const variants = r.variants.map((v, j) => j === vIdx ? { ...v, [key]: val } : v);
+      return { ...r, variants };
+    }));
+  };
+  const removeBulkVariant = (rowIdx, vIdx) => {
+    setBulkRows(prev => prev.map((r, i) => {
+      if (i !== rowIdx) return r;
+      return { ...r, variants: r.variants.filter((_, j) => j !== vIdx) };
+    }));
+  };
+  const addBulkVariant = (rowIdx) => {
+    setBulkRows(prev => prev.map((r, i) => {
+      if (i !== rowIdx) return r;
+      return { ...r, variants: [...r.variants, { id: Math.random().toString(36).slice(2,10), name:"", price:0, stock:0, costPrice:0, supplierCode:"", image:"" }] };
+    }));
+  };
   const removeBulkRow = (idx) => setBulkRows(prev => prev.filter((_, i) => i !== idx));
   const confirmBulkUpload = async () => {
     if (bulkRows.length === 0) return;
@@ -163,7 +215,7 @@ function AdminShop({ data, save, showToast, cu }) {
         id: r.id, name: r.name, category: r.category, description: r.description,
         price: r.price, salePrice: r.salePrice, onSale: r.onSale, stock: r.stock,
         supplierCode: r.supplierCode, noPost: r.noPost, gameExtra: r.gameExtra,
-        hiddenFromShop: r.hiddenFromShop, image: "", images: [], variants: [],
+        hiddenFromShop: r.hiddenFromShop, image: "", images: [], variants: r.variants,
       }));
       const { error } = await supabase.from("shop_products").insert(inserts);
       if (error) throw error;
@@ -1175,53 +1227,95 @@ function AdminShop({ data, save, showToast, cu }) {
                   <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
                     <thead>
                       <tr style={{ borderBottom:"1px solid var(--border)", textAlign:"left" }}>
-                        {["Name","Category","Price (£)","Sale £","Stock","Supplier","Description",""].map(h => (
+                        {["Name","Category","Price (£)","Stock","Supplier","Description",""].map(h => (
                           <th key={h} style={{ padding:"6px 8px", color:"var(--text-muted)", fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {bulkRows.map((row, idx) => (
-                        <tr key={row.id} style={{ borderBottom:"1px solid var(--border)", verticalAlign:"middle" }}>
-                          <td style={{ padding:"4px 6px" }}>
-                            <input value={row.name} onChange={e => updateBulkRow(idx,"name",e.target.value)}
-                              style={{ width:130, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
-                          </td>
-                          <td style={{ padding:"4px 6px" }}>
-                            <input value={row.category} onChange={e => updateBulkRow(idx,"category",e.target.value)}
-                              style={{ width:100, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
-                          </td>
-                          <td style={{ padding:"4px 6px" }}>
-                            <input type="number" step="0.01" value={row.price} onChange={e => updateBulkRow(idx,"price",+e.target.value)}
-                              style={{ width:70, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
-                          </td>
-                          <td style={{ padding:"4px 6px" }}>
-                            <input type="number" step="0.01" placeholder="—" value={row.salePrice ?? ""} onChange={e => updateBulkRow(idx,"salePrice",e.target.value===""?null:+e.target.value)}
-                              style={{ width:70, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
-                          </td>
-                          <td style={{ padding:"4px 6px" }}>
-                            <input type="number" value={row.stock} onChange={e => updateBulkRow(idx,"stock",+e.target.value)}
-                              style={{ width:55, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
-                          </td>
-                          <td style={{ padding:"4px 6px" }}>
-                            <input value={row.supplierCode} onChange={e => updateBulkRow(idx,"supplierCode",e.target.value)}
-                              style={{ width:85, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
-                          </td>
-                          <td style={{ padding:"4px 6px" }}>
-                            <input value={row.description} onChange={e => updateBulkRow(idx,"description",e.target.value)}
-                              style={{ width:180, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
-                          </td>
-                          <td style={{ padding:"4px 6px" }}>
-                            <button onClick={() => removeBulkRow(idx)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--red)", fontSize:15, lineHeight:1 }}>✕</button>
-                          </td>
-                        </tr>
+                        <React.Fragment key={row.id}>
+                          <tr style={{ borderBottom: row.variants.length > 0 ? "none" : "1px solid var(--border)", verticalAlign:"middle", background:"var(--card-bg)" }}>
+                            <td style={{ padding:"5px 6px" }}>
+                              <input value={row.name} onChange={e => updateBulkRow(idx,"name",e.target.value)}
+                                style={{ width:130, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)", fontWeight:600 }} />
+                            </td>
+                            <td style={{ padding:"5px 6px" }}>
+                              <input value={row.category} onChange={e => updateBulkRow(idx,"category",e.target.value)}
+                                list={`cats-${row.id}`}
+                                style={{ width:110, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                              <datalist id={`cats-${row.id}`}>
+                                {[...new Set(shopOrder.map(p => p.category).filter(Boolean))].sort().map(c => <option key={c} value={c} />)}
+                              </datalist>
+                            </td>
+                            <td style={{ padding:"5px 6px" }}>
+                              {row.variants.length === 0
+                                ? <input type="number" step="0.01" value={row.price} onChange={e => updateBulkRow(idx,"price",+e.target.value)}
+                                    style={{ width:70, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                                : <span style={{ color:"var(--text-muted)", fontSize:11 }}>per variant</span>
+                              }
+                            </td>
+                            <td style={{ padding:"5px 6px" }}>
+                              {row.variants.length === 0
+                                ? <input type="number" value={row.stock} onChange={e => updateBulkRow(idx,"stock",+e.target.value)}
+                                    style={{ width:55, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                                : <span style={{ color:"var(--text-muted)", fontSize:11 }}>per variant</span>
+                              }
+                            </td>
+                            <td style={{ padding:"5px 6px" }}>
+                              <input value={row.supplierCode} onChange={e => updateBulkRow(idx,"supplierCode",e.target.value)}
+                                style={{ width:85, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                            </td>
+                            <td style={{ padding:"5px 6px" }}>
+                              <input value={row.description} onChange={e => updateBulkRow(idx,"description",e.target.value)}
+                                style={{ width:160, fontSize:12, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"3px 6px", color:"var(--text)" }} />
+                            </td>
+                            <td style={{ padding:"5px 6px" }}>
+                              <button onClick={() => removeBulkRow(idx)} title="Remove product" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--red)", fontSize:15, lineHeight:1 }}>✕</button>
+                            </td>
+                          </tr>
+                          {row.variants.map((v, vIdx) => (
+                            <tr key={v.id} style={{ borderBottom: vIdx === row.variants.length - 1 ? "none" : "none", verticalAlign:"middle", background:"rgba(0,0,0,.15)" }}>
+                              <td style={{ padding:"3px 6px 3px 20px", color:"var(--text-muted)", fontSize:11 }}>
+                                ↳ <input value={v.name} onChange={e => updateBulkVariant(idx,vIdx,"name",e.target.value)}
+                                    placeholder="Variant name"
+                                    style={{ width:110, fontSize:11, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"2px 5px", color:"var(--text)" }} />
+                              </td>
+                              <td></td>
+                              <td style={{ padding:"3px 6px" }}>
+                                <input type="number" step="0.01" value={v.price} onChange={e => updateBulkVariant(idx,vIdx,"price",+e.target.value)}
+                                  style={{ width:70, fontSize:11, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"2px 5px", color:"var(--text)" }} />
+                              </td>
+                              <td style={{ padding:"3px 6px" }}>
+                                <input type="number" value={v.stock} onChange={e => updateBulkVariant(idx,vIdx,"stock",+e.target.value)}
+                                  style={{ width:55, fontSize:11, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"2px 5px", color:"var(--text)" }} />
+                              </td>
+                              <td style={{ padding:"3px 6px" }}>
+                                <span style={{ color:"var(--text-muted)", fontSize:10 }}>cost: </span>
+                                <input type="number" step="0.01" value={v.costPrice} onChange={e => updateBulkVariant(idx,vIdx,"costPrice",+e.target.value)}
+                                  style={{ width:55, fontSize:11, background:"var(--input-bg)", border:"1px solid var(--border)", borderRadius:4, padding:"2px 5px", color:"var(--text)" }} />
+                              </td>
+                              <td></td>
+                              <td style={{ padding:"3px 6px" }}>
+                                <button onClick={() => removeBulkVariant(idx,vIdx)} title="Remove variant" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--red)", fontSize:12, lineHeight:1 }}>✕</button>
+                              </td>
+                            </tr>
+                          ))}
+                          <tr>
+                            <td colSpan={7} style={{ padding:"2px 6px 8px 20px", borderBottom:"2px solid var(--border)" }}>
+                              <button onClick={() => addBulkVariant(idx)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--primary)", fontSize:11, padding:0 }}>
+                                + add variant
+                              </button>
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 {bulkError && <div style={{ color:"var(--red)", fontSize:12, marginBottom:10 }}>{bulkError}</div>}
                 <div style={{ fontSize:11, color:"var(--text-muted)", marginBottom:14 }}>
-                  💡 Images, variants and toggles (on sale, hidden, no post) can be set individually after upload via the normal Edit Product panel.
+                  💡 Images and toggles (on sale, hidden, no post) can be set individually after upload via the normal Edit Product panel.
                 </div>
               </div>
             )}
