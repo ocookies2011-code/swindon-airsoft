@@ -143,20 +143,42 @@ serve(async (req) => {
       // Find the player by matching Square customer
       let userId       = null as string | null;
       let userName     = "Unknown Player";
-      const squareCustomerId = payment.customer_id as string | null;
-      if (squareCustomerId) {
+
+      // Helper: look up a profile by email
+      const lookupByEmail = async (email: string): Promise<{ id: string; name: string } | null> => {
         try {
-          const custRes  = await fetch(`${SQUARE_BASE}/customers/${squareCustomerId}`, { headers: squareHeaders(token) });
-          const custData = await custRes.json();
-          const customer = custData.customer as Record<string, unknown> | null;
-          if (customer?.email_address) {
-            const email     = customer.email_address as string;
-            userName        = [customer.given_name, customer.family_name].filter(Boolean).join(" ") || email;
-            const playerRes = await fetch(`${sbUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id,name`, { headers: h });
-            const players   = await playerRes.json() as Record<string,unknown>[];
-            if (players.length > 0) { userId = players[0].id as string; userName = players[0].name as string || userName; }
-          }
-        } catch(e) { console.warn("Could not fetch Square customer:", e); }
+          const r = await fetch(`${sbUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=id,name`, { headers: h });
+          const rows = await r.json() as Record<string, unknown>[];
+          return rows.length > 0 ? { id: rows[0].id as string, name: rows[0].name as string } : null;
+        } catch { return null; }
+      };
+
+      // 1. Try buyer_email_address directly on the payment object
+      const buyerEmail = payment.buyer_email_address as string | null;
+      if (buyerEmail) {
+        const profile = await lookupByEmail(buyerEmail);
+        if (profile) { userId = profile.id; userName = profile.name || buyerEmail; }
+        else { userName = buyerEmail; } // at least store the email as the name
+      }
+
+      // 2. Try Square customer record if still no match
+      if (!userId) {
+        const squareCustomerId = payment.customer_id as string | null;
+        if (squareCustomerId) {
+          try {
+            const custRes  = await fetch(`${SQUARE_BASE}/customers/${squareCustomerId}`, { headers: squareHeaders(token) });
+            const custData = await custRes.json();
+            const customer = custData.customer as Record<string, unknown> | null;
+            if (customer?.email_address) {
+              const email = customer.email_address as string;
+              const profile = await lookupByEmail(email);
+              if (profile) { userId = profile.id; userName = profile.name || email; }
+              else { userName = [customer.given_name, customer.family_name].filter(Boolean).join(" ") || email || userName; }
+            } else if (customer?.given_name || customer?.family_name) {
+              userName = [customer.given_name, customer.family_name].filter(Boolean).join(" ");
+            }
+          } catch(e) { console.warn("Could not fetch Square customer:", e); }
+        }
       }
 
       if (!eventId) {

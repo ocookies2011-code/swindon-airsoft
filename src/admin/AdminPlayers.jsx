@@ -163,6 +163,35 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [ipBanBusy, setIpBanBusy] = useState(false);
   const [ipBans, setIpBans] = useState([]);
   const [showIpBans, setShowIpBans] = useState(false);
+  const [unknownBookings, setUnknownBookings] = useState(null); // null=not loaded, []=loaded
+  const [assigningBooking, setAssigningBooking] = useState(null); // bookingId being assigned
+  const [assignSearch, setAssignSearch] = useState("");
+
+  const loadUnknownBookings = async () => {
+    const { data: rows } = await supabase
+      .from("bookings")
+      .select("id, user_name, ticket_type, qty, total, created_at, event_id, square_order_id")
+      .is("user_id", null)
+      .order("created_at", { ascending: false });
+    // Enrich with event titles
+    const enriched = await Promise.all((rows || []).map(async b => {
+      if (!b.event_id) return b;
+      const ev = data.events?.find(e => e.id === b.event_id);
+      return { ...b, eventTitle: ev?.title || b.event_id };
+    }));
+    setUnknownBookings(enriched);
+  };
+
+  const assignBookingToPlayer = async (bookingId, player) => {
+    const { error } = await supabase.from("bookings")
+      .update({ user_id: player.id, user_name: player.name })
+      .eq("id", bookingId);
+    if (error) { showToast("Failed: " + error.message, "red"); return; }
+    showToast(`✅ Booking assigned to ${player.name}`);
+    setAssigningBooking(null);
+    setAssignSearch("");
+    loadUnknownBookings();
+  };
 
   // ── Bulk sync all players to Square Customer Directory ────────
   const syncAllPlayersToSquare = async () => {
@@ -641,6 +670,75 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
           </div>
         </div>
       )}
+
+      {/* ── Unknown Bookings (no user_id) ── */}
+      <div style={{ marginBottom:16 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => { if (unknownBookings === null) { loadUnknownBookings(); } else { setUnknownBookings(null); } }}>
+          ❓ {unknownBookings !== null ? "Hide" : "Check"} Unknown Bookings {unknownBookings?.length > 0 && `(${unknownBookings.length})`}
+        </button>
+        {unknownBookings !== null && (
+          <div style={{ marginTop:10, background:"var(--surface)", border:"1px solid #c8440033", padding:16 }}>
+            <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:700, fontSize:13, color:"#ff9900", letterSpacing:".1em", marginBottom:12 }}>
+              ❓ BOOKINGS WITH NO PLAYER LINKED
+            </div>
+            {unknownBookings.length === 0 ? (
+              <div style={{ fontSize:12, color:"var(--muted)" }}>✅ No unknown bookings — all clear.</div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {unknownBookings.map(b => (
+                  <div key={b.id} style={{ background:"#0d0a06", border:"1px solid #3a2800", padding:"10px 14px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", marginBottom: assigningBooking === b.id ? 10 : 0 }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:700, fontSize:13, color:"#ff9900" }}>{b.user_name || "Unknown Player"}</div>
+                        <div style={{ fontSize:11, color:"var(--muted)" }}>
+                          {b.eventTitle || b.event_id} · {b.ticket_type === "walkOn" ? "Walk-On" : "Rental"} ×{b.qty} · £{b.total} · {new Date(b.created_at).toLocaleDateString("en-GB")}
+                        </div>
+                      </div>
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setAssigningBooking(assigningBooking === b.id ? null : b.id); setAssignSearch(""); }}>
+                        {assigningBooking === b.id ? "Cancel" : "🔗 Assign Player"}
+                      </button>
+                    </div>
+                    {assigningBooking === b.id && (
+                      <div style={{ marginTop:8 }}>
+                        <input
+                          autoFocus
+                          type="text"
+                          placeholder="Search player name or email…"
+                          value={assignSearch}
+                          onChange={e => setAssignSearch(e.target.value)}
+                          style={{ width:"100%", padding:"6px 10px", background:"var(--bg)", border:"1px solid var(--border)", color:"var(--text)", fontSize:12, marginBottom:6 }}
+                        />
+                        <div style={{ display:"flex", flexDirection:"column", gap:4, maxHeight:180, overflowY:"auto" }}>
+                          {(data.users || [])
+                            .filter(u => u.role !== "admin" && assignSearch.length >= 2 && (
+                              u.name?.toLowerCase().includes(assignSearch.toLowerCase()) ||
+                              u.email?.toLowerCase().includes(assignSearch.toLowerCase())
+                            ))
+                            .slice(0, 8)
+                            .map(u => (
+                              <div key={u.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 10px", background:"#111", border:"1px solid #2a2a2a", cursor:"pointer" }}
+                                onClick={() => assignBookingToPlayer(b.id, u)}>
+                                <div>
+                                  <span style={{ fontSize:13, color:"#fff", fontWeight:600 }}>{u.name}</span>
+                                  <span style={{ fontSize:11, color:"var(--muted)", marginLeft:8 }}>{u.email}</span>
+                                </div>
+                                <span style={{ fontSize:11, color:"var(--accent)" }}>Assign →</span>
+                              </div>
+                            ))
+                          }
+                          {assignSearch.length >= 2 && (data.users || []).filter(u => u.role !== "admin" && (u.name?.toLowerCase().includes(assignSearch.toLowerCase()) || u.email?.toLowerCase().includes(assignSearch.toLowerCase()))).length === 0 && (
+                            <div style={{ fontSize:12, color:"var(--muted)", padding:"6px 10px" }}>No players found.</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── IP Bans Manager ── */}
       <div style={{ marginBottom:16 }}>
