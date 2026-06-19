@@ -810,7 +810,7 @@ function AdminShop({ data, save, showToast, cu }) {
             </div>
 
             {/* ── DETAILS TAB ── */}
-            {modalTab === "details" && <><div className="form-row">
+            {modalTab === "details" && <div><div className="form-row">
               <div className="form-group"><label>Name</label><input value={form.name} onChange={e => setField("name", e.target.value)} /></div>
               <div className="form-group">
                 <label>Category <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(optional — e.g. BBs, Guns, Accessories)</span></label>
@@ -926,10 +926,10 @@ function AdminShop({ data, save, showToast, cu }) {
               <label style={{fontSize:13}}>🔒 Hidden from Public Shop <span style={{color:"var(--muted)",fontSize:11}}>(only visible in Cash Sales &amp; Game Day Extras)</span></label>
             </div>
 
-            </> /* end details tab */}
+            </div> /* end details tab */}
 
             {/* ── VARIANTS TAB ── */}
-            {modalTab === "variants" && <>
+            {modalTab === "variants" && <div>
             <div style={{border:"1px solid #2a2a2a",borderLeft:"3px solid var(--accent)",marginBottom:14}}>
               <div style={{background:"#0d0d0d",padding:"8px 14px",fontSize:9,letterSpacing:".25em",color:"var(--accent)",fontFamily:"'Oswald','Barlow Condensed',sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #2a2a2a"}}>
                 VARIANTS (optional) — e.g. sizes, colours &nbsp;<span style={{fontWeight:400,fontSize:10,color:"var(--muted)",letterSpacing:".05em"}}>☰ drag to reorder</span>
@@ -1004,10 +1004,10 @@ function AdminShop({ data, save, showToast, cu }) {
               </div>
             </div>
 
-            </> /* end variants tab */}
+            </div> /* end variants tab */}
 
             {/* ── IMAGES TAB ── */}
-            {modalTab === "images" && <>
+            {modalTab === "images" && <div>
             <div className="form-group">
               <label>Product Images <span style={{fontWeight:400,color:"var(--muted)",fontSize:11}}>(first image shown on shop card — drag to reorder)</span></label>
               {(form.images || []).length > 0 && (
@@ -1031,7 +1031,7 @@ function AdminShop({ data, save, showToast, cu }) {
               </label>
             </div>
 
-            </> /* end images tab */}
+            </div> /* end images tab */}
 
             <div className="gap-2" style={{marginTop:18}}>
               <button className="btn btn-primary" onClick={saveItem} disabled={savingProduct}>{savingProduct ? "Saving…" : "Save Product"}</button>
