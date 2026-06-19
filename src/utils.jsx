@@ -2655,6 +2655,41 @@ function HomePage({ data, cu, setPage, onProductClick }) {
         );
       })()}
 
+      {/* TACTICAL GEAR — only shown when shop is open */}
+      {!data.shopClosed && data.shop.filter(p => p.published !== false && !p.hiddenFromShop).length > 0 && (
+        <div style={{ padding:"48px 20px", maxWidth:1200, margin:"0 auto" }}>
+          <div className="section-header">
+            <div>
+              <div className="section-title">TACTICAL <span>GEAR</span></div>
+              <div className="section-sub">BBs, gas, pyro and more</div>
+            </div>
+            <button className="section-link" onClick={() => setPage("shop")}>SHOP ALL →</button>
+          </div>
+          <div className="grid-4">
+            {data.shop.filter(p => p.published !== false && !p.hiddenFromShop).slice(0, 4).map(prod => {
+              const hasV = prod.variants?.length > 0;
+              const lowestVariant = hasV ? Math.min(...prod.variants.map(v => Number(v.price))) : null;
+              const displayPrice = hasV
+                ? lowestVariant
+                : (prod.onSale && prod.salePrice ? prod.salePrice : prod.price);
+              const priceLabel = hasV ? `From £${displayPrice}` : `£${Number(displayPrice).toFixed(2)}`;
+              return (
+              <div key={prod.id} className="shop-card" onClick={() => onProductClick ? onProductClick(prod) : setPage("shop")} style={{ cursor:"pointer" }}>
+                <div className="shop-img">
+                  {prod.image ? <img src={prod.image} alt={prod.name} /> : <span style={{ fontSize:32, opacity:.3 }}>📦</span>}
+                </div>
+                <div className="shop-body">
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:".12em", color:"var(--muted)", textTransform:"uppercase", fontFamily:"'Barlow Condensed',sans-serif", marginBottom:4 }}>{prod.category || "GEAR"}</div>
+                  <div style={{ fontWeight:700, fontSize:14, marginBottom:6, color:"#fff" }}>{prod.name}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)" }}>{priceLabel}</div>
+                </div>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* STAT BAR */}
       <div className="hero-stats">
         <div className="hero-stats-inner">
@@ -2735,41 +2770,6 @@ function HomePage({ data, cu, setPage, onProductClick }) {
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TACTICAL GEAR — only shown when shop is open */}
-        {!data.shopClosed && data.shop.filter(p => p.published !== false && !p.hiddenFromShop).length > 0 && (
-          <div style={{ marginBottom:48 }}>
-            <div className="section-header">
-              <div>
-                <div className="section-title">TACTICAL <span>GEAR</span></div>
-                <div className="section-sub">BBs, gas, pyro and more</div>
-              </div>
-              <button className="section-link" onClick={() => setPage("shop")}>SHOP ALL →</button>
-            </div>
-            <div className="grid-4">
-              {data.shop.filter(p => p.published !== false && !p.hiddenFromShop).slice(0, 4).map(prod => {
-                const hasV = prod.variants?.length > 0;
-                const lowestVariant = hasV ? Math.min(...prod.variants.map(v => Number(v.price))) : null;
-                const displayPrice = hasV
-                  ? lowestVariant
-                  : (prod.onSale && prod.salePrice ? prod.salePrice : prod.price);
-                const priceLabel = hasV ? `From £${displayPrice}` : `£${Number(displayPrice).toFixed(2)}`;
-                return (
-                <div key={prod.id} className="shop-card" onClick={() => onProductClick ? onProductClick(prod) : setPage("shop")} style={{ cursor:"pointer" }}>
-                  <div className="shop-img">
-                    {prod.image ? <img src={prod.image} alt={prod.name} /> : <span style={{ fontSize:32, opacity:.3 }}>📦</span>}
-                  </div>
-                  <div className="shop-body">
-                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:".12em", color:"var(--muted)", textTransform:"uppercase", fontFamily:"'Barlow Condensed',sans-serif", marginBottom:4 }}>{prod.category || "GEAR"}</div>
-                    <div style={{ fontWeight:700, fontSize:14, marginBottom:6, color:"#fff" }}>{prod.name}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:18, color:"var(--accent)" }}>{priceLabel}</div>
-                  </div>
-                </div>
                 );
               })}
             </div>
