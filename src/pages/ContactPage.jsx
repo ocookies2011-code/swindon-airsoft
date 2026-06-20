@@ -28,19 +28,18 @@ function ContactPage({ data, cu, showToast }) {
     setSending(true);
     try {
       // 1. Save to DB (works for guests too — RLS allows anon INSERT)
-      const { data: saved, error: dbErr } = await supabase
+      const { error: dbErr } = await supabase
         .from("contact_messages")
         .insert({
           sender_name:  form.name.trim(),
           sender_email: form.email.trim(),
-          subject:      `[${form.department}] ${form.subject.trim()}`,
+          department:   form.department,
+          subject:      form.subject.trim(),
           body:         form.message.trim(),
           user_id:      cu?.id || null,
-        })
-        .select("id")
-        .single();
+        });
 
-      if (dbErr) console.warn("contact_messages insert:", dbErr.message);
+      if (dbErr) throw new Error("Failed to save message: " + dbErr.message);
 
       // 2. Email notification to admin — brief nudge only, full message is in the contact inbox
       await sendEmail({

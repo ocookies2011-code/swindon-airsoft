@@ -156,6 +156,7 @@ export function AdminContactInbox({ showToast, cu }) {
                     {msg.status.toUpperCase()}
                   </span>
                 </div>
+                {msg.department && <div style={{ fontFamily: mono, fontSize: 8, color: "#3a5010", letterSpacing: ".12em", marginBottom: 2 }}>{msg.department.toUpperCase()}</div>}
                 <div style={{ fontFamily: mono, fontSize: 10, color: "#4a6040", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>{msg.subject}</div>
                 <div style={{ fontFamily: mono, fontSize: 9, color: "#2a3a20" }}>
                   {new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
@@ -180,6 +181,7 @@ export function AdminContactInbox({ showToast, cu }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: head, fontWeight: 900, fontSize: 18, color: "#e8f0d8", letterSpacing: ".05em", marginBottom: 4 }}>{selected.subject}</div>
                   <div style={{ fontFamily: mono, fontSize: 10, color: "#4a6040" }}>
+                    {selected.department && <><span style={{ color: "#c8ff00", letterSpacing: ".1em" }}>[{selected.department.toUpperCase()}]</span>{" · "}</>}
                     FROM: <span style={{ color: "#b0c090" }}>{selected.sender_name}</span>
                     {" · "}
                     <a href={`mailto:${selected.sender_email}`} style={{ color: "#c8ff00", textDecoration: "none" }}>{selected.sender_email}</a>
