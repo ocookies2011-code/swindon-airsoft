@@ -42,45 +42,25 @@ function ContactPage({ data, cu, showToast }) {
 
       if (dbErr) console.warn("contact_messages insert:", dbErr.message);
 
-      // 2. Email notification to admin
+      // 2. Email notification to admin — brief nudge only, full message is in the contact inbox
       await sendEmail({
         toEmail:     "swindonairsoftfield@gmail.com",
         toName:      "Swindon Airsoft Admin",
-        subject:     `[Contact] [${form.department}] ${form.subject.trim()} — ${form.name.trim()}`,
+        subject:     `New contact message from ${form.name.trim()}`,
         htmlContent: `
-          <div style="font-family:'Courier New',monospace;max-width:600px;background:#000;padding:0">
+          <div style="font-family:'Courier New',monospace;max-width:520px;background:#000;padding:0">
             <div style="background:#0a1a0a;padding:24px 32px;border-bottom:1px solid #2a3a2a">
-              <p style="margin:0 0 6px;color:#8aaa8a;font-size:11px;letter-spacing:3px;text-transform:uppercase">Swindon Airsoft · Contact Form</p>
-              <h1 style="margin:0;color:#c8ff00;font-size:26px;font-weight:900;letter-spacing:2px;text-transform:uppercase">New Message</h1>
+              <p style="margin:0 0 6px;color:#8aaa8a;font-size:11px;letter-spacing:3px;text-transform:uppercase">Swindon Airsoft · Contact Inbox</p>
+              <h1 style="margin:0;color:#c8ff00;font-size:24px;font-weight:900;letter-spacing:2px;text-transform:uppercase">New Message</h1>
             </div>
-            <div style="padding:0 32px">
-              <table style="width:100%;border-collapse:collapse">
-                <tr style="border-bottom:1px solid #2a3a2a">
-                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase;width:120px">From</td>
-                  <td style="padding:12px 0;color:#e0e0e0;font-weight:bold">${form.name.trim()}</td>
-                </tr>
-                <tr style="border-bottom:1px solid #2a3a2a">
-                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Reply To</td>
-                  <td style="padding:12px 0"><a href="mailto:${form.email.trim()}" style="color:#c8ff00">${form.email.trim()}</a></td>
-                </tr>
-                <tr style="border-bottom:1px solid #2a3a2a">
-                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Department</td>
-                  <td style="padding:12px 0;color:#e0e0e0">${form.department}</td>
-                </tr>
-                <tr style="border-bottom:1px solid #2a3a2a">
-                  <td style="padding:12px 0;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Subject</td>
-                  <td style="padding:12px 0;color:#e0e0e0">${form.subject.trim()}</td>
-                </tr>
-              </table>
+            <div style="padding:24px 32px">
+              <p style="margin:0 0 6px;color:#e0e0e0;font-size:14px"><strong>${form.name.trim()}</strong> sent a message via the contact form.</p>
+              <p style="margin:0;color:#8aaa8a;font-size:12px">Department: <span style="color:#c8ff00">${form.department}</span> &nbsp;·&nbsp; Subject: ${form.subject.trim()}</p>
             </div>
-            <div style="padding:20px 32px">
-              <p style="margin:0 0 10px;color:#8aaa8a;font-size:11px;letter-spacing:2px;text-transform:uppercase">Message</p>
-              <div style="background:#0a1a0a;border:1px solid #2a3a2a;padding:18px;color:#e0e0e0;line-height:1.7;white-space:pre-wrap">${form.message.trim()}</div>
+            <div style="padding:0 32px 24px;text-align:center">
+              <a href="https://swindon-airsoft.com/admin#admin/contact-inbox" style="display:inline-block;background:#c8ff00;color:#000;padding:12px 28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-size:12px">View Message in Inbox →</a>
             </div>
-            <div style="padding:16px 32px;border-top:1px solid #2a3a2a;text-align:center">
-              <a href="https://swindon-airsoft.com/admin#admin/contact-inbox" style="display:inline-block;background:#c8ff00;color:#000;padding:12px 28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-size:12px">Reply in Admin Panel</a>
-            </div>
-            <div style="padding:12px 32px;text-align:center">
+            <div style="padding:12px 32px;border-top:1px solid #1a2a1a;text-align:center">
               <p style="margin:0;color:#4a6a4a;font-size:10px;letter-spacing:2px;text-transform:uppercase">Swindon Airsoft · Auto-Generated Notification</p>
             </div>
           </div>
