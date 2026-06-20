@@ -869,6 +869,28 @@ function AdminShop({ data, save, showToast, cu }) {
                 </div>
                 {(form._descTab||"edit") !== "preview"
                   ? <textarea id="prod-desc-ta" rows={6} value={form.description||""} onChange={e => setField("description", e.target.value)}
+                      onPaste={e => {
+                        e.preventDefault();
+                        const raw = e.clipboardData.getData("text/html") || e.clipboardData.getData("text/plain");
+                        const clean = raw
+                          .replace(/<[^>]+>/g, " ")   // strip HTML tags
+                          .replace(/&nbsp;/gi, " ")   // &nbsp; → space
+                          .replace(/&amp;/gi, "&")
+                          .replace(/&lt;/gi, "<")
+                          .replace(/&gt;/gi, ">")
+                          .replace(/&quot;/gi, '"')
+                          .replace(/&#39;/gi, "'")
+                          .replace(/[ \t]+/g, " ")    // collapse multiple spaces
+                          .replace(/\n{3,}/g, "\n\n") // max 2 newlines
+                          .trim();
+                        const ta = e.target;
+                        const start = ta.selectionStart;
+                        const end = ta.selectionEnd;
+                        const current = form.description || "";
+                        const next = current.slice(0, start) + clean + current.slice(end);
+                        setField("description", next);
+                        setTimeout(() => { ta.setSelectionRange(start + clean.length, start + clean.length); }, 0);
+                      }}
                       style={{ width:"100%", background:"#111", border:"none", padding:"10px", resize:"vertical", color:"var(--text)", fontFamily:"'Share Tech Mono',monospace", fontSize:13, outline:"none", boxSizing:"border-box" }} />
                   : <div style={{ minHeight:120, padding:"10px 14px", background:"#0d0d0d", color:"var(--muted)", fontSize:13, lineHeight:1.8 }}
                       dangerouslySetInnerHTML={{ __html: renderMd(form.description) || "<span style='color:#444'>Nothing to preview yet…</span>" }} />
