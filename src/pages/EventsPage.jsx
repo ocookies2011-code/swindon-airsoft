@@ -22,6 +22,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   const [tab, setTab] = useState("info");
   const [squareError, setSquareError] = useState(null);
   const [bookingBusy, setBookingBusy] = useState(false);
+  const [bookingDone, setBookingDone] = useState(false);
   const bookingSafetyRef = useRef(null);
   const [useCredits, setUseCredits] = useState(false);
 
@@ -451,6 +452,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
         // Show success immediately — stock deduction and refresh happen in background
         resetCart();
+        setBookingDone(true);
         showToast("🎉 Booked! Payment confirmed." + (creditsApplied > 0 ? ` £${creditsApplied.toFixed(2)} credits used.` : ""));
 
         // Send ticket email with real booking IDs
@@ -535,7 +537,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     return (
       <div className="page-content">
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:12 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => { setDetail(null); setTab("info"); resetCart(); }}>← Back to Events</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setDetail(null); setTab("info"); resetCart(); setBookingDone(false); }}>← Back to Events</button>
           <div style={{ display:"flex", gap:8 }}>
             {/* Add to Calendar */}
             <button
@@ -1298,21 +1300,32 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   </div>
                 </div>
               )}
-              {!bookingBlocked && payTotal > 0 && (bCart.rental === 0 || rentalAgreed) && (
-                <SquareCheckoutButton
-                  amount={payTotal}
-                  description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
-                  onSuccess={confirmBookingAfterPayment}
-                  disabled={bookingBusy}
-                  onOpen={() => trackFunnel && trackFunnel("event:checkout")}
-                />
-              )}
-              {!bookingBlocked && payTotal === 0 && !cartEmpty && (bCart.rental === 0 || rentalAgreed) && (
-                <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }}
-                  disabled={bookingBusy}
-                  onClick={() => confirmBookingAfterPayment({ id: "CREDITS-" + Date.now(), status: "COMPLETED" })}>
-                  {bookingBusy ? "⏳ Confirming…" : "✓ CONFIRM — FULLY COVERED BY CREDITS"}
-                </button>
+              {bookingDone ? (
+                <div style={{ background:"rgba(200,255,0,.08)", border:"1px solid rgba(200,255,0,.35)", padding:"20px", textAlign:"center" }}>
+                  <div style={{ fontSize:28, marginBottom:8 }}>🎉</div>
+                  <div style={{ fontFamily:"'Oswald',sans-serif", fontWeight:700, fontSize:18, color:"var(--accent)", letterSpacing:".05em", marginBottom:6 }}>BOOKING CONFIRMED</div>
+                  <div style={{ fontSize:13, color:"var(--muted)", marginBottom:14 }}>A confirmation email with your ticket has been sent.</div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setDetail(null); setTab("info"); resetCart(); setBookingDone(false); }}>← Back to Events</button>
+                </div>
+              ) : (
+                <>
+                  {!bookingBlocked && payTotal > 0 && (bCart.rental === 0 || rentalAgreed) && (
+                    <SquareCheckoutButton
+                      amount={payTotal}
+                      description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
+                      onSuccess={confirmBookingAfterPayment}
+                      disabled={bookingBusy}
+                      onOpen={() => trackFunnel && trackFunnel("event:checkout")}
+                    />
+                  )}
+                  {!bookingBlocked && payTotal === 0 && !cartEmpty && (bCart.rental === 0 || rentalAgreed) && (
+                    <button className="btn btn-primary" style={{ width:"100%", padding:"13px", fontSize:14, letterSpacing:".1em" }}
+                      disabled={bookingBusy}
+                      onClick={() => confirmBookingAfterPayment({ id: "CREDITS-" + Date.now(), status: "COMPLETED" })}>
+                      {bookingBusy ? "⏳ Confirming…" : "✓ CONFIRM — FULLY COVERED BY CREDITS"}
+                    </button>
+                  )}
+                </>
               )}
               </div>
             </div>
