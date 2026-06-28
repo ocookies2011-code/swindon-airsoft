@@ -179,10 +179,14 @@ serve(async (req) => {
       const qty         = Number(bookingNoteMatch[2]);
       const ticketType  = bookingNoteMatch[3].toLowerCase().replace("-","").replace(" ","") === "walkon" ? "walkOn" : "rental";
 
-      // Find the event by title
-      const evRes  = await fetch(`${sbUrl}/rest/v1/events?title=ilike.*${encodeURIComponent(eventTitle.substring(0,15))}*&select=id,title`, { headers: h });
+      // Find the event by title — match on partial title then pick the closest upcoming date
+      const evRes  = await fetch(`${sbUrl}/rest/v1/events?title=ilike.*${encodeURIComponent(eventTitle.substring(0,15))}*&select=id,title,date&order=date.asc`, { headers: h });
       const evData = await evRes.json() as Record<string,unknown>[];
-      const eventId = evData[0]?.id as string || null;
+      // Prefer the nearest upcoming event; fall back to the nearest past event if nothing upcoming
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = evData.filter(e => (e.date as string) >= today);
+      const eventRow = upcoming.length > 0 ? upcoming[0] : evData[evData.length - 1] || null;
+      const eventId = eventRow?.id as string || null;
 
       // Find the player by matching Square customer
       let userId       = null as string | null;
