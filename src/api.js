@@ -168,7 +168,7 @@ export const profiles = wrapWithTimeout({
 export const events = wrapWithTimeout({
   async getAll() {
     const { data: evs, error } = await supabase
-      .from('events').select('*, event_extras(*), bookings(id, user_id, user_name, qty, ticket_type, total, extras, checked_in, created_at, square_order_id, admin_notes, is_guest, guest_email)').order('date')
+      .from('events').select('*, event_extras(*), bookings(id, user_id, user_name, qty, ticket_type, total, extras, checked_in, created_at, square_order_id, admin_notes, is_guest, guest_email, guest_phone, guest_waiver_signed, guest_waiver_name, guest_waiver_signed_at, guest_waiver_data)').order('date')
     if (error) throw error
     // Normalise to camelCase shape the app expects
     return evs.map(normaliseEvent)
@@ -654,7 +654,14 @@ function normaliseEvent(ev) {
       checkedIn:     b.checked_in,
       date:          b.created_at,
       squareOrderId: b.square_order_id || null,
-      adminNotes:   b.admin_notes || '',
+      adminNotes:          b.admin_notes || '',
+      isGuest:             b.is_guest || false,
+      guestEmail:          b.guest_email || null,
+      guestPhone:          b.guest_phone || null,
+      guestWaiverSigned:   b.guest_waiver_signed || false,
+      guestWaiverName:     b.guest_waiver_name || null,
+      guestWaiverSignedAt: b.guest_waiver_signed_at || null,
+      guestWaiverData:     b.guest_waiver_data || null,
     }))
   }
 }

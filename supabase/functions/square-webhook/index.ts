@@ -117,16 +117,60 @@ serve(async (req) => {
     if (isBookingPayment) {
       console.log("Detected booking payment from note:", note);
       // Check if booking already exists
-      const bookingRes  = await fetch(`${sbUrl}/rest/v1/bookings?square_order_id=eq.${paymentId}&select=id,total`, { headers: h });
+      const bookingRes  = await fetch(`${sbUrl}/rest/v1/bookings?square_order_id=eq.${paymentId}&select=id,total,user_name`, { headers: h });
       const bookingData = await bookingRes.json() as Record<string,unknown>[];
 
       if (bookingData.length > 0) {
-        // Booking exists — just make sure total is correct
-        if (totalAmount > 0 && Number(bookingData[0].total) === 0) {
-          await fetch(`${sbUrl}/rest/v1/bookings?square_order_id=eq.${paymentId}`, { method: "PATCH", headers: { ...h, "Prefer": "return=minimal" }, body: JSON.stringify({ total: totalAmount }) });
-          console.log(`Updated existing booking total to £${totalAmount}`);
+        const existingBooking = bookingData[0];
+        const existingName = existingBooking.user_name as string | null;
+        const nameNeedsUpdate = !existingName || existingName === "Unknown Player";
+
+        // Resolve name from Square payment if needed (so we can patch it in)
+        let resolvedName: string | null = null;
+        let resolvedUserId: string | null = null;
+        if (nameNeedsUpdate) {
+          const lookupByEmail = async (email: string): Promise<{ id: string; name: string } | null> => {
+            try {
+              const r = await fetch(`${sbUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=id,name`, { headers: h });
+              const rows = await r.json() as Record<string, unknown>[];
+              return rows.length > 0 ? { id: rows[0].id as string, name: rows[0].name as string } : null;
+            } catch { return null; }
+          };
+          const buyerEmail = payment.buyer_email_address as string | null;
+          if (buyerEmail) {
+            const profile = await lookupByEmail(buyerEmail);
+            if (profile) { resolvedUserId = profile.id; resolvedName = profile.name || buyerEmail; }
+            else { resolvedName = buyerEmail; }
+          }
+          if (!resolvedUserId) {
+            const squareCustomerId = payment.customer_id as string | null;
+            if (squareCustomerId) {
+              try {
+                const custRes  = await fetch(`${SQUARE_BASE}/customers/${squareCustomerId}`, { headers: squareHeaders(token) });
+                const custData = await custRes.json();
+                const customer = custData.customer as Record<string, unknown> | null;
+                if (customer?.email_address) {
+                  const email = customer.email_address as string;
+                  const profile = await lookupByEmail(email);
+                  if (profile) { resolvedUserId = profile.id; resolvedName = profile.name || email; }
+                  else { resolvedName = [customer.given_name, customer.family_name].filter(Boolean).join(" ") || email || null; }
+                } else if (customer?.given_name || customer?.family_name) {
+                  resolvedName = [customer.given_name, customer.family_name].filter(Boolean).join(" ");
+                }
+              } catch(e) { console.warn("Could not fetch Square customer:", e); }
+            }
+          }
         }
-        return new Response(JSON.stringify({ ok: true, skipped: "booking already exists", paymentId }), { headers: { ...cors, "Content-Type": "application/json" } });
+
+        // Patch total and/or user_name as needed
+        const patch: Record<string, unknown> = {};
+        if (totalAmount > 0 && Number(existingBooking.total) === 0) patch.total = totalAmount;
+        if (nameNeedsUpdate && resolvedName) { patch.user_name = resolvedName; if (resolvedUserId) patch.user_id = resolvedUserId; }
+        if (Object.keys(patch).length > 0) {
+          await fetch(`${sbUrl}/rest/v1/bookings?square_order_id=eq.${paymentId}`, { method: "PATCH", headers: { ...h, "Prefer": "return=minimal" }, body: JSON.stringify(patch) });
+          console.log(`Patched existing booking:`, patch);
+        }
+        return new Response(JSON.stringify({ ok: true, skipped: "booking already exists", patched: Object.keys(patch), paymentId }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
 
       // ── BOOKING DOESN'T EXIST — create it as fallback ────────────
