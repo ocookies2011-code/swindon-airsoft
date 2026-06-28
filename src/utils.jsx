@@ -170,6 +170,9 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
       // verifyBuyer() triggers the bank's 3DS challenge (popup or redirect
       // in the customer's banking app). Square handles the entire flow and
       // returns a verificationToken we pass to the Edge Function.
+      // Save a flag BEFORE verifyBuyer in case bank does a full page redirect —
+      // EventsPage checks this on mount to show success screen instead of payment form.
+      try { sessionStorage.setItem("sq_3ds_in_flight", JSON.stringify({ url: window.location.href, ts: Date.now() })); } catch {}
       setPayStage("verifying");
       try {
         const verificationDetails = {
@@ -232,12 +235,14 @@ function SquareCheckoutButton({ amount, description, onSuccess, disabled }) {
       }
 
       setPayStage("idle");
+      try { sessionStorage.removeItem("sq_3ds_in_flight"); } catch {}
       onSuccess({ id: payData.paymentId, status: "COMPLETED", receiptUrl: payData.receiptUrl || null, receiptNumber: payData.receiptNumber || null });
 
     } catch (e) {
       const errMsg = e.message || "Payment failed. Please try again.";
       setSqError(errMsg);
       setPayStage("idle");
+      try { sessionStorage.removeItem("sq_3ds_in_flight"); } catch {}
       // Log failed payment — fire and forget, never blocks UI
       supabase.from("failed_payments").insert({
         customer_name:     "Online customer",

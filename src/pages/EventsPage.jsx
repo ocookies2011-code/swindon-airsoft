@@ -86,6 +86,51 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   // Clean up booking safety timeout on unmount
   useEffect(() => () => { if (bookingSafetyRef.current) clearTimeout(bookingSafetyRef.current); }, []);
 
+  // ── 3DS redirect recovery ─────────────────────────────────────
+  // If the bank did a full-page redirect for 3DS verification, the page reloads
+  // and we land back here with no React state. Detect this via sessionStorage flag,
+  // poll the DB for a booking that appeared (created by the webhook), and show
+  // the success screen instead of letting the payment form re-initialise.
+  useEffect(() => {
+    let flag;
+    try { flag = JSON.parse(sessionStorage.getItem("sq_3ds_in_flight") || "null"); } catch {}
+    if (!flag) return;
+    // Flag is stale if more than 10 minutes old
+    if (Date.now() - flag.ts > 10 * 60 * 1000) {
+      try { sessionStorage.removeItem("sq_3ds_in_flight"); } catch {}
+      return;
+    }
+    // Clear the flag immediately so we don't loop
+    try { sessionStorage.removeItem("sq_3ds_in_flight"); } catch {}
+
+    // Figure out which event the user was on from the URL hash
+    const hash = window.location.hash;
+    const evMatch = hash.match(/events\/([a-f0-9-]{36})/);
+    const evId = evMatch?.[1] || null;
+    if (!evId) return;
+
+    // Navigate to that event if not already there
+    if (detail !== evId) setDetail(evId);
+
+    // Poll up to 8 seconds for the webhook to create the booking
+    let attempts = 0;
+    const poll = async () => {
+      try {
+        const userId = (await supabase.auth.getUser())?.data?.user?.id || null;
+        const query = supabase.from("bookings").select("id").eq("event_id", evId).limit(1);
+        if (userId) query.eq("user_id", userId);
+        const { data } = await query.maybeSingle();
+        if (data) {
+          setBookingDone(true);
+          return;
+        }
+      } catch {}
+      if (++attempts < 8) setTimeout(poll, 1000);
+    };
+    poll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Waitlist state
   const [waitlistMap, setWaitlistMap] = useState({}); // eventId -> [{...}]
   const [holdMap, setHoldMap]         = useState({}); // "eventId:ticketType" -> hold | null
