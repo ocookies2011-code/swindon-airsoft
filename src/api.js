@@ -1197,8 +1197,15 @@ export const visits = wrapWithTimeout({
     // This fixes the bug where direct Supabase calls were blocked by RLS policies
     // causing silent failures and no tracking for most logged-in users.
     const attempt = async () => {
-      const { error } = await supabase.functions.invoke('visit-log', { body });
-      if (error) throw error;
+      // Call via /api/log (same-domain Vercel proxy) rather than directly
+      // to Supabase — ad blockers (ABP, uBlock) block *.supabase.co/functions/*
+      // entirely, but a first-party /api/* path on the site domain is not blocked.
+      const res = await fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`visit-log ${res.status}`);
     };
     try {
       await attempt();
@@ -1215,12 +1222,10 @@ export const visits = wrapWithTimeout({
         // like sendBeacon, but unlike sendBeacon it can send auth headers which
         // Supabase requires even with verify_jwt:false.
         try {
-          const url = `${supabase.supabaseUrl}/functions/v1/visit-log`;
-          const anonKey = supabase.supabaseKey;
-          fetch(url, {
+          fetch('/api/log', {
             method: 'POST',
             keepalive: true,
-            headers: { 'Content-Type': 'application/json', 'apikey': anonKey, 'Authorization': `Bearer ${anonKey}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           }).catch(() => {});
         } catch { /* genuinely nothing more we can do */ }
@@ -1238,8 +1243,10 @@ export const visits = wrapWithTimeout({
       // client — direct Supabase updates are blocked by RLS for rows where
       // user_id IS NULL since there is no owner to match the policy against,
       // causing backfill to silently fail and logged-in users showing as anon.
-      await supabase.functions.invoke('visit-log', {
-        body: { action: 'backfill', sessionId, userId, userName: userName || null },
+      await fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'backfill', sessionId, userId, userName: userName || null }),
       });
     } catch { /* non-fatal */ }
   },
