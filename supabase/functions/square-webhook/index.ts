@@ -231,6 +231,23 @@ serve(async (req) => {
 
       if (!eventId) {
         console.error("Could not find event for title:", eventTitle);
+
+        // Last resort: this payment may actually be a UKARA registration fee
+        // (note format can coincidentally look booking-like). The frontend
+        // creates the ukara_applications row directly on payment success, so
+        // check there before falling back to a generic "Unknown Player" entry.
+        if (userName === "Unknown Player" || !userId) {
+          try {
+            const ukaraRes  = await fetch(`${sbUrl}/rest/v1/ukara_applications?square_payment_id=eq.${paymentId}&select=user_id,name,email`, { headers: h });
+            const ukaraData = await ukaraRes.json() as Record<string, unknown>[];
+            if (ukaraData.length > 0) {
+              userId   = ukaraData[0].user_id as string || userId;
+              userName = ukaraData[0].name as string || userName;
+              console.log(`Resolved name via ukara_applications match: ${userName}`);
+            }
+          } catch (e) { console.warn("ukara_applications lookup failed:", e); }
+        }
+
         // Still record in shop_orders as a fallback so it appears in revenue
         await fetch(`${sbUrl}/rest/v1/shop_orders`, {
           method: "POST",
