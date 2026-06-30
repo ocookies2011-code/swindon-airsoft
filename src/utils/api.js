@@ -1138,7 +1138,7 @@ export const visits = wrapWithTimeout({
       // Call the edge function which uses service role — bypasses RLS entirely.
       // This fixes the bug where direct Supabase calls were blocked by RLS policies
       // causing silent failures and no tracking for most logged-in users.
-      await supabase.functions.invoke('track-visit', {
+      await supabase.functions.invoke('visit-log', {
         body: {
           page,
           userId:    userId    || null,

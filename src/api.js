@@ -1197,7 +1197,7 @@ export const visits = wrapWithTimeout({
     // This fixes the bug where direct Supabase calls were blocked by RLS policies
     // causing silent failures and no tracking for most logged-in users.
     const attempt = async () => {
-      const { error } = await supabase.functions.invoke('track-visit', { body });
+      const { error } = await supabase.functions.invoke('visit-log', { body });
       if (error) throw error;
     };
     try {
@@ -1215,7 +1215,7 @@ export const visits = wrapWithTimeout({
         // unload (e.g. rapid navigation during a booking flow) and doesn't
         // wait for a response, so it succeeds in cases fetch-based calls miss.
         try {
-          const url = `${supabase.supabaseUrl}/functions/v1/track-visit`;
+          const url = `${supabase.supabaseUrl}/functions/v1/visit-log`;
           const blob = new Blob([JSON.stringify(body)], { type: 'application/json' });
           navigator.sendBeacon?.(url, blob);
         } catch { /* genuinely nothing more we can do */ }
@@ -1233,7 +1233,7 @@ export const visits = wrapWithTimeout({
       // client — direct Supabase updates are blocked by RLS for rows where
       // user_id IS NULL since there is no owner to match the policy against,
       // causing backfill to silently fail and logged-in users showing as anon.
-      await supabase.functions.invoke('track-visit', {
+      await supabase.functions.invoke('visit-log', {
         body: { action: 'backfill', sessionId, userId, userName: userName || null },
       });
     } catch { /* non-fatal */ }
