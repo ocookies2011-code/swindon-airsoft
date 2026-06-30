@@ -286,6 +286,7 @@ function AdminVisitorStats({ data, cu, showToast }) {
   const [error, setError]                 = useState(null);
   const [activeTab, setActiveTab]         = useState("overview");
   const [dateRange, setDateRange]         = useState("30d");
+  const [userSearch, setUserSearch]       = useState("");
 
   const rangeToDays = { "1d": 1, "7d": 7, "30d": 30, "90d": 90, "all": 0 };
 
@@ -477,7 +478,10 @@ function AdminVisitorStats({ data, cu, showToast }) {
     u.pages[row.page] = (u.pages[row.page] || 0) + (row.visit_count || 1);
     if (ts && (!u.last || ts > u.last)) { u.last = ts; u.lastPage = row.page; }
   });
-  const userRows = Object.values(userVisitMap).sort((aa, bb) => new Date(bb.last) - new Date(aa.last)).slice(0, 20);
+  const allUserRows = Object.values(userVisitMap).sort((aa, bb) => new Date(bb.last) - new Date(aa.last));
+  const userRows = userSearch.trim()
+    ? allUserRows.filter(u => (u.name + " " + (u.email || "")).toLowerCase().includes(userSearch.toLowerCase()))
+    : allUserRows;
 
   // Recent feed — sorted by last_seen_at desc
   const recentRows = [...filtered].sort((a, b) => {
@@ -722,8 +726,13 @@ function AdminVisitorStats({ data, cu, showToast }) {
         {activeTab === "users" && (
           <div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:".22em", color:"#3a5010", marginBottom:14 }}>
-              {uniqueUsers} UNIQUE LOGGED-IN USERS · {loggedInVisits} VISITS
+              {uniqueUsers} UNIQUE LOGGED-IN USERS · {loggedInVisits} VISITS · SHOWING {userRows.length} OF {allUserRows.length}
             </div>
+            <input
+              value={userSearch} onChange={e => setUserSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              style={{ width:"100%", boxSizing:"border-box", marginBottom:10, background:"#0c1009", border:"1px solid #1a2808", color:"#b0c090", fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 12px", outline:"none" }}
+            />
             <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
             <div style={{ background:"#0c1009", border:"1px solid #1a2808", minWidth:480 }}>
               <div style={{ borderBottom:"1px solid #1a2808", padding:"10px 16px", display:"grid", gridTemplateColumns:"2fr 1fr 2fr 2fr", gap:8 }}>
