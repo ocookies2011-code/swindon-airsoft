@@ -223,11 +223,13 @@ function AppInner() {
     if (page === "admin") return;
     // Wait for auth to resolve so we capture user identity correctly
     if (authLoading) return;
-    // Don't track blocked/checking visitors — geo-check not resolved yet or blocked
-    if (geoStatus !== "allowed") return;
-    const sid = getSessionId();
     // Don't count homepage hits — only track meaningful page visits
     if (page === "home") return;
+    // Don't track blocked visitors — but don't wait for geo-check to resolve
+    // (geoStatus === "checking" should not block tracking; geo-check resolves
+    // quickly and the dependency ensures we re-fire once it does)
+    if (geoStatus === "blocked") return;
+    const sid = getSessionId();
     api.visits.track({
       page,
       userId:    cu?.id   || null,

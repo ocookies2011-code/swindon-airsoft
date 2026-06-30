@@ -3,14 +3,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const CORS={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type"};
 const BOT=/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|google|baidu|yandex|duckduck|semrush|ahrefs|petalbot|bytespider/i;
 const GEO=(ip:string)=>`http://ip-api.com/json/${ip}?fields=status,countryCode,city,lat,lon`;
-function getIp(req:Request):string|null{const h=['cf-connecting-ip','x-real-ip','x-forwarded-for'];for(const k of h){const v=req.headers.get(k);if(v)return v.split(',')[0].trim();}return null;}
+function getIp(req:Request, bodyIp?:string|null):string|null{
+  // _proxyIp is set by the Vercel api/log.js proxy with the real browser IP
+  if(bodyIp&&!isPriv(bodyIp))return bodyIp;
+  const h=['cf-connecting-ip','x-real-ip','x-forwarded-for'];
+  for(const k of h){const v=req.headers.get(k);if(v){const ip=v.split(',')[0].trim();if(!isPriv(ip))return ip;}}
+  return null;
+}
 function isPriv(ip:string):boolean{return ip==="127.0.0.1"||ip==="::1"||ip.startsWith("10.")||ip.startsWith("192.168.")||/^172\.(1[6-9]|2\d|3[01])\./.test(ip);}
 
 serve(async(req)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:CORS});
   try{
     const body=await req.json();
-    const{page,userId,userName,sessionId,referrer,userAgent,action}=body;
+    const{page,userId,userName,sessionId,referrer,userAgent,action,_proxyIp}=body;
 
     // Backfill action: stamp user identity onto anonymous session rows (service role bypasses RLS)
     if(action==="backfill"){
@@ -25,7 +31,7 @@ serve(async(req)=>{
     if(userAgent&&BOT.test(userAgent))return new Response(JSON.stringify({ok:true,bot:true}),{headers:{...CORS,"Content-Type":"application/json"}});
     const sb=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const now=new Date().toISOString();
-    const clientIp=getIp(req);
+    const clientIp=getIp(req,_proxyIp||null);
 
     // Resolve userId: use provided userId, OR look up by IP if anon
     let resolvedUserId=userId||null;
