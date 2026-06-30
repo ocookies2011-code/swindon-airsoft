@@ -1229,12 +1229,13 @@ export const visits = wrapWithTimeout({
   async backfillUser({ sessionId, userId, userName }) {
     if (!sessionId || !userId) return;
     try {
-      // Direct UPDATE — RLS allows updating rows where user_id IS NULL
-      await supabase
-        .from('page_visits')
-        .update({ user_id: userId, user_name: userName || null })
-        .eq('session_id', sessionId)
-        .is('user_id', null);
+      // Route through the edge function (service role) rather than the anon
+      // client — direct Supabase updates are blocked by RLS for rows where
+      // user_id IS NULL since there is no owner to match the policy against,
+      // causing backfill to silently fail and logged-in users showing as anon.
+      await supabase.functions.invoke('track-visit', {
+        body: { action: 'backfill', sessionId, userId, userName: userName || null },
+      });
     } catch { /* non-fatal */ }
   },
 

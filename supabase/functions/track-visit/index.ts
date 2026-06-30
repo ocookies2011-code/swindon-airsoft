@@ -9,7 +9,18 @@ function isPriv(ip:string):boolean{return ip==="127.0.0.1"||ip==="::1"||ip.start
 serve(async(req)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:CORS});
   try{
-    const{page,userId,userName,sessionId,referrer,userAgent}=await req.json();
+    const body=await req.json();
+    const{page,userId,userName,sessionId,referrer,userAgent,action}=body;
+
+    // Backfill action: stamp user identity onto anonymous session rows (service role bypasses RLS)
+    if(action==="backfill"){
+      if(!sessionId||!userId)return new Response(JSON.stringify({ok:false,reason:"missing params"}),{headers:{...CORS,"Content-Type":"application/json"}});
+      const sb=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const{error}=await sb.from("page_visits").update({user_id:userId,user_name:userName||null}).eq("session_id",sessionId).is("user_id",null);
+      if(error)console.error("backfill error:",error.message);
+      return new Response(JSON.stringify({ok:!error}),{headers:{...CORS,"Content-Type":"application/json"}});
+    }
+
     if(!sessionId)return new Response(JSON.stringify({ok:false}),{headers:{...CORS,"Content-Type":"application/json"}});
     if(userAgent&&BOT.test(userAgent))return new Response(JSON.stringify({ok:true,bot:true}),{headers:{...CORS,"Content-Type":"application/json"}});
     const sb=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
