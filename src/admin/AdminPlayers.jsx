@@ -259,6 +259,26 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       .catch(() => {});
   }, []);
 
+  // Last page visited per player — most recent page_visits row per user_id.
+  // Used for the "Recently Active" sort and the last-seen badge in the table.
+  const [lastVisitMap, setLastVisitMap] = React.useState({});
+  React.useEffect(() => {
+    supabase.from('page_visits')
+      .select('user_id, page, last_seen_at')
+      .not('user_id', 'is', null)
+      .order('last_seen_at', { ascending: false })
+      .limit(2000)
+      .then(({ data: visits, error }) => {
+        if (error) { console.warn('Failed to load last visits:', error.message); return; }
+        if (!visits) return;
+        const map = {};
+        // Rows are ordered newest-first, so the first time we see a user_id is their latest visit
+        visits.forEach(v => { if (!map[v.user_id]) map[v.user_id] = { page: v.page, lastSeenAt: v.last_seen_at }; });
+        setLastVisitMap(map);
+      })
+      .catch(e => console.warn('Failed to load last visits:', e.message));
+  }, []);
+
   const playerSpendMap = React.useMemo(() => {
     const map = {};
     // Add event booking totals
@@ -279,6 +299,13 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {
     if (playerSort === "az")       return (a.name || "").localeCompare(b.name || "");
     if (playerSort === "za")       return (b.name || "").localeCompare(a.name || "");
+    if (playerSort === "active")   {
+      const aVisit = lastVisitMap[a.id]?.lastSeenAt || a.lastSeenAt;
+      const bVisit = lastVisitMap[b.id]?.lastSeenAt || b.lastSeenAt;
+      const at = aVisit ? new Date(aVisit).getTime() : 0;
+      const bt = bVisit ? new Date(bVisit).getTime() : 0;
+      return bt - at; // most recent first; players with no visits sink to the bottom
+    }
     if (playerSort === "games")    return (b.gamesAttended || 0) - (a.gamesAttended || 0);
     if (playerSort === "spend")    return (playerSpendMap[b.id] || 0) - (playerSpendMap[a.id] || 0);
     if (playerSort === "newest")   return new Date(b.joinDate || 0) - new Date(a.joinDate || 0);
@@ -844,6 +871,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
             {[
               { val:"az",       label:"A → Z" },
               { val:"za",       label:"Z → A" },
+              { val:"active",   label:"🟢 Recently Active" },
               { val:"games",    label:"Games Played" },
               { val:"spend",    label:"💰 Total Spent" },
               { val:"ukara",    label:"UKARA ID" },
@@ -971,7 +999,21 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                 <React.Fragment key={u.id}>
                 <tr style={{ background: selectedPlayerIds.has(u.id) ? "rgba(200,255,0,.03)" : "" }}>
                   <td><input type="checkbox" checked={selectedPlayerIds.has(u.id)} onChange={e => setSelectedPlayerIds(prev => { const n = new Set(prev); e.target.checked ? n.add(u.id) : n.delete(u.id); return n; })} /></td>
-                  <td style={{ fontWeight: 600 }}><PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} /></td>
+                  <td style={{ fontWeight: 600 }}>
+                    <PlayerLink id={u.id} name={u.name} onNameClick={() => setViewPlayer(u)} />
+                    {playerSort === "active" && (() => {
+                      const v = lastVisitMap[u.id];
+                      const ts = v?.lastSeenAt || u.lastSeenAt;
+                      if (!ts) return <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>No visits recorded</div>;
+                      const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+                      const rel = mins < 1 ? "just now" : mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins/60)}h ago` : `${Math.round(mins/1440)}d ago`;
+                      return (
+                        <div style={{ fontSize:10, color:"var(--muted)", marginTop:2, fontFamily:"'Share Tech Mono',monospace" }}>
+                          {rel}{v?.page ? ` · ${v.page}` : ""}
+                        </div>
+                      );
+                    })()}
+                  </td>
 
                   <td style={{ fontSize:12, fontWeight:700, fontFamily:"'Oswald',sans-serif", color: playerSort === "spend" ? "var(--accent)" : "inherit" }}>
                     {playerSort === "spend"
