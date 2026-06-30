@@ -1184,22 +1184,43 @@ export const visits = wrapWithTimeout({
   //     WHERE a.id < b.id AND a.user_id IS NULL AND a.session_id = b.session_id;
   //
   async track({ page, userId, userName, sessionId }) {
+    if (!sessionId) return;
+    const body = {
+      page,
+      userId:    userId    || null,
+      userName:  userName  || null,
+      sessionId,
+      referrer:  document.referrer   || null,
+      userAgent: navigator.userAgent || null,
+    };
+    // Call the edge function which uses service role — bypasses RLS entirely.
+    // This fixes the bug where direct Supabase calls were blocked by RLS policies
+    // causing silent failures and no tracking for most logged-in users.
+    const attempt = async () => {
+      const { error } = await supabase.functions.invoke('track-visit', { body });
+      if (error) throw error;
+    };
     try {
-      if (!sessionId) return;
-      // Call the edge function which uses service role — bypasses RLS entirely.
-      // This fixes the bug where direct Supabase calls were blocked by RLS policies
-      // causing silent failures and no tracking for most logged-in users.
-      await supabase.functions.invoke('track-visit', {
-        body: {
-          page,
-          userId:    userId    || null,
-          userName:  userName  || null,
-          sessionId,
-          referrer:  document.referrer   || null,
-          userAgent: navigator.userAgent || null,
-        },
-      });
-    } catch { /* never break the site */ }
+      await attempt();
+    } catch (e1) {
+      // Retry once after a short delay — covers transient network blips /
+      // edge function cold starts, which previously caused silent gaps in
+      // visitor tracking with zero trace of the failure.
+      try {
+        await new Promise(r => setTimeout(r, 800));
+        await attempt();
+      } catch (e2) {
+        console.warn('Visit tracking failed after retry:', e2?.message || e2);
+        // Last-resort fallback: sendBeacon fires even if the page is about to
+        // unload (e.g. rapid navigation during a booking flow) and doesn't
+        // wait for a response, so it succeeds in cases fetch-based calls miss.
+        try {
+          const url = `${supabase.supabaseUrl}/functions/v1/track-visit`;
+          const blob = new Blob([JSON.stringify(body)], { type: 'application/json' });
+          navigator.sendBeacon?.(url, blob);
+        } catch { /* genuinely nothing more we can do */ }
+      }
+    }
   },
 
   // Backfill user_id + user_name on the anonymous session row when auth resolves.
