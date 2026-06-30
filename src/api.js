@@ -1211,13 +1211,18 @@ export const visits = wrapWithTimeout({
         await attempt();
       } catch (e2) {
         console.warn('Visit tracking failed after retry:', e2?.message || e2);
-        // Last-resort fallback: sendBeacon fires even if the page is about to
-        // unload (e.g. rapid navigation during a booking flow) and doesn't
-        // wait for a response, so it succeeds in cases fetch-based calls miss.
+        // Last-resort fallback: fetch with keepalive:true survives page unload
+        // like sendBeacon, but unlike sendBeacon it can send auth headers which
+        // Supabase requires even with verify_jwt:false.
         try {
           const url = `${supabase.supabaseUrl}/functions/v1/visit-log`;
-          const blob = new Blob([JSON.stringify(body)], { type: 'application/json' });
-          navigator.sendBeacon?.(url, blob);
+          const anonKey = supabase.supabaseKey;
+          fetch(url, {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json', 'apikey': anonKey, 'Authorization': `Bearer ${anonKey}` },
+            body: JSON.stringify(body),
+          }).catch(() => {});
         } catch { /* genuinely nothing more we can do */ }
       }
     }
