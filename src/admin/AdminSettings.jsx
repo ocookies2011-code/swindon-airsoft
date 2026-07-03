@@ -5,6 +5,7 @@ import * as api from "../api";
 import { fmtErr, resetSquareConfig, trackKeyCache } from "../utils";
 import { logAction } from "./adminHelpers";
 import { EmailTestCard } from "./EmailTestCard";
+import { computeChatOnline } from "../components/LiveChatWidget";
 
 function AdminSettings({ showToast, cu }) {
   const S = (key, def = "") => {
@@ -132,6 +133,12 @@ function AdminSettings({ showToast, cu }) {
           </button>
         </div>
         </>)}
+      </div>
+
+      {/* Live Chat */}
+      <div className="card mb-2">
+        {sectionHead("💬 Live Chat", "livechat")}
+        {sectionBody("livechat", <LiveChatSettings showToast={showToast} cu={cu} />)}
       </div>
 
       {/* VIP Toggle */}
@@ -367,6 +374,113 @@ function AdminSettings({ showToast, cu }) {
       {/* EmailJS test */}
       <EmailTestCard showToast={showToast} sectionHead={sectionHead} />
     </div>
+  );
+}
+
+// ── Live Chat active hours settings ─────────────────────────────
+const DAY_LABELS = [["mon","Mon"],["tue","Tue"],["wed","Wed"],["thu","Thu"],["fri","Fri"],["sat","Sat"],["sun","Sun"]];
+const DEFAULT_HOURS = Object.fromEntries(DAY_LABELS.map(([k]) => [k, { enabled: true, open: "09:00", close: "21:00" }]));
+
+function LiveChatSettings({ showToast, cu }) {
+  const [enabled, setEnabled] = useState(true);
+  const [hours, setHours] = useState(DEFAULT_HOURS);
+  const [offlineMessage, setOfflineMessage] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [en, h, off] = await Promise.all([
+          api.settings.get("live_chat_enabled"),
+          api.settings.get("live_chat_hours"),
+          api.settings.get("live_chat_offline_message"),
+        ]);
+        setEnabled(en !== "false");
+        if (h) { try { setHours(JSON.parse(h)); } catch { /* keep defaults */ } }
+        setOfflineMessage(off || "We're offline right now, but leave a message and we'll get back to you as soon as we're back!");
+      } catch { /* keep defaults */ }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const updateDay = (key, patch) => setHours(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.settings.set("live_chat_enabled", String(enabled));
+      await api.settings.set("live_chat_hours", JSON.stringify(hours));
+      await api.settings.set("live_chat_offline_message", offlineMessage.trim());
+      showToast("✅ Live chat settings saved!");
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Live chat settings saved", detail: null });
+    } catch (e) { showToast("Save failed: " + fmtErr(e), "red"); }
+    finally { setSaving(false); }
+  };
+
+  if (!loaded) return <div style={{ fontSize: 12, color: "var(--muted)" }}>Loading…</div>;
+
+  const previewOnline = computeChatOnline(hours);
+
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 18 }}>
+        <div>
+          <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 4 }}>
+            {enabled
+              ? <span style={{ color: "var(--accent)", fontWeight: 700 }}>✅ Live chat widget is ENABLED</span>
+              : <span style={{ color: "var(--red)", fontWeight: 700 }}>⛔ Live chat widget is DISABLED (hidden site-wide)</span>}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+            All chat messages — in or out of hours — are saved and appear in Contact Inbox → Live Chat.
+          </div>
+        </div>
+        <button className={!enabled ? "btn btn-primary" : "btn btn-ghost"}
+          style={{ minWidth: 160, borderColor: !enabled ? "var(--accent)" : "var(--red)", color: !enabled ? "var(--accent)" : "var(--red)" }}
+          onClick={() => setEnabled(v => !v)}>
+          {enabled ? "⛔ Disable Widget" : "✅ Enable Widget"}
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>Active Hours</div>
+        <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12, lineHeight: 1.6 }}>
+          When outside these hours, the widget shows an "offline — leave a message" state instead of "online now" — but visitors can still send a message either way, and it always lands in your inbox. Times are UK time (Europe/London).
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {DAY_LABELS.map(([key, label]) => {
+            const d = hours[key] || { enabled: false, open: "09:00", close: "21:00" };
+            return (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, width: 90, fontSize: 12, color: "var(--text)", cursor: "pointer" }}>
+                  <input type="checkbox" checked={d.enabled} onChange={e => updateDay(key, { enabled: e.target.checked })} />
+                  {label}
+                </label>
+                <input type="time" value={d.open} disabled={!d.enabled} onChange={e => updateDay(key, { open: e.target.value })}
+                  style={{ width: 110, opacity: d.enabled ? 1 : 0.4 }} />
+                <span style={{ color: "var(--muted)", fontSize: 12 }}>to</span>
+                <input type="time" value={d.close} disabled={!d.enabled} onChange={e => updateDay(key, { close: e.target.value })}
+                  style={{ width: 110, opacity: d.enabled ? 1 : 0.4 }} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="form-group" style={{ marginBottom: 14 }}>
+        <label>Offline Message</label>
+        <textarea rows={2} value={offlineMessage} onChange={e => setOfflineMessage(e.target.value)}
+          placeholder="Shown to visitors when chat is outside active hours" />
+      </div>
+
+      <div className={previewOnline ? "alert alert-green" : "alert"} style={{ fontSize: 12, marginBottom: 14, background: previewOnline ? undefined : "rgba(255,255,255,.04)" }}>
+        {previewOnline ? "🟢 Right now, the widget would show as ONLINE." : "⚪ Right now, the widget would show as OFFLINE (messages still saved to your inbox)."}
+      </div>
+
+      <button className="btn btn-primary" onClick={save} disabled={saving}>
+        {saving ? "Saving…" : "Save Live Chat Settings"}
+      </button>
+    </>
   );
 }
 

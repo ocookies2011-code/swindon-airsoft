@@ -25,6 +25,7 @@ import { BlockedPage }        from "./pages/BlockedPage";
 import { PendingApprovalPage } from "./pages/PendingApprovalPage";
 import { PropsPage }          from "./pages/PropsPage";
 import { UKARAPage }          from "./pages/UKARAPage";
+import { LiveChatWidget }     from "./components/LiveChatWidget";
 
 const ALLOWED_COUNTRY_CODES = new Set([
   "GB",  // UK only — this is a UK airsoft field
@@ -782,6 +783,8 @@ function AppInner() {
           </div>
         </div>
       </footer>
+
+      <LiveChatWidget cu={cu} />
 
       {authModal && (
         <SupabaseAuthModal
