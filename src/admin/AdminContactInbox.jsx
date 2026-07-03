@@ -372,6 +372,15 @@ function AdminLiveChatPanel({ showToast, cu }) {
     if (selected?.id === id) setSelected(s => ({ ...s, status }));
   };
 
+  const deleteConvo = async (id) => {
+    if (!window.confirm("Delete this conversation permanently? This cannot be undone.")) return;
+    const { error } = await supabase.from("chat_conversations").delete().eq("id", id);
+    if (error) { showToast("Failed to delete: " + error.message, "red"); return; }
+    setConvos(prev => prev.filter(c => c.id !== id));
+    if (selected?.id === id) { setSelected(null); setMsgs([]); }
+    showToast("Conversation deleted");
+  };
+
   const unreadCount = convos.filter(c => c.unread_by_admin).length;
 
   return (
@@ -395,8 +404,16 @@ function AdminLiveChatPanel({ showToast, cu }) {
             return (
               <div key={c.id} onClick={() => openConvo(c)}
                 style={{ padding: "12px 14px", borderBottom: "1px solid #1a2808", cursor: "pointer", background: isActive ? "#0c1a0c" : "transparent",
-                  borderLeft: isActive ? "2px solid #c8ff00" : "2px solid transparent" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 4 }}>
+                  borderLeft: isActive ? "2px solid #c8ff00" : "2px solid transparent", position: "relative" }}>
+                <button
+                  onClick={e => { e.stopPropagation(); deleteConvo(c.id); }}
+                  title="Delete conversation"
+                  style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", color: "#3a5010", cursor: "pointer", fontSize: 12, padding: 2, lineHeight: 1 }}
+                  onMouseEnter={e => e.currentTarget.style.color = "#ef5350"}
+                  onMouseLeave={e => e.currentTarget.style.color = "#3a5010"}>
+                  🗑
+                </button>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 4, paddingRight: 18 }}>
                   <span style={{ fontFamily: head, fontWeight: 800, fontSize: 12, color: c.unread_by_admin ? "#c8ff00" : "#b0c090", letterSpacing: ".05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {c.unread_by_admin && <span style={{ display: "inline-block", width: 6, height: 6, background: "#c8ff00", borderRadius: "50%", marginRight: 6, verticalAlign: "middle" }} />}
                     {c.visitor_name}
@@ -439,6 +456,10 @@ function AdminLiveChatPanel({ showToast, cu }) {
                   : <button onClick={() => setStatus(selected.id, "open")}
                       style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".1em", padding: "6px 12px", background: "transparent", border: "1px solid #2a4a2a", color: "#81c784", cursor: "pointer" }}>REOPEN</button>
                 }
+                <button onClick={() => deleteConvo(selected.id)}
+                  style={{ fontFamily: mono, fontSize: 9, letterSpacing: ".1em", padding: "6px 12px", background: "transparent", border: "1px solid #4a1a1a", color: "#ef5350", cursor: "pointer" }}>
+                  DELETE
+                </button>
               </div>
             </div>
 
