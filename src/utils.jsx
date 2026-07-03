@@ -2282,6 +2282,19 @@ function HomePage({ data, cu, setPage, onProductClick }) {
   const adminBookingCount = upcomingEvents.flatMap(e => e.bookings || []).reduce((s, b) => s + (b.qty || 1), 0);
   const totalBookings = adminBookingCount > 0 ? adminBookingCount : (publicBookingCount ?? null);
 
+  // Per-event walk-on/rental counts (RLS hides other players' bookings from anon/non-admin
+  // sessions, which was showing wrong "slots left" on this widget for logged-out visitors).
+  const [eventBookingCounts, setEventBookingCounts] = React.useState({});
+  React.useEffect(() => {
+    import("./supabaseClient").then(({ supabase }) => {
+      supabase.rpc("get_upcoming_booking_counts").then(({ data }) => {
+        const map = {};
+        if (data) data.forEach(r => { map[r.event_id] = { walkOn: Number(r.walkon_booked || 0), rental: Number(r.rental_booked || 0) }; });
+        setEventBookingCounts(map);
+      }).catch(() => {});
+    });
+  }, []);
+
   return (
     <div>
       {Array.isArray(data.homeMsg) && data.homeMsg.length > 0 && (
@@ -2533,9 +2546,14 @@ function HomePage({ data, cu, setPage, onProductClick }) {
                         const STANDARD_RENTAL  = 55;
                         const walkOn = Number(nextEvent.walkOnPrice);
                         const rental = Number(nextEvent.rentalPrice);
-                        // Calculate remaining slots from actual bookings
-                        const walkOnBooked = (nextEvent.bookings || []).filter(b => b.type === "walkOn").reduce((s, b) => s + (b.qty || 1), 0);
-                        const rentalBooked = (nextEvent.bookings || []).filter(b => b.type === "rental").reduce((s, b) => s + (b.qty || 1), 0);
+                        // Calculate remaining slots from server-side counts (bypasses RLS,
+                        // which otherwise hides other players' bookings from logged-out
+                        // visitors and makes "slots left" show as full capacity)
+                        const realCounts = eventBookingCounts[nextEvent.id];
+                        const walkOnBookedOwn = (nextEvent.bookings || []).filter(b => b.type === "walkOn").reduce((s, b) => s + (b.qty || 1), 0);
+                        const rentalBookedOwn = (nextEvent.bookings || []).filter(b => b.type === "rental").reduce((s, b) => s + (b.qty || 1), 0);
+                        const walkOnBooked = realCounts ? realCounts.walkOn : walkOnBookedOwn;
+                        const rentalBooked = realCounts ? realCounts.rental : rentalBookedOwn;
                         const walkOnLeft = Math.max(0, (nextEvent.walkOnSlots || 0) - walkOnBooked);
                         const rentalLeft = Math.max(0, (nextEvent.rentalSlots || 0) - rentalBooked);
                         const isEarlyBird = (walkOn > 0 && walkOn < STANDARD_WALK_ON) || (rental > 0 && rental < STANDARD_RENTAL);
@@ -2567,7 +2585,7 @@ function HomePage({ data, cu, setPage, onProductClick }) {
                               )}
 {((nextEvent.walkOnSlots||0) + (nextEvent.rentalSlots||0)) > 0 && (() => {
                                 const totalSlots  = (nextEvent.walkOnSlots||0) + (nextEvent.rentalSlots||0);
-                                const totalBooked = (nextEvent.bookings||[]).reduce((s,b)=>s+(b.qty||1),0);
+                                const totalBooked = walkOnBooked + rentalBooked;
                                 const wl = Math.max(0, totalSlots - totalBooked);
                                 return (
                                   <div style={{ background:"rgba(0,0,0,.4)", border:`1px solid ${wl < 5 ? "rgba(239,68,68,.3)" : "rgba(255,255,255,.08)"}`, padding:"8px 14px", flex:1, minWidth:80 }}>
@@ -2594,7 +2612,10 @@ function HomePage({ data, cu, setPage, onProductClick }) {
                         <button className="btn btn-primary" style={{ padding:"11px 32px", letterSpacing:".2em", fontSize:13 }} onClick={() => setPage("events", nextEvent.id)}>DEPLOY →</button>
 {(() => {
                           const totalSlots  = (nextEvent.walkOnSlots||0) + (nextEvent.rentalSlots||0);
-                          const totalBooked = (nextEvent.bookings||[]).reduce((s,b)=>s+(b.qty||1),0);
+                          const realCounts = eventBookingCounts[nextEvent.id];
+                          const totalBooked = realCounts
+                            ? realCounts.walkOn + realCounts.rental
+                            : (nextEvent.bookings||[]).reduce((s,b)=>s+(b.qty||1),0);
                           const wl = Math.max(0, totalSlots - totalBooked);
                           if (totalSlots > 0 && wl === 0) return <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:"#ef4444", letterSpacing:".1em" }}>⛔ SOLD OUT</span>;
                           if (wl > 0) return <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color: wl < 5 ? "#ef4444" : "#5a6e42", letterSpacing:".1em" }}>{wl} slot{wl !== 1 ? "s" : ""} remaining</span>;
