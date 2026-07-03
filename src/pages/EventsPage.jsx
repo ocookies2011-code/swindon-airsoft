@@ -576,7 +576,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   
   const isAdmin = cu?.role === "admin";
     const isEventPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
-    const userReady = (cu && waiverValid) || guestValid;
+    const userReady = (cu && waiverValid);
     const bookingBlocked = isEventPast || !userReady || isAdmin || cartEmpty || (ev.vipOnly && !cu) || isCardBanned;
 
     return (
@@ -1212,18 +1212,18 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               )}
 
-              {!cu && !guestMode && (
+              {!cu && (
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14, letterSpacing:".1em" }} onClick={() => setAuthModal("login")}>
                     LOG IN TO BOOK
                   </button>
-                  <button className="btn btn-ghost" style={{ width:"100%", padding:"10px", fontSize:12, letterSpacing:".1em" }} onClick={() => setGuestMode(true)}>
-                    👤 BOOK AS GUEST
-                  </button>
+                  <div style={{ fontSize:11, color:"var(--muted)", textAlign:"center" }}>
+                    You must be logged in to book. Don't have an account? <span style={{ color:"var(--accent)", cursor:"pointer" }} onClick={() => setAuthModal("register")}>Sign up</span>
+                  </div>
                 </div>
               )}
 
-              {!cu && guestMode && (() => {
+              {false && !cu && guestMode && (() => {
                 const totalTickets = bCart.walkOn + bCart.rental;
                 const allSigned = guestWaiverSig.length >= totalTickets && guestWaiverSig.every(w => w.name?.trim().length >= 3 && w.signed);
                 return (
