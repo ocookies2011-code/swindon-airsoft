@@ -46,7 +46,27 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
       .catch(() => {});
   }, []);
 
+  // Unread contact form + live chat messages
+  const [pendingContact, setPendingContact] = React.useState(0);
+  React.useEffect(() => {
+    const fetchContact = async () => {
+      const [{ count: formCount }, { count: chatCount }] = await Promise.all([
+        supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("read_by_admin", false),
+        supabase.from("chat_conversations").select("id", { count: "exact", head: true }).eq("unread_by_admin", true),
+      ]);
+      setPendingContact((formCount || 0) + (chatCount || 0));
+    };
+    fetchContact();
+    const ch = supabase
+      .channel("dash_contact_badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "contact_messages" }, fetchContact)
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, fetchContact)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, []);
+
   const alerts = [
+    pendingContact > 0 && { msg: `${pendingContact} unread contact message(s)/live chat(s) waiting for a reply.`, section: "contact-inbox", color: "red", icon: "📨" },
     unsigned > 0 && { msg: `${unsigned} player(s) with unsigned waivers.`, section: "unsigned-waivers", color: "red" },
     pendingWaivers > 0 && { msg: `${pendingWaivers} waiver change request(s) pending approval.`, section: "waivers", color: "red" },
     data.users.filter(u => u.deleteRequest).length > 0 && { msg: `${data.users.filter(u => u.deleteRequest).length} account deletion request(s).`, section: "players", color: "red" },
@@ -114,6 +134,7 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {[
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>, label: "New Event", sub: "Create & publish", action: () => setSection("events"), color: "var(--accent)", textColor: "#000" },
+            { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={pendingContact > 0 ? "#ef5350" : "#81c784"} strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, label: "Contact Inbox", sub: pendingContact > 0 ? `${pendingContact} unread` : "All caught up", action: () => setSection("contact-inbox"), color: pendingContact > 0 ? "rgba(220,50,50,.12)" : "rgba(100,180,50,.08)", textColor: pendingContact > 0 ? "var(--red)" : "var(--accent)", border: pendingContact > 0 ? "rgba(220,50,50,.3)" : "rgba(100,180,50,.2)" },
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>, label: "Players", sub: `${data.users.filter(u=>u.role==="player").length} registered`, action: () => setSection("players"), color: "rgba(79,195,247,.12)", textColor: "#4fc3f7", border: "rgba(79,195,247,.3)" },
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>, label: "Shop Orders", sub: "Manage orders", action: () => setSection("shop"), color: "rgba(200,150,0,.1)", textColor: "var(--gold)", border: "rgba(200,150,0,.3)" },
             { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={unsigned > 0 ? "#f48fb1" : "#81c784"} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, label: "Waivers", sub: unsigned > 0 ? `${unsigned} unsigned` : "All signed", action: () => setSection("unsigned-waivers"), color: unsigned > 0 ? "rgba(220,50,50,.12)" : "rgba(100,180,50,.08)", textColor: unsigned > 0 ? "var(--red)" : "var(--accent)", border: unsigned > 0 ? "rgba(220,50,50,.3)" : "rgba(100,180,50,.2)" },
