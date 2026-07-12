@@ -1611,11 +1611,13 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
     if (!form.email || !form.email.includes("@")) { showToast("Enter your email address first", "red"); return; }
     setBusy(true);
     try {
-      // Look up the user by email
+      // Look up the user by email (case-insensitive — profiles.email isn't guaranteed lowercase)
+      const emailInput = form.email.trim().toLowerCase();
+      const escapedEmail = emailInput.replace(/[%_\\]/g, m => "\\" + m);
       const { data: profile } = await supabase
         .from("profiles")
         .select("id, name, email")
-        .eq("email", form.email.trim().toLowerCase())
+        .ilike("email", escapedEmail)
         .maybeSingle();
 
       // Always show success even if email not found (security)
