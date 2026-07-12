@@ -111,19 +111,30 @@ serve(async (req) => {
 
     // ── Is this an event booking payment? ────────────────────────
     // Note format: "EventTitle — NxTicketType" e.g. "Sunday Skirmish 21-06 — 1x Walk-On"
+    // May also carry "[EXTRAS:{"extraId":qty,...}]" appended by the frontend so
+    // game-day extras survive even if this webhook has to create/patch the
+    // booking as a fallback (Square payments here have no Order/line-items
+    // to inspect, so the note is the only source of truth for extras).
     const bookingNoteMatch = note.match(/^(.+?)\s*[—\-]+\s*(\d+)x\s*(Walk-?On|Rental)/i);
     const isBookingPayment = bookingNoteMatch !== null;
+    let noteExtras: Record<string, number> = {};
+    const extrasMatch = note.match(/\[EXTRAS:(\{.*?\})\]/);
+    if (extrasMatch) {
+      try { noteExtras = JSON.parse(extrasMatch[1]); } catch (e) { console.warn("Could not parse EXTRAS from note:", e); }
+    }
 
     if (isBookingPayment) {
-      console.log("Detected booking payment from note:", note);
+      console.log("Detected booking payment from note:", note, "| extras:", noteExtras);
       // Check if booking already exists
-      const bookingRes  = await fetch(`${sbUrl}/rest/v1/bookings?square_order_id=eq.${paymentId}&select=id,total,user_name`, { headers: h });
+      const bookingRes  = await fetch(`${sbUrl}/rest/v1/bookings?square_order_id=eq.${paymentId}&select=id,total,user_name,extras`, { headers: h });
       const bookingData = await bookingRes.json() as Record<string,unknown>[];
 
       if (bookingData.length > 0) {
         const existingBooking = bookingData[0];
         const existingName = existingBooking.user_name as string | null;
         const nameNeedsUpdate = !existingName || existingName === "Unknown Player";
+        const existingExtras = existingBooking.extras as Record<string, unknown> | null;
+        const extrasMissing = Object.keys(noteExtras).length > 0 && (!existingExtras || Object.keys(existingExtras).length === 0);
 
         // Resolve name from Square payment if needed (so we can patch it in)
         let resolvedName: string | null = null;
@@ -162,10 +173,11 @@ serve(async (req) => {
           }
         }
 
-        // Patch total and/or user_name as needed
+        // Patch total, user_name, and/or extras as needed
         const patch: Record<string, unknown> = {};
         if (totalAmount > 0 && Number(existingBooking.total) === 0) patch.total = totalAmount;
         if (nameNeedsUpdate && resolvedName) { patch.user_name = resolvedName; if (resolvedUserId) patch.user_id = resolvedUserId; }
+        if (extrasMissing) { patch.extras = noteExtras; console.log("Recovering missing extras from note:", noteExtras); }
         if (Object.keys(patch).length > 0) {
           await fetch(`${sbUrl}/rest/v1/bookings?square_order_id=eq.${paymentId}`, { method: "PATCH", headers: { ...h, "Prefer": "return=minimal" }, body: JSON.stringify(patch) });
           console.log(`Patched existing booking:`, patch);
@@ -261,7 +273,7 @@ serve(async (req) => {
       const insertRes = await fetch(`${sbUrl}/rest/v1/bookings`, {
         method: "POST",
         headers: { ...h, "Prefer": "return=representation" },
-        body: JSON.stringify({ event_id: eventId, user_id: userId, user_name: userName, ticket_type: ticketType, qty, extras: {}, total: totalAmount, square_order_id: paymentId, square_payment_id: paymentId }),
+        body: JSON.stringify({ event_id: eventId, user_id: userId, user_name: userName, ticket_type: ticketType, qty, extras: noteExtras, total: totalAmount, square_order_id: paymentId, square_payment_id: paymentId }),
       });
       const insertText = await insertRes.text();
       if (!insertRes.ok) {

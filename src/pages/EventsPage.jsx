@@ -1357,7 +1357,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                   {!bookingBlocked && payTotal > 0 && (bCart.rental === 0 || rentalAgreed) && (
                     <SquareCheckoutButton
                       amount={payTotal}
-                      description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}`}
+                      description={`${ev.title} — ${[bCart.walkOn>0 && `${bCart.walkOn}x Walk-On`, bCart.rental>0 && `${bCart.rental}x Rental`].filter(Boolean).join(", ")}${(() => { const ex = Object.fromEntries(Object.entries(bCart.extras).filter(([,v]) => v > 0)); return Object.keys(ex).length ? ` [EXTRAS:${JSON.stringify(ex)}]` : ""; })()}`}
                       onSuccess={confirmBookingAfterPayment}
                       disabled={bookingBusy}
                       onOpen={() => trackFunnel && trackFunnel("event:checkout")}
