@@ -165,7 +165,7 @@ function useData() {
               const thisYear = now.getFullYear();
               profiles.forEach(u => {
                 if (u.vipStatus === "active" && u.vipExpiresAt && new Date(u.vipExpiresAt) < now) {
-                  supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).catch(() => {});
+                  supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).then(() => {}, () => {});
                   u.vipStatus = "expired";
                 }
 

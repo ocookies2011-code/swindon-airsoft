@@ -143,7 +143,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
       details,
       old_value:   oldValue ? String(oldValue) : null,
       new_value:   newValue ? String(newValue) : null,
-    }).catch(() => {});
+    }).then(() => {}, () => {});
   }; // az | za | games | ukara
   const [roleFilter, setRoleFilter] = useState("all"); // all | player | admin
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(new Set());

@@ -510,7 +510,7 @@ function useData() {
               const thisYear = now.getFullYear();
               profiles.forEach(u => {
                 if (u.vipStatus === "active" && u.vipExpiresAt && new Date(u.vipExpiresAt) < now) {
-                  supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).catch(() => {});
+                  supabase.from('profiles').update({ vip_status: "expired" }).eq('id', u.id).then(() => {}, () => {});
                   u.vipStatus = "expired";
                 }
 
@@ -1668,7 +1668,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
       supabase.from("security_events").insert({
         event_type: "injection_attempt", email: form.email,
         payload: form.email, severity: "critical"
-      }).catch(() => {});
+      }).then(() => {}, () => {});
       showToast("Invalid input detected.", "red");
       return;
     }
@@ -1680,7 +1680,7 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
         supabase.from("security_events").insert({
           event_type: "failed_login", email: form.email.trim(),
           payload: error.message, severity: "medium"
-        }).catch(() => {});
+        }).then(() => {}, () => {});
         throw error;
       }
       try {
