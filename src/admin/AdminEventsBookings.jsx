@@ -1701,6 +1701,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
 
       {/* ── Message Booked Players Modal ── */}
       {messageModal && (() => {
+        const usersNotLoaded = !data.users || data.users.length === 0;
         const recipientCount = new Set(
           messageModal.bookings.map(b => data.users.find(u => u.id === b.userId)?.email).filter(Boolean).map(e => e.toLowerCase())
         ).size;
@@ -1708,9 +1709,17 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           <div className="overlay" onClick={() => !messageSending && setMessageModal(null)}>
             <div className="modal-box wide" onClick={e => e.stopPropagation()}>
               <div className="modal-title">✉️ Message Players — {messageModal.title}</div>
-              <div style={{ fontSize:12, color:"var(--muted)", marginBottom:16 }}>
-                Sends an email to all {recipientCount} unique player{recipientCount === 1 ? "" : "s"} booked on this event.
-              </div>
+              {usersNotLoaded ? (
+                <div style={{ fontSize:12, color:"var(--red)", marginBottom:16, background:"rgba(255,0,0,.08)", border:"1px solid rgba(255,0,0,.25)", padding:"10px 14px" }}>
+                  ⚠ Player directory hasn't finished loading yet. Close this, wait a few seconds for the page to fully load, then try again.
+                </div>
+              ) : (
+                <div style={{ fontSize:12, color: recipientCount === 0 ? "var(--red)" : "var(--muted)", marginBottom:16 }}>
+                  {recipientCount === 0
+                    ? "⚠ No matching player emails found for this event's bookings — nothing will be sent."
+                    : `Sends an email to all ${recipientCount} unique player${recipientCount === 1 ? "" : "s"} booked on this event.`}
+                </div>
+              )}
               <label style={{ fontSize:11, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", color:"var(--muted)", display:"block", marginBottom:6 }}>Subject</label>
               <input className="input" style={{ width:"100%", marginBottom:14 }} value={messageForm.subject}
                 onChange={e => setMessageForm(f => ({ ...f, subject: e.target.value }))} disabled={messageSending} />
@@ -1719,7 +1728,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 placeholder="Write your message here. Leave a blank line between paragraphs."
                 onChange={e => setMessageForm(f => ({ ...f, body: e.target.value }))} disabled={messageSending} />
               <div className="gap-2" style={{ marginTop:16 }}>
-                <button className="btn btn-primary" disabled={messageSending || !messageForm.subject.trim() || !messageForm.body.trim()}
+                <button className="btn btn-primary" disabled={messageSending || usersNotLoaded || recipientCount === 0 || !messageForm.subject.trim() || !messageForm.body.trim()}
                   onClick={async () => {
                     setMessageSending(true);
                     showToast("Sending…", "gold");
