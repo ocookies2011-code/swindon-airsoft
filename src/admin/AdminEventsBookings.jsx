@@ -3,7 +3,7 @@ import { PlayerLink } from '../utils/PlayerLink';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { AdminTrackStatusCell, DesignationInsignia, GmtClock, QRCode, QRScanner, RankInsignia, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtShort, renderMd, resetSquareConfig, sendAdminBookingNotification, sendEventReminderEmail, sendNewEventEmail, sendTicketEmail, sendWaitlistNotifyEmail, stockLabel, uid, useMobile } from "../utils";
+import { AdminTrackStatusCell, DesignationInsignia, GmtClock, QRCode, QRScanner, RankInsignia, TrackingBlock, WaiverModal, detectCourier, fmtDate, fmtErr, gmtShort, renderMd, resetSquareConfig, sendAdminBookingNotification, sendCustomEventEmail, sendEventReminderEmail, sendNewEventEmail, sendTicketEmail, sendWaitlistNotifyEmail, stockLabel, uid, useMobile } from "../utils";
 import { squareRefund, waitlistApi, holdApi, normaliseProfile } from "../api";
 
 import { diffFields, logAction } from "./adminHelpers";
@@ -85,6 +85,9 @@ function ExtrasEditor({ editBooking, setEditBooking, data }) {
 function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, cu }) {
   const [waitlistView, setWaitlistView] = useState(null); // { ev, entries }
   const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [messageModal, setMessageModal] = useState(null); // ev being messaged
+  const [messageForm, setMessageForm] = useState({ subject: "", body: "" });
+  const [messageSending, setMessageSending] = useState(false);
   const [resendBusy, setResendBusy] = useState({}); // bookingId -> true while sending
 
   const openWaitlist = async (ev) => {
@@ -779,6 +782,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                                 showToast(`📧 Reminders: ${r.sent} sent${r.failed > 0 ? `, ${r.failed} failed` : ""}`, r.failed > 0 ? "gold" : "");
                               } catch(e) { showToast("Failed: " + e.message, "red"); }
                             }}>📧 Remind</button>
+                        )}
+                        {ev.bookings.length > 0 && (
+                          <button className="btn btn-sm btn-ghost" style={{ color: "var(--blue)", borderColor: "rgba(79,195,247,.3)" }}
+                            onClick={() => { setMessageForm({ subject: `Update: ${ev.title}`, body: "" }); setMessageModal(ev); }}>✉️ Message</button>
                         )}
                         <button className="btn btn-sm btn-ghost" style={{ fontSize:10 }}
                           onClick={() => openWaitlist(ev)} disabled={waitlistLoading} title="View waitlist">
@@ -1691,6 +1698,48 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
           </div>
         </div>
       )}
+
+      {/* ── Message Booked Players Modal ── */}
+      {messageModal && (() => {
+        const recipientCount = new Set(
+          messageModal.bookings.map(b => data.users.find(u => u.id === b.userId)?.email).filter(Boolean).map(e => e.toLowerCase())
+        ).size;
+        return (
+          <div className="overlay" onClick={() => !messageSending && setMessageModal(null)}>
+            <div className="modal-box wide" onClick={e => e.stopPropagation()}>
+              <div className="modal-title">✉️ Message Players — {messageModal.title}</div>
+              <div style={{ fontSize:12, color:"var(--muted)", marginBottom:16 }}>
+                Sends an email to all {recipientCount} unique player{recipientCount === 1 ? "" : "s"} booked on this event.
+              </div>
+              <label style={{ fontSize:11, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", color:"var(--muted)", display:"block", marginBottom:6 }}>Subject</label>
+              <input className="input" style={{ width:"100%", marginBottom:14 }} value={messageForm.subject}
+                onChange={e => setMessageForm(f => ({ ...f, subject: e.target.value }))} disabled={messageSending} />
+              <label style={{ fontSize:11, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", color:"var(--muted)", display:"block", marginBottom:6 }}>Message</label>
+              <textarea className="input" style={{ width:"100%", minHeight:160, resize:"vertical", fontFamily:"inherit" }} value={messageForm.body}
+                placeholder="Write your message here. Leave a blank line between paragraphs."
+                onChange={e => setMessageForm(f => ({ ...f, body: e.target.value }))} disabled={messageSending} />
+              <div className="gap-2" style={{ marginTop:16 }}>
+                <button className="btn btn-primary" disabled={messageSending || !messageForm.subject.trim() || !messageForm.body.trim()}
+                  onClick={async () => {
+                    setMessageSending(true);
+                    showToast("Sending…", "gold");
+                    try {
+                      const bookedUsers = messageModal.bookings.map(b => {
+                        const u = data.users.find(u => u.id === b.userId);
+                        return u ? { ...u, bookingType: b.type } : null;
+                      }).filter(Boolean);
+                      const r = await sendCustomEventEmail({ ev: messageModal, bookedUsers, subject: messageForm.subject, message: messageForm.body });
+                      showToast(`✉️ Sent: ${r.sent}/${r.total}${r.failed > 0 ? ` (${r.failed} failed)` : ""}`, r.failed > 0 ? "gold" : "");
+                      setMessageModal(null);
+                    } catch(e) { showToast("Failed: " + e.message, "red"); }
+                    setMessageSending(false);
+                  }}>{messageSending ? "Sending…" : "Send Email"}</button>
+                <button className="btn btn-ghost" onClick={() => setMessageModal(null)} disabled={messageSending}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Add Booking Modal ── */}
       {addBookingModal && (() => {

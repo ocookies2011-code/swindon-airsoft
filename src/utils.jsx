@@ -3123,6 +3123,74 @@ async function sendEventReminderEmail({ ev, bookedUsers }) {
   return { sent, failed };
 }
 
+// ── Custom Event Broadcast Email (admin → all booked players) ─
+async function sendCustomEventEmail({ ev, bookedUsers, subject, message }) {
+  const dateStr = new Date(ev.date).toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
+  });
+  const timeStr = ev.endTime ? `${ev.time}–${ev.endTime} GMT` : ev.time ? `${ev.time} GMT` : "TBC";
+
+  // De-dupe by email — a player can have multiple bookings on the same event
+  const seen = new Set();
+  const recipients = bookedUsers.filter(u => {
+    const email = (u.email || "").trim().toLowerCase();
+    if (!email || seen.has(email)) return false;
+    seen.add(email);
+    return true;
+  });
+
+  const messageHtml = (message || "").split(/\n{2,}/).map(p =>
+    `<p style="font-size:14px;color:#dbe8c8;line-height:1.8;margin:0 0 16px;">${p.replace(/\n/g, "<br/>")}</p>`
+  ).join("");
+
+  let sent = 0, failed = 0;
+
+  for (const user of recipients) {
+    const htmlContent = `<div style="max-width:600px;margin:0 auto;background:#0a0a0a;padding:0;font-family:Arial,sans-serif;color:#e0e0e0;">
+    <div style="height:3px;background:#c8ff00;"></div>
+    <div style="background:#0d0d0d;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;padding:24px 32px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:.3em;color:#c8ff00;font-weight:700;text-transform:uppercase;margin-bottom:8px;">✉ MESSAGE FROM SWINDON AIRSOFT</div>
+      <img src="https://bnlndgjbcthxyodgstaa.supabase.co/storage/v1/object/public/email-templates/logo_transparent.png" alt="Swindon Airsoft" width="200" style="display:block;margin:0 auto 12px;height:auto;" />
+    </div>
+    <div style="background:#0d1300;border:1px solid #1a2808;border-top:none;padding:16px 24px;">
+      <div style="font-size:9px;letter-spacing:.3em;color:#3a5010;text-transform:uppercase;margin-bottom:8px;font-weight:700;">REGARDING YOUR BOOKING</div>
+      <div style="font-size:24px;font-weight:900;color:#e8f0d8;text-transform:uppercase;letter-spacing:.05em;line-height:1.1;margin-bottom:16px;">${ev.title}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">DATE</div>
+            <div style="font-size:14px;font-weight:700;color:#c8ff00;">${dateStr}</div>
+          </td>
+          <td style="padding:10px 14px;background:#0a0f06;border:1px solid #1a2808;border-left:none;width:50%;vertical-align:top;">
+            <div style="font-size:8px;letter-spacing:.25em;color:#3a5010;text-transform:uppercase;margin-bottom:4px;">TIME</div>
+            <div style="font-size:14px;font-weight:700;color:#4fc3f7;">${timeStr}</div>
+          </td>
+        </tr>
+      </table>
+      <div style="background:#060d02;border:1px solid #1a2808;border-left:3px solid #c8ff00;padding:18px 22px;margin-bottom:20px;">
+        ${messageHtml}
+      </div>
+      <div style="text-align:center;margin-top:8px;">
+        <a href="https://swindon-airsoft.com/#profile/bookings" style="display:inline-block;background:#c8ff00;color:#0a0a0a;font-size:12px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;padding:12px 32px;text-decoration:none;">VIEW MY BOOKING →</a>
+      </div>
+    </div>
+    <div style="background:#060d02;border:1px solid #1a2808;border-top:none;padding:14px 32px;font-size:11px;color:#2a3a10;text-align:center;letter-spacing:.08em;">
+      Questions? Reply to this email or contact us through the website.
+    </div>
+    <div style="background:#0a0f06;border-top:2px solid #c8ff00;padding:18px 32px;text-align:center;border-left:1px solid #1a2808;border-right:1px solid #1a2808;">
+      <a href="https://swindon-airsoft.com" style="font-size:11px;color:#c8ff00;letter-spacing:.25em;text-transform:uppercase;text-decoration:none;font-weight:700;font-family:Arial,sans-serif;">swindon-airsoft.com</a>
+      <div style="font-size:10px;color:#2a3a10;margin-top:5px;letter-spacing:.1em;">&copy; 2026 Swindon Airsoft. All rights reserved.</div>
+    </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1a2808,#c8ff00,#1a2808);"></div>
+  </div>`;
+    try {
+      await sendEmail({ toEmail: user.email, toName: user.name || "Player", subject: subject || `Update: ${ev.title}`, htmlContent });
+      sent++;
+    } catch { failed++; }
+  }
+  return { sent, failed, total: recipients.length };
+}
+
 // ── Waitlist Slot Available Email ────────────────────────────
 async function sendWaitlistNotifyEmail({ toEmail, toName, ev, ticketType }) {
   const dateStr = new Date(ev.date + "T12:00:00").toLocaleDateString("en-GB", { timeZone:"Europe/London", weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -3979,7 +4047,7 @@ export {
   // Email
   EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
   sendEmail,
-  sendTicketEmail, sendEventReminderEmail, sendWaitlistNotifyEmail,
+  sendTicketEmail, sendEventReminderEmail, sendCustomEventEmail, sendWaitlistNotifyEmail,
   sendCancellationEmail, sendWelcomeEmail,
   sendOrderEmail, sendDispatchEmail, sendNewEventEmail,
   sendAdminBookingNotification, sendAdminOrderNotification,
