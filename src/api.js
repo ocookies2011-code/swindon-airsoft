@@ -991,7 +991,18 @@ export async function squareRefund({ squarePaymentId, amount, locationId }) {
       reason: 'Refund from Swindon Airsoft',
     },
   })
-  if (error || !data) throw new Error(error?.message || 'Square refund failed')
+  if (error) {
+    // supabase-js only gives a generic "non-2xx status code" message by default —
+    // the actual reason (Square's error, or a missing secret) is in the response
+    // body, which we have to read out of error.context ourselves.
+    let detail = error.message
+    try {
+      const body = typeof error.context?.json === 'function' ? await error.context.json() : null
+      if (body?.error) detail = body.error
+    } catch { /* response body wasn't JSON or already consumed — fall back to the generic message */ }
+    throw new Error(detail)
+  }
+  if (!data) throw new Error('Square refund failed — no response from Edge Function')
   if (data.error) throw new Error(data.error)
   return data
 }
