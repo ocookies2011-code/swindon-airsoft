@@ -982,12 +982,15 @@ export const purchaseOrders = wrapWithTimeout({
 // Calls the square-refund Supabase Edge Function (server-side).
 // The Edge Function holds the Square Access Token securely.
 // amount = number in GBP (e.g. 12.50), null = full refund.
-export async function squareRefund({ squarePaymentId, amount, locationId }) {
+export async function squareRefund({ squarePaymentId, amount }) {
   const { data, error } = await supabase.functions.invoke('square-refund', {
     body: {
       paymentId: squarePaymentId,
       amount: amount ? Math.round(Number(amount) * 100) : null,
-      locationId,
+      // NOTE: location_id is intentionally NOT sent — it's only valid for Square's
+      // "unlinked" refunds (not tied to a real payment_id). Every refund here IS
+      // tied to a real payment_id, and Square rejects the whole request with
+      // "Supplying location_id is not allowed" if it's present at all.
       reason: 'Refund from Swindon Airsoft',
     },
   })
@@ -1002,6 +1005,7 @@ export async function squareRefund({ squarePaymentId, amount, locationId }) {
     } catch { /* response body wasn't JSON or already consumed — fall back to the generic message */ }
     throw new Error(detail)
   }
+
   if (!data) throw new Error('Square refund failed — no response from Edge Function')
   if (data.error) throw new Error(data.error)
   return data
