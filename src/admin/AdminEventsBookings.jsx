@@ -301,8 +301,9 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       if (amt > Number(booking.total)) throw new Error("Refund amount exceeds booking total");
       if (!booking.squareOrderId) throw new Error("No Square payment ID on this booking — refund manually in your Square Dashboard.");
       const locationId = await api.settings.get("square_location_id");
-      const isFullRefund = Math.abs(amt - Number(booking.total)) < 0.01;
-      await squareRefund({ squarePaymentId: booking.squareOrderId, amount: isFullRefund ? null : amt, locationId });
+      // Square's Refunds API requires amount_money on every request — there is no
+      // implicit "refund everything" mode, so always send the actual amount.
+      await squareRefund({ squarePaymentId: booking.squareOrderId, amount: amt, locationId });
       await supabase.from("bookings").update({
         refund_amount: amt,
         refund_note: refundNote || null,

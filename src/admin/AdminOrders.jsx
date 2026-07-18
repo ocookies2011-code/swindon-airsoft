@@ -150,8 +150,9 @@ function AdminOrdersInline({ showToast, cu }) {
     try {
       if (!order.paypal_order_id && !order.square_order_id) throw new Error("No payment ID on this order — cannot issue automatic refund. Refund manually in your Square Dashboard.");
       const locationId = await api.settings.get("square_location_id");
-      const isFullRefund = Math.abs(amt - Number(order.total)) < 0.01;
-      await squareRefund({ squarePaymentId: order.square_order_id || order.paypal_order_id, amount: isFullRefund ? null : amt, locationId });
+      // Square's Refunds API requires amount_money on every request — there is no
+      // implicit "refund everything" mode, so always send the actual amount.
+      await squareRefund({ squarePaymentId: order.square_order_id || order.paypal_order_id, amount: amt, locationId });
       await api.shopOrders.saveRefund(order.id, amt, refundNote || null);
       setOrders(o => o.map(x => x.id === order.id ? { ...x, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() } : x));
       if (detail?.id === order.id) setDetail(d => ({ ...d, status: "refunded", refund_amount: amt, refunded_at: new Date().toISOString() }));
