@@ -179,7 +179,12 @@ function AdminRevenue({ data, save, showToast, cu }) {
     qty: b.qty,
     extras: b.extras || {},
     eventExtras: ev.extras || [],
-    total: Number(b.total),
+    total: Number(b.total) - Number(b.refundAmount || 0),
+    grossTotal: Number(b.total),
+    refundAmount: b.refundAmount || null,
+    refundNote: b.refundNote || null,
+    refundedAt: b.refundedAt || null,
+    cancelledAt: b.cancelledAt || null,
     date: b.date || b.created_at,
     checkedIn: b.checkedIn,
     squareOrderId: b.squareOrderId || null,
@@ -491,7 +496,14 @@ function AdminRevenue({ data, save, showToast, cu }) {
                         {t.source === "cash" ? "💵 Cash" : t.source === "shop" ? "🛒 Shop" : t.source === "terminal" ? "🖥 Terminal" : "🌐 Online"}
                       </span>
                     </td>
-                    <td className="text-green" style={{ fontWeight: 700 }}>£{t.total.toFixed(2)}</td>
+                    <td className="text-green" style={{ fontWeight: 700 }}>
+                      £{t.total.toFixed(2)}
+                      {t.refundAmount > 0 && (
+                        <div style={{ fontSize:10, fontWeight:400, color:"#ef5350", fontFamily:"'Share Tech Mono',monospace" }}>
+                          −£{t.refundAmount.toFixed(2)} refunded{t.cancelledAt ? " (cancelled)" : ""}
+                        </div>
+                      )}
+                    </td>
                     <td onClick={e => e.stopPropagation()} style={{ display:"flex", gap:6, alignItems:"center" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                         {t.adminNotes && <span title={t.adminNotes} style={{ fontSize:10, background:"rgba(200,255,0,.15)", border:"1px solid rgba(200,255,0,.3)", color:"#c8ff00", padding:"1px 6px", borderRadius:2, fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".05em", whiteSpace:"nowrap" }}>📝 NOTE</span>}
@@ -686,7 +698,14 @@ function AdminRevenue({ data, save, showToast, cu }) {
                 </div>
               )}
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-                <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 900 }}>TOTAL <span className="text-green">£{selected.total.toFixed(2)}</span></div>
+                  {selected.refundAmount > 0 && (
+                    <div style={{ fontSize:11, color:"#ef5350", marginTop:2 }}>
+                      Gross £{selected.grossTotal.toFixed(2)} − £{selected.refundAmount.toFixed(2)} refunded{selected.cancelledAt ? " (ticket cancelled)" : ""}{selected.refundNote ? ` — ${selected.refundNote}` : ""}
+                    </div>
+                  )}
+                </div>
                 <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
               </div>
             </div>
