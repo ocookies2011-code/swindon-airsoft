@@ -292,15 +292,16 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   };
 
   const doRefundBooking = async () => {
-    const { booking } = refundModal;
-    const amt = parseFloat(refundAmt);
-    if (isNaN(amt) || amt <= 0) { showToast("Enter a valid refund amount", "red"); return; }
-    if (amt > booking.total) { showToast("Refund amount exceeds booking total", "red"); return; }
-    if (!booking.squareOrderId) { showToast("No Square payment ID on this booking — refund manually in your Square Dashboard.", "red"); return; }
+    if (!refundModal) return;
     setRefunding(true);
     try {
+      const { booking } = refundModal;
+      const amt = parseFloat(refundAmt);
+      if (isNaN(amt) || amt <= 0) throw new Error("Enter a valid refund amount");
+      if (amt > Number(booking.total)) throw new Error("Refund amount exceeds booking total");
+      if (!booking.squareOrderId) throw new Error("No Square payment ID on this booking — refund manually in your Square Dashboard.");
       const locationId = await api.settings.get("square_location_id");
-      const isFullRefund = Math.abs(amt - booking.total) < 0.01;
+      const isFullRefund = Math.abs(amt - Number(booking.total)) < 0.01;
       await squareRefund({ squarePaymentId: booking.squareOrderId, amount: isFullRefund ? null : amt, locationId });
       await supabase.from("bookings").update({
         refund_amount: amt,
@@ -312,8 +313,10 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       showToast(`✅ Refund of £${amt.toFixed(2)} issued via Square!`);
       logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: `Booking ID: ${booking.id} — ${booking.userName} | Refund: £${amt.toFixed(2)}${refundNote ? ` | Note: ${refundNote}` : ""}` });
       setRefundModal(null); setRefundAmt(""); setRefundNote("");
-    } catch (e) { showToast("❌ Refund failed: " + (e.message || String(e)), "red"); }
-    finally { setRefunding(false); }
+    } catch (e) {
+      console.error("Refund failed:", e);
+      showToast("❌ Refund failed: " + (e?.message || String(e)), "red");
+    } finally { setRefunding(false); }
   };
 
   const ev = data.events.find(e => e.id === evId);
