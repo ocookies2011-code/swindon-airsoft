@@ -304,15 +304,19 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
       // Square's Refunds API requires amount_money on every request — there is no
       // implicit "refund everything" mode, so always send the actual amount.
       await squareRefund({ squarePaymentId: booking.squareOrderId, amount: amt, locationId });
+      // A full refund cancels the ticket: frees the slot and blocks check-in.
+      // A partial refund (e.g. an extras adjustment) leaves the booking active.
+      const isFullRefund = Math.abs(amt - Number(booking.total)) < 0.01;
       await supabase.from("bookings").update({
         refund_amount: amt,
         refund_note: refundNote || null,
         refunded_at: new Date().toISOString(),
+        ...(isFullRefund ? { cancelled_at: new Date().toISOString() } : {}),
       }).eq("id", booking.id);
       const evList = await api.events.getAll();
       save({ events: evList });
-      showToast(`✅ Refund of £${amt.toFixed(2)} issued via Square!`);
-      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: `Booking ID: ${booking.id} — ${booking.userName} | Refund: £${amt.toFixed(2)}${refundNote ? ` | Note: ${refundNote}` : ""}` });
+      showToast(`✅ Refund of £${amt.toFixed(2)} issued via Square!${isFullRefund ? " Ticket cancelled." : ""}`);
+      logAction({ adminEmail: cu?.email, adminName: cu?.name, action: "Booking refunded", detail: `Booking ID: ${booking.id} — ${booking.userName} | Refund: £${amt.toFixed(2)}${isFullRefund ? " | Ticket cancelled" : ""}${refundNote ? ` | Note: ${refundNote}` : ""}` });
       setRefundModal(null); setRefundAmt(""); setRefundNote("");
     } catch (e) {
       console.error("Refund failed:", e);
@@ -321,8 +325,8 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   };
 
   const ev = data.events.find(e => e.id === evId);
-  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).reduce((s,b) => s+(b.qty||1), 0) : 0;
-  const totalTickets   = ev ? ev.bookings.reduce((s,b) => s+(b.qty||1), 0) : 0;
+  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn && !b.cancelledAt).reduce((s,b) => s+(b.qty||1), 0) : 0;
+  const totalTickets   = ev ? ev.bookings.filter(b => !b.cancelledAt).reduce((s,b) => s+(b.qty||1), 0) : 0;
 
   const allBookings = data.events.flatMap(ev =>
     ev.bookings.map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))
@@ -353,6 +357,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   // Show confirm modal first, then actually check in
   const requestCheckin = (booking, evObj) => {
     if (!booking?.id || !booking?.userId) { showToast("Invalid booking data", "red"); return; }
+    if (booking.cancelledAt) { showToast("❌ This ticket was refunded and cancelled — cannot check in", "red"); return; }
     const today = new Date().toISOString().slice(0, 10);
     if (evObj?.date && today < evObj.date) {
       showToast(`❌ Check-in not open yet — event is on ${fmtDate(evObj.date)}`, "red"); return;
@@ -751,7 +756,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               const upcoming = data.events.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") > now);
               const past     = data.events.filter(ev => new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= now);
               const renderRow = (ev, isPast) => {
-                const booked = ev.bookings.reduce((s, b) => s + b.qty, 0);
+                const booked = ev.bookings.filter(b => !b.cancelledAt).reduce((s, b) => s + b.qty, 0);
                 return (
                   <tr key={ev.id} style={{ opacity: isPast ? 0.55 : 1 }}>
                     <td>
@@ -833,13 +838,13 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
               <div style={{ flex:1, minWidth:260 }}>
                 <select value={evId} onChange={e => setEvId(e.target.value)}
                   style={{ width:"100%", fontSize:13, padding:"9px 12px", background:"var(--bg4)", border:"1px solid var(--border)", color:"var(--text)" }}>
-                  <option value="">— All events ({allBookings.reduce((s,b) => s+(b.qty||1),0)} tickets) —</option>
+                  <option value="">— All events ({allBookings.filter(b => !b.cancelledAt).reduce((s,b) => s+(b.qty||1),0)} tickets) —</option>
                   {upcomingEvs.map(e => (
-                    <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
+                    <option key={e.id} value={e.id}>{e.title} — {fmtDate(e.date)} ({e.bookings.filter(b => !b.cancelledAt).reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
                   {pastEvs.length > 0 && <option disabled>── Past Events ──────────────</option>}
                   {pastEvs.map(e => (
-                    <option key={e.id} value={e.id} style={{ color:"#ef5350" }}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
+                    <option key={e.id} value={e.id} style={{ color:"#ef5350" }}>⬛ {e.title} — {fmtDate(e.date)} ({e.bookings.filter(b => !b.cancelledAt).reduce((s,b)=>s+(b.qty||1),0)} tickets)</option>
                   ))}
                 </select>
               </div>
@@ -869,19 +874,19 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     return sorted.map(b => {
                       const bookingEv = b.eventObj || data.events.find(e => e.bookings?.some(bk => bk.id === b.id));
                       return (
-                        <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent" }}>
+                        <tr key={b.id} style={{ background: b.checkedIn ? "rgba(200,255,0,.03)" : "transparent", opacity: b.cancelledAt ? 0.55 : 1 }}>
                           <td style={{ fontWeight:600 }}><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: b.eventObj || bookingEv, eventTitle: b.eventTitle || bookingEv?.title })} />{b.isGuest && <span style={{ marginLeft:6, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:"#f97316", border:"1px solid rgba(249,115,22,.3)", padding:"1px 5px" }}>GUEST</span>}</td>
                           <td style={{ fontSize:12, color:"var(--muted)" }}>{bookingEv?.title || "—"}</td>
                           <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
                           <td>{b.qty}</td>
                           <td className="text-green">£{Number(b.total||0).toFixed(2)}</td>
                           <td className="mono" style={{ fontSize:11 }}>{gmtShort(b.date||b.created_at)}</td>
-                          <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                          <td>{b.cancelledAt ? <span className="tag" style={{ background:"rgba(239,83,80,.12)", border:"1px solid rgba(239,83,80,.35)", color:"#ef5350" }}>✕ Cancelled</span> : (b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>)}</td>
                           <td>
                             <div style={{ display:"flex", gap:5, flexWrap:"wrap", alignItems:"center" }}>
                               <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => setViewBooking({ ...b, eventObj: bookingEv, eventTitle: bookingEv?.title })}>View</button>
                               <button className="btn btn-sm btn-ghost" style={{fontSize:10}} onClick={() => openEdit({ ...b, eventTitle: bookingEv?.title, eventObj: bookingEv })}>Edit</button>
-                              {b.squareOrderId && Number(b.total) > 0 && (
+                              {b.squareOrderId && Number(b.total) > 0 && !b.cancelledAt && (
                                 <button style={{ background:"rgba(255,152,0,.12)", border:"1px solid rgba(255,152,0,.35)", color:"#ff9800", fontSize:10, padding:"3px 7px", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:".08em", whiteSpace:"nowrap" }}
                                   onClick={() => { setRefundModal({ booking: b }); setRefundAmt(Number(b.total).toFixed(2)); setRefundNote(""); }}>£ Refund</button>
                               )}
@@ -1085,12 +1090,15 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                         </td>
                         <td className="text-green">£{b.total.toFixed(2)}</td>
                         <td className="mono" style={{ fontSize: 11 }}>{gmtShort(b.date)}</td>
-                        <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
+                        <td>{b.cancelledAt ? <span className="tag" style={{ background:"rgba(239,83,80,.12)", border:"1px solid rgba(239,83,80,.35)", color:"#ef5350" }}>✕ Cancelled</span> : (b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>)}</td>
                         <td>
                           <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                            {!b.checkedIn
-                              ? <button className="btn btn-sm btn-primary" onClick={() => requestCheckin(b, ev)}>✓ In</button>
-                              : <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>✓ CHECKED IN</span>
+                            {b.cancelledAt
+                              ? <span style={{ fontSize:11, color:"#ef5350", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>REFUNDED</span>
+                              : (!b.checkedIn
+                                ? <button className="btn btn-sm btn-primary" onClick={() => requestCheckin(b, ev)}>✓ In</button>
+                                : <span style={{ fontSize:11, color:"var(--accent)", fontFamily:"'Share Tech Mono',monospace", letterSpacing:".1em" }}>✓ CHECKED IN</span>
+                              )
                             }
                           </div>
                         </td>
