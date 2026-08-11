@@ -12,6 +12,15 @@ function getIp(req:Request, bodyIp?:string|null):string|null{
 }
 function isPriv(ip:string):boolean{return ip==="127.0.0.1"||ip==="::1"||ip.startsWith("10.")||ip.startsWith("192.168.")||/^172\.(1[6-9]|2\d|3[01])\./.test(ip);}
 
+// Fire-and-forget profile IP/last-seen stamp. Wrapped in a real try/catch
+// instead of chaining .catch() on the query builder — some supabase-js
+// versions return a builder from .update().eq() whose .catch is not directly
+// chainable, which was throwing and aborting the whole request (this was
+// silently dropping every visit for any identified/logged-in user).
+async function touchProfile(sb:any, userId:string, clientIp:string, now:string){
+  try{ await sb.from("profiles").update({last_ip:clientIp,last_seen_at:now}).eq("id",userId); }catch(e){ console.error("touchProfile error:",e instanceof Error?e.message:e); }
+}
+
 serve(async(req)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:CORS});
   try{
@@ -39,36 +48,30 @@ serve(async(req)=>{
 
     // Log IP to profile for logged-in users
     if(resolvedUserId&&clientIp&&!isPriv(clientIp)){
-      await sb.from("profiles").update({last_ip:clientIp,last_seen_at:now}).eq("id",resolvedUserId).catch(()=>{});
+      await touchProfile(sb,resolvedUserId,clientIp,now);
     }
 
-    // If anon but we have an IP, check if this IP belongs to a known logged-in user
-    // This handles the "stays logged in" case where a new session starts before auth loads
+    // If anon but we have an IP, check ONLY for a same-IP identified visit in the
+    // last 20 seconds. This exists purely to cover the race condition where the
+    // tracking effect fires before client-side auth has resolved on a fresh page
+    // load/refresh — NOT to permanently or loosely tie an IP to a person, since
+    // shared networks (same office/venue WiFi) would otherwise cause one person's
+    // anonymous browsing to be misattributed to whoever else last logged in from
+    // that IP. The old version also fell back to profiles.last_ip with no time
+    // limit at all, which made this worse — that fallback has been removed.
     if(!resolvedUserId&&clientIp&&!isPriv(clientIp)){
-      // 1. Check if this IP has a recent identified visit (within last hour)
       const{data:recentVisit}=await sb.from("page_visits")
         .select("user_id,user_name")
         .eq("client_ip",clientIp)
         .not("user_id","is",null)
-        .gte("last_seen_at",new Date(Date.now()-3600000).toISOString())
+        .gte("last_seen_at",new Date(Date.now()-20000).toISOString())
         .order("last_seen_at",{ascending:false})
         .limit(1)
         .maybeSingle();
       if(recentVisit?.user_id){
         resolvedUserId=recentVisit.user_id;
         resolvedUserName=recentVisit.user_name;
-      } else {
-        // 2. Check profiles.last_ip for this IP
-        const{data:profile}=await sb.from("profiles")
-          .select("id,name")
-          .eq("last_ip",clientIp)
-          .limit(1)
-          .maybeSingle();
-        if(profile){resolvedUserId=profile.id;resolvedUserName=profile.name;}
-      }
-      // Update profile last_seen if we resolved the user
-      if(resolvedUserId){
-        await sb.from("profiles").update({last_ip:clientIp,last_seen_at:now}).eq("id",resolvedUserId).catch(()=>{});
+        await touchProfile(sb,resolvedUserId,clientIp,now);
       }
     }
 
