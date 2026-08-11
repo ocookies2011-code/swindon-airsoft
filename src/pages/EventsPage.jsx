@@ -576,7 +576,9 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
   
   const isAdmin = cu?.role === "admin";
     const isEventPast = new Date(ev.date + "T" + (ev.endTime || ev.time || "23:59") + ":00") <= new Date();
-    const userReady = (cu && waiverValid);
+    // Waiver is no longer required to book — only to check in and play (enforced
+    // at the door on Marshal Check-In). Booking only requires being logged in.
+    const userReady = !!cu;
     const bookingBlocked = isEventPast || !userReady || isAdmin || cartEmpty || (ev.vipOnly && !cu) || isCardBanned;
 
     return (
@@ -760,7 +762,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
 
               {isEventPast && <><div className="hazard-stripe red" /><div className="alert-hazard red mb-2"><div className="alert-hazard-label">⚠ EVENT CLOSED</div><div style={{fontSize:12,color:"#fca5a5"}}>This event has ended — booking is closed.</div></div></>}
               {!isEventPast && !cu && <div className="alert alert-gold mb-2">You must be <button className="btn btn-sm btn-ghost" style={{ marginLeft:4 }} onClick={() => setAuthModal("login")}>logged in</button> to book.</div>}
-              {cu && !waiverValid && <div className="alert alert-red mb-2">⚠️ Waiver required. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
+              {cu && !waiverValid && <div className="alert alert-gold mb-2">⚠️ You haven't signed a waiver yet — you can still book, but you'll need a signed waiver before you're allowed to play. <button className="btn btn-sm btn-ghost" style={{ marginLeft:8 }} onClick={() => setWaiverModal(true)}>Sign Waiver</button></div>}
               {ev.vipOnly && cu?.vipStatus !== "active" && (
                 <div className="alert alert-gold mb-2" style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <span style={{ fontSize:18 }}>⭐</span>
@@ -1185,7 +1187,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
               )}
 
-              {cartEmpty && cu && waiverValid && (
+              {cartEmpty && cu && (
                 <div style={{ textAlign:"center", padding:"20px 0", color:"var(--muted)", fontFamily:"'Share Tech Mono',monospace", fontSize:12 }}>
                   ▸ Select tickets above to proceed
                 </div>
@@ -1309,11 +1311,6 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
                 </div>
                 );
               })()}
-              {cu && !waiverValid && (
-                <button className="btn btn-primary" style={{ width:"100%", padding:"12px", fontSize:14 }} onClick={() => setWaiverModal(true)}>
-                  SIGN WAIVER TO CONTINUE
-                </button>
-              )}
               {!bookingBlocked && bCart.rental > 0 && !rentalAgreed && (
                 <div>
                   <div style={{ background:"#0d1209", border:"2px solid #c8a000", padding:"20px 20px 16px", marginBottom:8 }}>

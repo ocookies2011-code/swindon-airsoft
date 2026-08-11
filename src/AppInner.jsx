@@ -23,7 +23,6 @@ import { SelfCheckInPage }   from "./pages/SelfCheckInPage";
 import { ClassifiedsPage }   from "./pages/ClassifiedsPage";
 import { BlockedPage }        from "./pages/BlockedPage";
 import { PendingApprovalPage } from "./pages/PendingApprovalPage";
-import { PropsPage }          from "./pages/PropsPage";
 import { UKARAPage }          from "./pages/UKARAPage";
 import { LiveChatWidget }     from "./components/LiveChatWidget";
 
@@ -57,7 +56,7 @@ function AppInner() {
   //   /checkin       → self check-in
   //   /:page         → any other named page
 
-  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","marshal","reset","checkin","props","classifieds"];
+  const PUBLIC_PAGES = ["home","events","shop","gallery","qa","vip","gift-vouchers","leaderboard","profile","about","ukara","staff","contact","terms","player","news","marshal-schedule","marshal","reset","checkin","classifieds"];
 
   const parsePath = () => {
     // Support both legacy hash URLs (#shop, #events/id) and new path URLs (/shop, /shop/id)
@@ -191,14 +190,6 @@ function AppInner() {
     supabase.from('page_visits').select('visit_count').then(({ data }) => {
       if (data) setHitCount(data.reduce((s, r) => s + (r.visit_count || 1), 0));
     }).catch(() => {});
-  }, []);
-
-  // ── Props page enabled setting ───────────────────────────────
-  const [propsEnabled, setPropsEnabled] = useState(true);
-  useEffect(() => {
-    supabase.from('site_settings').select('value').eq('key','props_enabled').maybeSingle()
-      .then(({ data }) => { if (data?.value !== undefined) setPropsEnabled(data.value !== 'false'); })
-      .catch(() => {});
   }, []);
 
   // ── Page visit tracking ──────────────────────────────────
@@ -689,7 +680,6 @@ function AppInner() {
         {page === "reset"       && <PasswordResetPage token={resetToken} setPage={setPage} showToast={showToast} />}
         {page === "checkin"     && <SelfCheckInPage cu={cu} setAuthModal={setAuthModal} />}
         {page === "classifieds" && <ClassifiedsPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
-        {page === "props"       && (propsEnabled ? <PropsPage /> : <div style={{padding:60,textAlign:"center",color:"var(--muted)"}}>This page is currently unavailable.</div>)}
         {page === "ukara"       && <UKARAPage cu={cu} setPage={setPage} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "about"       && <AboutPage setPage={setPage} />}
         {page === "staff"       && <StaffPage staff={data.staff || []} />}

@@ -54,7 +54,11 @@ export function SelfCheckInPage({ cu, setAuthModal }) {
       if (!bookings?.length) { setStatus("no-booking"); return; }
       const b = bookings[0];
       setBooking(b);
-      setStatus(b.checked_in ? "already" : "confirm");
+      if (b.checked_in) { setStatus("already"); return; }
+      // Waiver is only required to actually play, not to book — enforce it here at check-in
+      const waiverValid = cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear();
+      if (!waiverValid) { setStatus("need-waiver"); return; }
+      setStatus("confirm");
     } catch (e) {
       setErrMsg(e.message);
       setStatus("error");
@@ -68,6 +72,9 @@ export function SelfCheckInPage({ cu, setAuthModal }) {
       setStatus("not-today");
       return;
     }
+    // Final waiver guard
+    const waiverValid = cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear();
+    if (!waiverValid) { setStatus("need-waiver"); return; }
     setBusy(true);
     try {
       const { error } = await supabase
@@ -152,6 +159,19 @@ export function SelfCheckInPage({ cu, setAuthModal }) {
         You don't have a booking for <strong style={{ color:"#fff" }}>{event?.title}</strong>.<br/>
         Please see a marshal for assistance.
       </div>
+    </Wrap>
+  );
+
+  if (status === "need-waiver") return (
+    <Wrap>
+      <div style={{ fontSize:48, marginBottom:16 }}>📋</div>
+      <div style={{ ...MIL, fontSize:26, fontWeight:700, color:"#ef4444", marginBottom:8 }}>WAIVER REQUIRED</div>
+      <div style={{ background:"rgba(239,68,68,.06)", border:"1px solid rgba(239,68,68,.2)", padding:"16px 20px", marginBottom:20, fontSize:13, color:"#c8d4b0", lineHeight:1.8 }}>
+        You haven't signed a waiver yet. You must sign one before you can check in and play.
+      </div>
+      <a href={`${window.location.origin}${window.location.pathname}#profile/waiver`} className="btn btn-primary" style={{ width:"100%", fontSize:16, padding:"14px 0", display:"block", textAlign:"center", textDecoration:"none" }}>
+        SIGN WAIVER
+      </a>
     </Wrap>
   );
 

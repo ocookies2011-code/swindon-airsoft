@@ -2,9 +2,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { QRScanner, useMobile, fmtDate, gmtShort } from "../utils";
+import { QRScanner, useMobile, fmtDate, gmtShort, WaiverModal } from "../utils";
 
 function MarshalCheckinPage({ data, showToast, save, updateUser }) {
+  // Player flagged as needing a waiver before they can be checked in
+  const [waiverPrompt, setWaiverPrompt] = useState(null); // { booking, evObj, player }
   // Only show events from today onwards
   const today = new Date().toISOString().slice(0, 10);
   const upcomingEvents = data.events.filter(e => e.date >= today).sort((a,b) => a.date.localeCompare(b.date));
@@ -16,12 +18,25 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
   const ev = upcomingEvents.find(e => e.id === evId);
   const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
 
+  // Waiver was made optional at booking time — it's enforced here instead,
+  // since check-in is the actual gate to playing.
+  const hasValidWaiver = (player) =>
+    !!player && player.waiverSigned === true && player.waiverYear === new Date().getFullYear();
+
   const doCheckin = async (booking, evObj) => {
     if (!booking?.id || !booking?.userId) { showToast("Invalid booking", "red"); return; }
     // Block check-in before event date
     const today = new Date().toISOString().slice(0, 10);
     if (evObj?.date && today < evObj.date) {
       showToast(`❌ Check-in not open yet — event is on ${fmtDate(evObj.date)}`, "red"); return;
+    }
+    // Block check-in without a valid waiver for this year — this is the
+    // actual point players are required to have a signed waiver to play.
+    const player = data.users?.find(u => u.id === booking.userId);
+    if (!hasValidWaiver(player)) {
+      showToast(`⚠️ ${booking.userName} has not signed a waiver this year — sign it before checking in`, "red");
+      setWaiverPrompt({ booking, evObj, player });
+      return;
     }
     setBusy(true);
     try {
@@ -212,6 +227,36 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
       )}
 
       {scanning && <QRScanner onScan={onQRScan} onClose={() => setScanning(false)} />}
+
+      {/* Waiver-required prompt — shown when check-in is blocked by a missing/expired waiver */}
+      {waiverPrompt && !waiverPrompt.signing && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }}>
+          <div className="card" style={{ maxWidth:420, width:"100%" }}>
+            <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:900, fontSize:16, color:"var(--red)", letterSpacing:".06em", marginBottom:10 }}>
+              ⚠️ WAIVER REQUIRED
+            </div>
+            <div style={{ fontSize:13, color:"var(--muted)", lineHeight:1.6, marginBottom:16 }}>
+              <strong style={{ color:"#e8f0d8" }}>{waiverPrompt.booking?.userName}</strong> has not signed a waiver this year. They must sign one before they can be checked in and play.
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button className="btn btn-primary" style={{ flex:1 }} onClick={() => setWaiverPrompt(p => ({ ...p, signing: true }))}>
+                📝 Sign Waiver Now
+              </button>
+              <button className="btn btn-ghost" onClick={() => setWaiverPrompt(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {waiverPrompt?.signing && (
+        <WaiverModal
+          cu={waiverPrompt.player}
+          updateUser={updateUser}
+          showToast={showToast}
+          existing={waiverPrompt.player?.waiverData}
+          onClose={() => setWaiverPrompt(null)}
+        />
+      )}
     </div>
   );
 }
