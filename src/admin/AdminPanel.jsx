@@ -141,6 +141,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     // ── OPERATIONS ───────────────────────────────────────
     { id: "events",            label: "Events & Bookings", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
     { id: "scan-waiver",       label: "Scan Waiver",      icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M2 20h20"/></svg>, group: "OPERATIONS" },
+    { id: "unsigned-waivers",  label: "Waivers",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f48fb1" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, badge: unsigned || null, badgeColor: "red", group: "OPERATIONS" },
     { id: "players",           label: "Players",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>, badge: (pendingRegistrations + pendingWaivers + pendingVip + deleteReqs) || null, badgeColor: pendingRegistrations > 0 ? "red" : pendingWaivers > 0 ? "gold" : pendingVip > 0 ? "gold" : "", group: "OPERATIONS" },
     { id: "cheat-reports",     label: "Cheat Reports",    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, badge: pendingReports || null, badgeColor: "red", group: "OPERATIONS" },
     { id: "ukara-admin",       label: "UKARA",             icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ce93d8" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, badge: pendingUkara || null, badgeColor: "purple", group: "OPERATIONS" },
@@ -157,13 +158,15 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     { id: "messages",          label: "Site Messages",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f48fb1" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>, group: "CONTENT" },
     { id: "news-admin",        label: "News & Updates",   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>, group: "CONTENT" },
     { id: "marshal-admin",     label: "Marshal Schedule",  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>, group: "CONTENT" },
-    { id: "contact-admin",     label: "Contact Depts",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, group: "CONTENT" },
+    { id: "contact-admin",     label: "Departments",       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, group: "CONTENT" },
+
+    // ── COMMUNITY ────────────────────────────────────────
+    { id: "classifieds-admin",  label: "Classifieds",      icon: "🛒", group: "COMMUNITY" },
+    { id: "reported-messages",  label: "Message Reports",  icon: "🚩", group: "COMMUNITY" },
+    { id: "contact-inbox",     label: "Contact Inbox",    icon: "📨", badge: pendingContact || null, badgeColor: "red", group: "COMMUNITY" },
 
     // ── ANALYTICS ────────────────────────────────────────
     { id: "leaderboard-admin", label: "Leaderboard",       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd54f" strokeWidth="2"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>, group: "ANALYTICS" },
-    { id: "classifieds-admin",  label: "Classifieds",      icon: "🛒", group: "COMMUNITY" },
-    { id: "reported-messages",  label: "Reports",          icon: "🚩", group: "COMMUNITY" },
-    { id: "contact-inbox",     label: "Contact Inbox",    icon: "📨", badge: pendingContact || null, badgeColor: "red", group: "COMMUNITY" },
     { id: "visitor-stats",     label: "Visitor Stats",     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80cbc4" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, group: "ANALYTICS" },
     { id: "security",           label: "Security",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, group: "ANALYTICS" },
     ...(isSuperAdmin ? [{ id: "revenue", label: "Revenue", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, group: "ANALYTICS" }] : []),
@@ -227,6 +230,9 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
         </div>
         <div className="admin-content">
           {section === "dashboard" && <AdminDash data={data} setSection={setSection} isSuperAdmin={isSuperAdmin} />}
+          {/* Events, Players, and Shop are kept mounted (display:none instead of unmounting) so their
+              internal state — filters, scroll position, in-progress edits, fetched data — survives
+              switching tabs and coming back. Every other section unmounts normally on tab switch. */}
           <div style={{ display: section === "events" ? "block" : "none" }}><AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} /></div>
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
           {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
