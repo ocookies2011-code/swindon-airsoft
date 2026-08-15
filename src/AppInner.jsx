@@ -391,6 +391,15 @@ function AppInner() {
     return () => { clearTimeout(timeout); subscription.unsubscribe(); };
   }, []);
 
+  // If the user logs out while sitting on the profile page, bounce to home
+  // instead of leaving a null-cu ProfilePage render behind (was crashing with
+  // "Cannot read properties of null (reading 'gamesAttended')").
+  useEffect(() => {
+    if (!authLoading && !cu && page === "profile") {
+      setPage("home");
+    }
+  }, [cu, authLoading, page]);
+
   // Refresh current user profile after updates
   const refreshCu = useCallback(async () => {
     if (!cu) return;
@@ -674,7 +683,7 @@ function AppInner() {
         {page === "qa"          && <QAPage data={data} />}
         {page === "gift-vouchers" && <GiftVoucherPage cu={cu} showToast={showToast} setAuthModal={setAuthModal} />}
         {page === "vip"         && <VipPage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} setPage={setPage} />}
-        {page === "profile"     && !authLoading && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
+        {page === "profile"     && !authLoading && cu && <ProfilePage data={data} cu={cu} updateUser={updateUserAndRefresh} showToast={showToast} save={save} refresh={refreshCu} setPage={setPage} />}
         {page === "profile"     && authLoading  && <div style={{ textAlign:"center", padding:60, color:"var(--muted)" }}>Loading…</div>}
         {page === "player"      && <PublicProfilePage userId={publicProfileId} prevPage={prevPage} setPage={setPage} />}
         {page === "reset"       && <PasswordResetPage token={resetToken} setPage={setPage} showToast={showToast} />}
