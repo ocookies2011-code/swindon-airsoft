@@ -53,11 +53,10 @@ function AdminCancellationRequests({ showToast, cu, refresh }) {
     if (!(amt > 0)) { showToast("Enter a valid amount.", "red"); return; }
     setBusyId(r.id);
     try {
-      // Soft-cancel the booking — admin is allowed to update any booking row
-      const { error: bErr } = await supabase.from("bookings")
-        .update({ cancelled_at: new Date().toISOString() }).eq("id", r.booking_id);
-      if (bErr) throw bErr;
-
+      // Issue the credit/refund FIRST, then soft-cancel the booking. If this were
+      // reversed and the refund/credit step failed (e.g. no real Square payment
+      // to refund), the booking would end up cancelled with nothing actually
+      // issued, and the request stuck as "pending" with no way to tell.
       if (method === "credit") {
         const { error: rpcErr } = await supabase.rpc("admin_award_credit", {
           p_user_id: r.user_id, p_amount: amt, p_note: note || `Cancellation of ${r.event_title}`,
@@ -69,6 +68,11 @@ function AdminCancellationRequests({ showToast, cu, refresh }) {
         }
         await squareRefund({ squarePaymentId: r.square_order_id, amount: amt });
       }
+
+      // Soft-cancel the booking — admin is allowed to update any booking row
+      const { error: bErr } = await supabase.from("bookings")
+        .update({ cancelled_at: new Date().toISOString() }).eq("id", r.booking_id);
+      if (bErr) throw bErr;
 
       await supabase.from("cancellation_requests").update({
         status: "approved",

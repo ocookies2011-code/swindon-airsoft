@@ -430,7 +430,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
   }, []);
 
   const printPlayerList = (ev) => {
-    const bookings = ev.bookings || [];
+    const bookings = (ev.bookings || []).filter(b => !b.cancelledAt);
     const ticketTypes = {};
     const extraCounts = {};
     bookings.forEach(b => {
@@ -1306,11 +1306,11 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                 w.document.close();
               }}>🖨 Print Check-In Poster</button>
             </div>
-            <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{fmtDate(viewEv.date)} @ {viewEv.time} GMT | {viewEv.location} · {viewEv.bookings.length} booked</p>
+            <p className="text-muted" style={{ fontSize: 13, marginBottom: 16 }}>{fmtDate(viewEv.date)} @ {viewEv.time} GMT | {viewEv.location} · {viewEv.bookings.filter(b => !b.cancelledAt).length} booked</p>
             <div className="table-wrap"><table className="data-table">
               <thead><tr><th>Player</th><th>Type</th><th>Qty</th><th>Extras</th><th>Total</th><th>Booked</th><th>Status</th></tr></thead>
               <tbody>
-                {[...viewEv.bookings].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => (
+                {[...viewEv.bookings].filter(b => !b.cancelledAt).sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => (
                   <tr key={b.id}>
                     <td><PlayerLink id={b.userId} name={b.userName} onNameClick={() => setViewBooking({ ...b, eventObj: ev, eventTitle: ev?.title })} /></td>
                     <td>{b.type === "walkOn" ? "Walk-On" : "Rental"}</td>
@@ -1348,7 +1348,7 @@ function AdminEventsBookings({ data, save, updateEvent, updateUser, showToast, c
                     <td>{b.checkedIn ? <span className="tag tag-green">✓ In</span> : <span className="tag tag-blue">Booked</span>}</td>
                   </tr>
                 ))}
-                {viewEv.bookings.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No bookings</td></tr>}
+                {viewEv.bookings.filter(b => !b.cancelledAt).length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No bookings</td></tr>}
               </tbody>
             </table></div>
             <button className="btn btn-ghost mt-2" onClick={() => setViewId(null)}>Close</button>
