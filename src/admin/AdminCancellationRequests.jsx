@@ -8,7 +8,7 @@ import { squareRefund, waitlistApi, holdApi } from "../api";
 import { fmtDate, gmtShort, sendEmail } from "../utils";
 import { logAction } from "./adminHelpers";
 
-function AdminCancellationRequests({ showToast, cu }) {
+function AdminCancellationRequests({ showToast, cu, refresh }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState("pending");
@@ -120,6 +120,7 @@ function AdminCancellationRequests({ showToast, cu }) {
       showToast("Cancellation approved.");
       setReviewModal(null);
       load();
+      refresh?.();
     } catch (e) {
       showToast("Approval failed: " + (e.message || String(e)), "red");
     } finally { setBusyId(null); }

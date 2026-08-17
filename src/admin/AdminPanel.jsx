@@ -252,7 +252,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
               internal state — filters, scroll position, in-progress edits, fetched data — survives
               switching tabs and coming back. Every other section unmounts normally on tab switch. */}
           <div style={{ display: section === "events" ? "block" : "none" }}><AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} /></div>
-          {section === "cancellation-requests" && <AdminCancellationRequests showToast={showToast} cu={cu} />}
+          {section === "cancellation-requests" && <AdminCancellationRequests showToast={showToast} cu={cu} refresh={refresh} />}
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
           {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
           {section === "scan-waiver" && <AdminScanWaiver data={data} updateUser={updateUser} showToast={showToast} />}
