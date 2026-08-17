@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import * as api from "../api";
-import { DesignationInsignia, QRCode, QRScanner, RankInsignia, SquareCheckoutButton, WaiverModal, fmtDate, fmtErr, gmtShort, loadSquareConfig, sendCancellationEmail, sendWaitlistNotifyEmail, sendWelcomeEmail, uid, useMobile } from "../utils";
+import { cancellationRequests } from "../api";
+import { DesignationInsignia, QRCode, QRScanner, RankInsignia, SquareCheckoutButton, WaiverModal, fmtDate, fmtErr, gmtShort, loadSquareConfig, sendEmail, sendWelcomeEmail, uid, useMobile } from "../utils";
 import { LoadoutTab } from "./LoadoutTab";
 import { ReportCheatTab } from "./ReportCheatTab";
 import { PlayerOrders } from "./PlayerOrders";
@@ -148,124 +149,56 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
         return;
       }
 
-      // Calculate refund
-      let refundAmount = Number(b.total);
-      if (isRental) refundAmount = refundAmount * 0.9; // 10% charge on rentals
-      refundAmount = Math.round(refundAmount * 100) / 100;
+      // Suggested figures shown to the admin — not acted on automatically.
+      // Cancellation now goes to admin review rather than auto-processing:
+      // see AdminCancellationRequests.jsx for where this gets approved/rejected.
+      let suggestedAmount = Number(b.total);
+      if (isRental) suggestedAmount = suggestedAmount * 0.9; // 10% charge on rentals
+      suggestedAmount = Math.round(suggestedAmount * 100) / 100;
+      const hasRealSquarePayment = b.squareOrderId && !b.squareOrderId.startsWith("ADMIN-") && !b.squareOrderId.startsWith("CREDITS-");
+      const suggestedMethod = within48 || !hasRealSquarePayment ? "credit" : "refund";
 
-      // ── IMPORTANT: Delete booking FIRST before awarding credits ──
-      // This prevents credits being awarded if the delete fails
-      await api.bookings.delete(b.id);
-      save({ events: data.events.map(ev => ({ ...ev, bookings: ev.bookings.filter(bk => bk.id !== b.id) })) });
+      await cancellationRequests.create({
+        bookingId: b.id,
+        userId: cu.id,
+        userName: cu.name,
+        userEmail: cu.email,
+        eventId: b.eventObj.id,
+        eventTitle: b.eventTitle,
+        eventDate: b.eventDate,
+        ticketType: b.type,
+        qty: b.qty,
+        total: b.total,
+        suggestedRefundAmount: suggestedAmount,
+        suggestedMethod,
+        squareOrderId: b.squareOrderId,
+        hoursUntilEvent: Math.round(hoursUntil),
+      });
 
-      // Award credits or refund only after booking is confirmed deleted
-      let creditAwarded = false;
-      if (within48) {
-        // Within 48h — give credits (use RPC to bypass RLS cleanly)
-        const { data: newCredits } = await supabase.rpc("award_cancellation_credit", {
-          p_user_id: cu.id, p_amount: refundAmount
-        });
-        updateUser(cu.id, { credits: newCredits ?? ((Number(cu.credits) || 0) + refundAmount) });
-        creditAwarded = true;
-      } else if (b.squareOrderId && !b.squareOrderId.startsWith("ADMIN-") && !b.squareOrderId.startsWith("CREDITS-")) {
-        // Outside 48h — try Square refund
-        try {
-          const locationId = await api.settings.get("square_location_id");
-          await squareRefund({ squarePaymentId: b.squareOrderId, amount: refundAmount, locationId });
-        } catch {
-          // Square refund failed — fall back to credits
-          const { data: newCredits } = await supabase.rpc("award_cancellation_credit", {
-            p_user_id: cu.id, p_amount: refundAmount
-          });
-          updateUser(cu.id, { credits: newCredits ?? ((Number(cu.credits) || 0) + refundAmount) });
-          creditAwarded = true;
-        }
-      } else {
-        // No Square payment (manual/admin booking) — give credits
-        const { data: newCredits } = await supabase.rpc("award_cancellation_credit", {
-          p_user_id: cu.id, p_amount: refundAmount
-        });
-        updateUser(cu.id, { credits: newCredits ?? ((Number(cu.credits) || 0) + refundAmount) });
-        creditAwarded = true;
-      }
+      showToast("Cancellation request sent — an admin will review it shortly.");
 
-      // Create a 30-min hold for the first person on the waitlist for this ticket type
-      try {
-        const freedType = b.type;
-        const wl = await waitlistApi.getByEvent(b.eventObj.id);
-        const first = wl.find(w => w.ticket_type === freedType);
-        if (first?.user_email) {
-          // Create the hold so the slot is reserved for them for 30 minutes
-          await holdApi.createHold({
-            eventId: b.eventObj.id,
-            ticketType: freedType,
-            userId: first.user_id,
-            userName: first.user_name,
-            userEmail: first.user_email,
-          });
-          sendWaitlistNotifyEmail({ toEmail: first.user_email, toName: first.user_name, ev: b.eventObj, ticketType: freedType }).catch(() => {});
-        }
-      } catch { /* non-fatal */ }
-
-      const isCredits = within48 || !b.squareOrderId;
-      showToast(
-        isRental && within48
-          ? `Booking cancelled. £${refundAmount.toFixed(2)} game credits added (10% rental fee applied, within 48h).`
-          : isRental
-          ? `Booking cancelled. £${refundAmount.toFixed(2)} refunded (10% rental fee applied).`
-          : within48
-          ? `Booking cancelled. £${refundAmount.toFixed(2)} added as game credits (within 48h of event).`
-          : `Booking cancelled. £${refundAmount.toFixed(2)} refunded.`
-      );
-
-      // Send cancellation confirmation to player (fire & forget)
-      if (cu.email) {
-        sendCancellationEmail({
-          cu,
-          eventTitle: b.eventTitle,
-          eventDate:  b.eventDate,
-          ticketType: b.type,
-          refundAmount,
-          isCredits,
-          isRental,
-        }).then(() => showToast("📧 Cancellation confirmation sent.")).catch(() => {});
-      }
-
-      // Notify admin of cancellation
+      // Notify admin of the pending request
       sendEmail({
         toEmail: "swindonairsoftfield@gmail.com",
         toName:  "Swindon Airsoft Admin",
-        subject: `❌ Booking Cancelled — ${cu.name} (${b.eventTitle})`,
+        subject: `🔔 Cancellation Request — ${cu.name} (${b.eventTitle})`,
         htmlContent: `
           <div style="font-family:Arial,sans-serif;padding:20px">
-            <h2 style="color:#c8550000">❌ Booking Cancelled</h2>
+            <h2 style="color:#c85500">🔔 Cancellation Request Pending Review</h2>
             <table style="font-size:14px;border-collapse:collapse">
               <tr><td style="padding:4px 12px 4px 0;color:#666">Player</td><td><strong>${cu.name}</strong> (${cu.email})</td></tr>
               <tr><td style="padding:4px 12px 4px 0;color:#666">Event</td><td>${b.eventTitle}</td></tr>
               <tr><td style="padding:4px 12px 4px 0;color:#666">Ticket</td><td>${b.qty}x ${b.type} — £${Number(b.total).toFixed(2)}</td></tr>
-              <tr><td style="padding:4px 12px 4px 0;color:#666">Refund</td><td>${creditAwarded ? `£${refundAmount.toFixed(2)} game credits added to account` : `£${refundAmount.toFixed(2)} Square refund issued`}</td></tr>
-              <tr><td style="padding:4px 12px 4px 0;color:#666">Within 48h</td><td>${within48 ? "Yes — credits given" : "No — refund issued"}</td></tr>
-              <tr><td style="padding:4px 12px 4px 0;color:#666">Time</td><td>${new Date().toLocaleString("en-GB", { timeZone:"Europe/London" })}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Suggested</td><td>£${suggestedAmount.toFixed(2)} as ${suggestedMethod === "credit" ? "game credits" : "Square refund"}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666">Time until event</td><td>${Math.round(hoursUntil)}h</td></tr>
             </table>
-            <p style="color:#666;font-size:12px;margin-top:16px">This is an automated notification from Swindon Airsoft.</p>
+            <p style="color:#666;font-size:12px;margin-top:16px">Review and approve/reject in Admin → Cancellation Requests.</p>
           </div>`,
-      }).catch(() => {});
-
-      // Audit log
-      supabase.from("admin_audit_log").insert({
-        admin_name:  cu.name,
-        admin_email: cu.email,
-        player_id:   cu.id,
-        player_name: cu.name,
-        action:      "booking_cancelled",
-        details:     `Self-cancelled: ${b.qty}x ${b.type} — ${b.eventTitle}`,
-        old_value:   `Booked, total: £${Number(b.total).toFixed(2)}`,
-        new_value:   creditAwarded ? `Credits added: £${refundAmount.toFixed(2)}` : `Refunded: £${refundAmount.toFixed(2)}`,
       }).catch(() => {});
 
       setCancelModal(null);
     } catch (e) {
-      showToast("Cancellation failed: " + (e.message || String(e)), "red");
+      showToast("Cancellation request failed: " + (e.message || String(e)), "red");
     } finally { setCancelling(false); }
   };
   // Use the higher of stored count vs actual (in case bookings haven't all loaded)

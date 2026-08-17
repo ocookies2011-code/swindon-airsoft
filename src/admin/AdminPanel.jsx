@@ -8,6 +8,7 @@ import { SA_LOGO_SRC } from "../assets/logoImage";
 
 import { AdminDash }               from "./AdminDash";
 import { AdminEventsBookings }     from "./AdminEventsBookings";
+import { AdminCancellationRequests } from "./AdminCancellationRequests";
 import { AdminPlayers }            from "./AdminPlayers";
 import { AdminOrdersInline }       from "./AdminOrders";
 import { AdminShop }               from "./AdminShop";
@@ -50,7 +51,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     // Also support legacy hash URLs
     const hashParts = window.location.hash.replace("#","").split("/");
     const src = parts[0] === "admin" ? parts : (hashParts[0] === "admin" ? hashParts : []);
-    const ADMIN_SECTIONS = ["dashboard","events","waivers","unsigned-waivers","scan-waiver","players","shop",
+    const ADMIN_SECTIONS = ["dashboard","events","cancellation-requests","waivers","unsigned-waivers","scan-waiver","players","shop",
       "leaderboard-admin","revenue","visitor-stats","security","classifieds-admin","reported-messages","gallery-admin","qa-admin","staff-admin",
       "contact-inbox","contact-admin","messages","news-admin","marshal-admin","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
     return src[1] && ADMIN_SECTIONS.includes(src[1]) ? src[1] : "dashboard";
@@ -74,6 +75,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const [pendingReports, setPendingReports] = useState(0);
   const [pendingUkara, setPendingUkara] = React.useState(0);
   const [pendingContact, setPendingContact] = useState(0);
+  const [pendingCancellations, setPendingCancellations] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
     const fetchPending = () =>
@@ -127,6 +129,21 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     return () => { supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
+  useEffect(() => {
+    const fetchPendingCancellations = () =>
+      supabase.from("cancellation_requests").select("id", { count: "exact", head: true }).eq("status", "pending")
+        .then(({ count }) => setPendingCancellations(count || 0))
+        .catch(() => {});
+    fetchPendingCancellations();
+    const ch = supabase
+      .channel("admin_nav_cancellation_badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cancellation_requests" }, fetchPendingCancellations)
+      .subscribe();
+    const onVisible = () => { if (document.visibilityState === "visible") fetchPendingCancellations(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVisible); };
+  }, []);
+
   const unsigned = data.users.filter(u => u.role === "player" && !(u.waiverSigned === true && u.waiverYear === new Date().getFullYear())).length;
   const _now = new Date();
   const _activeEvts = data.events.filter(e => e.published && new Date(e.date + "T" + (e.endTime || e.time || "23:59") + ":00") > _now);
@@ -140,6 +157,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
 
     // ── OPERATIONS ───────────────────────────────────────
     { id: "events",            label: "Events & Bookings", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, badge: totalBookings, badgeColor: "blue", group: "OPERATIONS" },
+    { id: "cancellation-requests", label: "Cancellation Requests", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff8a65" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, badge: pendingCancellations || null, badgeColor: "gold", group: "OPERATIONS" },
     { id: "scan-waiver",       label: "Scan Waiver",      icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M2 20h20"/></svg>, group: "OPERATIONS" },
     { id: "unsigned-waivers",  label: "Waivers",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f48fb1" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, badge: unsigned || null, badgeColor: "red", group: "OPERATIONS" },
     { id: "players",           label: "Players",           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#81c784" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>, badge: (pendingRegistrations + pendingWaivers + pendingVip + deleteReqs) || null, badgeColor: pendingRegistrations > 0 ? "red" : pendingWaivers > 0 ? "gold" : pendingVip > 0 ? "gold" : "", group: "OPERATIONS" },
@@ -234,6 +252,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
               internal state — filters, scroll position, in-progress edits, fetched data — survives
               switching tabs and coming back. Every other section unmounts normally on tab switch. */}
           <div style={{ display: section === "events" ? "block" : "none" }}><AdminEventsBookings data={data} save={save} updateEvent={updateEvent} updateUser={updateUser} showToast={showToast} cu={cu} /></div>
+          {section === "cancellation-requests" && <AdminCancellationRequests showToast={showToast} cu={cu} />}
           {section === "waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} cu={cu} />}
           {section === "unsigned-waivers" && <AdminWaivers data={data} updateUser={updateUser} showToast={showToast} filterUnsigned cu={cu} />}
           {section === "scan-waiver" && <AdminScanWaiver data={data} updateUser={updateUser} showToast={showToast} />}

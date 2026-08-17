@@ -354,6 +354,19 @@ export const bookings = wrapWithTimeout({
     if (error) throw error
   },
 
+  // Soft-cancel: sets cancelled_at instead of deleting the row.
+  // Player-initiated deletes are blocked by RLS (bookings_delete requires is_admin()),
+  // so a hard delete() call here silently affects 0 rows without erroring — the
+  // booking stays, but downstream code (credits/refund) proceeds as if it's gone.
+  // Updating cancelled_at works within the existing bookings_update RLS policy
+  // (user_id = auth.uid()), and every capacity/check-in/admin-audit code path
+  // already respects cancelled_at, so this integrates cleanly.
+  async cancel(bookingId) {
+    const { error } = await supabase
+      .from('bookings').update({ cancelled_at: new Date().toISOString() }).eq('id', bookingId)
+    if (error) throw error
+  },
+
   async delete(bookingId) {
     const { error } = await supabase
       .from('bookings').delete().eq('id', bookingId)
@@ -982,7 +995,32 @@ export const purchaseOrders = wrapWithTimeout({
   },
 })
 
-// ── Square Refunds ────────────────────────────────────────
+// ── Cancellation Requests ────────────────────────────────
+// Player-initiated cancellations now go through admin review instead of
+// being auto-processed. See AdminCancellationRequests.jsx for the approval side.
+export const cancellationRequests = wrapWithTimeout({
+  async create(req) {
+    const { error } = await supabase.from('cancellation_requests').insert({
+      booking_id:               req.bookingId,
+      user_id:                  req.userId,
+      user_name:                req.userName,
+      user_email:               req.userEmail,
+      event_id:                 req.eventId,
+      event_title:              req.eventTitle,
+      event_date:               req.eventDate,
+      ticket_type:              req.ticketType,
+      qty:                      req.qty,
+      total:                    req.total,
+      suggested_refund_amount:  req.suggestedRefundAmount,
+      suggested_method:         req.suggestedMethod,
+      square_order_id:          req.squareOrderId || null,
+      hours_until_event:        req.hoursUntilEvent,
+    })
+    if (error) throw error
+  },
+})
+
+
 // Calls the square-refund Supabase Edge Function (server-side).
 // The Edge Function holds the Square Access Token securely.
 // amount = number in GBP (e.g. 12.50), null = full refund.
