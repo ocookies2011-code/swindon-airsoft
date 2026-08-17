@@ -9,7 +9,7 @@
 // instead — it can't fail to render since it's just an ordinary page, and
 // a short-lived cookie remembers that you got in.
 
-import { next } from '@vercel/functions'
+import { next, rewrite } from '@vercel/functions'
 
 const PASSWORD = 'FieldConcept2026!'
 const COOKIE_NAME = 'concept_gate'
@@ -76,6 +76,16 @@ export default async function middleware(request) {
 
   if (!authed) {
     return html(page({}), 401)
+  }
+
+  // Bare /concept has no file extension, so it needs an explicit rewrite to
+  // the actual index.html — everything else under /concept (assets/*.js,
+  // *.css, etc.) already has a real file to resolve to and just needs next().
+  // This used to be a vercel.json rewrite, but that rule wasn't being applied
+  // once middleware also matched the same path — doing it here avoids
+  // whatever ordering conflict caused that.
+  if (url.pathname === '/concept' || url.pathname === '/concept/') {
+    return rewrite(new URL('/concept/index.html', request.url))
   }
 
   return next()
