@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npx vite",
-    "build": "npx vite build && npm --prefix test-site ci --no-audit --no-fund && npm --prefix test-site run build && rm -rf dist/concept && mkdir -p dist/concept && cp -r test-site/dist/. dist/concept/",
+    "build": "npx vite build",
     "preview": "npx vite preview"
   },
   "dependencies": {
