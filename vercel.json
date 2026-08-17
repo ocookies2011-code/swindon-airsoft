@@ -72,6 +72,14 @@
       "destination": "/api/$1"
     },
     {
+      "source": "/concept",
+      "destination": "/concept/index.html"
+    },
+    {
+      "source": "/concept/",
+      "destination": "/concept/index.html"
+    },
+    {
       "source": "/((?!.*\\.[a-zA-Z0-9]{1,5}$).*)",
       "destination": "/index.html"
     }
