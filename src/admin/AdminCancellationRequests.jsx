@@ -205,7 +205,7 @@ function AdminCancellationRequests({ showToast, cu, refresh }) {
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
             <thead>
               <tr style={{ borderBottom:"1px solid var(--border)", background:"var(--bg4)" }}>
-                {["Requested","Player","Event","Ticket","Suggested","Status",""].map(h => (
+                {["Requested","Player","Event","Ticket","Amount","Status",""].map(h => (
                   <th key={h} style={{ padding:"8px 12px", textAlign:"left", fontSize:10, color:"var(--muted)", letterSpacing:".1em", textTransform:"uppercase", fontWeight:600 }}>{h}</th>
                 ))}
               </tr>
@@ -224,7 +224,18 @@ function AdminCancellationRequests({ showToast, cu, refresh }) {
                   </td>
                   <td style={{ padding:"10px 12px" }}>{r.qty}x {r.ticket_type} · £{Number(r.total).toFixed(2)}</td>
                   <td style={{ padding:"10px 12px", fontFamily:"'Share Tech Mono',monospace" }}>
-                    £{Number(r.suggested_refund_amount).toFixed(2)} <span style={{ color:"var(--muted)" }}>({r.suggested_method})</span>
+                    {r.status === "approved" ? (
+                      <>
+                        £{Number(r.resolved_amount).toFixed(2)} <span style={{ color:"var(--muted)" }}>({r.resolved_method})</span>
+                        {(Number(r.resolved_amount) !== Number(r.suggested_refund_amount) || r.resolved_method !== r.suggested_method) && (
+                          <div style={{ fontSize:9, color:"var(--muted)", marginTop:2 }}>
+                            suggested £{Number(r.suggested_refund_amount).toFixed(2)} ({r.suggested_method})
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>£{Number(r.suggested_refund_amount).toFixed(2)} <span style={{ color:"var(--muted)" }}>({r.suggested_method})</span></>
+                    )}
                   </td>
                   <td style={{ padding:"10px 12px" }}>
                     <span style={{ background:"rgba(0,0,0,.3)", border:`1px solid ${statusColor[r.status]}`, color:statusColor[r.status], fontSize:9, fontWeight:700, padding:"2px 7px", letterSpacing:".1em", textTransform:"uppercase" }}>
