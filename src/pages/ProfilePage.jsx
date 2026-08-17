@@ -59,7 +59,7 @@ function ProfilePage({ data, cu, updateUser, showToast, save, refresh, setPage }
   const [waiverModal, setWaiverModal] = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
   const waiverValid = cu && ((cu.waiverSigned === true && cu.waiverYear === new Date().getFullYear()) || cu.role === "admin");
-  const myBookings = cu ? data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))) : [];
+  const myBookings = cu ? data.events.flatMap(ev => ev.bookings.filter(b => b.userId === cu.id && !b.cancelledAt).map(b => ({ ...b, eventTitle: ev.title, eventDate: ev.date, eventObj: ev }))) : [];
 
   // Auto-open scanner when player arrives via QR code scan (#checkin)
   useEffect(() => {

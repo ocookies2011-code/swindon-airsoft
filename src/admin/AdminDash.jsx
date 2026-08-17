@@ -5,8 +5,8 @@ import * as api from "../api";
 import { GmtClock, fmtDate, sendEventReminderEmail } from "../utils";
 
 function AdminDash({ data, setSection, isSuperAdmin }) {
-  const allBookings = data.events.flatMap(e => e.bookings);
-  const revenue = allBookings.filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + b.total, 0);
+  const allBookings = data.events.flatMap(e => e.bookings).filter(b => !b.cancelledAt);
+  const revenue = allBookings.filter(b => !b.squareOrderId?.startsWith("ADMIN-MANUAL-")).reduce((s, b) => s + (b.total - (b.refundAmount || 0)), 0);
   const checkins = allBookings.filter(b => b.checkedIn).length;
   const players = data.users.filter(u => u.role === "player").length;
   const [pendingUkara, setPendingUkara] = React.useState(0);
@@ -102,14 +102,14 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
   const hoursToNextEvent = nextEvent
     ? Math.round((new Date(nextEvent.date) - new Date()) / 3600000)
     : null;
-  const reminderDue = hoursToNextEvent !== null && hoursToNextEvent <= 48 && hoursToNextEvent > 0 && nextEvent.bookings.length > 0;
+  const reminderDue = hoursToNextEvent !== null && hoursToNextEvent <= 48 && hoursToNextEvent > 0 && nextEvent.bookings.filter(b => !b.cancelledAt).length > 0;
 
   const sendRemindersNow = async () => {
     if (!nextEvent) return;
     setReminderBusy(true);
     setReminderResult(null);
     try {
-      const bookedUsers = nextEvent.bookings.map(b => {
+      const bookedUsers = nextEvent.bookings.filter(b => !b.cancelledAt).map(b => {
         const u = data.users.find(u => u.id === b.userId);
         return u ? { ...u, bookingType: b.type, bookingTotal: b.total } : null;
       }).filter(Boolean);
@@ -164,7 +164,7 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
               {reminderDue && <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"2px 7px", background:"rgba(249,115,22,.15)", border:"1px solid rgba(249,115,22,.5)", color:"#f97316", letterSpacing:".1em" }}>⚡ {hoursToNextEvent}H — SEND REMINDERS</span>}
             </div>
             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
-              {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {nextEvent.bookings.length} player(s) booked
+              {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · {nextEvent.bookings.filter(b => !b.cancelledAt).length} player(s) booked
             </div>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -176,7 +176,7 @@ function AdminDash({ data, setSection, isSuperAdmin }) {
             {reminderResult?.error && (
               <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "var(--red)" }}>✗ {reminderResult.error}</span>
             )}
-            <button className="btn btn-sm btn-primary" onClick={sendRemindersNow} disabled={reminderBusy || nextEvent.bookings.length === 0}
+            <button className="btn btn-sm btn-primary" onClick={sendRemindersNow} disabled={reminderBusy || nextEvent.bookings.filter(b => !b.cancelledAt).length === 0}
               style={{ fontSize: 11, letterSpacing: ".1em" }}>
               {reminderBusy ? "Sending…" : "📧 Send Reminders"}
             </button>

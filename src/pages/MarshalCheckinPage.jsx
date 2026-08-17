@@ -16,7 +16,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
   const [busy, setBusy] = useState(false);
 
   const ev = upcomingEvents.find(e => e.id === evId);
-  const checkedInCount = ev ? ev.bookings.filter(b => b.checkedIn).length : 0;
+  const checkedInCount = ev ? ev.bookings.filter(b => !b.cancelledAt && b.checkedIn).length : 0;
 
   // Waiver was made optional at booking time — it's enforced here instead,
   // since check-in is the actual gate to playing.
@@ -25,6 +25,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
 
   const doCheckin = async (booking, evObj) => {
     if (!booking?.id || !booking?.userId) { showToast("Invalid booking", "red"); return; }
+    if (booking.cancelledAt) { showToast("❌ This ticket was cancelled — cannot check in", "red"); return; }
     // Block check-in before event date
     const today = new Date().toISOString().slice(0, 10);
     if (evObj?.date && today < evObj.date) {
@@ -58,7 +59,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
 
   const manualCheckin = () => {
     if (!ev || !manual.trim()) return;
-    const found = ev.bookings.find(x =>
+    const found = ev.bookings.filter(b => !b.cancelledAt).find(x =>
       x.userName.toLowerCase().includes(manual.toLowerCase()) || x.id === manual.trim()
     );
     if (!found) { showToast("Booking not found", "red"); return; }
@@ -71,6 +72,7 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
     for (const evObj of upcomingEvents) {
       const b = evObj.bookings.find(x => x.id === code);
       if (b) {
+        if (b.cancelledAt) { showToast(`❌ ${b.userName}'s ticket was cancelled — cannot check in`, "red"); return; }
         if (b.checkedIn) { showToast(`${b.userName} already checked in`, "gold"); return; }
         doCheckin(b, evObj); return;
       }
@@ -95,10 +97,10 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
           </select>
         </div>
         {ev && (() => {
-          const walkOnBooked   = ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + (b.qty||1), 0);
-          const rentalBooked   = ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + (b.qty||1), 0);
-          const walkOnChecked  = ev.bookings.filter(b => b.type === "walkOn" && b.checkedIn).reduce((s,b) => s + (b.qty||1), 0);
-          const rentalChecked  = ev.bookings.filter(b => b.type === "rental" && b.checkedIn).reduce((s,b) => s + (b.qty||1), 0);
+          const walkOnBooked   = ev.bookings.filter(b => !b.cancelledAt && b.type === "walkOn").reduce((s,b) => s + (b.qty||1), 0);
+          const rentalBooked   = ev.bookings.filter(b => !b.cancelledAt && b.type === "rental").reduce((s,b) => s + (b.qty||1), 0);
+          const walkOnChecked  = ev.bookings.filter(b => !b.cancelledAt && b.type === "walkOn" && b.checkedIn).reduce((s,b) => s + (b.qty||1), 0);
+          const rentalChecked  = ev.bookings.filter(b => !b.cancelledAt && b.type === "rental" && b.checkedIn).reduce((s,b) => s + (b.qty||1), 0);
           return (
             <div style={{ marginTop: 12 }}>
               {/* Breakdown badges */}
@@ -157,10 +159,10 @@ function MarshalCheckinPage({ data, showToast, save, updateUser }) {
       </div>
 
       {/* Player list */}
-      {ev && ev.bookings.length > 0 && (
+      {ev && ev.bookings.filter(b => !b.cancelledAt).length > 0 && (
         <div className="card">
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 12 }}>Booking List</div>
-          {ev.bookings.map(b => {
+          {ev.bookings.filter(b => !b.cancelledAt).map(b => {
             // Build extras labels for this booking
             const extrasEntries = Object.entries(b.extras || {}).filter(([,v]) => v > 0);
             const extrasLabels = extrasEntries.map(([k, qty]) => {

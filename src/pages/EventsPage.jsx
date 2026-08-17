@@ -191,14 +191,14 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
     const vipIsActive = cu?.vipStatus === "active" && (!cu?.vipExpiresAt || new Date(cu.vipExpiresAt) > new Date());
     const vipDisc   = vipIsActive ? 0.1 : 0;
     const waiverValid = (cu?.waiverSigned === true && cu?.waiverYear === new Date().getFullYear()) || cu?.role === "admin";
-    const myBookings  = cu ? ev.bookings.filter(b => b.userId === cu.id) : [];
+    const myBookings  = cu ? ev.bookings.filter(b => b.userId === cu.id && !b.cancelledAt) : [];
 
     // Per-type slots remaining — use server-side counts to bypass RLS
     // (RLS only shows the current user's bookings, so ev.bookings is incomplete)
     // While counts are loading, use max of own bookings vs slots (safe default)
     const realCounts   = countsLoaded ? (realBookingCounts[ev.id] || { walkOn: 0, rental: 0 }) : null;
-    const walkOnBookedOwn = ev.bookings.filter(b => b.type === "walkOn").reduce((s,b) => s + b.qty, 0);
-    const rentalBookedOwn = ev.bookings.filter(b => b.type === "rental").reduce((s,b) => s + b.qty, 0);
+    const walkOnBookedOwn = ev.bookings.filter(b => !b.cancelledAt && b.type === "walkOn").reduce((s,b) => s + b.qty, 0);
+    const rentalBookedOwn = ev.bookings.filter(b => !b.cancelledAt && b.type === "rental").reduce((s,b) => s + b.qty, 0);
     const walkOnBooked = realCounts ? realCounts.walkOn : walkOnBookedOwn;
     const rentalBooked = realCounts ? realCounts.rental : rentalBookedOwn;
     const walkOnLeft   = ev.walkOnSlots - walkOnBooked;
@@ -1496,7 +1496,7 @@ function EventsPage({ data, cu, updateEvent, updateUser, showToast, setAuthModal
           const operationCodes = ["ALPHA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL"];
 
           const renderCard = (ev, idx, isPast) => {
-            const booked = ev.bookings.reduce((s,b) => s + b.qty, 0);
+            const booked = ev.bookings.filter(b => !b.cancelledAt).reduce((s,b) => s + b.qty, 0);
             const total  = ev.walkOnSlots + ev.rentalSlots;
             const fillPct = total > 0 ? booked / total : 0;
             const isFull = fillPct >= 1;
