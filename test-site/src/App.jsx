@@ -11,15 +11,19 @@ import Contact from './pages/Contact'
 export default function App() {
   return (
     <HashRouter>
-      <Nav />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/fixtures" element={<Fixtures />} />
-        <Route path="/rules" element={<Rules />} />
-        <Route path="/gallery" element={<Gallery />} />
-        <Route path="/contact" element={<Contact />} />
-      </Routes>
-      <Footer />
+      <div className="app-shell">
+        <Nav />
+        <div className="app-main">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/fixtures" element={<Fixtures />} />
+            <Route path="/rules" element={<Rules />} />
+            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/contact" element={<Contact />} />
+          </Routes>
+          <Footer />
+        </div>
+      </div>
     </HashRouter>
   )
 }
