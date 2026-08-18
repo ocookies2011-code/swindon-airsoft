@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import logoMono from '../assets/logo-mono.png'
+import logoMono from '../assets/logo.png'
 
 export default function Nav() {
   const [open, setOpen] = useState(false)
