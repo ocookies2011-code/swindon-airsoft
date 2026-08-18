@@ -170,21 +170,90 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
 .text-link:hover { color: #fff; border-color: #fff; }
 
 /* ── Hero ───────────────────────────────────────────────── */
-.hero {
-  position: relative;
-  height: min(78vh, 620px);
-  min-height: 480px;
+/* ── Util bar (compact, replaces the old marketing hero) ─── */
+.util-bar { border-bottom: 1px solid rgba(245,243,238,0.12); padding: 28px 0; }
+.util-bar-inner {
   display: flex;
+  justify-content: space-between;
   align-items: flex-end;
-  clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
+  flex-wrap: wrap;
+  gap: 24px;
 }
-.hero .photo { position: absolute; inset: 0; }
-.hero-inner {
+.util-main { max-width: 560px; }
+.util-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(34px, 5vw, 54px);
+  text-transform: uppercase;
+  line-height: 0.95;
+  margin: 6px 0 10px;
+}
+.util-sub { font-size: 15px; color: var(--steel); line-height: 1.55; margin: 0; max-width: 460px; }
+.util-next {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--void-2);
+  border-left: 3px solid var(--blaze);
+  padding: 14px 18px;
+  min-width: 240px;
+}
+.util-next-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
+.util-next-title { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; color: var(--paper); }
+.util-next-when { font-family: var(--font-mono); font-size: 11px; color: var(--blaze); text-transform: uppercase; margin-bottom: 8px; }
+.util-book-btn { padding: 10px 18px; font-size: 11px; }
+
+/* ── Portal tiles — big photo links as primary navigation ──
+   (Ground Zero Airsoft's homepage pattern: destinations are
+   clickable photo tiles, not another round of marketing copy) */
+.portal { padding: 0; }
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 900px) { .portal-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .portal-grid { grid-template-columns: 1fr; } }
+.portal-tile {
+  position: relative;
+  display: block;
+  min-height: 300px;
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+}
+.portal-tile .photo { position: absolute; inset: 0; }
+.portal-tile .photo img { transition: transform .5s ease; }
+.portal-tile:hover .photo img { transform: scale(1.06); }
+.portal-tile-body {
   position: relative;
   z-index: 3;
-  width: 100%;
-  padding: 0 32px 52px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px 22px;
 }
+.portal-label {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 30px;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.portal-desc { font-size: 12.5px; color: #D8D5CC; margin-bottom: 12px; max-width: 220px; }
+.portal-enter {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blaze);
+}
+.portal-tile:hover .portal-enter { color: #fff; }
+
+.stats-compact .stat { padding: 18px 24px; }
+.stats-compact .stat .n { font-size: clamp(22px, 3vw, 30px); }
 .hero-tag {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -197,25 +266,6 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
   gap: 10px;
 }
 .hero-tag::before { content: ""; width: 22px; height: 2px; background: var(--blaze); display: inline-block; }
-.hero h1 {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(52px, 9vw, 118px);
-  line-height: 0.86;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-  margin: 0 0 16px;
-  max-width: 900px;
-}
-.hero h1 .accent { color: var(--blaze); }
-.hero-sub {
-  font-size: clamp(15px, 1.6vw, 18px);
-  color: var(--steel);
-  max-width: 460px;
-  line-height: 1.55;
-  margin: 0 0 24px;
-}
-.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; }
 
 .blaze-btn {
   font-family: var(--font-mono);
@@ -236,16 +286,6 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
   transition: background .15s ease, transform .15s ease;
 }
 .blaze-btn:hover { background: #fff; transform: translateY(-1px); }
-
-.hero-next {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--steel);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  line-height: 1.8;
-}
-.hero-next b { color: var(--paper); font-size: 13px; letter-spacing: 0.02em; }
 
 /* ── Stat strip ─────────────────────────────────────────── */
 .stats {
