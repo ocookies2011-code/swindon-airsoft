@@ -11,21 +11,23 @@ export default function Home() {
     <>
       {/* Photo hero with bold headline overlay + red CTA — matches the
           military-recruitment reference structure */}
+      <div className="hero-frame">
       <section className="hero">
         <Photo src={PHOTOS.hero} alt="" />
         <div className="hero-inner">
+          {nextEvent && (
+            <div className="hero-next">
+              <span className="hero-next-label">Next Fixture</span>
+              <span className="hero-next-title">{nextEvent.title}</span>
+              <span className="hero-next-when">{daysUntil(nextEvent.date) === 0 ? 'Today' : `${daysUntil(nextEvent.date)} days out`}</span>
+            </div>
+          )}
           <h1 className="hero-headline">PLAYING AIRSOFT<br />IS MORE THAN<br /><span className="accent">A GAME</span></h1>
           <p className="hero-copy">If there's a shot to take or a flank to hold, we'd rather you found out here — marshalled, fair, and on real ground.</p>
           <Link className="btn-red" to="/fixtures">JOIN US →</Link>
         </div>
-        {nextEvent && (
-          <div className="hero-next">
-            <span className="hero-next-label">Next Fixture</span>
-            <span className="hero-next-title">{nextEvent.title}</span>
-            <span className="hero-next-when">{daysUntil(nextEvent.date) === 0 ? 'Today' : `${daysUntil(nextEvent.date)} days out`}</span>
-          </div>
-        )}
       </section>
+      </div>
 
       {/* Photo tile row — same shape as the reference's thumbnail strip */}
       <section className="portal">
