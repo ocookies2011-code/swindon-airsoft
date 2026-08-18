@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
+import logoMono from './assets/logo-mono.png'
 
 // Real photography (Unsplash, free license) — treated with a consistent
 // duotone (see .photo in styles.css) so shots from different photographers
@@ -86,7 +87,7 @@ export default function App() {
   return (
     <>
       <header className="topbar">
-        <div className="topbar-mark"><span className="bolt">⚡</span> SWINDON AIRSOFT</div>
+        <div className="topbar-mark"><img src={logoMono} alt="Swindon Airsoft" className="topbar-logo" /> SWINDON AIRSOFT</div>
         <nav className="topbar-nav">
           <a href="#ground">The Ground</a>
           <a href="#fixtures">Fixtures</a>
@@ -216,9 +217,12 @@ export default function App() {
       </section>
 
       <footer>
-        <div className="wrap foot-row">
-          <span>Swindon Airsoft — Field Concept · Design Draft, Not Live</span>
-          <span>Wiltshire, England</span>
+        <div className="wrap foot-inner">
+          <img src={logoMono} alt="Swindon Airsoft" className="foot-logo" />
+          <div className="foot-row">
+            <span>Swindon Airsoft — Field Concept · Design Draft, Not Live</span>
+            <span>Wiltshire, England</span>
+          </div>
         </div>
       </footer>
     </>

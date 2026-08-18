@@ -89,14 +89,14 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
 }
 .topbar-mark {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 19px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.topbar-mark .bolt { color: var(--blaze); }
+.topbar-logo { height: 34px; width: auto; display: block; }
 .topbar-nav {
   display: flex;
   gap: 30px;
@@ -112,8 +112,8 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
 /* ── Hero ───────────────────────────────────────────────── */
 .hero {
   position: relative;
-  height: min(92vh, 780px);
-  min-height: 560px;
+  height: min(78vh, 620px);
+  min-height: 480px;
   display: flex;
   align-items: flex-end;
   clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
@@ -123,7 +123,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
   position: relative;
   z-index: 3;
   width: 100%;
-  padding: 0 32px 74px;
+  padding: 0 32px 52px;
 }
 .hero-tag {
   font-family: var(--font-mono);
@@ -131,7 +131,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--blaze);
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -140,22 +140,22 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
 .hero h1 {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(56px, 10vw, 132px);
+  font-size: clamp(52px, 9vw, 118px);
   line-height: 0.86;
   letter-spacing: 0.01em;
   text-transform: uppercase;
-  margin: 0 0 22px;
+  margin: 0 0 16px;
   max-width: 900px;
 }
 .hero h1 .accent { color: var(--blaze); }
 .hero-sub {
-  font-size: clamp(15px, 1.6vw, 19px);
+  font-size: clamp(15px, 1.6vw, 18px);
   color: var(--steel);
-  max-width: 480px;
-  line-height: 1.6;
-  margin: 0 0 34px;
+  max-width: 460px;
+  line-height: 1.55;
+  margin: 0 0 24px;
 }
-.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 26px; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; }
 
 .blaze-btn {
   font-family: var(--font-mono);
@@ -196,14 +196,14 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
 }
 @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 .stat {
-  padding: 30px 24px;
+  padding: 22px 24px;
   border-right: 1px solid rgba(245,243,238,0.12);
   text-align: center;
 }
 .stat:last-child { border-right: none; }
 .stat .n {
   font-family: var(--font-display);
-  font-size: clamp(30px, 4vw, 46px);
+  font-size: clamp(28px, 3.6vw, 40px);
   color: var(--blaze);
   line-height: 1;
 }
@@ -213,12 +213,12 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--blaze); outline
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--steel);
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 /* ── Section scaffolding ────────────────────────────────── */
-section { padding: 96px 0; }
-.section-head { margin-bottom: 48px; }
+section { padding: 60px 0; }
+.section-head { margin-bottom: 32px; }
 .section-tag {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -245,7 +245,7 @@ section { padding: 96px 0; }
   align-items: stretch;
 }
 @media (max-width: 900px) { .ground { grid-template-columns: 1fr; } }
-.ground-photo { min-height: 420px; clip-path: polygon(0 0, 100% 4%, 100% 100%, 0 96%); }
+.ground-photo { min-height: 340px; clip-path: polygon(0 0, 100% 4%, 100% 100%, 0 96%); }
 .ground-copy { padding: 20px 0 20px 56px; display: flex; flex-direction: column; justify-content: center; }
 @media (max-width: 900px) { .ground-copy { padding: 40px 0 0; } }
 .ground-copy p {
@@ -296,7 +296,7 @@ section { padding: 96px 0; }
 /* ── Field Notes (photo cards) ───────────────────────────── */
 .notes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 @media (max-width: 860px) { .notes-grid { grid-template-columns: 1fr; } }
-.note { position: relative; min-height: 340px; overflow: hidden; }
+.note { position: relative; min-height: 280px; overflow: hidden; }
 .note .photo { position: absolute; inset: 0; }
 .note-body { position: relative; z-index: 3; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 28px; }
 .note .tag {
@@ -311,7 +311,7 @@ section { padding: 96px 0; }
 .note p { font-size: 13.5px; line-height: 1.6; color: #D8D5CC; margin: 0; }
 
 /* ── Closing CTA ─────────────────────────────────────────── */
-.closing { text-align: center; padding: 120px 0; }
+.closing { text-align: center; padding: 72px 0; }
 .closing h2 {
   font-family: var(--font-display);
   font-weight: 400;
@@ -323,8 +323,11 @@ section { padding: 96px 0; }
 .closing h2 .accent { color: var(--blaze); }
 
 /* ── Footer ──────────────────────────────────────────────── */
-footer { border-top: 2px solid var(--blaze); padding: 44px 0; }
+footer { border-top: 2px solid var(--blaze); padding: 32px 0; }
+.foot-inner { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.foot-logo { height: 64px; width: auto; opacity: 0.92; }
 .foot-row {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
