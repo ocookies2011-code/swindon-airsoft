@@ -1,20 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 
-// ── Contour line generator ──────────────────────────────────
-// Procedural topographic lines, used both as hero backdrop and as the
-// section-divider "elevation reveal" motif — the one visual idea this
-// page repeats on purpose.
-function contourPath(seed, amplitude, yBase, points = 8) {
-  const w = 1200
-  let d = `M 0 ${yBase}`
-  const step = w / points
-  for (let i = 1; i <= points; i++) {
-    const x = i * step
-    const wobble = Math.sin(i * seed) * amplitude + Math.cos(i * seed * 1.7) * (amplitude * 0.4)
-    d += ` L ${x.toFixed(1)} ${(yBase + wobble).toFixed(1)}`
-  }
-  return d
+// Real photography (Unsplash, free license) — treated with a consistent
+// duotone (see .photo in styles.css) so shots from different photographers
+// read as one cohesive brand rather than assorted stock images.
+const PHOTOS = {
+  hero:   'https://images.unsplash.com/photo-1541513982013-5dc4f56697f9?auto=format&fit=crop&w=2400&q=80',
+  ground: 'https://images.unsplash.com/photo-1569242840838-2a6bdd402fe4?auto=format&fit=crop&w=1600&q=80',
+  note1:  'https://images.unsplash.com/photo-1615589184136-9f1818682216?auto=format&fit=crop&w=900&q=80',
+  note2:  'https://images.unsplash.com/photo-1598744591141-0370fe5aec26?auto=format&fit=crop&w=900&q=80',
+  note3:  'https://images.unsplash.com/photo-1566566716921-b50e82140547?auto=format&fit=crop&w=900&q=80',
 }
 
 function useInView() {
@@ -25,7 +20,7 @@ function useInView() {
     if (!el) return
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setInView(true); obs.disconnect() } },
-      { threshold: 0.2 }
+      { threshold: 0.15 }
     )
     obs.observe(el)
     return () => obs.disconnect()
@@ -33,55 +28,22 @@ function useInView() {
   return [ref, inView]
 }
 
-function ContourDivider({ lines = 3 }) {
-  const [ref, inView] = useInView()
-  return (
-    <div className={`contour-divider${inView ? ' in-view' : ''}`} ref={ref}>
-      <svg viewBox="0 0 1200 90" preserveAspectRatio="none">
-        {Array.from({ length: lines }).map((_, i) => (
-          <path key={i} d={contourPath(0.9 + i * 0.35, 14 + i * 6, 30 + i * 14, 10)} />
-        ))}
-      </svg>
-    </div>
-  )
-}
-
-function HeroContours() {
-  return (
-    <svg className="hero-contours" viewBox="0 0 1200 700" preserveAspectRatio="none">
-      {Array.from({ length: 7 }).map((_, i) => (
-        <path
-          key={i}
-          d={contourPath(0.5 + i * 0.22, 26 + i * 8, 90 + i * 78, 14)}
-          fill="none"
-          stroke="#3C4A30"
-          strokeWidth="1"
-          opacity={0.16 - i * 0.012}
-        />
-      ))}
-    </svg>
-  )
-}
-
 function Reveal({ children, as: Tag = 'div', ...rest }) {
   const [ref, inView] = useInView()
   return <Tag ref={ref} className={`reveal${inView ? ' in-view' : ''}`} {...rest}>{children}</Tag>
 }
 
-// Deterministic pseudo grid-reference derived from the event id, so each
-// fixture reads a real identifier rather than a decorative 01/02/03.
-function gridRefFor(id, date) {
-  let h = 0
-  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0
-  const east = 100 + (h % 900)
-  const north = 100 + (Math.floor(h / 7) % 900)
-  return `SU ${east} ${north}`
+function Photo({ src, alt }) {
+  return (
+    <div className="photo">
+      <img src={src} alt={alt} loading="lazy" />
+    </div>
+  )
 }
 
 function daysUntil(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
-  const now = new Date()
-  const diff = Math.ceil((d - now) / 86400000)
+  const diff = Math.ceil((d - new Date()) / 86400000)
   return diff
 }
 
@@ -111,7 +73,7 @@ export default function App() {
           countData.forEach(c => { map[c.event_id] = c })
           setCounts(map)
         }
-      } catch (e) {
+      } catch {
         if (!cancelled) { setLoadError(true); setEvents([]) }
       }
     }
@@ -124,77 +86,70 @@ export default function App() {
   return (
     <>
       <header className="topbar">
-        <div className="topbar-mark"><span className="dot">●</span> SWINDON AIRSOFT — FIELD CONCEPT</div>
+        <div className="topbar-mark"><span className="bolt">⚡</span> SWINDON AIRSOFT</div>
         <nav className="topbar-nav">
           <a href="#ground">The Ground</a>
           <a href="#fixtures">Fixtures</a>
-          <a href="#notes">Briefing</a>
+          <a href="#notes">Loadout</a>
         </nav>
       </header>
 
       <section className="hero">
-        <HeroContours />
-        <div className="wrap hero-inner">
-          <div className="grid-ref">OS GRID SU 148 848 · WILTSHIRE</div>
-          <h1><span>SWINDON</span><span>AIRSOFT</span></h1>
-          <p className="hero-sub">Woodland skirmish, run properly — real terrain, real cover, marshalled fairly.</p>
+        <Photo src={PHOTOS.hero} alt="" />
+        <div className="hero-inner">
+          <div className="hero-tag">Wiltshire · Outdoor Field</div>
+          <h1>NO RESPAWNS.<br /><span className="accent">JUST INSTINCT.</span></h1>
+          <p className="hero-sub">Full-contact woodland skirmish, marshalled properly. Bring your kit or rent ours — either way, the ground doesn't care who you are.</p>
           <div className="hero-actions">
-            <a className="waypoint-btn" href="#fixtures"><span className="tri">▲</span> Next Muster</a>
+            <a className="blaze-btn" href="#fixtures">Book In →</a>
             {nextEvent && (
               <div className="hero-next">
-                <span className="label">Next Fixture</span><br />
-                <b>{nextEvent.title}</b> — {daysUntil(nextEvent.date) === 0 ? 'today' : `${daysUntil(nextEvent.date)}d out`}
+                Next Up<br /><b>{nextEvent.title}</b> — {daysUntil(nextEvent.date) === 0 ? 'TODAY' : `${daysUntil(nextEvent.date)}D OUT`}
               </div>
             )}
           </div>
         </div>
       </section>
 
-      <ContourDivider />
+      <div className="stats">
+        <div className="stat"><div className="n">2019</div><div className="l">Running Since</div></div>
+        <div className="stat"><div className="n">30+</div><div className="l">Acres of Ground</div></div>
+        <div className="stat"><div className="n">100%</div><div className="l">Marshalled Games</div></div>
+        <div className="stat"><div className="n">UKARA</div><div className="l">Defence Eligible</div></div>
+      </div>
 
       <section id="ground">
         <div className="wrap">
           <div className="section-head">
-            <div>
-              <span className="section-eyebrow">Terrain Briefing</span>
-              <h2>The Ground</h2>
-            </div>
-            <div className="section-meta">Mixed woodland · CQB structures<br />Wiltshire, England</div>
+            <span className="section-tag">Terrain</span>
+            <h2>The Ground</h2>
           </div>
           <div className="ground">
+            <Reveal className="ground-photo"><Photo src={PHOTOS.ground} alt="Woodland terrain" /></Reveal>
             <Reveal className="ground-copy">
-              <p>The site reads differently depending on which way you came in — dense treeline to the north, a scatter of built-up CQB positions cutting through the middle ground, and open flanks that punish anyone who rushes them. It rewards players who read terrain rather than players who just run fast.</p>
-              <p>Games are marshalled properly: clear calling, fair eliminations, and briefings that actually cover the ruleset rather than rushing through it. New to the hobby or fifteen years in, you're playing the same ground on the same terms.</p>
-            </Reveal>
-            <Reveal className="ground-stats">
-              <div className="ground-stat"><span className="k">Terrain</span><span className="v">Woodland + CQB</span></div>
-              <div className="ground-stat"><span className="k">Marshals</span><span className="v">On every game</span></div>
-              <div className="ground-stat"><span className="k">Games run since</span><span className="v">2019</span></div>
-              <div className="ground-stat"><span className="k">Entry</span><span className="v">UKARA-friendly</span></div>
+              <p>Dense treeline, built CQB structures, and open flanks that punish anyone who rushes them. Read the terrain or get read — there's no third option.</p>
+              <p>Marshals on every game, clear calling, and a briefing that actually covers the ruleset. First time out or years in, you're playing on the same terms as everyone else.</p>
+              <ul className="ground-list">
+                <li>Terrain <span className="v">Woodland + CQB</span></li>
+                <li>Marshals <span className="v">Every Game</span></li>
+                <li>Entry <span className="v">UKARA-Friendly</span></li>
+              </ul>
             </Reveal>
           </div>
         </div>
       </section>
 
-      <ContourDivider />
-
       <section id="fixtures">
         <div className="wrap">
           <div className="section-head">
-            <div>
-              <span className="section-eyebrow">Upcoming</span>
-              <h2>Fixtures</h2>
-            </div>
-            <div className="section-meta">Live from the booking system</div>
+            <span className="section-tag">Upcoming</span>
+            <h2>Fixtures</h2>
           </div>
-
           <div className="fixtures-list">
-            {events === null && <div className="empty-note">Reading the board…</div>}
-            {events && events.length === 0 && !loadError && (
-              <div className="empty-note">Nothing published yet — check back shortly.</div>
-            )}
+            {events === null && <div className="empty-note">Loading fixtures…</div>}
+            {events && events.length === 0 && !loadError && <div className="empty-note">Nothing published yet — check back shortly.</div>}
             {loadError && <div className="error-note">Couldn't reach the fixture list just now.</div>}
-            {events && events.map(ev => {
+            {events && events.map((ev, i) => {
               const c = counts[ev.id]
               const totalSlots = (ev.walk_on_slots || 0) + (ev.rental_slots || 0)
               const booked = c ? (Number(c.total_booked) || 0) : null
@@ -202,16 +157,14 @@ export default function App() {
               const isFull = pct !== null && pct >= 100
               return (
                 <Reveal as="div" className="fixture" key={ev.id}>
-                  <div className="fixture-ref">{gridRefFor(ev.id, ev.date)}<span className="small">grid ref</span></div>
+                  <div className="fixture-num">{String(i + 1).padStart(2, '0')}</div>
                   <div className="fixture-main">
                     <h3>{ev.title}</h3>
                     <div className="date">{new Date(ev.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {ev.time || ''}{ev.location ? ` · ${ev.location}` : ''}</div>
                   </div>
                   <div className="fixture-slots">
-                    <span className="n">{pct === null ? '—' : isFull ? 'FULL' : `${totalSlots - booked} left of ${totalSlots}`}</span>
-                    {pct !== null && (
-                      <div className="bar"><div className={`bar-fill${isFull ? ' full' : ''}`} style={{ width: `${pct}%` }} /></div>
-                    )}
+                    <span className="n">{pct === null ? '—' : isFull ? 'FULL' : `${totalSlots - booked} LEFT`}</span>
+                    {pct !== null && <div className="bar"><div className={`bar-fill${isFull ? ' full' : ''}`} style={{ width: `${pct}%` }} /></div>}
                   </div>
                 </Reveal>
               )
@@ -220,47 +173,52 @@ export default function App() {
         </div>
       </section>
 
-      <ContourDivider />
-
       <section id="notes">
         <div className="wrap">
           <div className="section-head">
-            <div>
-              <span className="section-eyebrow">Before You Come</span>
-              <h2>Field Notes</h2>
-            </div>
+            <span className="section-tag">Before You Come</span>
+            <h2>Loadout Check</h2>
           </div>
           <div className="notes-grid">
             <Reveal as="div" className="note">
-              <div className="symbol">A</div>
-              <h4>First time out</h4>
-              <p>Rentals are available if you don't own kit yet — full brief and safety check happens before anyone's on the ground.</p>
+              <Photo src={PHOTOS.note1} alt="" />
+              <div className="note-body">
+                <div className="tag">First Timer</div>
+                <h4>No Kit? No Problem</h4>
+                <p>Rentals cover everything you need. Full safety brief before anyone sets foot on the ground.</p>
+              </div>
             </Reveal>
             <Reveal as="div" className="note">
-              <div className="symbol">B</div>
-              <h4>What to bring</h4>
-              <p>Full-seal eye protection is non-negotiable. Layer for woodland — the ground holds damp longer than the sky suggests.</p>
+              <Photo src={PHOTOS.note2} alt="" />
+              <div className="note-body">
+                <div className="tag">Non-Negotiable</div>
+                <h4>Eye Protection</h4>
+                <p>Full-seal only. Layer up for woodland — the ground holds damp longer than the forecast suggests.</p>
+              </div>
             </Reveal>
             <Reveal as="div" className="note">
-              <div className="symbol">C</div>
-              <h4>UKARA</h4>
-              <p>Games count toward UKARA play-count from day one. Ask at the gate if you're working toward your defence.</p>
+              <Photo src={PHOTOS.note3} alt="" />
+              <div className="note-body">
+                <div className="tag">Working Toward It</div>
+                <h4>UKARA Counts</h4>
+                <p>Every game counts toward your play total from day one. Ask at the gate if you're building your defence.</p>
+              </div>
             </Reveal>
           </div>
         </div>
       </section>
 
-      <footer>
+      <section className="closing">
         <div className="wrap">
-          <div className="legend">
-            <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--forest)' }} /> Woodland</span>
-            <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--ember)', borderRadius: '50%' }} /> Muster point</span>
-            <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--moss)' }} /> CQB structure</span>
-          </div>
-          <div className="foot-bottom">
-            <span>SWINDON AIRSOFT — FIELD CONCEPT · DESIGN DRAFT, NOT LIVE</span>
-            <span>WILTSHIRE, ENGLAND</span>
-          </div>
+          <h2>GET MUDDY.<br /><span className="accent">GET GOOD.</span></h2>
+          <a className="blaze-btn" href="#fixtures">See What's On →</a>
+        </div>
+      </section>
+
+      <footer>
+        <div className="wrap foot-row">
+          <span>Swindon Airsoft — Field Concept · Design Draft, Not Live</span>
+          <span>Wiltshire, England</span>
         </div>
       </footer>
     </>
