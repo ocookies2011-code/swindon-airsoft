@@ -58,16 +58,16 @@ export default function Home() {
         <div className="wrap welcome-grid">
           <div className="welcome-photo"><Photo src={PHOTOS.ground} alt="" /></div>
           <div className="welcome-copy">
-            <p>Dense treeline, built CQB structures, and open flanks that punish anyone who rushes them. Marshals on every game, clear calling, a briefing that actually covers the ruleset.</p>
-            <p>First time out or years in, you're playing on the same terms as everyone else.</p>
+            <p>Located just off Junction 16 of the M4 — run by airsofters, for airsofters. Whether you're seasoned or brand new to the sport, we've got you covered.</p>
+            <p>Gates open 08:00 with a free tea or coffee, chrono at 08:45, morning brief at 09:30, first game on at 10:00. We stop for lunch around 12:30, then it's back into it until end of day.</p>
             <div className="welcome-contact">
               <div>
-                <div className="tag">Contact Info</div>
-                <p>Wiltshire, England<br />Directions sent on booking confirmation</p>
+                <div className="tag">Find Us</div>
+                <p>Manor Hl, Swindon, SN5 4EG<br />A marshal greets you on arrival</p>
               </div>
               <div>
-                <div className="tag">Match Days</div>
-                <p>Sundays, most weekends<br />Gates 08:00 · Brief 08:30</p>
+                <div className="tag">Age Policy</div>
+                <p>12+ with a parent playing, 14+ with written consent<br />18+ books independently</p>
               </div>
             </div>
             <Link className="btn-red btn-red-small" to="/fixtures">Book In →</Link>
@@ -76,8 +76,8 @@ export default function Home() {
       </section>
 
       <div className="stats">
-        <div className="stat"><div className="n">2019</div><div className="l">Running Since</div></div>
-        <div className="stat"><div className="n">30+</div><div className="l">Acres of Ground</div></div>
+        <div className="stat"><div className="n">12+</div><div className="l">Minimum Age</div></div>
+        <div className="stat"><div className="n">350 FPS</div><div className="l">Rifle Limit</div></div>
         <div className="stat"><div className="n">100%</div><div className="l">Marshalled Games</div></div>
         <div className="stat"><div className="n">UKARA</div><div className="l">Defence Eligible</div></div>
       </div>

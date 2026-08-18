@@ -268,6 +268,14 @@ section { padding: 44px 0; }
 .rule-num { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--red); margin-bottom: 8px; }
 .rule-block h3 { font-family: var(--font-display); font-size: 15.5px; font-weight: 600; text-transform: uppercase; margin: 0 0 8px; }
 .rule-block p { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 0; }
+.rule-list { list-style: none; padding: 0; margin: 0; max-width: 680px; }
+.rule-list li { font-size: 14px; line-height: 1.6; color: var(--muted); padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rule-list li b { color: var(--paper); }
+.rental-rates { display: flex; flex-direction: column; max-width: 560px; }
+.rental-rates > div { display: grid; grid-template-columns: 130px 60px 1fr; gap: 14px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rental-rates span { font-family: var(--font-display); font-size: 13px; text-transform: uppercase; }
+.rental-rates b { color: var(--red); font-family: var(--font-mono); font-size: 14px; }
+.rental-rates small { font-size: 12px; color: var(--muted); }
 .closing { text-align: center; padding: 40px 0; }
 .closing-small { padding: 36px 0; background: var(--camo-black); border-top: 1px solid var(--line); }
 .closing h2 { font-family: var(--font-display); font-size: clamp(20px, 3vw, 26px); font-weight: 600; text-transform: uppercase; margin: 0; }
@@ -297,7 +305,7 @@ section { padding: 44px 0; }
 .contact-block p { font-size: 14px; line-height: 1.55; color: var(--muted); margin: 0; }
 .contact-form { display: flex; flex-direction: column; gap: 14px; }
 .contact-form label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
-.contact-form input, .contact-form textarea {
+.contact-form input, .contact-form textarea, .contact-form select {
   font-family: var(--font-body); font-size: 14px; background: var(--camo-black);
   border: 1px solid var(--line); color: var(--paper); padding: 10px 12px; resize: vertical;
 }
@@ -315,5 +323,24 @@ footer { border-top: 1px solid var(--line); background: var(--camo-black); paddi
 .foot-nav a { color: var(--muted); text-decoration: none; }
 .foot-nav a:hover { color: var(--red); }
 .foot-row { width: 100%; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); text-transform: uppercase; }
+
+/* ── Account ─────────────────────────────────────────────── */
+.account-tabs { display: flex; gap: 0; margin-bottom: 6px; }
+.account-tabs button {
+  flex: 1; padding: 10px; background: var(--camo-black); border: 1px solid var(--line);
+  color: var(--muted); font-family: var(--font-display); font-size: 12px; text-transform: uppercase;
+  letter-spacing: 0.04em; cursor: pointer;
+}
+.account-tabs button.active { background: var(--red); color: #fff; border-color: var(--red-dark); }
+.account-error { color: var(--red); font-size: 13px; background: rgba(179,30,30,0.12); padding: 10px 12px; border-left: 3px solid var(--red); }
+.account-note { font-size: 12px; color: var(--muted); margin: 0; }
+.account-summary { background: var(--camo-black); border-left: 3px solid var(--red); padding: 22px 24px; }
+.account-summary-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+.account-name { font-family: var(--font-display); font-size: 22px; font-weight: 600; text-transform: uppercase; }
+.account-callsign { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-top: 2px; }
+.account-stats { display: flex; flex-wrap: wrap; gap: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+.account-stats .n { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--red); text-transform: uppercase; }
+.account-stats .l { display: block; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.account-warning { margin-top: 18px; padding: 12px 16px; background: rgba(179,30,30,0.14); border-left: 3px solid var(--red); font-size: 13px; color: var(--paper); }
 
 .reveal { opacity: 1; }

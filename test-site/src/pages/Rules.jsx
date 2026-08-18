@@ -10,43 +10,88 @@ export default function Rules() {
         <div className="wrap page-hero-inner">
           <span className="section-tag">Read This First</span>
           <h1>Rules &amp; Kit</h1>
-          <p className="page-hero-sub">Nobody enjoys a briefing, but everyone enjoys a fair game. This is the whole thing — five minutes, no surprises on the day.</p>
+          <p className="page-hero-sub">The real ruleset — same FPS limits, engagement distances, and policies enforced on site, not a summary.</p>
         </div>
       </section>
 
       <section>
         <div className="wrap">
+          <div className="section-head">
+            <span className="section-tag">Section 02</span>
+            <h2>Age Requirements</h2>
+          </div>
+          <ul className="rule-list">
+            <li>Players must be at least <b>12 years old</b> to participate.</li>
+            <li>Players aged <b>12–13</b> must have a parent or guardian present and playing with them on the day.</li>
+            <li>Players aged <b>14–17</b> must have written parental or guardian consent before attending.</li>
+            <li>Players <b>18 and over</b> may attend and book independently.</li>
+            <li>Valid ID or consent documentation may be requested on arrival.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="faq">
+        <div className="wrap">
+          <div className="section-head">
+            <span className="section-tag">Section 04</span>
+            <h2>FPS Limits &amp; Chronographing</h2>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 24, maxWidth: 640 }}>
+            All guns must meet Swindon Airsoft's FPS (Feet Per Second) limits. Every weapon is chronographed before the game begins — anything over limit doesn't go on the field.
+          </p>
           <div className="rules-grid">
             <div className="rule-block">
-              <div className="rule-num">01</div>
-              <h3>Eye Protection</h3>
-              <p>Full-seal eye protection only — no shooting glasses, no gaps at the temple. Mesh masks are fine if they're full-seal. This is checked at the gate, every game, no exceptions, no "just for this round."</p>
+              <h3>Full Auto Rifle</h3>
+              <p><b>Limit:</b> 350fps (0.20g)<br /><b>MED:</b> No minimum engagement distance</p>
             </div>
             <div className="rule-block">
-              <div className="rule-num">02</div>
-              <h3>FPS Limits</h3>
-              <p>AEGs capped at 350 FPS on 0.20g BBs measured at the chrono station. Snipers get a bolt-action allowance up to 500 FPS with a minimum engagement distance of 20m — enforced, not just suggested.</p>
+              <h3>DMR</h3>
+              <p><b>Limit:</b> 450fps (0.20g)<br /><b>MED:</b> 30m minimum engagement distance</p>
             </div>
             <div className="rule-block">
-              <div className="rule-num">03</div>
-              <h3>Hit Calling</h3>
-              <p>Any hit anywhere on the body or gun counts — call it loud, raise a hand, and get to safe zone. Blind-firing and spraying without looking are both bannable on the spot.</p>
+              <h3>Bolt-Action Sniper</h3>
+              <p><b>Limit:</b> 500fps (0.20g)<br /><b>MED:</b> 30m minimum engagement distance</p>
             </div>
-            <div className="rule-block">
-              <div className="rule-num">04</div>
-              <h3>Minimum Engagement Distance</h3>
-              <p>10m for full-auto AEGs. Full-auto below that gets you a warning first time, a walk second time. This is the rule marshals watch closest — it's the one that actually hurts people.</p>
-            </div>
-            <div className="rule-block">
-              <div className="rule-num">05</div>
-              <h3>Safety Flags</h3>
-              <p>Barrel bags or safety flags on at all times outside the game area — car park, gate, clubhouse. Guns come out of the bag only once you're through to the briefing point.</p>
-            </div>
-            <div className="rule-block">
-              <div className="rule-num">06</div>
-              <h3>Marshal Calls Are Final</h3>
-              <p>Disagree after the game, not during it. A marshal's call in the moment stands — arguing on the field holds up everyone else's day, not just yours.</p>
-            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 18, maxWidth: 640 }}>
+            Players operating a DMR or bolt-action sniper must carry a sidearm and switch to it when inside the MED.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div className="wrap">
+          <div className="section-head">
+            <span className="section-tag">Section 03</span>
+            <h2>Code of Conduct</h2>
+          </div>
+          <ul className="rule-list">
+            <li>Follow all marshal instructions immediately and without question.</li>
+            <li>Call your hits honestly — this is a self-policing sport.</li>
+            <li>Aggressive behaviour, abuse, or threatening conduct toward players or staff results in immediate removal and a permanent ban.</li>
+            <li>Alcohol and illegal substances are strictly prohibited on site.</li>
+            <li>All weapons must remain holstered or slung when not in the active play area.</li>
+            <li>Eye protection must be worn at all times in the game zone — no exceptions.</li>
+            <li>As this is a woodland site, boots are a must at all times — no trainers or open footwear.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="faq">
+        <div className="wrap">
+          <div className="section-head">
+            <span className="section-tag">Section 07</span>
+            <h2>Rental Equipment</h2>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 18, maxWidth: 640 }}>
+            Rental equipment remains the property of Swindon Airsoft and must be returned in good working order. Players are responsible for rental equipment while it's in their possession — don't disassemble, modify, or tamper with it, including removing batteries. Damage or loss is charged at the following rates:
+          </p>
+          <div className="rental-rates">
+            <div><span>Rifle</span><b>£153</b><small>replacement, or parts required for repair</small></div>
+            <div><span>Goggles / Mask</span><b>£23</b><small>£13 for visor replacement only</small></div>
+            <div><span>Chest Rig</span><b>£20</b><small>repair charge for any damage</small></div>
+            <div><span>Speedloader</span><b>£5</b><small>replacement</small></div>
+            <div><span>Magazine</span><b>£16</b><small>per replacement magazine</small></div>
           </div>
         </div>
       </section>
@@ -63,7 +108,7 @@ export default function Rules() {
               <div className="note-body">
                 <div className="tag">Own Kit</div>
                 <h4>Walk-On Players</h4>
-                <p>Your gun (350 FPS max), full-seal eyewear, mags, BBs (bio only), and layers for woodland — the ground holds damp longer than the forecast suggests.</p>
+                <p>Your gun (chronographed on arrival), full-seal eyewear, mags, bio BBs, and boots. Layer up — the ground holds damp longer than the forecast suggests.</p>
               </div>
             </div>
             <div className="note">
@@ -71,15 +116,15 @@ export default function Rules() {
               <div className="note-body">
                 <div className="tag">First Timer</div>
                 <h4>Rental Players</h4>
-                <p>Just yourself. Gun, mask, gloves, and BBs are covered — turn up in sturdy boots and clothes you don't mind getting muddy.</p>
+                <p>Just yourself, boots, and clothes you don't mind getting muddy. Gun, mask, and BBs are covered.</p>
               </div>
             </div>
             <div className="note">
               <Photo src={PHOTOS.note3} alt="" />
               <div className="note-body">
-                <div className="tag">Working Toward It</div>
-                <h4>UKARA Defence</h4>
-                <p>Every game counts toward your play total from day one, rental or own kit. Ask at the gate for a signed record if you need it for your application.</p>
+                <div className="tag">Before You Play</div>
+                <h4>Sign Your Waiver</h4>
+                <p>The digital waiver must be signed before attending — do this from your Profile on the live site before game day.</p>
               </div>
             </div>
           </div>

@@ -1,15 +1,18 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import logo from '../assets/logo.png'
+import { useAuth } from '../useAuth'
 
 export default function Nav() {
   const [open, setOpen] = useState(false)
+  const { user, profile } = useAuth()
   const links = [
     { to: '/', label: 'Home', sub: 'Welcome', end: true },
     { to: '/fixtures', label: 'Fixtures', sub: 'Book In' },
     { to: '/rules', label: 'Rules & Kit', sub: 'Read First' },
     { to: '/gallery', label: 'Gallery', sub: 'Photo & Video' },
     { to: '/contact', label: 'Contact', sub: 'Get In Touch' },
+    { to: '/account', label: user ? (profile?.name || 'My Account') : 'Sign In', sub: user ? 'My Account' : 'Player Login' },
   ]
   return (
     <>

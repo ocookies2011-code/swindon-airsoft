@@ -7,6 +7,7 @@ import Fixtures from './pages/Fixtures'
 import Rules from './pages/Rules'
 import Gallery from './pages/Gallery'
 import Contact from './pages/Contact'
+import Account from './pages/Account'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/rules" element={<Rules />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/account" element={<Account />} />
           </Routes>
           <Footer />
         </div>
