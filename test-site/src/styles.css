@@ -60,6 +60,13 @@ body {
 }
 .hero-frame { padding: 14px; }
 
+/* ── Photo (base) — every .photo usage relies on this to constrain the
+   image to its container. This was accidentally dropped in an earlier
+   rewrite, which is why images were overflowing their containers instead
+   of being cropped to fit. ─────────────────────────────────────────── */
+.photo { position: relative; overflow: hidden; background: var(--olive-dark); }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 /* ── App shell (sidebar + content) ──────────────────────── */
 .app-shell { display: flex; min-height: 100vh; }
 .app-main { flex: 1; min-width: 0; margin-left: var(--sidebar-w); }
