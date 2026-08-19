@@ -14,7 +14,7 @@
   --khaki: #8C8760;
   --red: #B31E1E;
   --red-dark: #7E1414;
-  --cream: #E4DBBE;
+  --cream: #D9CFA3;
   --ink-dark: #23241C;
   --paper: #EFEBDD;
   --muted: #B8B6A3;
@@ -187,8 +187,8 @@ body {
 .portal-tile .photo { height: 200px; }
 .portal-tile .photo img { filter: grayscale(0.4) brightness(0.75) contrast(1.05); }
 .portal-cap {
-  background: #17190F;
-  color: #B8B6A3;
+  background: var(--camo-black);
+  color: var(--muted);
   font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.08em;
