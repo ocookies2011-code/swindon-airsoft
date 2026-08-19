@@ -157,6 +157,8 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
   const [passwordModal, setPasswordModal] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
+  const [resetRequests, setResetRequests] = useState([]);
+  const [activeResetRequestId, setActiveResetRequestId] = useState(null);
   const [ipBanModal, setIpBanModal] = useState(null); // player to ban by IP
   const [ipBanReason, setIpBanReason] = useState("");
   const [ipBanExpiry, setIpBanExpiry] = useState(""); // "" = permanent
@@ -227,6 +229,20 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
 
   // Fetch fresh from DB on mount
   useEffect(() => { loadUsers(); }, []);
+
+  const loadResetRequests = () =>
+    supabase.from("password_reset_requests").select("*")
+      .eq("resolved", false).order("created_at", { ascending: true })
+      .then(({ data }) => setResetRequests(data || []))
+      .catch(() => {});
+  useEffect(() => { loadResetRequests(); }, []);
+
+  const dismissResetRequest = async (id) => {
+    await supabase.from("password_reset_requests")
+      .update({ resolved: true, resolved_at: new Date().toISOString(), resolved_by: cu?.name || cu?.email || null })
+      .eq("id", id);
+    setResetRequests(prev => prev.filter(r => r.id !== id));
+  };
 
   // Wrapper that updates DB then refreshes localUsers
   const updateUserAndRefresh = async (id, patch) => {
@@ -676,6 +692,28 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
 
   return (
     <div>
+      {resetRequests.length > 0 && (
+        <div style={{ background:"rgba(200,255,0,.08)", border:"2px solid rgba(200,255,0,.4)", padding:"16px 20px", marginBottom:20 }}>
+          <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"#c8ff00", letterSpacing:".1em", marginBottom:12 }}>
+            🔑 {resetRequests.length} PASSWORD RESET REQUEST{resetRequests.length !== 1 ? 'S' : ''}
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {resetRequests.map(r => (
+              <div key={r.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", background:"#0d1209", padding:"10px 14px", border:"1px solid #2a4018" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:"#fff" }}>{r.name || r.email}</div>
+                  <div style={{ fontSize:11, color:"var(--muted)" }}>{r.email} · requested {fmtDate(r.created_at)}</div>
+                </div>
+                <div style={{ display:"flex", gap:6 }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => { setActiveResetRequestId(r.id); setPasswordModal({ id: r.user_id, name: r.name || r.email }); }}>🔑 Set Password</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => dismissResetRequest(r.id)}>Dismiss</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {pendingApprovals.length > 0 && (
         <div style={{ background:"rgba(200,255,0,.08)", border:"2px solid rgba(200,255,0,.4)", padding:"16px 20px", marginBottom:20 }}>
           <div style={{ fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, color:"#c8ff00", letterSpacing:".1em", marginBottom:12 }}>
@@ -1051,7 +1089,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                       {u.adminNotes && <span title={u.adminNotes} style={{ fontSize:12, cursor:"help" }}>🔒</span>}
                       <button className="btn btn-sm btn-ghost" onClick={() => setViewPlayer(u)}>View</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => setEdit({ ...u })}>Edit</button>
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setPasswordModal(u); setNewPassword(""); }}>🔑 Password</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setActiveResetRequestId(null); setPasswordModal(u); setNewPassword(""); }}>🔑 Password</button>
                       <button className="btn btn-sm btn-danger" style={{ fontSize:10 }} onClick={() => { setIpBanModal({ ...u, ip: u.lastIp || "" }); setIpBanReason(""); setIpBanExpiry(""); }}>🚫 Ban IP</button>
                     </div>
                   </td>
@@ -1116,7 +1154,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                   </div>
                   <div style={{ display:"flex", gap:6 }}>
                     <button className="btn btn-sm btn-danger" onClick={() => setDelAccountConfirm(u)}>Delete Account</button>
-                    <button className="btn btn-sm btn-ghost" onClick={() => { setPasswordModal(u); setNewPassword(""); }}>🔑 Set Password</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => { setActiveResetRequestId(null); setPasswordModal(u); setNewPassword(""); }}>🔑 Set Password</button>
                     <button className="btn btn-sm btn-ghost" onClick={async () => {
                       await updateUserAndRefresh(u.id, { deleteRequest: false });
                       showToast(`Deletion request cleared for ${u.name}`);
@@ -1364,7 +1402,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
 
       {/* ── Set Password Modal ── */}
       {passwordModal && (
-        <div className="overlay" onClick={() => setPasswordModal(null)}>
+        <div className="overlay" onClick={() => { setPasswordModal(null); setActiveResetRequestId(null); }}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-title">🔑 Set Password</div>
             <div style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
@@ -1393,6 +1431,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
                     });
                     if (error) throw error;
                     showToast("✅ Password updated for " + passwordModal.name);
+                    if (activeResetRequestId) { dismissResetRequest(activeResetRequestId); setActiveResetRequestId(null); }
                     setPasswordModal(null);
                     setNewPassword("");
                   } catch(e) { showToast("Failed: " + e.message, "red"); }
@@ -1401,7 +1440,7 @@ function AdminPlayers({ data, save, updateUser, showToast, cu }) {
               >
                 {passwordBusy ? "Saving…" : "Set Password"}
               </button>
-              <button className="btn btn-ghost" onClick={() => setPasswordModal(null)}>Cancel</button>
+              <button className="btn btn-ghost" onClick={() => { setPasswordModal(null); setActiveResetRequestId(null); }}>Cancel</button>
             </div>
           </div>
         </div>

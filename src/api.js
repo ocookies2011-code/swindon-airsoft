@@ -300,7 +300,7 @@ export const events = wrapWithTimeout({
 export const bookings = wrapWithTimeout({
   async create(booking) {
     const isGuest = !booking.userId && !!booking.guestEmail;
-    const { data, error } = await supabase.from('bookings').insert({
+    const row = {
       event_id:             booking.eventId,
       user_id:              booking.userId              || null,
       user_name:            booking.userName            || null,
@@ -319,8 +319,33 @@ export const bookings = wrapWithTimeout({
       guest_waiver_signed_at: booking.guestWaiverSignedAt || null,
       guest_waiver_data:    booking.guestWaiverData
         ? JSON.parse(booking.guestWaiverData) : null,
-    }).select().single()
-    if (error) throw error
+    }
+    const { data, error } = await supabase.from('bookings').insert(row).select().single()
+    if (error) {
+      // The Square webhook can race ahead of us and create a fallback booking
+      // for this same payment+ticket type (as "Unknown Player") before this
+      // insert lands, tripping bookings_square_order_ticket_unique. The payment
+      // is fine and a booking DOES exist — rather than show the customer a
+      // scary "payment taken but booking failed" error, claim the existing row
+      // by patching in the real user/guest details instead of throwing.
+      if (error.code === '23505' && booking.squareOrderId) {
+        const { data: existing } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('square_order_id', booking.squareOrderId)
+          .eq('ticket_type', booking.type)
+          .maybeSingle()
+        if (existing) {
+          const { data: patched, error: patchErr } = await supabase
+            .from('bookings')
+            .update(row)
+            .eq('id', existing.id)
+            .select().single()
+          if (!patchErr) return patched
+        }
+      }
+      throw error
+    }
     return data
   },
 

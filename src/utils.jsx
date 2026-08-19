@@ -1623,42 +1623,33 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
       // Always show success even if email not found (security)
       if (!profile) { setResetSent(true); return; }
 
-      // Generate a secure token and store it
-      const token = crypto.randomUUID() + "-" + Date.now();
-      const expiresAt = new Date(Date.now() + 3600000).toISOString(); // 1 hour
-      await supabase.from("password_reset_tokens").upsert({
+      // File the request for admin action — no more self-service token/link.
+      const { error: reqErr } = await supabase.from("password_reset_requests").insert({
         user_id: profile.id,
-        email: profile.email.toLowerCase(),
-        token,
-        expires_at: expiresAt,
-        used: false,
-      }, { onConflict: "user_id" });
-
-      // Send email via EmailJS
-      const resetLink = window.location.origin + "/#reset/" + token;
-      const playerName = profile.name || "Operator";
-      const btnStyle = "background:#c8ff00;color:#000;font-weight:900;font-size:14px;letter-spacing:.15em;text-transform:uppercase;padding:14px 32px;text-decoration:none;display:inline-block";
-      const htmlContent = "<div style=\"font-family:Arial,sans-serif;background:#080b06;padding:32px;max-width:520px;margin:0 auto\">" +
-        "<div style=\"background:#0d1209;border:1px solid #2a4018;padding:28px;color:#c8d4b0\">" +
-        "<h2 style=\"color:#c8ff00;font-size:22px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 16px\">🔐 PASSWORD RESET</h2>" +
-        "<p style=\"margin:0 0 12px;font-size:14px;line-height:1.7\">Hi " + playerName + ",</p>" +
-        "<p style=\"margin:0 0 20px;font-size:14px;line-height:1.7\">We received a request to reset your Swindon Airsoft password. Click the button below to set a new password. This link expires in 1 hour.</p>" +
-        "<div style=\"text-align:center;margin:24px 0\">" +
-        "<a href=\"" + resetLink + "\" style=\"" + btnStyle + "\">RESET MY PASSWORD</a>" +
-        "</div>" +
-        "<p style=\"margin:20px 0 0;font-size:12px;color:#5a6e42;line-height:1.6\">If you didn't request this, you can safely ignore this email.</p>" +
-        "</div>" +
-        "<p style=\"text-align:center;font-size:11px;color:#3a5010;margin-top:16px\">◈ SWINDON AIRSOFT · FIELD COMMAND ◈</p>" +
-        "</div>";
-      await sendEmail({
-        toEmail: profile.email,
-        toName: playerName,
-        subject: "🔐 Reset Your Swindon Airsoft Password",
-        htmlContent,
+        name:    profile.name || null,
+        email:   profile.email.toLowerCase(),
       });
+      if (reqErr) throw new Error("Couldn't submit your request — please try again or contact us.");
+
+      // Alert the admin by email so it doesn't just sit in a queue unseen.
+      await sendEmail({
+        toEmail: "swindonairsoftfield@gmail.com",
+        toName:  "Swindon Airsoft Admin",
+        subject: "🔑 Password Reset Requested: " + (profile.name || profile.email),
+        htmlContent:
+          "<div style=\"font-family:Arial,sans-serif;background:#080b06;padding:32px;max-width:520px;margin:0 auto\">" +
+          "<div style=\"background:#0d1209;border:1px solid #2a4018;padding:28px;color:#c8d4b0\">" +
+          "<h2 style=\"color:#c8ff00;font-size:22px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 16px\">🔑 PASSWORD RESET REQUESTED</h2>" +
+          "<p style=\"margin:0 0 8px;font-size:14px;line-height:1.7\"><strong>" + (profile.name || "Unnamed player") + "</strong> (" + profile.email + ") has requested a password reset.</p>" +
+          "<p style=\"margin:0;font-size:13px;color:#8aaa8a;line-height:1.7\">Go to Admin → Players, find them, and use Set Password.</p>" +
+          "</div>" +
+          "<p style=\"text-align:center;font-size:11px;color:#3a5010;margin-top:16px\">◈ SWINDON AIRSOFT · FIELD COMMAND ◈</p>" +
+          "</div>",
+      }).catch(() => {}); // non-fatal — the request row is what matters
+
       setResetSent(true);
     } catch (e) {
-      showToast(e.message || "Failed to send reset email", "red");
+      showToast(e.message || "Failed to submit reset request", "red");
     } finally { setBusy(false); }
   };
 
@@ -1798,17 +1789,17 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
             {resetSent ? (
               <>
                 <div className="alert alert-green" style={{ marginBottom: 16 }}>
-                  ✅ Check your email — a reset link has been sent to <strong>{form.email}</strong>.
+                  ✅ Request received for <strong>{form.email}</strong>.
                 </div>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>Click the link in the email to set a new password. Check your spam folder if it doesn't arrive within a minute.</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>We'll reset your password and be in touch shortly.</div>
                 <button className="btn btn-ghost" onClick={() => { setResetMode(false); setResetSent(false); }}>← Back to Login</button>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>Enter your email address and we'll send you a link to reset your password.</div>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>Enter your email address and we'll reset your password for you.</div>
                 <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => setField("email", e.target.value)} onKeyDown={e => e.key === "Enter" && sendReset()} autoFocus /></div>
                 <div className="gap-2 mt-2">
-                  <button className="btn btn-primary" disabled={busy} onClick={sendReset}>{busy ? "Sending…" : "Send Reset Link"}</button>
+                  <button className="btn btn-primary" disabled={busy} onClick={sendReset}>{busy ? "Submitting…" : "Request Reset"}</button>
                   <button className="btn btn-ghost" onClick={() => setResetMode(false)}>← Back</button>
                 </div>
               </>
