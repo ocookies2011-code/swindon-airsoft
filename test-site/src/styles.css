@@ -114,8 +114,9 @@ body {
 @media (max-width: 860px) { .sidebar-burger { display: block; } }
 
 /* ── Hero ────────────────────────────────────────────────── */
-.hero { display: flex; align-items: stretch; min-height: 360px; overflow: hidden; }
-@media (max-width: 720px) { .hero { flex-direction: column; min-height: 0; } }
+.hero { display: flex; align-items: stretch; height: 480px; overflow: hidden; }
+@media (max-width: 720px) { .hero { flex-direction: column; height: auto; } }
+@media (max-width: 720px) { .hero .photo { height: 280px; } }
 .hero .photo { flex: 1 1 58%; position: relative; }
 .hero-inner {
   flex: 0 0 42%;
