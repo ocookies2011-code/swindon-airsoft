@@ -1626,13 +1626,14 @@ function SupabaseAuthModal({ mode, setMode, onClose, showToast, onLogin }) {
       // Generate a secure token and store it
       const token = crypto.randomUUID() + "-" + Date.now();
       const expiresAt = new Date(Date.now() + 3600000).toISOString(); // 1 hour
-      await supabase.from("password_reset_tokens").upsert({
+      const { error: tokenErr } = await supabase.from("password_reset_tokens").upsert({
         user_id: profile.id,
         email: profile.email.toLowerCase(),
         token,
         expires_at: expiresAt,
         used: false,
       }, { onConflict: "user_id" });
+      if (tokenErr) throw new Error("Couldn't create reset link — please try again or contact us.");
 
       // Send email via EmailJS
       const resetLink = window.location.origin + "/#reset/" + token;
