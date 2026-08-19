@@ -1,11 +1,33 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Photo, PHOTOS } from '../components/common'
 import { useFixtures, daysUntil } from '../useFixtures'
+import { supabase } from '../supabaseClient'
+
+function useLatestNews() {
+  const [post, setPost] = useState(undefined) // undefined = loading, null = none
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('news_posts')
+      .select('id, title, body, created_at')
+      .eq('published', true)
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        setPost(error || !data?.length ? null : data[0])
+      })
+    return () => { cancelled = true }
+  }, [])
+  return post
+}
 
 export default function Home() {
   const { events } = useFixtures(1)
   const nextEvent = events && events.length > 0 ? events[0] : null
+  const news = useLatestNews()
 
   return (
     <>
@@ -52,25 +74,36 @@ export default function Home() {
       </section>
 
       {/* Welcome / about strip with red section header bar, matching the
-          reference's "Welcome To Our Academy" block */}
+          reference's "Welcome To Our Academy" block — nested photo+news
+          row on top, contact info + age policy row below */}
       <section className="welcome">
         <div className="section-band"><span>Welcome To The Field</span></div>
-        <div className="wrap welcome-grid">
-          <div className="welcome-photo"><Photo src={PHOTOS.ground} alt="" /></div>
-          <div className="welcome-copy">
-            <p>Located just off Junction 16 of the M4 — run by airsofters, for airsofters. Whether you're seasoned or brand new to the sport, we've got you covered.</p>
-            <p>Gates open 08:00 with a free tea or coffee, chrono at 08:45, morning brief at 09:30, first game on at 10:00. We stop for lunch around 12:30, then it's back into it until end of day.</p>
-            <div className="welcome-contact">
-              <div>
-                <div className="tag">Find Us</div>
-                <p>Manor Hl, Swindon, SN5 4EG<br />A marshal greets you on arrival</p>
-              </div>
-              <div>
-                <div className="tag">Age Policy</div>
-                <p>12+ with a parent playing, 14+ with written consent<br />18+ books independently</p>
-              </div>
+        <div className="wrap">
+          <div className="welcome-top">
+            <div className="welcome-photo"><Photo src={PHOTOS.note1} alt="" /></div>
+            <div className="welcome-news">
+              <div className="tag">Latest News</div>
+              {news === undefined && <p className="welcome-news-body">Loading…</p>}
+              {news === null && <p className="welcome-news-body">No news posted yet — check back soon.</p>}
+              {news && (
+                <>
+                  <h4>{news.title}</h4>
+                  <p className="welcome-news-body">{news.body.length > 200 ? news.body.slice(0, 200) + '…' : news.body}</p>
+                  <Link className="text-link" to="/gallery">Read more →</Link>
+                </>
+              )}
             </div>
-            <Link className="btn-red btn-red-small" to="/fixtures">Book In →</Link>
+          </div>
+          <div className="welcome-bottom">
+            <div>
+              <div className="tag">Contact Info</div>
+              <p>Manor Hl, Swindon, SN5 4EG<br />A marshal greets you on arrival</p>
+            </div>
+            <div>
+              <div className="tag">Age Policy</div>
+              <p>12+ with a parent playing, 14+ with written consent<br />18+ books independently</p>
+              <Link className="btn-gray" to="/fixtures">Book In →</Link>
+            </div>
           </div>
         </div>
       </section>
