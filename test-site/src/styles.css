@@ -43,14 +43,20 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--red); outline-o
 .wrap { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
 
 /* Camo texture — layered radial-gradient blobs, tiled */
-.camo-bg, body {
+body {
+  background-color: var(--camo-black);
+}
+/* Camo is used ONLY as a thin decorative strip around the hero photo
+   (see .hero-frame) — the reference screenshot does not use it as a
+   page-wide background at all. Every other section is solid dark or
+   solid cream (sidebar), never camo-textured. */
+.camo-bg, .hero-frame {
   background-color: var(--olive);
   background-image:
-    linear-gradient(rgba(10,11,7,0.62), rgba(10,11,7,0.62)),
+    linear-gradient(rgba(10,11,7,0.5), rgba(10,11,7,0.5)),
     url('./assets/camo.svg');
-  background-size: cover, 500px 500px;
+  background-size: cover, 400px 400px;
   background-repeat: no-repeat, repeat;
-  background-attachment: fixed, fixed;
 }
 .hero-frame { padding: 14px; }
 
@@ -75,7 +81,10 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--red); outline-o
   .sidebar { left: -260px; transition: left .2s ease; width: 240px; }
   .sidebar.open { left: 0; }
 }
-.sidebar-brand { display: block; padding: 20px 18px; border-bottom: 1px solid rgba(0,0,0,0.12); text-decoration: none; }
+.sidebar-brand { display: block; padding: 20px 18px 12px; text-decoration: none; }
+.sidebar-social { display: flex; gap: 10px; padding: 0 18px 16px; border-bottom: 1px solid rgba(0,0,0,0.12); }
+.sidebar-social a { color: #6B6752; display: flex; }
+.sidebar-social a:hover { color: var(--red); }
 .sidebar-logo { width: 100%; max-width: 160px; height: auto; display: block; }
 .sidebar-nav { display: flex; flex-direction: column; padding: 8px 0; }
 .sidebar-nav a {
@@ -105,7 +114,6 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--red); outline-o
 @media (max-width: 860px) { .sidebar-burger { display: block; } }
 
 /* ── Hero ────────────────────────────────────────────────── */
-.hero-frame { padding: 14px; }
 .hero { display: flex; align-items: stretch; min-height: 360px; overflow: hidden; }
 @media (max-width: 720px) { .hero { flex-direction: column; min-height: 0; } }
 .hero .photo { flex: 1 1 58%; position: relative; }
