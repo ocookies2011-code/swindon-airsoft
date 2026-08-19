@@ -45,9 +45,12 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--red); outline-o
 /* Camo texture — layered radial-gradient blobs, tiled */
 .camo-bg, body {
   background-color: var(--olive);
-  background-image: url('./assets/camo.svg');
-  background-size: 300px 300px;
-  background-repeat: repeat;
+  background-image:
+    linear-gradient(rgba(10,11,7,0.62), rgba(10,11,7,0.62)),
+    url('./assets/camo.svg');
+  background-size: cover, 500px 500px;
+  background-repeat: no-repeat, repeat;
+  background-attachment: fixed, fixed;
 }
 .hero-frame { padding: 14px; }
 
@@ -209,13 +212,13 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--red); outline-o
 .stat .l { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
 
 /* ── Generic section scaffolding ─────────────────────────── */
-section { padding: 44px 0; }
+section { padding: 32px 0; }
 .section-head { margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .section-tag { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--red); display: block; margin-bottom: 6px; }
 .section-head h2 { font-family: var(--font-display); font-size: clamp(22px, 3vw, 30px); font-weight: 600; text-transform: uppercase; margin: 0; }
 
 /* ── Page hero (non-home) ────────────────────────────────── */
-.page-hero { background: var(--camo-black); padding: 40px 0 28px; border-bottom: 1px solid var(--line); }
+.page-hero { background: var(--camo-black); padding: 32px 0 22px; border-bottom: 1px solid var(--line); }
 .page-hero h1 { font-family: var(--font-display); font-size: clamp(26px, 4vw, 38px); font-weight: 600; text-transform: uppercase; margin: 8px 0 10px; }
 .page-hero-sub { font-size: 14.5px; color: var(--muted); max-width: 560px; line-height: 1.55; margin: 0; }
 .page-hero-photo { position: relative; padding: 0; height: 220px; display: flex; align-items: flex-end; }
