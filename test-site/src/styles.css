@@ -94,16 +94,10 @@ body {
 .sidebar-social a:hover { color: var(--red); }
 .sidebar-logo { width: 100%; max-width: 160px; height: auto; display: block; }
 .sidebar-nav { display: flex; flex-direction: column; padding: 8px 0; }
-.sidebar-nav a {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 13px 18px;
-  text-decoration: none;
-  color: var(--ink-dark);
-}
+.sidebar-nav a { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 13px 18px; text-decoration: none; color: var(--ink-dark); }
 .sidebar-nav a:hover { background: rgba(0,0,0,0.04); }
 .sidebar-nav a.active { background: var(--red); color: #fff; }
+.sidebar-nav a.active::after { content: "›"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 20px; font-weight: 600; }
 .sidebar-nav-label { font-family: var(--font-display); font-size: 14px; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; }
 .sidebar-nav-sub { font-family: var(--font-mono); font-size: 10px; color: #8A8878; text-transform: uppercase; letter-spacing: 0.04em; }
 .sidebar-nav a.active .sidebar-nav-sub { color: rgba(255,255,255,0.75); }
@@ -187,24 +181,22 @@ body {
 
 /* ── Photo tile row ──────────────────────────────────────── */
 .portal { padding: 0; }
-.portal-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+.portal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; background: var(--camo-black); }
 @media (max-width: 720px) { .portal-grid { grid-template-columns: repeat(2, 1fr); } }
-.portal-tile { position: relative; display: block; height: 130px; text-decoration: none; overflow: hidden; }
-.portal-tile .photo { position: absolute; inset: 0; }
-.portal-tile .photo img { filter: grayscale(0.25) brightness(0.85); }
+.portal-tile { display: flex; flex-direction: column; text-decoration: none; overflow: hidden; }
+.portal-tile .photo { height: 110px; }
+.portal-tile .photo img { filter: grayscale(0.4) brightness(0.75) contrast(1.05); }
 .portal-cap {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-  background: rgba(20,22,14,0.82);
-  border-top: 2px solid var(--red);
-  color: var(--paper);
+  background: #17190F;
+  color: #B8B6A3;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: center;
-  padding: 8px 6px;
+  padding: 10px 6px;
 }
-.portal-tile:hover .portal-cap { border-top-color: #fff; }
+.portal-tile:hover .portal-cap { color: var(--paper); }
 
 /* ── Welcome / about band ───────────────────────────────── */
 .welcome { padding: 0 0 44px; }
