@@ -22,6 +22,7 @@ import { PasswordResetPage }  from "./pages/PasswordResetPage";
 import { SelfCheckInPage }   from "./pages/SelfCheckInPage";
 import { ClassifiedsPage }   from "./pages/ClassifiedsPage";
 import { BlockedPage }        from "./pages/BlockedPage";
+import { MaintenancePage }    from "./pages/MaintenancePage";
 import { PendingApprovalPage } from "./pages/PendingApprovalPage";
 import { UKARAPage }          from "./pages/UKARAPage";
 import { LiveChatWidget }     from "./components/LiveChatWidget";
@@ -140,6 +141,17 @@ function AppInner() {
       navigate("/" + p);
     }
   };
+
+  // ── Maintenance mode gate ──────────────────────────────────
+  // While maintenance mode is on (toggled in Admin > Maintenance Mode),
+  // non-admin visitors can only reach home (the closing-down page),
+  // news and gallery — any other page is bounced back to home.
+  const MAINTENANCE_ALLOWED_PAGES = ["home", "news", "gallery"];
+  useEffect(() => {
+    if (!data?.maintenanceModeEnabled) return;
+    if (cu?.role === "admin") return;
+    if (!MAINTENANCE_ALLOWED_PAGES.includes(page)) setPage("home");
+  }, [page, data?.maintenanceModeEnabled, cu?.role]);
 
   // popstate — handle browser back/forward buttons
   useEffect(() => {
@@ -577,6 +589,7 @@ function AppInner() {
   }
 
   const isAdmin = cu?.role === "admin";
+  const maintenanceActive = !!data?.maintenanceModeEnabled && !isAdmin;
 
   // Error banner — shown at top but doesn't block the site
   const errorBanner = loadError ? (
@@ -631,10 +644,11 @@ function AppInner() {
           <span>NO SIGNAL — YOU ARE OFFLINE. SOME FEATURES MAY NOT WORK.</span>
         </div>
       )}
-      <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} data={data} />
+      <PublicNav page={page} setPage={setPage} cu={cu} setCu={setCu} setAuthModal={setAuthModal} shopClosed={data?.shopClosed} data={data} maintenanceActive={maintenanceActive} />
 
       <div className="pub-page-wrap">
-        {page === "home"        && <HomePage data={data} cu={cu} setPage={setPage} onProductClick={(item) => { goToProduct(item); setPageState("shop"); }} />}
+        {page === "home" && maintenanceActive && <MaintenancePage data={data} cu={cu} showToast={showToast} setPage={setPage} />}
+        {page === "home" && !maintenanceActive && <HomePage data={data} cu={cu} setPage={setPage} onProductClick={(item) => { goToProduct(item); setPageState("shop"); }} />}
         {page === "events"      && <EventsPage data={data} cu={cu} updateEvent={updateEvent} updateUser={updateUserAndRefresh} showToast={showToast} setAuthModal={setAuthModal} save={save} setPage={setPage} trackFunnel={trackFunnel} initialEventId={initialEventId} />}
         {page === "shop" && data.shopClosed && (
           <ShopClosedPage setPage={setPage} />

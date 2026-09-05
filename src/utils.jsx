@@ -409,7 +409,7 @@ function useData() {
     if (loadingRef.current) return; // already in progress — skip
     loadingRef.current = true;
     setLoadError(null);
-    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [], news: [] };
+    const emptyData = { events: [], shop: [], postageOptions: [], albums: [], qa: [], homeMsg: "", users: [], staff: [], news: [], maintenanceModeEnabled: false, maintenanceDesign: "warm_thankyou", maintenanceHeadline: "", maintenanceMessage: "" };
 
     // Single top-level timeout — if the whole thing takes too long, unblock the UI
     const globalTimeout = setTimeout(() => {
@@ -437,7 +437,7 @@ function useData() {
 
           const [evList, shopList, postageList, albumList, qaList, staffList, newsList, homeMsg,
                  socialFacebook, socialInstagram, socialWhatsapp, contactAddress, contactPhone, contactEmail,
-                 contactDepartmentsRaw, shopClosed] = await Promise.all([
+                 contactDepartmentsRaw, shopClosed, maintModeEnabled, maintDesign, maintHeadline, maintMessage] = await Promise.all([
             safe("events",  api.events.getAll()),
             safe("shop",    api.shop.getAll()),
             safe("postage", api.postage.getAll()),
@@ -454,6 +454,10 @@ function useData() {
             api.settings.get("contact_email").catch(() => ""),
             api.settings.get("contact_departments").catch(() => ""),
             api.settings.get("shop_closed").catch(() => "false"),
+            api.settings.get("maintenance_mode_enabled").catch(() => "false"),
+            api.settings.get("maintenance_design").catch(() => "warm_thankyou"),
+            api.settings.get("maintenance_headline").catch(() => ""),
+            api.settings.get("maintenance_message").catch(() => ""),
           ]);
 
           // If all key collections came back empty and it's a partial error, treat as a cold-start failure
@@ -489,6 +493,10 @@ function useData() {
             staff: staffList,
             news: newsList,
             shopClosed: shopClosed === "true",
+            maintenanceModeEnabled: maintModeEnabled === "true",
+            maintenanceDesign: maintDesign || "warm_thankyou",
+            maintenanceHeadline: maintHeadline || "Thank You For Everything",
+            maintenanceMessage: maintMessage || "",
             homeMsg: (() => { try { const p = JSON.parse(homeMsg); return Array.isArray(p) ? p : (homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []); } catch { return homeMsg ? [{ text: homeMsg, color: "#c8ff00", bg: "#0a0f06", icon: "⚡" }] : []; } })(),
             socialFacebook,
             socialInstagram,

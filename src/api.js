@@ -1854,6 +1854,52 @@ export const ukaraApplications = wrapWithTimeout({
 });
 
 // ── News & Updates ────────────────────────────────────────────────────────────
+// ── Guestbook (maintenance mode) ─────────────────────────────
+export const guestbook = wrapWithTimeout({
+  // Public: only ever returns admin-approved messages
+  async getApproved() {
+    const { data, error } = await supabase
+      .from('guestbook_messages')
+      .select('id, name, message, created_at')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  // Admin: all messages, optionally filtered by status ('pending'|'approved'|'rejected'|'all')
+  async getAdmin(status) {
+    let q = supabase.from('guestbook_messages').select('*').order('created_at', { ascending: false })
+    if (status && status !== 'all') q = q.eq('status', status)
+    const { data, error } = await q
+    if (error) throw error
+    return data || []
+  },
+
+  async create({ name, message, userId }) {
+    const { error } = await supabase
+      .from('guestbook_messages')
+      .insert({ name: (name || '').trim(), message: (message || '').trim(), user_id: userId || null, status: 'pending' })
+    if (error) throw error
+  },
+
+  async moderate(id, status, moderatorId) {
+    const { error } = await supabase
+      .from('guestbook_messages')
+      .update({ status, moderated_at: new Date().toISOString(), moderated_by: moderatorId || null })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('guestbook_messages')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  },
+})
+
 export const news = wrapWithTimeout({
   async getAll() {
     const { data, error } = await supabase

@@ -34,6 +34,7 @@ import { AdminVisitorStats }       from "./AdminVisitorStats";
 import { AdminAuditLog }           from "./AdminAuditLog";
 import { AdminCheatReports }       from "./AdminCheatReports";
 import { AdminNews }              from "./AdminNews";
+import { AdminMaintenance }        from "./AdminMaintenance";
 import { EmailTestCard }           from "./EmailTestCard";
 
 // Public-facing pages that live in /pages but were originally in AdminPanel.jsx
@@ -53,7 +54,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     const src = parts[0] === "admin" ? parts : (hashParts[0] === "admin" ? hashParts : []);
     const ADMIN_SECTIONS = ["dashboard","events","cancellation-requests","waivers","unsigned-waivers","scan-waiver","players","shop",
       "leaderboard-admin","revenue","visitor-stats","security","classifieds-admin","reported-messages","gallery-admin","qa-admin","staff-admin",
-      "contact-inbox","contact-admin","messages","news-admin","marshal-admin","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin"];
+      "contact-inbox","contact-admin","messages","news-admin","marshal-admin","discount-codes","gift-vouchers","settings","audit-log","cheat-reports","ukara-admin","maintenance-admin"];
     return src[1] && ADMIN_SECTIONS.includes(src[1]) ? src[1] : "dashboard";
   };
   const [section, setSectionState] = useState(getInitialSection);
@@ -76,6 +77,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
   const [pendingUkara, setPendingUkara] = React.useState(0);
   const [pendingContact, setPendingContact] = useState(0);
   const [pendingCancellations, setPendingCancellations] = useState(0);
+  const [pendingGuestbook, setPendingGuestbook] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
     const fetchPending = () =>
@@ -125,6 +127,21 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, fetchContact)
       .subscribe();
     const onVisible = () => { if (document.visibilityState === "visible") fetchContact(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVisible); };
+  }, []);
+
+  useEffect(() => {
+    const fetchGuestbook = () =>
+      supabase.from("guestbook_messages").select("id", { count: "exact", head: true }).eq("status", "pending")
+        .then(({ count }) => setPendingGuestbook(count || 0))
+        .catch(() => {});
+    fetchGuestbook();
+    const ch = supabase
+      .channel("admin_nav_guestbook_badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "guestbook_messages" }, fetchGuestbook)
+      .subscribe();
+    const onVisible = () => { if (document.visibilityState === "visible") fetchGuestbook(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => { supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
@@ -190,6 +207,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
     ...(isSuperAdmin ? [{ id: "revenue", label: "Revenue", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1M12 7v1m0 8v1"/></svg>, group: "ANALYTICS" }] : []),
 
     // ── SYSTEM ───────────────────────────────────────────
+    { id: "maintenance-admin", label: "Maintenance Mode",  icon: "🚧", badge: pendingGuestbook || null, badgeColor: "gold", group: "SYSTEM" },
     { id: "settings",          label: "Settings",          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b0bec5" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, group: "SYSTEM" },
     // { id: "cash", label: "Cash Sales", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a5d6a7" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, group: "COMMERCE" }, // hidden — terminal sales now go to shop_orders automatically
     ...(isSuperAdmin ? [{ id: "audit-log", label: "Audit Log", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef9a9a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>, group: "SYSTEM" }] : []),
@@ -276,6 +294,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
           {section === "gift-vouchers" && <AdminGiftVouchers showToast={showToast} cu={cu} />}
           {section === "settings" && <AdminSettings showToast={showToast} cu={cu} />}
+          {section === "maintenance-admin" && <AdminMaintenance showToast={showToast} cu={cu} />}
           {section === "audit-log" && isSuperAdmin && <AdminAuditLog />}
           {section === "ukara-admin" && <AdminUkaraApplications showToast={showToast} cu={cu} />}
         </div>

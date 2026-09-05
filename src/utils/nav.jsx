@@ -4,7 +4,7 @@ import { supabase } from "../supabaseClient";
 import { SA_LOGO_SRC } from "../assets/logoImage";
 import { SiteSearch } from "./SiteSearch";
 
-function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data }) {
+function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data, maintenanceActive }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef  = useRef(null);
@@ -52,6 +52,13 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
   const aboutPages = ["about","qa","staff","contact","terms","ukara","news"];
   const shopPages  = ["shop","gift-vouchers"];
 
+  // While maintenance mode is active, only Home / News / Gallery are reachable —
+  // hide every other nav link (and any dropdown whose id itself isn't allowed).
+  const MAINTENANCE_NAV_ALLOWED = new Set(["home","news","gallery"]);
+  const visibleLinks = maintenanceActive
+    ? allLinks.filter(l => MAINTENANCE_NAV_ALLOWED.has(l.id))
+    : allLinks;
+
   const go = (id) => {
     if (id === "admin" && cu?.role !== "admin") return;
     setPage(id);
@@ -76,7 +83,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
 
           {/* Desktop links */}
           <div className="pub-nav-links" ref={dropdownRef} style={{ flex:"0 0 auto", overflow:"visible" }}>
-            {allLinks.filter(l => !l.adminOnly || cu?.role === 'admin').map(l => (
+            {visibleLinks.filter(l => !l.adminOnly || cu?.role === 'admin').map(l => (
               l.children ? (
                 <div key={l.id} className="pub-nav-link-wrap">
                   <button
@@ -183,7 +190,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
           <div style={{ padding:"8px 16px 12px", borderBottom:"1px solid #1a2808" }}>
             <SiteSearch data={data} setPage={(p) => { setPage(p); setDrawerOpen(false); }} />
           </div>
-          {allLinks.filter(l => !l.adminOnly || cu?.role === 'admin').map(l => (
+          {visibleLinks.filter(l => !l.adminOnly || cu?.role === 'admin').map(l => (
             l.children ? (
               <div key={l.id}>
                 <div style={{ padding:"10px 20px 4px", fontFamily:"'Oswald','Barlow Condensed',sans-serif", fontSize:9, fontWeight:600, letterSpacing:".25em", color:"var(--muted)", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
@@ -242,7 +249,11 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
       {/* ── BOTTOM NAV (mobile) ── */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {[
+          {(maintenanceActive ? [
+            { id:"home",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Home" },
+            { id:"news", icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>, label:"News" },
+            { id:"gallery",     icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Gallery" },
+          ] : [
             { id:"home",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Home" },
             { id:"events",      icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Events" },
             { id:"shop",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Shop" },
@@ -250,7 +261,7 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data })
             { id:"leaderboard", icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="10" width="4" height="9" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="6" width="4" height="13" stroke="currentColor" strokeWidth="1.4"/><rect x="15" y="13" width="4" height="6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Ranks" },
             { id:"news", icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>, label:"News" },
             { id:"profile",     icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M2 19c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Profile" },
-          ].map(b => (
+          ]).map(b => (
             <button key={b.id} className={`bottom-nav-btn ${page === b.id ? "active" : ""}`} onClick={() => go(b.id)}>
               <span className="bottom-nav-icon" style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>{b.icon}</span>
               <span>{b.label}</span>
