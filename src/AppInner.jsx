@@ -142,17 +142,6 @@ function AppInner() {
     }
   };
 
-  // ── Maintenance mode gate ──────────────────────────────────
-  // While maintenance mode is on (toggled in Admin > Maintenance Mode),
-  // non-admin visitors can only reach home (the closing-down page),
-  // news, gallery, contact and shop — any other page is bounced back to home.
-  const MAINTENANCE_ALLOWED_PAGES = ["home", "news", "gallery", "contact", "shop"];
-  useEffect(() => {
-    if (!data?.maintenanceModeEnabled) return;
-    if (cu?.role === "admin") return;
-    if (!MAINTENANCE_ALLOWED_PAGES.includes(page)) setPage("home");
-  }, [page, data?.maintenanceModeEnabled, cu?.role]);
-
   // popstate — handle browser back/forward buttons
   useEffect(() => {
     const onPop = () => {
@@ -190,6 +179,18 @@ function AppInner() {
   }, []);
 
   const [cu, setCu] = useState(null);          // current user profile
+
+  // ── Maintenance mode gate ──────────────────────────────────
+  // While maintenance mode is on (toggled in Admin > Maintenance Mode),
+  // non-admin visitors can only reach home (the closing-down page),
+  // news, gallery, contact and shop — any other page is bounced back to home.
+  const MAINTENANCE_ALLOWED_PAGES = ["home", "news", "gallery", "contact", "shop"];
+  useEffect(() => {
+    if (!data?.maintenanceModeEnabled) return;
+    if (cu?.role === "admin") return;
+    if (!MAINTENANCE_ALLOWED_PAGES.includes(page)) setPage("home");
+  }, [page, data?.maintenanceModeEnabled, cu?.role]);
+
   const [authLoading, setAuthLoading] = useState(true);
   const [authModal, setAuthModal] = useState(null);
   const [hitCount, setHitCount] = useState(null);
