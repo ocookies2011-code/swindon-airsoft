@@ -327,22 +327,18 @@ export const bookings = wrapWithTimeout({
       // insert lands, tripping bookings_square_order_ticket_unique. The payment
       // is fine and a booking DOES exist — rather than show the customer a
       // scary "payment taken but booking failed" error, claim the existing row
-      // by patching in the real user/guest details instead of throwing.
+      // via a SECURITY DEFINER RPC (bookings RLS deliberately can't see a row
+      // with user_id IS NULL, so a plain select+update here would silently
+      // find nothing — the RPC does its own targeted lookup server-side and
+      // only ever assigns the row to the caller's own account).
       if (error.code === '23505' && booking.squareOrderId) {
-        const { data: existing } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('square_order_id', booking.squareOrderId)
-          .eq('ticket_type', booking.type)
-          .maybeSingle()
-        if (existing) {
-          const { data: patched, error: patchErr } = await supabase
-            .from('bookings')
-            .update(row)
-            .eq('id', existing.id)
-            .select().single()
-          if (!patchErr) return patched
-        }
+        const { data: claimed, error: claimErr } = await supabase.rpc('claim_orphan_booking', {
+          p_square_order_id: booking.squareOrderId,
+          p_ticket_type:     booking.type,
+          p_user_id:         booking.userId,
+          p_user_name:       booking.userName || null,
+        })
+        if (!claimErr && claimed) return claimed
       }
       throw error
     }
