@@ -157,7 +157,7 @@ function TacticalFarewellTheme({ data, headline, message, cu, showToast, setPage
   const photos = usePhotoStrip(data, 6);
   const { entries, loading } = useApprovedGuestbook();
   const stats = [
-    { label: "GAME DAYS RUN", value: data?.events?.length || 0 },
+    { label: "ACTIVE PLAYERS", value: (data?.users || []).filter(u => (u.gamesAttended || 0) > 0).length },
     { label: "PHOTOS ARCHIVED", value: (data?.albums || []).reduce((s, a) => s + (a.images?.length || 0), 0) },
     { label: "ALBUMS", value: (data?.albums || []).length },
   ];
