@@ -27,7 +27,7 @@ function useApprovedGuestbook() {
   return { entries, loading };
 }
 
-function GuestbookForm({ cu, showToast, accent = "var(--accent)" }) {
+function GuestbookForm({ cu, showToast, accent = "var(--accent)", previewMode = false }) {
   const [name, setName] = useState(cu?.name || "");
   const [message, setMessage] = useState("");
   const [website, setWebsite] = useState(""); // honeypot — real users never fill this in
@@ -38,6 +38,12 @@ function GuestbookForm({ cu, showToast, accent = "var(--accent)" }) {
     e.preventDefault();
     if (website) return; // bot caught by honeypot — fail silently
     if (!name.trim() || !message.trim()) return;
+    if (previewMode) {
+      // Admin preview — don't actually write to the guestbook
+      setSent(true);
+      showToast && showToast("👁 Preview only — nothing was actually sent.");
+      return;
+    }
     setSubmitting(true);
     try {
       await api.guestbook.create({ name: name.trim().slice(0, 80), message: message.trim().slice(0, 1000), userId: cu?.id });
@@ -106,7 +112,7 @@ function GuestbookList({ entries, loading }) {
 // ═══════════════════════════════════════════════════════════════
 // THEME 1 — Warm Thank You (default): heartfelt, photo-led
 // ═══════════════════════════════════════════════════════════════
-function WarmThankYouTheme({ data, headline, message, cu, showToast, setPage }) {
+function WarmThankYouTheme({ data, headline, message, cu, showToast, setPage, previewMode }) {
   const photos = usePhotoStrip(data, 9);
   const { entries, loading } = useApprovedGuestbook();
   return (
@@ -137,7 +143,7 @@ function WarmThankYouTheme({ data, headline, message, cu, showToast, setPage }) 
       <div style={{ background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: 8, padding: "28px 24px" }}>
         <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 18, color: "var(--text)", marginBottom: 4, textAlign: "center" }}>Guestbook</div>
         <div style={{ fontSize: 12, color: "var(--muted)", textAlign: "center", marginBottom: 20 }}>Leave a message for the team and the community.</div>
-        <div style={{ maxWidth: 480, margin: "0 auto 28px" }}><GuestbookForm cu={cu} showToast={showToast} /></div>
+        <div style={{ maxWidth: 480, margin: "0 auto 28px" }}><GuestbookForm cu={cu} showToast={showToast} previewMode={previewMode} /></div>
         <GuestbookList entries={entries} loading={loading} />
       </div>
     </div>
@@ -147,7 +153,7 @@ function WarmThankYouTheme({ data, headline, message, cu, showToast, setPage }) 
 // ═══════════════════════════════════════════════════════════════
 // THEME 2 — Tactical Farewell: matches the site's tactical/military aesthetic
 // ═══════════════════════════════════════════════════════════════
-function TacticalFarewellTheme({ data, headline, message, cu, showToast, setPage }) {
+function TacticalFarewellTheme({ data, headline, message, cu, showToast, setPage, previewMode }) {
   const photos = usePhotoStrip(data, 6);
   const { entries, loading } = useApprovedGuestbook();
   const stats = [
@@ -207,7 +213,7 @@ function TacticalFarewellTheme({ data, headline, message, cu, showToast, setPage
       <div style={{ background: "var(--bg2)", border: "1px solid var(--border2)", padding: "26px 22px" }}>
         <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, color: "var(--accent)", letterSpacing: ".1em", marginBottom: 4, textAlign: "center" }}>⬡ FIELD LOG — LEAVE YOUR MARK</div>
         <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", marginBottom: 18 }}>Log a message for the squad before we ship out.</div>
-        <div style={{ maxWidth: 480, margin: "0 auto 24px" }}><GuestbookForm cu={cu} showToast={showToast} /></div>
+        <div style={{ maxWidth: 480, margin: "0 auto 24px" }}><GuestbookForm cu={cu} showToast={showToast} previewMode={previewMode} /></div>
         <GuestbookList entries={entries} loading={loading} />
       </div>
     </div>
@@ -217,7 +223,7 @@ function TacticalFarewellTheme({ data, headline, message, cu, showToast, setPage
 // ═══════════════════════════════════════════════════════════════
 // THEME 3 — Minimal Elegant: quiet, understated sign-off
 // ═══════════════════════════════════════════════════════════════
-function MinimalElegantTheme({ data, headline, message, cu, showToast, setPage }) {
+function MinimalElegantTheme({ data, headline, message, cu, showToast, setPage, previewMode }) {
   const photos = usePhotoStrip(data, 5);
   const { entries, loading } = useApprovedGuestbook();
   return (
@@ -246,22 +252,25 @@ function MinimalElegantTheme({ data, headline, message, cu, showToast, setPage }
       <div style={{ width: 40, height: 1, background: "var(--border2)", margin: "0 auto 32px" }} />
 
       <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 20 }}>A few words, if you'd like to leave one.</div>
-      <div style={{ maxWidth: 420, margin: "0 auto 28px", textAlign: "left" }}><GuestbookForm cu={cu} showToast={showToast} /></div>
+      <div style={{ maxWidth: 420, margin: "0 auto 28px", textAlign: "left" }}><GuestbookForm cu={cu} showToast={showToast} previewMode={previewMode} /></div>
       <div style={{ textAlign: "left" }}><GuestbookList entries={entries} loading={loading} /></div>
     </div>
   );
 }
 
-// ── Entry point — picks the theme selected in Admin > Maintenance Mode ──
-function MaintenancePage({ data, cu, showToast, setPage }) {
-  const design = data?.maintenanceDesign || "warm_thankyou";
-  const headline = data?.maintenanceHeadline || "Thank You For Everything";
-  const message = data?.maintenanceMessage || "";
-  const props = { data, headline, message, cu, showToast, setPage };
+// ── Entry point — picks the theme selected in Admin > Maintenance Mode.
+// overrideDesign/overrideHeadline/overrideMessage let Admin > Maintenance Mode
+// preview a design or unsaved copy without touching the live settings.
+function MaintenancePage({ data, cu, showToast, setPage, previewMode, overrideDesign, overrideHeadline, overrideMessage }) {
+  const design = overrideDesign || data?.maintenanceDesign || "warm_thankyou";
+  const headline = overrideHeadline ?? (data?.maintenanceHeadline || "Thank You For Everything");
+  const message = overrideMessage ?? (data?.maintenanceMessage || "");
+  const props = { data, headline, message, cu, showToast, setPage, previewMode };
 
   if (design === "tactical_farewell") return <TacticalFarewellTheme {...props} />;
   if (design === "minimal_elegant") return <MinimalElegantTheme {...props} />;
   return <WarmThankYouTheme {...props} />;
 }
+
 
 export { MaintenancePage };

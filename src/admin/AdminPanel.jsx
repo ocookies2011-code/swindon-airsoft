@@ -294,7 +294,7 @@ function AdminPanel({ data, cu, save, updateUser, updateEvent, showToast, setPag
           {section === "discount-codes" && <AdminDiscountCodes data={data} showToast={showToast} cu={cu} />}
           {section === "gift-vouchers" && <AdminGiftVouchers showToast={showToast} cu={cu} />}
           {section === "settings" && <AdminSettings showToast={showToast} cu={cu} />}
-          {section === "maintenance-admin" && <AdminMaintenance showToast={showToast} cu={cu} />}
+          {section === "maintenance-admin" && <AdminMaintenance data={data} showToast={showToast} cu={cu} />}
           {section === "audit-log" && isSuperAdmin && <AdminAuditLog />}
           {section === "ukara-admin" && <AdminUkaraApplications showToast={showToast} cu={cu} />}
         </div>

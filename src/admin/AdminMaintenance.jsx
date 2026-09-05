@@ -5,6 +5,7 @@ import { supabase } from "../supabaseClient";
 import * as api from "../api";
 import { fmtErr } from "../utils";
 import { logAction } from "./adminHelpers";
+import { MaintenancePage } from "../pages/MaintenancePage";
 
 const DESIGNS = [
   {
@@ -27,12 +28,13 @@ const DESIGNS = [
   },
 ];
 
-function AdminMaintenance({ showToast, cu }) {
+function AdminMaintenance({ data, showToast, cu }) {
   // ── Maintenance mode + design + copy ─────────────────────
   const [enabled, setEnabled] = useState(false);
   const [design, setDesign] = useState("warm_thankyou");
   const [headline, setHeadline] = useState("");
   const [message, setMessage] = useState("");
+  const [previewDesign, setPreviewDesign] = useState(null); // which design id is currently shown full-screen, or null
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingDesign, setSavingDesign] = useState(false);
@@ -153,7 +155,14 @@ function AdminMaintenance({ showToast, cu }) {
                   {d.swatch.map((c, i) => <div key={i} style={{ width: 22, height: 22, borderRadius: 4, background: c, border: "1px solid rgba(255,255,255,.15)" }} />)}
                 </div>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)", marginBottom: 4 }}>{d.name}</div>
-                <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.5 }}>{d.desc}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.5, marginBottom: 10 }}>{d.desc}</div>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 11, padding: "5px 10px" }}
+                  onClick={(e) => { e.stopPropagation(); setPreviewDesign(d.id); }}
+                >
+                  👁 Preview
+                </button>
               </div>
             );
           })}
@@ -174,11 +183,64 @@ function AdminMaintenance({ showToast, cu }) {
           <textarea rows={4} value={message} onChange={e => setMessage(e.target.value)} maxLength={2000}
             placeholder="Tell your visitors what's happening and thank them for their support…" />
         </div>
-        <button className="btn btn-primary" onClick={saveCopy} disabled={saving}>{saving ? "Saving…" : "Save Message"}</button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button className="btn btn-primary" onClick={saveCopy} disabled={saving}>{saving ? "Saving…" : "Save Message"}</button>
+          <button className="btn btn-ghost" onClick={() => setPreviewDesign(design)}>👁 Preview with current design</button>
+        </div>
       </div>
 
       {/* ── Guestbook moderation ────────────────────────────── */}
       <GuestbookModeration showToast={showToast} cu={cu} />
+
+      {/* ── Full-screen preview modal ───────────────────────── */}
+      {previewDesign && (
+        <MaintenancePreviewModal
+          design={previewDesign}
+          headline={headline}
+          message={message}
+          data={data}
+          cu={cu}
+          onClose={() => setPreviewDesign(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Full-screen preview overlay — renders the real public MaintenancePage
+// component with the design/copy the admin is looking at, but with the
+// guestbook form disabled (nothing is actually submitted from here).
+function MaintenancePreviewModal({ design, headline, message, data, cu, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+  }, [onClose]);
+
+  const designName = DESIGNS.find(d => d.id === design)?.name || design;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "var(--bg)", overflowY: "auto" }}>
+      <div style={{
+        position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between",
+        gap: 12, padding: "12px 20px", background: "#000", borderBottom: "2px solid var(--accent)", flexWrap: "wrap",
+      }}>
+        <div style={{ fontFamily: "'Oswald','Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 13, color: "var(--accent)", letterSpacing: ".1em", textTransform: "uppercase" }}>
+          👁 PREVIEW — {designName} <span style={{ color: "var(--muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(not visible to visitors yet — guestbook submissions here aren't sent)</span>
+        </div>
+        <button className="btn btn-ghost" onClick={onClose} style={{ flexShrink: 0 }}>✕ Close Preview</button>
+      </div>
+      <MaintenancePage
+        data={data}
+        cu={cu}
+        showToast={() => {}}
+        setPage={() => {}}
+        previewMode
+        overrideDesign={design}
+        overrideHeadline={headline}
+        overrideMessage={message}
+      />
     </div>
   );
 }
