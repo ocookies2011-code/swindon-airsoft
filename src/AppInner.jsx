@@ -145,8 +145,8 @@ function AppInner() {
   // ── Maintenance mode gate ──────────────────────────────────
   // While maintenance mode is on (toggled in Admin > Maintenance Mode),
   // non-admin visitors can only reach home (the closing-down page),
-  // news and gallery — any other page is bounced back to home.
-  const MAINTENANCE_ALLOWED_PAGES = ["home", "news", "gallery"];
+  // news, gallery, contact and shop — any other page is bounced back to home.
+  const MAINTENANCE_ALLOWED_PAGES = ["home", "news", "gallery", "contact", "shop"];
   useEffect(() => {
     if (!data?.maintenanceModeEnabled) return;
     if (cu?.role === "admin") return;

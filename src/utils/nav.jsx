@@ -52,11 +52,15 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data, m
   const aboutPages = ["about","qa","staff","contact","terms","ukara","news"];
   const shopPages  = ["shop","gift-vouchers"];
 
-  // While maintenance mode is active, only Home / News / Gallery are reachable —
-  // hide every other nav link (and any dropdown whose id itself isn't allowed).
-  const MAINTENANCE_NAV_ALLOWED = new Set(["home","news","gallery"]);
+  // While maintenance mode is active, only Home / News / Gallery / Contact / Shop
+  // are reachable — hide every other nav link. For dropdown parents (Shop, About),
+  // filter their children down to just the allowed ones and only keep the parent
+  // if something remains inside it.
+  const MAINTENANCE_NAV_ALLOWED = new Set(["home","news","gallery","shop","contact"]);
   const visibleLinks = maintenanceActive
-    ? allLinks.filter(l => MAINTENANCE_NAV_ALLOWED.has(l.id))
+    ? allLinks
+        .map(l => l.children ? { ...l, children: l.children.filter(c => MAINTENANCE_NAV_ALLOWED.has(c.id)) } : l)
+        .filter(l => MAINTENANCE_NAV_ALLOWED.has(l.id) || (l.children && l.children.length > 0))
     : allLinks;
 
   const go = (id) => {
@@ -253,6 +257,8 @@ function PublicNav({ page, setPage, cu, setCu, setAuthModal, shopClosed, data, m
             { id:"home",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Home" },
             { id:"news", icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>, label:"News" },
             { id:"gallery",     icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.4"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14l4-4 4 4 3-3 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Gallery" },
+            { id:"shop",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14l-1.5 9H4.5L3 5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="17" r="1" fill="currentColor"/><circle cx="14" cy="17" r="1" fill="currentColor"/><path d="M1 2h3l1 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Shop" },
+            { id:"contact",     icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, label:"Contact" },
           ] : [
             { id:"home",        icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.4"/><path d="M7 18v-6h6v6" stroke="currentColor" strokeWidth="1.4"/></svg>, label:"Home" },
             { id:"events",      icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.4"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label:"Events" },

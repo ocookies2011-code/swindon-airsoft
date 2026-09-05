@@ -113,8 +113,8 @@ function AdminMaintenance({ showToast, cu }) {
             </div>
             <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6, maxWidth: 520 }}>
               When ON, everyone except logged-in admins is shown the page below instead of the homepage, and can only
-              otherwise reach <strong>News</strong> and <strong>Gallery</strong> — every other page (Shop, Events, Bookings, etc.)
-              redirects back to it. Admins signed in still see and use the full site normally.
+              otherwise reach <strong>News</strong>, <strong>Gallery</strong>, <strong>Contact</strong> and <strong>Shop</strong> — every
+              other page (Events, Bookings, Leaderboard, etc.) redirects back to it. Admins signed in still see and use the full site normally.
             </div>
           </div>
           <button
